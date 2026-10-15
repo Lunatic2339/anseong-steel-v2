@@ -27,6 +27,10 @@ namespace Anseong.EditorTools
         const float RobotHeight = 65f;
         const float RobotSpacing = 80f;          // A와 B 사이 X 간격
 
+        const float LabelGap = 5f;               // 로봇 머리 위 라벨 간격 (m)
+        const float LabelCharacterSize = 1f;
+        const int LabelFontSize = 100;
+
         const float ReferenceRowZ = -50f;        // 기준물 줄 (로봇 앞)
         const float PersonHeight = 1.8f;
         const float PersonRadius = 0.25f;
@@ -119,6 +123,21 @@ namespace Anseong.EditorTools
             Debug.Log($"{LogPrefix} {label} ({model.name}): 측정 높이 {measured:F3} m, 폭 {bounds.size.x:F3} m, 깊이 {bounds.size.z:F3} m " +
                       $"→ 배율 {scale:F3} → 높이 {RobotHeight} m, 바닥 보정 {offset:F3} m. " +
                       $"Idle 바인딩 경로 {matched}/{total} 일치, Avatar {(animator.avatar != null ? animator.avatar.name : "없음")}", robot);
+
+            CreateLabel(new Vector3(x, RobotHeight + LabelGap, 0f), label);
+        }
+
+        static void CreateLabel(Vector3 position, string text)
+        {
+            var label = new GameObject($"Label {text}");
+            label.transform.position = position;
+            var mesh = label.AddComponent<TextMesh>();
+            mesh.text = text;
+            mesh.characterSize = LabelCharacterSize;
+            mesh.fontSize = LabelFontSize;
+            mesh.anchor = TextAnchor.LowerCenter;
+            mesh.alignment = TextAlignment.Center;
+            Undo.RegisterCreatedObjectUndo(label, "Build Scale Test");
         }
 
         static bool TryGetRendererBounds(GameObject root, out Bounds bounds)
