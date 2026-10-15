@@ -55,7 +55,7 @@
 - 사람이 확인할 것:
   - [x] Unity 임포트 후 Editor.log에 `error CS` 없음 (B 삭제·메뉴 정리 후에도 확인).
   - [ ] EditMode 테스트 `HeightFitTests` 통과.
-  - [ ] `Idle.fbx` 등 애니메이션 FBX를 펼쳤을 때 Mesh 서브에셋이 없음.
+  - [x] `Idle.fbx`를 펼쳤을 때 Mesh 서브에셋 없음, 클립 `Idle`·`IdleAvatar`만 있음 (선우 확인).
   - [x] Play에서 A의 Idle 재생 (선우 확인).
   - [x] Build Scale Test 다시 실행 → `Sandbox_Scale.unity` 저장.
   - [ ] Scene 뷰에서 65m와 1.8m·4m·30m 기준물 비율.
