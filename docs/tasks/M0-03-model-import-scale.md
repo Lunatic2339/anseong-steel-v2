@@ -50,15 +50,16 @@
   - `Editor/RobotModelPostprocessor.cs` — Generic, Avatar 자체 생성, 스케일 1, 모델은 Material Description 재질(InPrefab)·애니메이션 끔, 애니메이션 FBX는 재질 없음·블렌드셰이프 끔·메시/렌더러 제거, 클립 이름 = 파일 이름, Idle/Walk 루프
   - `Editor/ScaleSandboxMenu.cs` — `Anseong → Sandbox → Build Scale Test`, `Report Robot Stats`
   - `Runtime/Core/HeightFit.cs` + `Tests/EditMode/HeightFitTests.cs` — 65m 배율·바닥 보정 계산
-  - `Scenes/Sandbox/` 폴더
-- 로봇 통계 (Report Robot Stats): _사람이 실행 후 기록_
+  - `Scenes/Sandbox/Sandbox_Scale.unity` (메뉴로 생성, 선우 저장)
+- 로봇 통계 (Report Robot Stats, A `BossUpdatedCompatible`): SkinnedMeshRenderer **291**, MeshRenderer 0, 재질 슬롯 **299** / 고유 재질 **124**, 삼각형 **59,134**, 정점 89,402, 렌더러당 최대 본 58
 - 사람이 확인할 것:
   - [x] Unity 임포트 후 Editor.log에 `error CS` 없음 (B 삭제·메뉴 정리 후에도 확인).
   - [ ] EditMode 테스트 `HeightFitTests` 통과.
   - [ ] `Idle.fbx` 등 애니메이션 FBX를 펼쳤을 때 Mesh 서브에셋이 없음.
   - [x] Play에서 A의 Idle 재생 (선우 확인).
-  - [ ] Build Scale Test 다시 실행 → `Sandbox_Scale.unity` 저장. Scene 뷰에서 65m와 1.8m·4m·30m 기준물 비율.
-  - [ ] Report Robot Stats 결과를 Claude에게 전달.
+  - [x] Build Scale Test 다시 실행 → `Sandbox_Scale.unity` 저장.
+  - [ ] Scene 뷰에서 65m와 1.8m·4m·30m 기준물 비율.
+  - [x] Report Robot Stats 실행 (결과 위에 기록).
 - 남은 문제 / 제안:
   - **Game 뷰가 도트처럼 보였던 문제**: 모델·텍스처 문제가 아니라 에디터 Game 뷰 표시 설정이 원인이었다. Windows 화면 배율 150%에서 Game 뷰가 낮은 해상도로 그린 뒤 1.5배로 늘려 보여줬다(Scale 슬라이더 최소값이 1.5x). Game 뷰 해상도 설정을 바꾸자 Scene 뷰와 같게 보였다(선우 확인). 헤드셋·빌드에는 영향 없음.
   - 참고: `Assets/Settings/PC_RPAsset`의 MSAA가 꺼져 있다(`m_MSAA: 1`). 위 문제의 원인은 아니지만, VR 화질을 다룰 때 MSAA 4x를 켤지 총괄 채팅에서 결정 제안.
