@@ -25,10 +25,10 @@
 5. 두 모델의 SkinnedMeshRenderer 수, 재질 수, 삼각형 수를 측정하는 메뉴 **Anseong → Sandbox → Report Robot Stats**를 만들고 결과를 결과 칸에 적는다.
 
 ## 사람이 할 일
-- [ ] **Build Scale Test** 실행 → `Assets/_Anseong/Scenes/Sandbox/Sandbox_Scale.unity`로 저장.
-- [ ] Play: A와 B 중 Idle이 **메시 찢어짐·뒤틀림 없이** 재생되는 쪽을 고른다. 둘 다 정상이면 B(원본)를 우선.
-- [ ] 에디터 Scene 뷰에서 65m 높이와 기준물 비율이 그럴듯한지 본다.
-- [ ] 고른 모델을 Claude에게 알려준다 → Claude가 고르지 않은 쪽 파일을 삭제.
+- [x] **Build Scale Test** 실행 → `Assets/_Anseong/Scenes/Sandbox/Sandbox_Scale.unity`로 저장.
+- [x] Play: A와 B 중 Idle이 **메시 찢어짐·뒤틀림 없이** 재생되는 쪽을 고른다. 둘 다 정상이면 B(원본)를 우선.
+- [x] 에디터 Scene 뷰에서 65m 높이와 기준물 비율이 그럴듯한지 본다.
+- [x] 고른 모델을 Claude에게 알려준다 → Claude가 고르지 않은 쪽 파일을 삭제.
 
 ## 하지 말 것
 - 메시 병합·텍스처 아틀라스(별도 작업, 성재·윤주).
@@ -54,11 +54,11 @@
 - 로봇 통계 (Report Robot Stats, A `BossUpdatedCompatible`): SkinnedMeshRenderer **291**, MeshRenderer 0, 재질 슬롯 **299** / 고유 재질 **124**, 삼각형 **59,134**, 정점 89,402, 렌더러당 최대 본 58
 - 사람이 확인할 것:
   - [x] Unity 임포트 후 Editor.log에 `error CS` 없음 (B 삭제·메뉴 정리 후에도 확인).
-  - [ ] EditMode 테스트 `HeightFitTests` 통과.
+  - [x] EditMode 테스트 `HeightFitTests` 통과 (선우 확인).
   - [x] `Idle.fbx`를 펼쳤을 때 Mesh 서브에셋 없음, 클립 `Idle`·`IdleAvatar`만 있음 (선우 확인).
   - [x] Play에서 A의 Idle 재생 (선우 확인).
   - [x] Build Scale Test 다시 실행 → `Sandbox_Scale.unity` 저장.
-  - [ ] Scene 뷰에서 65m와 1.8m·4m·30m 기준물 비율.
+  - [x] Scene 뷰에서 65m와 1.8m·4m·30m 기준물 비율 (선우 확인).
   - [x] Report Robot Stats 실행 (결과 위에 기록).
 - 남은 문제 / 제안:
   - **Game 뷰가 도트처럼 보였던 문제**: 모델·텍스처 문제가 아니라 에디터 Game 뷰 표시 설정이 원인이었다. Windows 화면 배율 150%에서 Game 뷰가 낮은 해상도로 그린 뒤 1.5배로 늘려 보여줬다(Scale 슬라이더 최소값이 1.5x). Game 뷰 해상도 설정을 바꾸자 Scene 뷰와 같게 보였다(선우 확인). 헤드셋·빌드에는 영향 없음.
