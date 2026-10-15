@@ -1,0 +1,22 @@
+{
+    "name": "Anseong.Editor",
+    "rootNamespace": "Anseong.EditorTools",
+    "references": [
+        "Anseong.Runtime",
+        "Unity.InputSystem",
+        "Unity.Netcode.Runtime",
+        "Unity.XR.CoreUtils",
+        "Unity.XR.Interaction.Toolkit"
+    ],
+    "includePlatforms": [
+        "Editor"
+    ],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": false,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

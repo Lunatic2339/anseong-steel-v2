@@ -107,3 +107,14 @@ InitTestScene*.unity*
 
 # Auto-generated cache in Assets folder
 /[Aa]ssets/[Ss]ceneDependencyCache*
+
+# --- anseong-steel-v2 additions ---
+# Unity Version Control (Plastic) leftovers; we use Git only
+.plastic/
+ignore.conf
+# Claude Code local settings
+.claude/settings.local.json
+# Local captures, logs and backups
+*.log
+[Rr]ecordings/
+*_Backup_*/
