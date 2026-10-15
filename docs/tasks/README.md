@@ -15,10 +15,13 @@
 
 | 파일 | 마일스톤 | 담당 | 상태 |
 |---|---|---|---|
-| `M0-01-project-cleanup.md` | M0 | 선우 | 대기 |
-| `M0-02-xr-basic-scene.md` | M0 | 선우 (+PC-B 한 명) | 대기 |
+| `M0-01-project-cleanup.md` | M0 | 선우 | 완료 (#1) |
+| `M0-02-xr-basic-scene.md` | M0 | 선우 (+PC-B 한 명) | 완료 (#2), PC-B 확인 남음 |
 | `M0-03-model-import-scale.md` | M0 | 선우 (+성재) | 대기 |
 | `M0-04-cockpit-eye-height.md` | M0 | 선우 | 대기 |
+| `A-01-boss-animations.md` | 아트 (10/29, 11/12) | 성재 | 대기 |
+| `A-02-merge-and-material-slots.md` | 아트 (11/05) | Blender 경험자 + 윤주 | M0-03 후 |
+| `A-03-robot-colors.md` | 아트 (11/19) | 윤주 | A-02 후 |
 
 ## 지시서 형식
 
