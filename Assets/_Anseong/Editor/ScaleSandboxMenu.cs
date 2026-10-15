@@ -1,5 +1,4 @@
 using System.Linq;
-using System.Text;
 using Anseong.Core;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -10,12 +9,11 @@ using UnityEngine.SceneManagement;
 namespace Anseong.EditorTools
 {
     /// <summary>
-    /// 로봇 후보 모델 A/B를 65m로 세워 비교하는 샌드박스 씬 메뉴. 씬 저장은 사람이 한다.
+    /// 로봇 모델을 65m로 세워 기준물과 비교하는 샌드박스 씬 메뉴. 씬 저장은 사람이 한다.
     /// </summary>
     public static class ScaleSandboxMenu
     {
-        const string ModelAPath = "Assets/_Anseong/Art/Robot/Source/BossUpdatedCompatible.fbx";
-        const string ModelBPath = "Assets/_Anseong/Art/Robot/Source/mecha-finger-rig-mixamo-v026dsadsfadf.fbx";
+        const string RobotModelPath = "Assets/_Anseong/Art/Robot/Source/BossUpdatedCompatible.fbx";
         const string IdleClipPath = "Assets/_Anseong/Art/Robot/Animation/Source/Idle.fbx";
         const string IdleControllerPath = "Assets/_Anseong/Art/Robot/Animation/Robot_Idle.controller";
         const string SandboxFolderParent = "Assets/_Anseong/Scenes";
@@ -25,20 +23,15 @@ namespace Anseong.EditorTools
         const string LogPrefix = "[ScaleSandboxMenu]";
 
         const float RobotHeight = 65f;
-        const float RobotSpacing = 80f;          // A와 B 사이 X 간격
-
-        const float LabelGap = 5f;               // 로봇 머리 위 라벨 간격 (m)
-        const float LabelCharacterSize = 1f;
-        const int LabelFontSize = 100;
 
         const float ReferenceRowZ = -50f;        // 기준물 줄 (로봇 앞)
         const float PersonHeight = 1.8f;
         const float PersonRadius = 0.25f;
         static readonly Vector3 TruckSize = new Vector3(2.5f, 4f, 10f);
         static readonly Vector3 BuildingSize = new Vector3(20f, 30f, 20f);
-        const float PersonX = 0f;
-        const float TruckX = 10f;
-        const float BuildingX = -30f;
+        const float PersonX = 30f;               // 로봇(X=0)을 가리지 않게 옆으로 비켜 세운다
+        const float TruckX = 36f;
+        const float BuildingX = 60f;
 
         const float GroundSize = 400f;           // 바닥 한 변 (m)
         const float UnityPlaneSize = 10f;        // 기본 Plane 한 변
@@ -49,12 +42,11 @@ namespace Anseong.EditorTools
         [MenuItem("Anseong/Sandbox/Build Scale Test")]
         static void BuildScaleTest()
         {
-            var modelA = AssetDatabase.LoadAssetAtPath<GameObject>(ModelAPath);
-            var modelB = AssetDatabase.LoadAssetAtPath<GameObject>(ModelBPath);
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(RobotModelPath);
             var idleClip = LoadClip(IdleClipPath);
-            if (modelA == null && modelB == null)
+            if (model == null)
             {
-                EditorUtility.DisplayDialog("Build Scale Test", $"모델을 찾지 못했습니다.\n{ModelAPath}\n{ModelBPath}", "확인");
+                EditorUtility.DisplayDialog("Build Scale Test", $"모델을 찾지 못했습니다: {RobotModelPath}", "확인");
                 return;
             }
             if (idleClip == null)
@@ -68,11 +60,7 @@ namespace Anseong.EditorTools
             var controller = GetOrCreateIdleController(idleClip);
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-            if (modelA != null) PlaceRobot(modelA, ModelAPath, "A", -RobotSpacing * 0.5f, controller, idleClip);
-            else Debug.LogWarning($"{LogPrefix} 모델 A 없음: {ModelAPath}");
-            if (modelB != null) PlaceRobot(modelB, ModelBPath, "B", RobotSpacing * 0.5f, controller, idleClip);
-            else Debug.LogWarning($"{LogPrefix} 모델 B 없음: {ModelBPath}");
-
+            PlaceRobot(model, RobotModelPath, controller, idleClip);
             CreateGround();
             CreateReferences();
             AimCamera(scene);
@@ -85,23 +73,48 @@ namespace Anseong.EditorTools
         [MenuItem("Anseong/Sandbox/Report Robot Stats")]
         static void ReportRobotStats()
         {
-            var report = new StringBuilder($"{LogPrefix} 로봇 모델 통계\n");
-            AppendStats(report, "A", ModelAPath);
-            AppendStats(report, "B", ModelBPath);
-            Debug.Log(report.ToString());
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(RobotModelPath);
+            if (model == null)
+            {
+                Debug.LogError($"{LogPrefix} 모델을 찾지 못했습니다: {RobotModelPath}");
+                return;
+            }
+
+            var skinned = model.GetComponentsInChildren<SkinnedMeshRenderer>(true);
+            var meshRenderers = model.GetComponentsInChildren<MeshRenderer>(true);
+            var renderers = model.GetComponentsInChildren<Renderer>(true);
+            var materialSlots = renderers.Sum(r => r.sharedMaterials.Length);
+            var uniqueMaterials = renderers.SelectMany(r => r.sharedMaterials).Where(m => m != null).Distinct().Count();
+
+            var meshes = skinned.Select(s => s.sharedMesh)
+                .Concat(model.GetComponentsInChildren<MeshFilter>(true).Select(f => f.sharedMesh))
+                .Where(m => m != null)
+                .ToArray();
+            long triangles = 0;
+            long vertices = 0;
+            foreach (var mesh in meshes)
+            {
+                vertices += mesh.vertexCount;
+                for (var i = 0; i < mesh.subMeshCount; i++)
+                    if (mesh.GetTopology(i) == MeshTopology.Triangles)
+                        triangles += mesh.GetIndexCount(i) / 3;
+            }
+            var maxBones = skinned.Length == 0 ? 0 : skinned.Max(s => s.bones.Length);
+
+            Debug.Log($"{LogPrefix} 로봇 모델 통계 ({model.name}): SkinnedMeshRenderer {skinned.Length}, MeshRenderer {meshRenderers.Length}, " +
+                      $"재질 슬롯 {materialSlots} / 고유 재질 {uniqueMaterials}, 삼각형 {triangles:N0}, 정점 {vertices:N0}, " +
+                      $"렌더러당 최대 본 {maxBones}", model);
         }
 
-        static void PlaceRobot(GameObject model, string modelPath, string label, float x,
-            AnimatorController controller, AnimationClip idleClip)
+        static void PlaceRobot(GameObject model, string modelPath, AnimatorController controller, AnimationClip idleClip)
         {
             var robot = (GameObject)PrefabUtility.InstantiatePrefab(model);
-            robot.name = $"{label}_{model.name}";
-            robot.transform.position = new Vector3(x, 0f, 0f);
+            robot.transform.position = Vector3.zero;
             Undo.RegisterCreatedObjectUndo(robot, "Build Scale Test");
 
             if (!TryGetRendererBounds(robot, out var bounds))
             {
-                Debug.LogError($"{LogPrefix} {label}: 렌더러가 없어 높이를 잴 수 없습니다.", robot);
+                Debug.LogError($"{LogPrefix} {model.name}: 렌더러가 없어 높이를 잴 수 없습니다.", robot);
                 return;
             }
 
@@ -120,24 +133,9 @@ namespace Anseong.EditorTools
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
             var (matched, total) = CountMatchedBindingPaths(robot.transform, idleClip);
-            Debug.Log($"{LogPrefix} {label} ({model.name}): 측정 높이 {measured:F3} m, 폭 {bounds.size.x:F3} m, 깊이 {bounds.size.z:F3} m " +
+            Debug.Log($"{LogPrefix} {model.name}: 측정 높이 {measured:F3} m, 폭 {bounds.size.x:F3} m, 깊이 {bounds.size.z:F3} m " +
                       $"→ 배율 {scale:F3} → 높이 {RobotHeight} m, 바닥 보정 {offset:F3} m. " +
                       $"Idle 바인딩 경로 {matched}/{total} 일치, Avatar {(animator.avatar != null ? animator.avatar.name : "없음")}", robot);
-
-            CreateLabel(new Vector3(x, RobotHeight + LabelGap, 0f), label);
-        }
-
-        static void CreateLabel(Vector3 position, string text)
-        {
-            var label = new GameObject($"Label {text}");
-            label.transform.position = position;
-            var mesh = label.AddComponent<TextMesh>();
-            mesh.text = text;
-            mesh.characterSize = LabelCharacterSize;
-            mesh.fontSize = LabelFontSize;
-            mesh.anchor = TextAnchor.LowerCenter;
-            mesh.alignment = TextAlignment.Center;
-            Undo.RegisterCreatedObjectUndo(label, "Build Scale Test");
         }
 
         static bool TryGetRendererBounds(GameObject root, out Bounds bounds)
@@ -238,41 +236,6 @@ namespace Anseong.EditorTools
             var folder = $"{SandboxFolderParent}/{SandboxFolderName}";
             if (!AssetDatabase.IsValidFolder(folder))
                 AssetDatabase.CreateFolder(SandboxFolderParent, SandboxFolderName);
-        }
-
-        static void AppendStats(StringBuilder report, string label, string modelPath)
-        {
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
-            if (model == null)
-            {
-                report.AppendLine($"  {label}: 없음 ({modelPath})");
-                return;
-            }
-
-            var skinned = model.GetComponentsInChildren<SkinnedMeshRenderer>(true);
-            var meshRenderers = model.GetComponentsInChildren<MeshRenderer>(true);
-            var renderers = model.GetComponentsInChildren<Renderer>(true);
-            var materialSlots = renderers.Sum(r => r.sharedMaterials.Length);
-            var uniqueMaterials = renderers.SelectMany(r => r.sharedMaterials).Where(m => m != null).Distinct().Count();
-
-            var meshes = skinned.Select(s => s.sharedMesh)
-                .Concat(model.GetComponentsInChildren<MeshFilter>(true).Select(f => f.sharedMesh))
-                .Where(m => m != null)
-                .ToArray();
-            long triangles = 0;
-            long vertices = 0;
-            foreach (var mesh in meshes)
-            {
-                vertices += mesh.vertexCount;
-                for (var i = 0; i < mesh.subMeshCount; i++)
-                    if (mesh.GetTopology(i) == MeshTopology.Triangles)
-                        triangles += mesh.GetIndexCount(i) / 3;
-            }
-            var maxBones = skinned.Length == 0 ? 0 : skinned.Max(s => s.bones.Length);
-
-            report.AppendLine($"  {label} ({model.name}): SkinnedMeshRenderer {skinned.Length}, MeshRenderer {meshRenderers.Length}, " +
-                              $"재질 슬롯 {materialSlots} / 고유 재질 {uniqueMaterials}, 삼각형 {triangles:N0}, 정점 {vertices:N0}, " +
-                              $"렌더러당 최대 본 {maxBones}");
         }
     }
 }
