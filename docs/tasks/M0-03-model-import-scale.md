@@ -41,5 +41,25 @@
 
 ## 결과 (작업 후 Claude가 작성)
 - 바뀐 파일:
+  - `Art/Robot/Source/BossUpdatedCompatible.fbx` (A), `Art/Robot/Source/mecha-finger-rig-mixamo-v026dsadsfadf.fbx` (B)
+  - `Art/Robot/Source/Textures/texture-000~121.png` 122장 (A·B가 같은 이름으로 외부 참조, 기존 `.fbm`과 `Surface/Textures` 사본은 md5 동일 → 한 벌만)
+  - `Art/Robot/Animation/Source/{Idle,Walk,Punch}.fbx`
+  - `Editor/RobotModelPostprocessor.cs` — Generic, Avatar 자체 생성, 스케일 1, 모델은 Material Description 재질(InPrefab)·애니메이션 끔, 애니메이션 FBX는 재질 없음·블렌드셰이프 끔·메시/렌더러 제거, 클립 이름 = 파일 이름, Idle/Walk 루프
+  - `Editor/ScaleSandboxMenu.cs` — `Anseong → Sandbox → Build Scale Test`, `Report Robot Stats`
+  - `Runtime/Core/HeightFit.cs` + `Tests/EditMode/HeightFitTests.cs` — 65m 배율·바닥 보정 계산
+  - Build Scale Test 실행 시 생성: `Art/Robot/Animation/Robot_Idle.controller`, `Scenes/Sandbox/` 폴더
+- 로봇 통계 (Report Robot Stats): _사람이 실행 후 기록_
+  - A:
+  - B:
 - 사람이 확인할 것:
+  - [ ] Unity 재임포트 후 Editor.log에 `error CS` 없음. EditMode 테스트 `HeightFitTests` 통과.
+  - [ ] 모델 A·B 재질에 텍스처가 연결됨 (분홍·민무늬 아님).
+  - [ ] `Idle.fbx` 등 애니메이션 FBX를 펼쳤을 때 Mesh 서브에셋이 없음.
+  - [ ] Build Scale Test Console 로그: A·B 측정 높이, 배율, `Idle 바인딩 경로 n/m 일치` (m에 가까울수록 맞음).
+  - [ ] `Sandbox_Scale.unity` 저장 → Play에서 Idle이 찢어짐·뒤틀림 없이 재생되는 쪽 선택 (둘 다 정상이면 B).
+  - [ ] Scene 뷰에서 65m와 1.8m·4m·30m 기준물 비율.
+  - [ ] Report Robot Stats 결과를 Claude에게 전달.
 - 남은 문제 / 제안:
+  - 고른 모델이 정해지면 다른 쪽 FBX(+.meta)를 삭제하고, 모델 경로 상수(`ScaleSandboxMenu`)를 하나로 정리.
+  - FBX 5개가 약 105MB로 일반 git에 들어간다(각 50MB 이하). 저장소가 커지는 것이 부담되면 Git LFS 도입을 총괄 채팅에서 결정.
+  - 애니메이션 FBX 메시는 `OnPostprocessModel`에서 지운다. Unity가 서브에셋을 남기면 Mixamo "Without Skin" 재다운로드로 바꾸는 것을 제안.
