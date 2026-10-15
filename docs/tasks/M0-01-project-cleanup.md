@@ -36,5 +36,15 @@
 
 ## 결과 (작업 후 Claude가 작성)
 - 바뀐 파일:
+  - `Packages/manifest.json`: 7개 패키지 제거(Claude). 다른 패키지 버전 변경 없음.
+  - `Packages/packages-lock.json`: Unity가 재생성. 7개 + 그것들만 쓰던 의존성 3개(`com.unity.2d.sprite`, `com.unity.dt.app-ui`, `com.unity.nuget.newtonsoft-json`) 제거, 남은 패키지 버전 변경 없음.
+  - `Assets/XR/Settings/OpenXRPackageSettings.asset`: PC(Standalone) 프로필 Touch Pro 끔, Touch Plus 켬. 켜진 프로필 = Oculus Touch + Meta Quest Touch Plus.
+  - `ProjectSettings/ProjectSettings.asset`: `companyName`·`productName` = `AnseongSteel`.
+  - `ProjectSettings/VersionControlSettings.asset`: `Unity Version Control` → `Visible Meta Files` (아래 참고).
 - 사람이 확인할 것:
+  - Package Manager → In Project에 제거한 7개가 없는지.
+  - Api Compatibility Level은 템플릿부터 이미 .NET Framework였다(파일의 `apiCompatibilityLevel: 3` = .NET Framework, 플랫폼별 값 없음). 에디터 화면에서도 .NET Framework로 확인됨. 그래서 이 항목은 파일 변경이 없다.
+  - `Editor.log`: 패키지 해석 에러·`error CS` 없음. 경고는 `Anseong.Runtime`·`Anseong.Editor`·`Anseong.Tests.EditMode` asmdef에 스크립트가 없다는 것뿐(스크립트가 생기면 사라짐).
 - 남은 문제 / 제안:
+  - `collab-proxy`(Unity Version Control) 제거 후 Version Control 모드가 `Hidden Meta Files`로 바뀌어서, 사람이 `Visible Meta Files`로 되돌렸다. git 사용에 필요하므로 유지할 것.
+  - `ProjectSettings/Packages/com.unity.ai.assistant/Settings.json`이 git에 남아 있다. 패키지를 뺐으므로 쓰이지 않는 파일이다. `ProjectSettings/*` 수정 금지 규칙 때문에 그대로 뒀다. 삭제 여부를 총괄 채팅에서 결정하기를 제안.
