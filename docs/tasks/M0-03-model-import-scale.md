@@ -25,10 +25,10 @@
 5. 두 모델의 SkinnedMeshRenderer 수, 재질 수, 삼각형 수를 측정하는 메뉴 **Anseong → Sandbox → Report Robot Stats**를 만들고 결과를 결과 칸에 적는다.
 
 ## 사람이 할 일
-- [ ] **Build Scale Test** 실행 → `Assets/_Anseong/Scenes/Sandbox/Sandbox_Scale.unity`로 저장.
-- [ ] Play: A와 B 중 Idle이 **메시 찢어짐·뒤틀림 없이** 재생되는 쪽을 고른다. 둘 다 정상이면 B(원본)를 우선.
-- [ ] 에디터 Scene 뷰에서 65m 높이와 기준물 비율이 그럴듯한지 본다.
-- [ ] 고른 모델을 Claude에게 알려준다 → Claude가 고르지 않은 쪽 파일을 삭제.
+- [x] **Build Scale Test** 실행 → `Assets/_Anseong/Scenes/Sandbox/Sandbox_Scale.unity`로 저장.
+- [x] Play: A와 B 중 Idle이 **메시 찢어짐·뒤틀림 없이** 재생되는 쪽을 고른다. 둘 다 정상이면 B(원본)를 우선.
+- [x] 에디터 Scene 뷰에서 65m 높이와 기준물 비율이 그럴듯한지 본다.
+- [x] 고른 모델을 Claude에게 알려준다 → Claude가 고르지 않은 쪽 파일을 삭제.
 
 ## 하지 말 것
 - 메시 병합·텍스처 아틀라스(별도 작업, 성재·윤주).
@@ -40,6 +40,30 @@
 - 렌더러·재질·삼각형 수가 기록됨.
 
 ## 결과 (작업 후 Claude가 작성)
+- 선택한 모델: **A `BossUpdatedCompatible.fbx`** (선우, Play에서 확인). B는 삭제.
+  - 근거: FBX 노드를 읽어 보면 A와 Idle/Walk/Punch는 단위 m, `Armature` 스케일 1로 구조가 같다. B는 단위 cm에 `Armature` 스케일 100이라, Idle 재생 시 몸이 사라졌다(라벨만 보이고 메시는 안 보임). 두 모델 모두 Idle 바인딩 경로는 33/33 일치했으므로 경로가 아니라 Armature 스케일 차이가 원인으로 보인다.
+  - 측정: 임포트 직후 렌더러 높이 1.056 m → 배율 61.550 → 65 m, 바닥 보정 3.480 m.
 - 바뀐 파일:
+  - `Art/Robot/Source/BossUpdatedCompatible.fbx`
+  - `Art/Robot/Source/Textures/texture-000~121.png` 122장 (모델이 같은 이름으로 외부 참조. 기존 `.fbm`과 `Surface/Textures` 사본은 md5 동일 → 한 벌만)
+  - `Art/Robot/Animation/Source/{Idle,Walk,Punch}.fbx`, `Art/Robot/Animation/Robot_Idle.controller` (메뉴가 생성)
+  - `Editor/RobotModelPostprocessor.cs` — Generic, Avatar 자체 생성, 스케일 1, 모델은 Material Description 재질(InPrefab)·애니메이션 끔, 애니메이션 FBX는 재질 없음·블렌드셰이프 끔·메시/렌더러 제거, 클립 이름 = 파일 이름, Idle/Walk 루프
+  - `Editor/ScaleSandboxMenu.cs` — `Anseong → Sandbox → Build Scale Test`, `Report Robot Stats`
+  - `Runtime/Core/HeightFit.cs` + `Tests/EditMode/HeightFitTests.cs` — 65m 배율·바닥 보정 계산
+  - `Scenes/Sandbox/Sandbox_Scale.unity` (메뉴로 생성, 선우 저장)
+- 로봇 통계 (Report Robot Stats, A `BossUpdatedCompatible`): SkinnedMeshRenderer **291**, MeshRenderer 0, 재질 슬롯 **299** / 고유 재질 **124**, 삼각형 **59,134**, 정점 89,402, 렌더러당 최대 본 58
 - 사람이 확인할 것:
+  - [x] Unity 임포트 후 Editor.log에 `error CS` 없음 (B 삭제·메뉴 정리 후에도 확인).
+  - [x] EditMode 테스트 `HeightFitTests` 통과 (선우 확인).
+  - [x] `Idle.fbx`를 펼쳤을 때 Mesh 서브에셋 없음, 클립 `Idle`·`IdleAvatar`만 있음 (선우 확인).
+  - [x] Play에서 A의 Idle 재생 (선우 확인).
+  - [x] Build Scale Test 다시 실행 → `Sandbox_Scale.unity` 저장.
+  - [x] Scene 뷰에서 65m와 1.8m·4m·30m 기준물 비율 (선우 확인).
+  - [x] Report Robot Stats 실행 (결과 위에 기록).
 - 남은 문제 / 제안:
+  - **Game 뷰가 도트처럼 보였던 문제**: 모델·텍스처 문제가 아니라 에디터 Game 뷰 표시 설정이 원인이었다. Windows 화면 배율 150%에서 Game 뷰가 낮은 해상도로 그린 뒤 1.5배로 늘려 보여줬다(Scale 슬라이더 최소값이 1.5x). Game 뷰 해상도 설정을 바꾸자 Scene 뷰와 같게 보였다(선우 확인). 헤드셋·빌드에는 영향 없음.
+  - 참고: `Assets/Settings/PC_RPAsset`의 MSAA가 꺼져 있다(`m_MSAA: 1`). 위 문제의 원인은 아니지만, VR 화질을 다룰 때 MSAA 4x를 켤지 총괄 채팅에서 결정 제안.
+  - 드라이버 설치 중 Unity가 강제 종료되어 `Library/Bee` 빌드 캐시가 깨졌다(ILPP `SymbolsNotMatchingException`). Unity를 닫고 `Library/Bee`를 지운 뒤 다시 열어 해결.
+  - 텍스처 122장 대부분이 32~512px라 65m 크기에서 가까이 보면 흐릴 수 있다. 메시 병합·아틀라스 작업(성재·윤주) 때 함께 검토.
+  - FBX 4개가 약 88MB로 일반 git에 들어간다(각 50MB 이하). B는 히스토리에 남는다. 저장소 크기가 부담되면 Git LFS 도입을 총괄 채팅에서 결정.
+  - 애니메이션 FBX 메시는 `OnPostprocessModel`에서 지운다. 서브에셋이 남으면 Mixamo "Without Skin" 재다운로드로 바꾸는 것을 제안.
