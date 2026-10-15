@@ -8,7 +8,7 @@
 - 손가락은 **주먹으로 고정**. 코드가 주먹 포즈를 씌우므로 손가락 애니메이션은 만들지 않는다.
 - 플레이어 로봇 팔은 IK로 움직이므로 **플레이어용 애니메이션은 필요 없다**(출격 자동 걷기 정도만 보스 클립 재사용).
 - 모델 전용 텍스처를 새로 그리지 않는다. 단색 플라스틱처럼 보이지 않게 **반복 디테일 맵·AO·색 슬롯**을 쓰거나 기존 Tripo 텍스처를 살린다. 최종 방식은 A-03에서 헤드셋으로 3안을 비교해 고른다(아래 "표면 표현 3안").
-- 팀에 Blender 경험자가 있으므로 **메시 병합·재질 교체·모서리 정리는 Blender에서** 원본을 깨끗하게 만든다(A-02). Blender가 막히면 Unity 에디터 도구로 대신한다.
+- 팀에 Blender 경험자(성재·유진)가 있으므로 **메시 병합·재질 교체·모서리 정리는 Blender에서** 원본을 깨끗하게 만든다(A-02). Blender가 막히면 Unity 에디터 도구로 대신한다.
 
 ## 바꾸면 안 되는 기준 (코드가 의존함)
 
@@ -104,5 +104,5 @@ URP Lit 재질 6개 × 2세트(플레이어/보스). 색·Metallic·Smoothness·
 ## 아트 작업 지시서
 
 - `docs/tasks/A-01-boss-animations.md` — 성재
-- `docs/tasks/A-02-merge-and-material-slots.md` — Blender 경험자 (+윤주, Claude Code)
+- `docs/tasks/A-02-merge-and-material-slots.md` — 성재 (+유진, 윤주, Claude Code)
 - `docs/tasks/A-03-robot-colors.md` — 윤주 (표면 3안 비교 + 색)

@@ -20,7 +20,7 @@
 | `M0-03-model-import-scale.md` | M0 | 선우 (+성재) | 완료 (#5) |
 | `M0-04-cockpit-eye-height.md` | M0 | 선우 | 대기 |
 | `A-01-boss-animations.md` | 아트 (10/29, 11/12) | 성재 | 대기 |
-| `A-02-merge-and-material-slots.md` | 아트 (11/05) | Blender 경험자 + 윤주 | M0-03 후 |
+| `A-02-merge-and-material-slots.md` | 아트 (11/05) | 성재 (+유진, 윤주) | M0-03 후 |
 | `A-03-robot-colors.md` | 아트 (11/19) | 윤주 | A-02 후 |
 
 ## 지시서 형식
