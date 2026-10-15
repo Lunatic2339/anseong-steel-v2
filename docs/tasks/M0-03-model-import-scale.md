@@ -53,14 +53,16 @@
   - `Scenes/Sandbox/` 폴더
 - 로봇 통계 (Report Robot Stats): _사람이 실행 후 기록_
 - 사람이 확인할 것:
-  - [x] Unity 임포트 후 Editor.log에 `error CS` 없음 (B 삭제·메뉴 정리 후 재확인 필요).
+  - [x] Unity 임포트 후 Editor.log에 `error CS` 없음 (B 삭제·메뉴 정리 후에도 확인).
   - [ ] EditMode 테스트 `HeightFitTests` 통과.
   - [ ] `Idle.fbx` 등 애니메이션 FBX를 펼쳤을 때 Mesh 서브에셋이 없음.
   - [x] Play에서 A의 Idle 재생 (선우 확인).
   - [ ] Build Scale Test 다시 실행 → `Sandbox_Scale.unity` 저장. Scene 뷰에서 65m와 1.8m·4m·30m 기준물 비율.
   - [ ] Report Robot Stats 결과를 Claude에게 전달.
 - 남은 문제 / 제안:
-  - **화면 계단 현상**: `Assets/Settings/PC_RPAsset`의 MSAA가 꺼져 있다(`m_MSAA: 1`). 렌더 스케일은 1. VR(PC 렌더링)에서는 MSAA 4x가 보통이므로 켤지 총괄 채팅에서 결정 제안. 이 작업 범위 밖이라 바꾸지 않았다.
+  - **Game 뷰가 도트처럼 보였던 문제**: 모델·텍스처 문제가 아니라 에디터 Game 뷰 표시 설정이 원인이었다. Windows 화면 배율 150%에서 Game 뷰가 낮은 해상도로 그린 뒤 1.5배로 늘려 보여줬다(Scale 슬라이더 최소값이 1.5x). Game 뷰 해상도 설정을 바꾸자 Scene 뷰와 같게 보였다(선우 확인). 헤드셋·빌드에는 영향 없음.
+  - 참고: `Assets/Settings/PC_RPAsset`의 MSAA가 꺼져 있다(`m_MSAA: 1`). 위 문제의 원인은 아니지만, VR 화질을 다룰 때 MSAA 4x를 켤지 총괄 채팅에서 결정 제안.
+  - 드라이버 설치 중 Unity가 강제 종료되어 `Library/Bee` 빌드 캐시가 깨졌다(ILPP `SymbolsNotMatchingException`). Unity를 닫고 `Library/Bee`를 지운 뒤 다시 열어 해결.
   - 텍스처 122장 대부분이 32~512px라 65m 크기에서 가까이 보면 흐릴 수 있다. 메시 병합·아틀라스 작업(성재·윤주) 때 함께 검토.
   - FBX 4개가 약 88MB로 일반 git에 들어간다(각 50MB 이하). B는 히스토리에 남는다. 저장소 크기가 부담되면 Git LFS 도입을 총괄 채팅에서 결정.
   - 애니메이션 FBX 메시는 `OnPostprocessModel`에서 지운다. 서브에셋이 남으면 Mixamo "Without Skin" 재다운로드로 바꾸는 것을 제안.
