@@ -19,9 +19,27 @@
 | `M0-02-xr-basic-scene.md` | M0 | 선우 (+PC-B 한 명) | 완료 (#2), PC-B 확인 남음 |
 | `M0-03-model-import-scale.md` | M0 | 선우 (+성재) | 완료 (#5) |
 | `M0-04-cockpit-eye-height.md` | M0 | 선우 | 대기 |
-| `A-01-boss-animations.md` | 아트 (10/29, 11/12) | 성재 | 대기 |
-| `A-02-merge-and-material-slots.md` | 아트 (11/05) | Blender 경험자 + 윤주 | M0-03 후 |
-| `A-03-robot-colors.md` | 아트 (11/19) | 윤주 | A-02 후 |
+| `A-01-boss-animations.md` | 아트 (10/29, 11/12) | 유진 (보스 + 플레이어 몸 클립) | 지금 시작 |
+| `A-02-merge-and-material-slots.md` | 아트 (11/05) | 성재 (+유진) | 지금 시작 |
+| `A-03-robot-colors.md` | 아트 (11/19) | 성재 (플레이어 색) + 유진 (보스 색) | A-02 후 |
+| `D-01-boss-pattern-table.md` | 기획 (10/27) | 유진 (Claude 제안값 다듬기) | 지금 시작 |
+| `E-01-steelworks-environment.md` | 환경 (10/28, 11/19) | 윤주 (+유진 도움) | 지금 시작 |
+| `S-01-sound.md` | 소리 (10/28, 11/19) | 윤주 | 지금 시작 |
+| `H-01-exoskeleton-prototype.md` | 하드웨어 (10/29) | 고건 | 지금 시작 |
+| `H-02-equipment-and-pc-b.md` | 장비 (10/22) | 성재 | 지금 시작 |
+| `P-01-midterm-presentation.md` | 발표 (10/29) | 유진 (+Claude 초안) | 지금 시작 |
+| 조종석 모델 (지시서는 M0-04 후) | 아트 (11/19) | 성재 | A-02 후 |
+| HUD 아이콘 시안 (지시서는 M2 때) | 아트 (11/19) | 윤주 | E-01 1차 후 |
+| VFX 소스 고르기 (지시서는 M2 때) | 아트 (11/19) | 유진 | P-01 후 |
+| 부서지는 구조물 조각 만들기 (지시서는 M4 때) | 아트 (11/19) | 유진 (Blender) | E-01 1차 후 |
+
+번호 앞 글자: M = 코드(선우+Claude), A = 아트, D = 기획, E = 환경, S = 소리, H = 하드웨어, P = 발표.
+
+### 코드를 쓰지 않는 팀원이 결과물을 넘기는 법
+- 레포를 clone해서 Unity로 열 수 있으면: 지시서에 적힌 폴더에 넣고 Claude Code(데스크톱 앱 Code 탭)에 "커밋하고 PR 만들어줘". 위 "진행 순서"와 같다.
+- 어렵다면: 파일을 선우에게 전달(디스코드·드라이브). 선우의 Claude Code 세션이 넣는다.
+- 어느 쪽이든 **`Scenes/Main.unity`는 건드리지 않는다.** 씬 작업은 `Scenes/Sandbox/Sandbox_<이름>.unity`에서 한다.
+- 외부에서 받은 파일(모델·텍스처·소리)은 출처와 라이선스를 같은 폴더의 `SOURCES.md`에 적는다. 출처를 모르는 파일은 쓰지 않는다(전시 작품이므로).
 
 ## 지시서 형식
 

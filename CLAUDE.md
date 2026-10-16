@@ -12,6 +12,8 @@
 | `docs/design/02_architecture.md` | PC 2대 네트워크 구조, 시점·스케일, 외골격 |
 | `docs/design/03_reuse_from_old_repo.md` | 기존 레포에서 참고할 로직(파일:줄)과 피해야 할 버그 |
 | `docs/design/04_art_spec.md` | 아트 기준(뼈대·크기·성능 한도·재질 슬롯), 보스 애니메이션 목록, 아트 마감 |
+| `docs/design/05_boss_patterns.md` | 보스 공격 흐름·기술표·페이즈별 순서·전환 (제안값) |
+| `docs/design/06_feel_and_sound.md` | 조작감 컨셉: 공격·이동 동작별 소리·진동·외골격 |
 | `docs/tasks/` | 작업 지시서. **한 세션 = 지시서 하나 = PR 하나** |
 
 ## 고정된 결정
@@ -36,6 +38,7 @@ Assets/_Anseong/
   Tests/EditMode/ (asmdef: Anseong.Tests.EditMode)
   Art/{Robot,Boss,Cockpit,Pilot,Environment,Weapons}  Audio/
   Scenes/Main.unity, Scenes/Sandbox/Sandbox_<이름>.unity
+Hardware/Exo/firmware/   ESP32 펌웨어 (Unity 밖)
 ```
 
 네임스페이스는 `Anseong.<폴더>` (예: `Anseong.Combat`).
