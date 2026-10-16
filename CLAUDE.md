@@ -36,6 +36,7 @@ Assets/_Anseong/
   Tests/EditMode/ (asmdef: Anseong.Tests.EditMode)
   Art/{Robot,Boss,Cockpit,Pilot,Environment,Weapons}  Audio/
   Scenes/Main.unity, Scenes/Sandbox/Sandbox_<이름>.unity
+Hardware/Exo/firmware/   ESP32 펌웨어 (Unity 밖)
 ```
 
 네임스페이스는 `Anseong.<폴더>` (예: `Anseong.Combat`).

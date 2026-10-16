@@ -101,8 +101,18 @@ URP Lit 재질 6개 × 2세트(플레이어/보스). 색·Metallic·Smoothness·
 | 11/19 | 보스·플레이어 색 최종, 환경 1차 |
 | 11/26 | **아트 동결**. 이후로는 버그 수정만 |
 
+## 환경 성능 한도 (제철소 전체)
+
+| 항목 | 한도 |
+|---|---|
+| 삼각형 | 300,000 이하 (멀리 있는 건물은 단순한 모양으로) |
+| 재질 | 40개 이하 |
+| 텍스처 | 장당 2048 이하 |
+| 조명 | 방향광 1개만 실시간. 나머지 조명은 넣지 않는다(조명 설정은 Claude가 한다) |
+| 움직이지 않는 물체 | Inspector의 Static 체크 |
+
 ## 아트 작업 지시서
 
-- `docs/tasks/A-01-boss-animations.md` — 성재
+- `docs/tasks/A-01-boss-animations.md` — 유진
 - `docs/tasks/A-02-merge-and-material-slots.md` — 성재 (+유진, 윤주, Claude Code)
 - `docs/tasks/A-03-robot-colors.md` — 윤주 (표면 3안 비교 + 색)
