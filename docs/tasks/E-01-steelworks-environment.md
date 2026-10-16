@@ -1,6 +1,6 @@
 # E-01 제철소 환경
 
-- 마일스톤: 1차 10/28 (중간발표), 2차 11/19 / 담당: 윤주 / 브랜치: `feat/yunju-environment`
+- 마일스톤: 1차 10/28 (중간발표), 2차 11/19 / 담당: 유진 (보스전 무대) / 브랜치: `feat/yujin-environment`
 - 선행: 없음 (M0-03의 스케일 테스트 메뉴를 기준물로 씀)
 
 ## 목표
@@ -18,9 +18,9 @@
 - 200m 밖: 단순한 모양의 실루엣 건물과 안개.
 - 하늘: 흐림이나 해 질 녘. 제철소 느낌(주황빛 불꽃·연기)은 2차에서.
 
-## 사람이 할 일 (윤주)
+## 사람이 할 일 (유진)
 1. 레포를 clone해서 Unity로 연다(어려우면 선우에게 도움 요청).
-2. 메뉴 **Anseong → Sandbox → Build Scale Test**로 65m 로봇과 기준물이 있는 씬을 만들고 `Scenes/Sandbox/Sandbox_Yunju.unity`로 저장한다. 이 씬에서 작업한다.
+2. 메뉴 **Anseong → Sandbox → Build Scale Test**로 65m 로봇과 기준물이 있는 씬을 만들고 `Scenes/Sandbox/Sandbox_Yujin.unity`로 저장한다. 이 씬에서 작업한다.
 3. 무료 에셋을 고른다. 추천 출처: Unity Asset Store 무료(URP 지원 표시 확인), Poly Haven(CC0 모델·텍스처·HDRI 하늘), Kenney·Quaternius(CC0). **쓴 파일만** `Assets/_Anseong/Art/Environment/Source/<출처이름>/`에 넣고 `Art/Environment/SOURCES.md`에 출처·라이선스를 적는다. 패키지 전체를 넣지 않는다(레포 용량).
 4. 위 "배치 기준"대로 놓는다. 움직이지 않는 물체는 Inspector에서 Static 체크. 조명은 기본 방향광 하나만 둔다.
 5. 배치한 환경 전체를 빈 오브젝트 `Env_Steelworks` 아래로 묶어 프리팹으로 저장: `Assets/_Anseong/Art/Environment/Env_Steelworks.prefab`.

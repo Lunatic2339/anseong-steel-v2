@@ -19,17 +19,18 @@
 | `M0-02-xr-basic-scene.md` | M0 | 선우 (+PC-B 한 명) | 완료 (#2), PC-B 확인 남음 |
 | `M0-03-model-import-scale.md` | M0 | 선우 (+성재) | 완료 (#5) |
 | `M0-04-cockpit-eye-height.md` | M0 | 선우 | 대기 |
-| `A-01-boss-animations.md` | 아트 (10/29, 11/12) | 유진 | 지금 시작 |
-| `A-02-merge-and-material-slots.md` | 아트 (11/05) | 성재 (+유진, 윤주) | 지금 시작 |
-| `A-03-robot-colors.md` | 아트 (11/19) | 윤주 | A-02 후 |
+| `A-01-boss-animations.md` | 아트 (10/29, 11/12) | 유진 (보스 + 플레이어 몸 클립) | 지금 시작 |
+| `A-02-merge-and-material-slots.md` | 아트 (11/05) | 성재 (+유진) | 지금 시작 |
+| `A-03-robot-colors.md` | 아트 (11/19) | 성재 (플레이어 색) + 유진 (보스 색) | A-02 후 |
 | `D-01-boss-pattern-table.md` | 기획 (10/27) | 유진 | 지금 시작 |
-| `E-01-steelworks-environment.md` | 환경 (10/28, 11/19) | 윤주 | 지금 시작 |
+| `E-01-steelworks-environment.md` | 환경 (10/28, 11/19) | 유진 | 지금 시작 |
 | `S-01-sound.md` | 소리 (10/28, 11/19) | 윤주 | 지금 시작 |
 | `H-01-exoskeleton-prototype.md` | 하드웨어 (10/29) | 고건 | 지금 시작 |
 | `H-02-equipment-and-pc-b.md` | 장비 (10/22) | 고건 | 지금 시작 |
-| `P-01-midterm-presentation.md` | 발표 (10/29) | 유진 (+Claude 초안) | 지금 시작 |
+| `P-01-midterm-presentation.md` | 발표 (10/29) | 윤주 (+Claude 초안) | 지금 시작 |
 | 조종석 모델 (지시서는 M0-04 후) | 아트 (11/19) | 성재 | A-02 후 |
-| HUD 아트·VFX (지시서는 M2 때) | 아트 (11/19) | 윤주 | E-01 후 |
+| HUD 아이콘 시안 (지시서는 M2 때) | 아트 (11/19) | 윤주 | P-01 후 |
+| VFX 소스 고르기 (지시서는 M2 때) | 아트 (11/19) | 유진 | E-01 후 |
 
 번호 앞 글자: M = 코드(선우+Claude), A = 아트, D = 기획, E = 환경, S = 소리, H = 하드웨어, P = 발표.
 

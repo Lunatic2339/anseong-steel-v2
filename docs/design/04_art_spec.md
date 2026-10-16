@@ -6,7 +6,7 @@
 
 - 보스·플레이어 모두 **v026 디자인**. 같은 모델을 색·발광으로 구분한다.
 - 손가락은 **주먹으로 고정**. 코드가 주먹 포즈를 씌우므로 손가락 애니메이션은 만들지 않는다.
-- 플레이어 로봇 팔은 IK로 움직이므로 **플레이어용 애니메이션은 필요 없다**(출격 자동 걷기 정도만 보스 클립 재사용).
+- 플레이어 로봇은 **팔만 조종사가 IK로 움직이고**, 몸통·다리는 클립을 재생한다(`02_architecture.md` "플레이어 로봇 몸"). 보스와 같은 뼈라 클립을 같이 쓰고, 플레이어만 필요한 것은 옆걸음 좌/우뿐이다.
 - 모델 전용 텍스처를 새로 그리지 않는다. 단색 플라스틱처럼 보이지 않게 **반복 디테일 맵·AO·색 슬롯**을 쓰거나 기존 Tripo 텍스처를 살린다. 최종 방식은 A-03에서 헤드셋으로 3안을 비교해 고른다(아래 "표면 표현 3안").
 - 팀에 Blender 경험자(성재·유진)가 있으므로 **메시 병합·재질 교체·모서리 정리는 Blender에서** 원본을 깨끗하게 만든다(A-02). Blender가 막히면 Unity 에디터 도구로 대신한다.
 
@@ -66,9 +66,9 @@
 | Glow | 발광부(눈·라인) | 하늘색 발광 | 노랑·주황 발광 |
 | Trim | 테두리·장식 | 은색 | 무광 금색 |
 
-URP Lit 재질 6개 × 2세트(플레이어/보스). 색·Metallic·Smoothness·Emission만 쓴다. 최종 색은 윤주가 정한다.
+URP Lit 재질 6개 × 2세트(플레이어/보스). 색·Metallic·Smoothness·Emission만 쓴다. 플레이어 색은 성재, 보스 색은 유진이 정한다.
 
-## 보스 애니메이션 목록
+## 애니메이션 목록 (보스 + 플레이어 몸)
 
 플레이어 로봇과 같은 Mixamo 뼈라서 **Mixamo에서 받은 클립을 그대로 쓸 수 있다**. 이미 있는 것은 기존 레포 `AnseongSteel/Assets/_BossPrototype/Animation/` 아래에 있다.
 
@@ -87,7 +87,16 @@ URP Lit 재질 6개 × 2세트(플레이어/보스). 색·Metallic·Smoothness·
 | 2 | 앞·뒤 걷기, 제자리 회전 | 거리 조절 | 있음 `Walk`, `TurnLeft`, `TurnRight` (뒤 걷기는 필요) | walking backward |
 | 3 | 등장 포효·도발 | 전투 시작 | 선택 | taunt, roar, battlecry |
 
-받는 설정: **Format = FBX for Unity, Skin = Without Skin, 30fps**, 걷기·달리기처럼 이동하는 클립은 **In Place 체크**(이동은 코드가 한다). 파일 이름은 `Boss_<동작>.fbx` (예: `Boss_PunchLeft.fbx`).
+플레이어 로봇 몸(다리·몸통에만 재생, 팔은 IK):
+
+| 우선 | 필요한 동작 | 쓰는 곳 | 상태 | Mixamo 검색어 예시 |
+|---|---|---|---|---|
+| 1 | 전투 대기 | 항상 | 보스 `Idle` 공유 | – |
+| 2 | 옆걸음 왼쪽·오른쪽 | 협동 회피 | **필요** | strafe, side step |
+| 2 | 앞·뒤 걷기 | 접근·후퇴, 출격 | 보스 `Walk`·뒤 걷기 공유 | – |
+| 2 | 휘청 | 조종사가 맞았을 때 | 보스 `Stagger` 공유(몸통만) | – |
+
+받는 설정: **Format = FBX for Unity, Skin = Without Skin, 30fps**, 걷기·달리기처럼 이동하는 클립은 **In Place 체크**(이동은 코드가 한다). 파일 이름은 `Boss_<동작>.fbx` (예: `Boss_PunchLeft.fbx`), 플레이어 전용은 `Pilot_<동작>.fbx` (예: `Pilot_StrafeLeft.fbx`).
 
 왼손 버전이 Mixamo에 없으면 오른손 버전만 받아도 된다. 좌우 반전은 M2에서 코드 쪽(Humanoid 설정 등)으로 처리를 검토한다.
 
@@ -113,6 +122,6 @@ URP Lit 재질 6개 × 2세트(플레이어/보스). 색·Metallic·Smoothness·
 
 ## 아트 작업 지시서
 
-- `docs/tasks/A-01-boss-animations.md` — 유진
-- `docs/tasks/A-02-merge-and-material-slots.md` — 성재 (+유진, 윤주, Claude Code)
-- `docs/tasks/A-03-robot-colors.md` — 윤주 (표면 3안 비교 + 색)
+- `docs/tasks/A-01-boss-animations.md` — 유진 (보스 + 플레이어 몸 클립)
+- `docs/tasks/A-02-merge-and-material-slots.md` — 성재 (+유진, Claude Code)
+- `docs/tasks/A-03-robot-colors.md` — 성재 (표면 3안 비교, 플레이어 색) + 유진 (보스 색)

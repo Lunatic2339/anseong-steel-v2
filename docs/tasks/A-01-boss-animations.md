@@ -1,10 +1,10 @@
-# A-01 보스 애니메이션 수집 (Mixamo)
+# A-01 로봇 애니메이션 수집 (Mixamo, 보스 + 플레이어 몸)
 
 - 마일스톤: M2·M4 준비 / 담당: 유진 / 브랜치: `feat/yujin-boss-anims`
 - 선행: 없음(바로 시작 가능). Unity 임포트는 M0-03 병합 후.
 
 ## 목표
-`docs/design/04_art_spec.md`의 "보스 애니메이션 목록" 중 **필요** 표시된 클립을 Mixamo에서 받아 모은다. 우선 1은 10/29, 우선 2는 11/12까지.
+`docs/design/04_art_spec.md`의 "애니메이션 목록"(보스 표와 플레이어 몸 표) 중 **필요** 표시된 클립을 Mixamo에서 받아 모은다. 우선 1은 10/29, 우선 2는 11/12까지.
 
 ## 배경
 - 우리 로봇은 Mixamo 뼈대라서 Mixamo 클립을 그대로 쓸 수 있다. 모델링·리깅 지식은 필요 없다.
@@ -16,7 +16,7 @@
 3. Animations 탭에서 목록의 검색어로 찾고, 미리보기에서 **거대 로봇이 하기에 묵직하고 읽기 쉬운 동작**을 고른다. 후보가 여러 개면 2~3개 받아도 된다.
 4. 오른쪽 슬라이더로 속도(Overdrive)·팔 간격(Character Arm-Space)을 필요하면 조절한다.
 5. Download: **Format = FBX for Unity(.fbx), Skin = Without Skin, Frames per Second = 30**, 이동하는 클립은 **In Place 체크**.
-6. 파일 이름을 `Boss_<동작>.fbx`로 바꾼다. 예: `Boss_PunchLeft.fbx`, `Boss_Knockback.fbx`, `Boss_SlamBoth.fbx`, `Boss_Charge.fbx`, `Boss_Kneel.fbx`, `Boss_WalkBack.fbx`.
+6. 파일 이름을 `Boss_<동작>.fbx`(플레이어 전용은 `Pilot_<동작>.fbx`)로 바꾼다. 예: `Boss_PunchLeft.fbx`, `Boss_Knockback.fbx`, `Boss_SlamBoth.fbx`, `Boss_Charge.fbx`, `Boss_Kneel.fbx`, `Boss_WalkBack.fbx`.
 7. 아래 둘 중 하나로 넘긴다.
    - Git을 쓸 수 있으면: 이 레포를 clone → `Assets/_Anseong/Art/Robot/Animation/Source/Mixamo/`에 넣고 Claude Code에 "이 클립들 커밋하고 PR 만들어줘".
    - 어려우면: 파일을 선우에게 전달(디스코드·드라이브). 선우의 Claude Code 세션이 넣는다.
@@ -32,7 +32,7 @@
 
 ## 완료 기준
 - 우선 1의 **필요** 클립(왼손 펀치, 크게 밀려남)이 들어옴 — 10/29.
-- 우선 2의 **필요** 클립(두 손 내려찍기, 돌진, 무릎 꿇기, 뒤로 걷기)이 들어옴 — 11/12.
+- 우선 2의 **필요** 클립(두 손 내려찍기, 돌진, 무릎 꿇기, 뒤로 걷기, 플레이어 옆걸음 좌/우)이 들어옴 — 11/12.
 
 ## 결과 (작업 후 작성)
 - 받은 클립:
