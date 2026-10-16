@@ -22,7 +22,7 @@
 | `A-01-boss-animations.md` | 아트 (10/29, 11/12) | 유진 (보스 + 플레이어 몸 클립) | 지금 시작 |
 | `A-02-merge-and-material-slots.md` | 아트 (11/05) | 성재 (+유진) | 지금 시작 |
 | `A-03-robot-colors.md` | 아트 (11/19) | 성재 (플레이어 색) + 유진 (보스 색) | A-02 후 |
-| `D-01-boss-pattern-table.md` | 기획 (10/27) | 유진 | 지금 시작 |
+| `D-01-boss-pattern-table.md` | 기획 (10/27) | 유진 (Claude 제안값 다듬기) | 지금 시작 |
 | `E-01-steelworks-environment.md` | 환경 (10/28, 11/19) | 윤주 (+유진 도움) | 지금 시작 |
 | `S-01-sound.md` | 소리 (10/28, 11/19) | 윤주 | 지금 시작 |
 | `H-01-exoskeleton-prototype.md` | 하드웨어 (10/29) | 고건 | 지금 시작 |
