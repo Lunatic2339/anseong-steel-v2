@@ -26,7 +26,7 @@
 | `E-01-steelworks-environment.md` | 환경 (10/28, 11/19) | 윤주 (+유진 도움) | 지금 시작 |
 | `S-01-sound.md` | 소리 (10/28, 11/19) | 윤주 | 지금 시작 |
 | `H-01-exoskeleton-prototype.md` | 하드웨어 (10/29) | 고건 | 지금 시작 |
-| `H-02-equipment-and-pc-b.md` | 장비 (10/22) | 고건 | 지금 시작 |
+| `H-02-equipment-and-pc-b.md` | 장비 (10/22) | 성재 | 지금 시작 |
 | `P-01-midterm-presentation.md` | 발표 (10/29) | 유진 (+Claude 초안) | 지금 시작 |
 | 조종석 모델 (지시서는 M0-04 후) | 아트 (11/19) | 성재 | A-02 후 |
 | HUD 아이콘 시안 (지시서는 M2 때) | 아트 (11/19) | 윤주 | E-01 1차 후 |
