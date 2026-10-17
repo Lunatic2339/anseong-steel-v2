@@ -12,7 +12,7 @@
 - `docs/design/05_boss_patterns.md` "보스가 맞았을 때", 중간발표 빌드는 보스 공격 없음(항상 빈틈, 맞으면 경직).
 - `docs/design/02_architecture.md` "누가 무엇을 계산하나": 명중은 때린 쪽이 판정해 `HitReport(side, kind, quality, clientTime, strikeId)`로 서버에 보고.
 - `03_reuse_from_old_repo.md`: 연계·부스트 `RobotCombat.cs` Hit 132-171, Boost 82-88. 보스 접촉 `MechaVRBossContact.cs`(bounds 브로드페이즈, 부위는 컴포넌트로). 진동 큐 `IntegratedFeedback.cs` 7-14 `PunchHapticQueue`.
-- 휘청 클립: 기존 레포 `AS/_BossPrototype/Animation/CombatSource/Stagger.fbx`(이미 있는 클립. A-01에서 다시 받지 않음).
+- 휘청 클립: 기존 레포 `AS/_BossPrototype/Animation/CombatSource/Stagger.fbx`(옛 레포에 이미 있는 클립이라 A-01에서 다시 받지 않음. v2에는 아직 없으므로 5단계에서 가져온다).
 
 ## 네트워크에 대해 정한 기본값
 M1은 NGO 없이 한 PC에서 돈다. 다만 나중에 다시 쓰지 않도록 **명중 보고는 지금부터 `HitReport` 구조체로** 만들고, 받는 쪽(`CombatAuthority`)은 지금은 로컬 호출, M3에서 서버 RPC로 바꾼다. 규칙 클래스는 하나만 둔다(1인 모드 전용 규칙을 따로 만들지 않음).
@@ -22,7 +22,7 @@ M1은 NGO 없이 한 PC에서 돈다. 다만 나중에 다시 쓰지 않도록 *
 2. 판정 순서대로 연결: 입력 유효 → 그립 → 분류 → 접촉 → `HitReport` → 피해 확정 → 연계·부스트 갱신. `StrikeLog`의 명중 열을 채운다.
 3. 순수 클래스 `ComboRules`: 잽(A) → 잽(B) → 훅(A), 제한 2.4초, 같은 팔 연속 잽 0.15초, 종료 조건(헛침, 차례 아닌 공격, 시간 초과, 직접 피해). 부스트는 마지막 훅 명중 뒤 0.45초 안에 그립 유지 + 트리거. 기본값 = 기획 초기값, Inspector 노출. 쓰지 않는 필드는 옮기지 않는다.
 4. 순수 클래스 `BossHealth`: 피해 잽 3% / 훅 5% / 부스트 +6%. HP 0이면 멈춤(쓰러짐은 M2).
-5. 보스 반응: 잽 = 효과만, 훅 = `Stagger` 앞부분 약 0.6초, 부스트 = `Stagger` 전체(밀려남 클립은 A-01 이후). Stagger 클립을 `Art/Robot/Animation/Source/`로 가져오고 보스 Animator에 추가.
+5. 보스 반응: 잽 = 효과만, 훅 = `Stagger` 앞부분 약 0.6초, 부스트 = `Stagger` 전체(밀려남 클립은 A-01 이후). 옛 레포의 `Stagger.fbx`를 `Art/Robot/Animation/Source/`로 복사하고(`.meta`는 Unity가 만들게 두고 같은 커밋에 넣는다) 보스 Animator에 추가.
 6. 보스 HP 막대: 보스 위 월드 공간 막대(단순 사각형 두 개). HUD 아트는 M2 이후.
 7. 소리·진동 자리: 명중 시 `SFX_PunchHit`·`SFX_HookHit`, 헛침 `SFX_PunchWhoosh`(파일이 없으면 무음으로 넘어감, S-01 1차가 오면 M1-07에서 연결). 컨트롤러 진동은 우선순위 큐로 짧게.
 8. EditMode 테스트: 연계 순서·시간 초과·차례 위반, 부스트 창, 중복 명중 무시, HP 계산.
