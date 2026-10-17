@@ -41,10 +41,12 @@ namespace Anseong.EditorTools
         [MenuItem("Anseong/Sandbox/Build Eye Height Test")]
         static void BuildEyeHeightTest()
         {
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(RobotSandboxUtility.RobotModelPath);
-            if (model == null)
+            var art = RobotArtSettings.Load();
+            var playerModel = art.PlayerModel;
+            var bossModel = art.BossModel;
+            if (playerModel == null || bossModel == null)
             {
-                EditorUtility.DisplayDialog("Build Eye Height Test", $"모델을 찾지 못했습니다: {RobotSandboxUtility.RobotModelPath}", "확인");
+                EditorUtility.DisplayDialog("Build Eye Height Test", $"모델을 찾지 못했습니다: {art.PlayerModelPath}, {art.BossModelPath}", "확인");
                 return;
             }
             if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo())
@@ -58,12 +60,13 @@ namespace Anseong.EditorTools
             if (switchSeat == null)
                 Debug.LogWarning($"{LogPrefix} '{DevMapName}/{SwitchSeatActionName}' 액션을 찾지 못했습니다. 좌석 전환 없이 만듭니다: {RobotSandboxUtility.PilotInputPath}");
 
-            var player = CreateRobot(model, "Player Robot", Vector3.zero, 0f);
-            var boss = CreateRobot(model, "Boss Robot", Vector3.forward * BossDistance, 180f);
+            var player = CreateRobot(playerModel, "Player Robot", Vector3.zero, 0f);
+            var boss = CreateRobot(bossModel, "Boss Robot", Vector3.forward * BossDistance, 180f);
             if (player == null || boss == null) return;
 
             ApplyGuardPose(player);
             ApplyGuardPose(boss);
+            RobotSandboxUtility.ApplyPlayerMaterials(player);
             RobotSandboxUtility.TintBoss(boss);
 
             CreateCockpit(player, switchSeat);
