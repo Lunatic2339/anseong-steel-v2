@@ -18,7 +18,14 @@
 | `M0-01-project-cleanup.md` | M0 | 선우 | 완료 (#1) |
 | `M0-02-xr-basic-scene.md` | M0 | 선우 (+PC-B 한 명) | 완료 (#2), PC-B 확인 남음 |
 | `M0-03-model-import-scale.md` | M0 | 선우 (+성재) | 완료 (#5) |
-| `M0-04-cockpit-eye-height.md` | M0 | 선우 | PR #9 (Head 좌석 결정, MSAA는 M5로 보류) |
+| `M0-04-cockpit-eye-height.md` | M0 | 선우 | 완료 (#9, Head 좌석 결정, MSAA는 M5로 보류) |
+| `M1-01-cockpit-root-offset.md` | M1 (10/20) | 선우 | 지금 시작 |
+| `M1-02-pilot-input-calibration.md` | M1 (10/21) | 선우 | 지금 시작 (M1-01과 동시) |
+| `M1-03-arm-ik.md` | M1 (10/24) | 선우 | M1-01·02 후 |
+| `M1-04-punch-classifier-csv.md` | M1 (10/25) | 선우 | M1-02 후 (M1-03과 동시) |
+| `M1-05-hit-combat-boss-hp.md` | M1 (10/27) | 선우 | M1-03·04 후 |
+| `M1-06-guard-judgement.md` | M1 (10/27) | 선우 | M1-03 후 (M1-05와 동시) |
+| `M1-07-midterm-build.md` | 중간발표 (10/29) | 선우 | M1-05·06, E-01·S-01 1차 후 |
 | `A-01-boss-animations.md` | 아트 (10/29, 11/12) | 유진 (보스 + 플레이어 몸 클립) | 지금 시작 |
 | `A-02-merge-and-material-slots.md` | 아트 (11/05) | 성재 (+유진) | 지금 시작 |
 | `A-03-robot-colors.md` | 아트 (11/19) | 성재 (플레이어 색) + 유진 (보스 색) | A-02 후 |
