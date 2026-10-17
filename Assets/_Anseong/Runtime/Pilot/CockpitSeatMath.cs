@@ -10,18 +10,19 @@ namespace Anseong.Pilot
     }
 
     /// <summary>
-    /// 로봇 본 위치에서 조종석 자세를 계산한다. 결과는 사람 크기(배율 1) 월드 좌표.
+    /// 로봇 루트에서 조종석 자세를 계산한다. 결과는 사람 크기(배율 1) 월드 좌표.
     /// </summary>
     public static class CockpitSeatMath
     {
         /// <summary>
-        /// 조종석 중심 자세. 회전은 로봇 정면의 yaw만 따른다(본의 기울기·흔들림을 시야에 넣지 않는다).
+        /// 조종석 중심 자세 = 로봇 루트 + 고정 오프셋. 회전은 로봇 정면의 yaw만 따른다
+        /// (루트가 기울어도, 애니메이션 본이 흔들려도 시야에 넣지 않는다).
         /// offsetMeters는 로봇 정면 기준 미터 단위이며 로봇 배율과 무관하다.
         /// </summary>
-        public static (Vector3 position, Quaternion rotation) RigPose(Vector3 bonePosition, Quaternion robotRotation, Vector3 offsetMeters)
+        public static (Vector3 position, Quaternion rotation) RigPose(Vector3 rootPosition, Quaternion robotRotation, Vector3 offsetMeters)
         {
             var yaw = YawOnly(robotRotation);
-            return (bonePosition + yaw * offsetMeters, yaw);
+            return (rootPosition + yaw * offsetMeters, yaw);
         }
 
         /// <summary>조종석 중심에서 각 조종사 좌석까지의 로컬 오프셋. 두 좌석 간격 = spacing.</summary>

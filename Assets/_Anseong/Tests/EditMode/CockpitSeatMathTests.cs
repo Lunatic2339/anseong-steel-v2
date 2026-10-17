@@ -42,6 +42,28 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void RigPose_RootMovedAndYawed_FollowsRootPositionAndYaw()
+        {
+            var root = new Vector3(10f, 0f, 5f);
+            var (position, rotation) = CockpitSeatMath.RigPose(root, Quaternion.Euler(0f, 90f, 0f), new Vector3(0f, 55.9f, 1f));
+            AssertVector(new Vector3(11f, 55.9f, 5f), position);
+            AssertVector(Vector3.right, rotation * Vector3.forward);
+            AssertVector(Vector3.up, rotation * Vector3.up);
+        }
+
+        [Test]
+        public void RigPose_RootTilted_SeatStaysLevelAboveRoot()
+        {
+            // 루트가 앞으로·옆으로 기울어도 오프셋은 yaw만 받아 기울지 않는다(높은 좌석이 크게 휘두르지 않음).
+            var root = new Vector3(3f, 0f, -2f);
+            var tilted = Quaternion.Euler(15f, 40f, 10f);
+            var (position, rotation) = CockpitSeatMath.RigPose(root, tilted, new Vector3(0f, 55.9f, 0f));
+            AssertVector(new Vector3(3f, 55.9f, -2f), position);
+            AssertVector(Vector3.up, rotation * Vector3.up);
+            AssertVector(Quaternion.Euler(0f, 40f, 0f) * Vector3.forward, rotation * Vector3.forward);
+        }
+
+        [Test]
         public void YawOnly_FacingStraightDown_UsesUpAxis()
         {
             // 앞으로 90도 엎어짐: 정면이 아래, 머리 위쪽 축이 +Z.
