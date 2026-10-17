@@ -1,4 +1,3 @@
-using System.Linq;
 using Anseong.Pilot;
 using UnityEditor;
 using UnityEditor.Animations;
@@ -9,7 +8,7 @@ using UnityEngine.SceneManagement;
 namespace Anseong.EditorTools
 {
     /// <summary>
-    /// 플레이어 로봇·보스 프리팹을 메뉴 한 번으로 다시 만든다(M1-01). 열린 씬은 건드리지 않는다.
+    /// 플레이어 로봇·보스 프리팹을 메뉴 한 번으로 다시 만든다(M1-01 조종석, M1-03 두 팔 드라이버). 열린 씬은 건드리지 않는다.
     /// </summary>
     public static class RobotPrefabMenu
     {
@@ -26,16 +25,18 @@ namespace Anseong.EditorTools
         [MenuItem("Anseong/Setup/Build Player Robot Prefab")]
         static void BuildPrefabs()
         {
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(RobotSandboxUtility.RobotModelPath);
+            var art = RobotArtSettings.Load();
+            var playerModel = art.PlayerModel;
+            var bossModel = art.BossModel;
             var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(IdleControllerPath);
-            if (model == null || controller == null)
+            if (playerModel == null || bossModel == null || controller == null)
             {
                 EditorUtility.DisplayDialog("Build Player Robot Prefab",
-                    $"필요한 에셋을 찾지 못했습니다.\n모델: {RobotSandboxUtility.RobotModelPath}\n대기 컨트롤러: {IdleControllerPath}\n" +
+                    $"필요한 에셋을 찾지 못했습니다.\n플레이어 모델: {art.PlayerModelPath}\n보스 모델: {art.BossModelPath}\n대기 컨트롤러: {IdleControllerPath}\n" +
+                    "모델은 'Anseong → Art → Robot Art Settings'에서 바꿉니다. " +
                     "컨트롤러가 없으면 'Anseong → Sandbox → Build Scale Test'를 먼저 실행하세요.", "확인");
                 return;
             }
-            var avatar = AssetDatabase.LoadAllAssetsAtPath(RobotSandboxUtility.RobotModelPath).OfType<Avatar>().FirstOrDefault();
             var switchSeat = RobotSandboxUtility.FindAction(DevMapName, SwitchSeatActionName);
             if (switchSeat == null)
                 Debug.LogWarning($"{LogPrefix} '{DevMapName}/{SwitchSeatActionName}' 액션을 찾지 못했습니다. 좌석 전환 없이 만듭니다.");
@@ -47,12 +48,19 @@ namespace Anseong.EditorTools
             var preview = EditorSceneManager.NewPreviewScene();
             try
             {
-                var player = CreateRobot(model, controller, avatar, "Robot_Player", preview);
+                var player = CreateRobot(playerModel, controller, RobotArtSettings.AvatarOf(playerModel), "Robot_Player", preview);
                 if (player == null) return;
+                RobotSandboxUtility.ApplyPlayerMaterials(player);
                 if (!AddCockpit(player, IdleClip(controller), switchSeat)) return;
+                if (!RobotArmSetup.AddArmDrivers(player, out var armReport))
+                {
+                    Debug.LogError($"{LogPrefix} {armReport} 플레이어 프리팹을 만들지 않습니다.");
+                    return;
+                }
+                Debug.Log($"{LogPrefix} 팔 드라이버: {armReport}");
                 Save(player, PlayerPrefabPath);
 
-                var boss = CreateRobot(model, controller, avatar, "Robot_Boss", preview);
+                var boss = CreateRobot(bossModel, controller, RobotArtSettings.AvatarOf(bossModel), "Robot_Boss", preview);
                 if (boss == null) return;
                 RobotSandboxUtility.TintBoss(boss);
                 Save(boss, BossPrefabPath);

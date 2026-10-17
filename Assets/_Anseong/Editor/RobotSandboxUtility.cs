@@ -13,7 +13,6 @@ namespace Anseong.EditorTools
     /// </summary>
     static class RobotSandboxUtility
     {
-        public const string RobotModelPath = "Assets/_Anseong/Art/Robot/Source/BossUpdatedCompatible.fbx";
         public const float RobotHeight = 65f;
 
         public const string PilotInputPath = "Assets/_Anseong/Runtime/Pilot/PilotInput.inputactions";
@@ -22,7 +21,7 @@ namespace Anseong.EditorTools
         const string BossFolderName = "Boss";
         static readonly Color BossColor = new Color(0.45f, 0.06f, 0.05f);
 
-        // Mixamo 본 이름 (BossUpdatedCompatible.fbx). 런타임은 이 이름을 쓰지 않고 Inspector 참조만 쓴다.
+        // Mixamo 본 이름 (모든 로봇 모델 공통, 04_art_spec). 런타임은 이 이름을 쓰지 않고 Inspector 참조만 쓴다.
         public const string HeadBone = "mixamorig:Head";
         public const string HeadEndBone = "mixamorig:Head_end";
         public const string SpineBone = "mixamorig:Spine";
@@ -284,9 +283,21 @@ namespace Anseong.EditorTools
                 list.GetArrayElementAtIndex(i).objectReferenceValue = hidden[i];
         }
 
-        /// <summary>조종석 바닥·좌석 표시·콘솔·창틀 박스(임시 형상. 조종석 모델이 오면 바꾼다).</summary>
+        /// <summary>
+        /// 조종석 형상. RobotArtSettings에 조종석 프리팹이 있으면 그것을, 없으면 바닥·좌석 표시·콘솔·창틀 박스를 만든다.
+        /// </summary>
         public static void CreateCockpitProps(Transform rig)
         {
+            var prefab = RobotArtSettings.Load().CockpitPrefab;
+            if (prefab != null)
+            {
+                var model = (GameObject)PrefabUtility.InstantiatePrefab(prefab, rig);
+                model.transform.SetLocalPositionAndRotation(Vector3.zero, Quaternion.identity);
+                model.transform.localScale = Vector3.one;
+                Debug.Log($"[RobotSandboxUtility] 조종석 모델: {prefab.name}", prefab);
+                return;
+            }
+
             var root = new GameObject("Cockpit Props");
             root.transform.SetParent(rig, false);
 
@@ -312,13 +323,53 @@ namespace Anseong.EditorTools
             box.transform.localPosition = localPosition;
         }
 
+        /// <summary>플레이어 재질 슬롯(RobotArtSettings)을 적용한다. 맞지 않는 재질은 모델 그대로 둔다.</summary>
+        public static void ApplyPlayerMaterials(Transform player)
+        {
+            var slots = RobotArtSettings.Load().PlayerSlotMaterials;
+            if (slots.Length == 0) return;
+            var replaced = ApplySlotMaterials(player.GetComponentsInChildren<Renderer>(true), slots, null);
+            Debug.Log($"[RobotSandboxUtility] 플레이어 재질 슬롯 적용: {replaced}칸", player);
+        }
+
+        /// <summary>
+        /// 보스 재질. 보스 재질 슬롯(RobotArtSettings)과 이름이 맞는 재질은 그 슬롯 재질로,
+        /// 나머지는 보스 단색(Boss_Tint)으로 바꾼다. 슬롯이 비어 있으면 전부 Boss_Tint.
+        /// </summary>
         public static void TintBoss(Transform boss)
         {
             var renderers = boss.GetComponentsInChildren<Renderer>(true);
+            var slots = RobotArtSettings.Load().BossSlotMaterials;
             var tint = GetOrCreateBossTint(renderers);
-            if (tint == null) return;
+            var replaced = ApplySlotMaterials(renderers, slots, tint);
+            if (slots.Length > 0)
+                Debug.Log($"[RobotSandboxUtility] 보스 재질 슬롯 적용: {replaced}칸, 나머지는 {(tint != null ? tint.name : "모델 재질")}", boss);
+        }
+
+        /// <summary>렌더러 재질 칸마다 이름이 맞는 슬롯 재질로 바꾸고, 맞지 않으면 fallback(없으면 그대로). 슬롯으로 바꾼 칸 수를 돌려준다.</summary>
+        static int ApplySlotMaterials(Renderer[] renderers, RobotArtSettings.SlotMaterial[] slots, Material fallback)
+        {
+            var slotNames = slots.Select(s => s.material != null ? s.slot : null).ToArray();
+            var replaced = 0;
             foreach (var r in renderers)
-                r.sharedMaterials = Enumerable.Repeat(tint, r.sharedMaterials.Length).ToArray();
+            {
+                var materials = r.sharedMaterials;
+                for (var i = 0; i < materials.Length; i++)
+                {
+                    var index = materials[i] != null ? MaterialSlotNames.IndexOf(materials[i].name, slotNames) : -1;
+                    if (index >= 0)
+                    {
+                        materials[i] = slots[index].material;
+                        replaced++;
+                    }
+                    else if (fallback != null)
+                    {
+                        materials[i] = fallback;
+                    }
+                }
+                r.sharedMaterials = materials;
+            }
+            return replaced;
         }
 
         static Material GetOrCreateBossTint(Renderer[] renderers)

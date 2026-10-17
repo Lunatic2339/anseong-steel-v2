@@ -32,7 +32,13 @@ namespace Anseong.EditorTools
 
         // 애니메이션 FBX
         const ModelImporterMaterialImportMode AnimationMaterialMode = ModelImporterMaterialImportMode.None;
-        static readonly string[] LoopClipNames = { "Idle", "Walk" };
+        // 처음 임포트할 때 반복 재생으로 둘 클립(파일 이름, 04_art_spec 애니메이션 목록).
+        // 그 뒤에는 FBX Inspector의 Animation 탭에서 Loop Time을 바꾸면 그대로 남는다.
+        static readonly string[] LoopClipNames =
+        {
+            "Idle", "Walk", "TurnLeft", "TurnRight",
+            "Boss_WalkBack", "Pilot_StrafeLeft", "Pilot_StrafeRight",
+        };
 
         public override uint GetVersion() => Version;
 
@@ -69,13 +75,16 @@ namespace Anseong.EditorTools
             var importer = (ModelImporter)assetImporter;
 
             // Mixamo 클립 이름("mixamo.com")을 파일 이름으로 바꾸고 루프 여부를 정한다.
+            // 구간은 매번 파일에서 다시 읽고(클립 교체 대비), Loop Time은 이미 정해져 있으면(Inspector에서 바꾼 값) 그대로 둔다.
             var clipName = Path.GetFileNameWithoutExtension(assetPath);
             var loop = LoopClipNames.Contains(clipName);
+            var existing = importer.clipAnimations;
             var clips = importer.defaultClipAnimations;
             for (var i = 0; i < clips.Length; i++)
             {
                 clips[i].name = clips.Length == 1 ? clipName : $"{clipName}_{i}";
-                clips[i].loopTime = loop;
+                var previous = existing.FirstOrDefault(c => c.name == clips[i].name);
+                clips[i].loopTime = previous != null ? previous.loopTime : loop;
             }
             importer.clipAnimations = clips;
         }
