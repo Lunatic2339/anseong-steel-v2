@@ -5,39 +5,44 @@
 
 ## 핵심 3줄
 
-1. **내 브랜치에서만 작업한다.** `main`에는 직접 커밋·푸시하지 않는다.
+1. **내 이름 브랜치에서만 작업한다.** `main`에는 직접 커밋·푸시하지 않는다.
 2. **내 브랜치에 커밋·푸시까지만 한다.** 직접 머지(Merge)하지 않는다.
 3. **main에 넣고 싶으면 PR을 연다.** 병합은 코드 담당(선우)이 리뷰 후에 한다.
 
-## 브랜치 이름
+## 브랜치: 내 이름 하나만
 
-`feat/<내 이름>-<하는 일>` 영어 소문자, 띄어쓰기 대신 `-`. 자기 지시서에 브랜치 이름이 적혀 있으면 그것을 씁니다.
+브랜치는 **자기 이름 하나**를 처음에 한 번 만들고 계속 씁니다. 일마다 새로 만들지 않습니다.
 
-| 사람 | 예시 |
+| 사람 | 브랜치 |
 |---|---|
-| 유진 | `feat/yujin-boss-anim` |
-| 성재 | `feat/sungjae-material-slots` |
-| 윤주 | `feat/yunju-environment` |
-| 고건 | `feat/gogeon-exo-firmware` |
+| 유진 | `yujin` |
+| 성재 | `sungjae` |
+| 윤주 | `yunju` |
+| 고건 | `gogeon` |
 
-지시서 하나 = 브랜치 하나. 다른 일을 시작하면 새 브랜치를 만든다.
+## 처음 한 번
 
-## 작업 순서 (Claude Code 데스크톱 앱 Code 탭에 이렇게 말하면 됩니다)
+- **Claude Code**: "main 최신으로 받고 `yujin` 브랜치 만들어줘." (자기 이름으로)
+- **GitHub Desktop**: 위쪽 **Current branch** → **New branch** → 이름 `yujin` → Create branch → **Publish branch**.
 
-1. 시작: "main 최신으로 받고 `feat/yujin-boss-anim` 브랜치 만들어줘."
-2. 중간중간 저장: "지금까지 커밋하고 내 브랜치에 푸시해줘."
+## 매번
+
+**Claude Code에 이렇게 말하면 됩니다**
+1. 시작: "내 브랜치로 바꾸고 main 최신 내용 받아줘."
+2. 중간중간 저장: "지금까지 커밋하고 푸시해줘."
 3. 다 됐을 때: "main으로 PR 만들고 리뷰어에 Lunatic2339 넣어줘."
 4. PR 링크를 **팀 단톡방**에 올린다.
-5. 수정 요청이 오면 같은 브랜치에 고쳐서 다시 푸시하면 PR에 자동으로 붙는다. 새 PR을 만들 필요 없다.
 
-GitHub Desktop으로 직접 할 때:
-1. 위쪽 **Fetch origin** → **Pull origin**으로 최신 받기.
-2. Current branch → **New branch** → 이름 `feat/<이름>-<하는 일>` (Create branch based on `main`).
+**GitHub Desktop으로 직접 할 때**
+1. 위쪽 **Current branch**가 내 이름인지 확인.
+2. 위쪽 메뉴 **Branch → Update from main** (다른 사람이 바꾼 최신 내용 받기).
 3. 지시서에 적힌 폴더에 파일을 넣기(Unity가 만든 `.meta` 파일도 같이).
-4. 왼쪽 아래에 한 줄 설명 → **Commit to feat/...** → **Push origin**.
-5. **Create Pull Request** → 브라우저에서 아래 "GitHub 웹에서" 순서대로.
+4. 왼쪽 아래에 한 줄 설명 → **Commit** → **Push origin**.
+5. 다 됐으면 **Create Pull Request** → 브라우저에서: base `main`, compare `내 이름` → 오른쪽 **Reviewers**에 `Lunatic2339` → **Create pull request**. 초록색 **Merge** 버튼은 누르지 않는다.
+6. PR 링크를 팀 단톡방에.
 
-GitHub 웹에서 직접 할 때: 레포 페이지 → **Compare & pull request** → base `main`, compare `내 브랜치` → 오른쪽 **Reviewers**에 `Lunatic2339` → **Create pull request**. 초록색 **Merge** 버튼은 누르지 않는다.
+- PR이 열려 있는 동안 더 고쳐서 푸시하면 같은 PR에 자동으로 붙습니다. 새 PR을 만들 필요 없습니다.
+- PR이 병합된 뒤에도 같은 브랜치를 계속 씁니다. 다음 작업 전에 2번(Update from main)만 하면 됩니다.
 
 ## Unity 충돌 주의
 

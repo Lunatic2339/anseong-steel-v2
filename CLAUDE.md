@@ -62,7 +62,8 @@ Hardware/Exo/firmware/   ESP32 펌웨어 (Unity 밖)
 
 ## Git
 
-- `main`에 직접 커밋하지 않는다. 브랜치 `feat/<이름>-<기능>`, PR로 병합.
+- `main`에 직접 커밋하지 않는다. 코드 작업 브랜치는 `feat/<이름>-<기능>`, PR로 병합.
+- 코드를 쓰지 않는 팀원(유진·성재·윤주·고건)은 자기 이름 브랜치 하나(`yujin`·`sungjae`·`yunju`·`gogeon`)를 계속 쓴다. 작업 전 main을 그 브랜치로 merge하고, 끝나면 main으로 PR(리뷰어 Lunatic2339). 규칙: `docs/GitHub_작업_규칙.md`.
 - 파일 하나 50MB 이하. 베이크된 대용량 `.anim`, 백업 폴더, 빌드 결과, 검증 로그·캡처를 커밋하지 않는다.
 
 ## 작업 방식
