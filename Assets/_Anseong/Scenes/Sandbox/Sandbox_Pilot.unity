@@ -838,6 +838,10 @@ PrefabInstance:
       value: 
       objectReference: {fileID: 571538634}
     - target: {fileID: 4118297886106858395, guid: 615b9f1fc6771b8418de9b8d3485a32b, type: 3}
+      propertyPath: followBone
+      value: 
+      objectReference: {fileID: 1689199301}
+    - target: {fileID: 4118297886106858395, guid: 615b9f1fc6771b8418de9b8d3485a32b, type: 3}
       propertyPath: followWeight
       value: 1
       objectReference: {fileID: 0}
@@ -896,6 +900,11 @@ PrefabInstance:
 --- !u!4 &1677834550 stripped
 Transform:
   m_CorrespondingSourceObject: {fileID: 145749947407951150, guid: 615b9f1fc6771b8418de9b8d3485a32b, type: 3}
+  m_PrefabInstance: {fileID: 1677834549}
+  m_PrefabAsset: {fileID: 0}
+--- !u!4 &1689199301 stripped
+Transform:
+  m_CorrespondingSourceObject: {fileID: 1308540052482540190, guid: 615b9f1fc6771b8418de9b8d3485a32b, type: 3}
   m_PrefabInstance: {fileID: 1677834549}
   m_PrefabAsset: {fileID: 0}
 --- !u!1660057539 &9223372036854775807
