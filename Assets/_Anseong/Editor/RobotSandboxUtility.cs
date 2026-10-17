@@ -108,37 +108,91 @@ namespace Anseong.EditorTools
         }
 
         /// <summary>
-        /// 로봇 루트(배율 1, 정면 +Z) 기준 좌석 바닥 오프셋(m). 본 위치를 그 순간의 자세에서 잰다.
+        /// 로봇 루트(배율 1, 정면 +Z) 기준 좌석 바닥 오프셋(m).
         /// Head 좌석: 눈 = Head→Head_end 40% 지점. ChestTop 좌석: 눈 = 양 어깨(Arm 본) 높이, 앞뒤는 Spine 본.
+        /// poseClip을 주면 그 클립을 여러 시점에서 재생해 본 위치의 평균을 쓴다(실제 게임에서 보이는 자세).
+        /// 없으면 지금 자세(기본 자세)에서 잰다. 어느 쪽이든 끝나면 본 자세를 원래대로 되돌린다.
         /// </summary>
-        public static bool TryComputeSeatOffsets(Transform robotRoot, out Vector3 headOffset, out Vector3 chestOffset, out string report)
+        public static bool TryComputeSeatOffsets(Transform robotRoot, out Vector3 headOffset, out Vector3 chestOffset, out string report,
+            AnimationClip poseClip = null)
         {
             headOffset = chestOffset = Vector3.zero;
-            var head = FindBone(robotRoot, HeadBone);
-            var headEnd = FindBone(robotRoot, HeadEndBone);
-            var spine = FindBone(robotRoot, SpineBone);
-            var leftArm = FindBone(robotRoot, LeftPrefix + ArmSuffix);
-            var rightArm = FindBone(robotRoot, RightPrefix + ArmSuffix);
-            if (head == null || headEnd == null || spine == null || leftArm == null || rightArm == null)
+            var bones = new[]
+            {
+                FindBone(robotRoot, HeadBone),
+                FindBone(robotRoot, HeadEndBone),
+                FindBone(robotRoot, SpineBone),
+                FindBone(robotRoot, LeftPrefix + ArmSuffix),
+                FindBone(robotRoot, RightPrefix + ArmSuffix),
+            };
+            if (bones.Any(b => b == null))
             {
                 report = "좌석 기준 본(Head, Head_end, Spine, LeftArm, RightArm)을 찾지 못했습니다.";
                 return false;
             }
 
+            var animator = robotRoot.GetComponentInChildren<Animator>(true);
+            var source = "기본 자세";
+            Vector3[] positions;
+            if (poseClip != null && animator != null)
+            {
+                positions = AveragePositions(animator.gameObject, poseClip, bones, out var headRange);
+                source = $"'{poseClip.name}' 클립 평균 자세(재생 중 Head 높이 변화 {headRange:F2} m)";
+            }
+            else
+            {
+                positions = bones.Select(b => b.position).ToArray();
+            }
+            var head = positions[0];
+            var headEnd = positions[1];
+            var spine = positions[2];
+            var shoulderY = (positions[3].y + positions[4].y) * 0.5f;
+
             var toRobot = Quaternion.Inverse(CockpitSeatMath.YawOnly(robotRoot.rotation));
 
-            var headEye = Vector3.Lerp(head.position, headEnd.position, HeadEyeFraction);
+            var headEye = Vector3.Lerp(head, headEnd, HeadEyeFraction);
             var headFloor = headEye + Vector3.down * PilotEyeHeight;
             headOffset = toRobot * (headFloor - robotRoot.position) + Vector3.forward * HeadSeatForward;
 
-            var shoulderY = (leftArm.position.y + rightArm.position.y) * 0.5f;
-            var chestFloor = new Vector3(spine.position.x, shoulderY - PilotEyeHeight, spine.position.z);
+            var chestFloor = new Vector3(spine.x, shoulderY - PilotEyeHeight, spine.z);
             chestOffset = toRobot * (chestFloor - robotRoot.position) + Vector3.forward * ChestSeatForward;
 
-            report = $"본 높이: Head {head.position.y:F1} m, Head_end {headEnd.position.y:F1} m, Spine {spine.position.y:F1} m, 어깨 {shoulderY:F1} m. " +
+            report = $"본 높이({source}): Head {head.y:F1} m, Head_end {headEnd.y:F1} m, Spine {spine.y:F1} m, 어깨 {shoulderY:F1} m. " +
                      $"좌석 눈 높이(키 {PilotEyeHeight} m 가정): Head {headEye.y:F1} m, ChestTop {shoulderY:F1} m. " +
                      $"루트 기준 바닥 오프셋 Head {headOffset}, ChestTop {chestOffset}";
             return true;
+        }
+
+        const int PoseSamples = 16;
+
+        /// <summary>clip을 고르게 PoseSamples번 재생해 bones의 평균 월드 위치를 잰다. 끝나면 모든 본을 원래 자세로 되돌린다.</summary>
+        static Vector3[] AveragePositions(GameObject model, AnimationClip clip, Transform[] bones, out float headRange)
+        {
+            var all = model.GetComponentsInChildren<Transform>(true);
+            var saved = all.Select(t => (t.localPosition, t.localRotation, t.localScale)).ToArray();
+            var sums = new Vector3[bones.Length];
+            float minHead = float.MaxValue, maxHead = float.MinValue;
+            try
+            {
+                for (var i = 0; i < PoseSamples; i++)
+                {
+                    clip.SampleAnimation(model, clip.length * i / PoseSamples);
+                    for (var b = 0; b < bones.Length; b++) sums[b] += bones[b].position;
+                    minHead = Mathf.Min(minHead, bones[0].position.y);
+                    maxHead = Mathf.Max(maxHead, bones[0].position.y);
+                }
+            }
+            finally
+            {
+                for (var i = 0; i < all.Length; i++)
+                {
+                    all[i].localPosition = saved[i].localPosition;
+                    all[i].localRotation = saved[i].localRotation;
+                    all[i].localScale = saved[i].localScale;
+                }
+            }
+            headRange = maxHead - minHead;
+            return sums.Select(v => v / PoseSamples).ToArray();
         }
 
         /// <summary>Head 좌석에서 숨길 자기 로봇 머리 렌더러(정점 절반 이상이 Head·Head_end 본).</summary>

@@ -49,7 +49,7 @@ namespace Anseong.EditorTools
             {
                 var player = CreateRobot(model, controller, avatar, "Robot_Player", preview);
                 if (player == null) return;
-                if (!AddCockpit(player, switchSeat)) return;
+                if (!AddCockpit(player, IdleClip(controller), switchSeat)) return;
                 Save(player, PlayerPrefabPath);
 
                 var boss = CreateRobot(model, controller, avatar, "Robot_Boss", preview);
@@ -98,10 +98,13 @@ namespace Anseong.EditorTools
             return root.transform;
         }
 
-        static bool AddCockpit(Transform player, UnityEngine.InputSystem.InputActionReference switchSeat)
+        static bool AddCockpit(Transform player, AnimationClip idleClip, UnityEngine.InputSystem.InputActionReference switchSeat)
         {
-            // 본 위치는 Animator가 평가되기 전의 기본 자세에서 잰다(M0-04와 같은 기준).
-            if (!RobotSandboxUtility.TryComputeSeatOffsets(player, out var headOffset, out var chestOffset, out var report))
+            // 게임에서는 대기 클립이 계속 돌므로 기본 자세가 아니라 대기 클립 평균 자세에서 잰다.
+            // (기본 자세 기준이면 대기 자세의 몸이 더 낮아 좌석이 머리 뒤·위로 밀린다. 1차 헤드셋 확인)
+            if (idleClip == null)
+                Debug.LogWarning($"{LogPrefix} 대기 컨트롤러에서 클립을 찾지 못해 기본 자세로 좌석을 잽니다.");
+            if (!RobotSandboxUtility.TryComputeSeatOffsets(player, out var headOffset, out var chestOffset, out var report, idleClip))
             {
                 Debug.LogError($"{LogPrefix} {report} 플레이어 프리팹을 만들지 않습니다.");
                 return false;
@@ -119,6 +122,12 @@ namespace Anseong.EditorTools
             if (headRenderers.Length == 0)
                 Debug.LogWarning($"{LogPrefix} 숨길 머리 렌더러를 찾지 못했습니다. Head 좌석에서 머리가 시야를 막을 수 있습니다.");
             return true;
+        }
+
+        static AnimationClip IdleClip(AnimatorController controller)
+        {
+            var state = controller.layers.Length > 0 ? controller.layers[0].stateMachine.defaultState : null;
+            return state != null ? state.motion as AnimationClip : null;
         }
 
         static void Save(Transform root, string path)
