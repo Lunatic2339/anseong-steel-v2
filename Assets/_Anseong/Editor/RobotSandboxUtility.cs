@@ -264,12 +264,13 @@ namespace Anseong.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>조종석이 따라 흔들릴 본과 그 기준 위치를 채운다. 비율(followWeight)은 클래스 기본값(1)을 쓴다.</summary>
-        public static void ConfigureFollow(CockpitSeat seat, Transform bone, Vector3 referenceLocal)
+        /// <summary>조종석이 따라 흔들릴 본과 그 기준 위치, 따라가는 비율을 채운다.</summary>
+        public static void ConfigureFollow(CockpitSeat seat, Transform bone, Vector3 referenceLocal, float weight = 1f)
         {
             var serialized = new SerializedObject(seat);
             serialized.FindProperty("followBone").objectReferenceValue = bone;
             serialized.FindProperty("followReferenceLocal").vector3Value = referenceLocal;
+            serialized.FindProperty("followWeight").floatValue = weight;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
