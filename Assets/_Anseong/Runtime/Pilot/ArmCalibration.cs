@@ -186,6 +186,27 @@ namespace Anseong.Pilot
             return CalibrationError.None;
         }
 
+        /// <summary>
+        /// 1인 양팔 모드: 두 손을 나란히 정면으로 뻗은 위치에서 몸 정면 yaw(°)를 구한다.
+        /// 왼손 → 오른손 선에 수직인 방향이라 어깨 추정이 좌우로 틀려도 영향을 받지 않는다.
+        /// 두 손이 너무 가까우면 NaN.
+        /// </summary>
+        public static float BodyYawFromHands(Vector3 leftReach, Vector3 rightReach, float minSpacing = 0.1f)
+        {
+            var across = new Vector3(rightReach.x - leftReach.x, 0f, rightReach.z - leftReach.z);
+            if (!Finite(across) || across.magnitude < minSpacing) return float.NaN;
+            var forward = Vector3.Cross(across, Vector3.up);
+            return Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
+        }
+
+        /// <summary>도달까지 끝난 보정의 몸 정면 yaw를 바꾼다(1인 양팔 모드에서 두 손 공통 정면으로 맞출 때).</summary>
+        public bool SetBodyYaw(float degrees)
+        {
+            if (!IsComplete || float.IsNaN(degrees) || float.IsInfinity(degrees)) return false;
+            BodyYawDegrees = degrees;
+            return true;
+        }
+
         /// <summary>트래킹 공간 위치 → 몸 기준(어깨 원점, +Z = 몸 정면, +Y = 위).</summary>
         public Vector3 ToBody(Vector3 trackingPoint)
         {
