@@ -144,7 +144,7 @@ namespace Anseong.EditorTools
             if (poseClip != null && animator != null)
             {
                 positions = AveragePositions(animator.gameObject, poseClip, bones, out var headRange);
-                source = $"'{poseClip.name}' 클립 평균 자세(재생 중 Head 높이 변화 {headRange:F2} m)";
+                source = $"'{poseClip.name}' 클립 평균 자세(재생 중 Head 움직임 범위 {headRange:F2} m)";
             }
             else
             {
@@ -180,15 +180,16 @@ namespace Anseong.EditorTools
             var all = model.GetComponentsInChildren<Transform>(true);
             var saved = all.Select(t => (t.localPosition, t.localRotation, t.localScale)).ToArray();
             var sums = new Vector3[bones.Length];
-            float minHead = float.MaxValue, maxHead = float.MinValue;
+            var minHead = Vector3.one * float.MaxValue;
+            var maxHead = Vector3.one * float.MinValue;
             try
             {
                 for (var i = 0; i < PoseSamples; i++)
                 {
                     clip.SampleAnimation(model, clip.length * i / PoseSamples);
                     for (var b = 0; b < bones.Length; b++) sums[b] += bones[b].position;
-                    minHead = Mathf.Min(minHead, bones[0].position.y);
-                    maxHead = Mathf.Max(maxHead, bones[0].position.y);
+                    minHead = Vector3.Min(minHead, bones[0].position);
+                    maxHead = Vector3.Max(maxHead, bones[0].position);
                 }
             }
             finally
@@ -200,7 +201,7 @@ namespace Anseong.EditorTools
                     all[i].localScale = saved[i].localScale;
                 }
             }
-            headRange = maxHead - minHead;
+            headRange = Vector3.Distance(maxHead, minHead);
             return sums.Select(v => v / PoseSamples).ToArray();
         }
 
