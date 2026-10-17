@@ -116,7 +116,14 @@ namespace Anseong.EditorTools
         public static bool TryComputeSeatOffsets(Transform robotRoot, out Vector3 headOffset, out Vector3 chestOffset, out string report,
             AnimationClip poseClip = null)
         {
-            headOffset = chestOffset = Vector3.zero;
+            return TryComputeSeatOffsets(robotRoot, out headOffset, out chestOffset, out _, out report, poseClip);
+        }
+
+        /// <summary>위와 같고, Head 본의 기준 위치(루트 원점, 로봇 정면 기준)도 돌려준다. 조종석 흔들림 따라가기의 기준.</summary>
+        public static bool TryComputeSeatOffsets(Transform robotRoot, out Vector3 headOffset, out Vector3 chestOffset, out Vector3 headReferenceLocal,
+            out string report, AnimationClip poseClip = null)
+        {
+            headOffset = chestOffset = headReferenceLocal = Vector3.zero;
             var bones = new[]
             {
                 FindBone(robotRoot, HeadBone),
@@ -149,6 +156,8 @@ namespace Anseong.EditorTools
             var shoulderY = (positions[3].y + positions[4].y) * 0.5f;
 
             var toRobot = Quaternion.Inverse(CockpitSeatMath.YawOnly(robotRoot.rotation));
+
+            headReferenceLocal = toRobot * (head - robotRoot.position);
 
             var headEye = Vector3.Lerp(head, headEnd, HeadEyeFraction);
             var headFloor = headEye + Vector3.down * PilotEyeHeight;
@@ -251,6 +260,15 @@ namespace Anseong.EditorTools
             serialized.FindProperty("activeSeat").intValue = 0;
             serialized.FindProperty("seatSpacing").floatValue = SeatSpacing;
             serialized.FindProperty("switchSeatAction").objectReferenceValue = switchSeat;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+        }
+
+        /// <summary>조종석이 따라 흔들릴 본과 그 기준 위치를 채운다. 비율(followWeight)은 건드리지 않는다(기본 0).</summary>
+        public static void ConfigureFollow(CockpitSeat seat, Transform bone, Vector3 referenceLocal)
+        {
+            var serialized = new SerializedObject(seat);
+            serialized.FindProperty("followBone").objectReferenceValue = bone;
+            serialized.FindProperty("followReferenceLocal").vector3Value = referenceLocal;
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
