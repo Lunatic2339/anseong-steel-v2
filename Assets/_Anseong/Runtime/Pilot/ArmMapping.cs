@@ -28,9 +28,16 @@ namespace Anseong.Pilot
         public static bool TryLinear(ArmCalibration calibration, Vector3 hand, float robotArmLength,
             float shoulderHeightOffset, out Vector3 robotLocal)
         {
+            return TryLinear(calibration, hand, robotArmLength, shoulderHeightOffset, Vector3.zero, out robotLocal);
+        }
+
+        /// <summary>shoulderShift(트래킹 공간, m): 허리 회전으로 사람 어깨가 움직인 양(<see cref="TorsoTwist.ShoulderShift"/>).</summary>
+        public static bool TryLinear(ArmCalibration calibration, Vector3 hand, float robotArmLength,
+            float shoulderHeightOffset, Vector3 shoulderShift, out Vector3 robotLocal)
+        {
             robotLocal = Vector3.zero;
             if (calibration == null || !calibration.IsComplete || !ArmCalibration.Finite(hand) || robotArmLength <= 0f) return false;
-            var shoulder = calibration.Shoulder + Vector3.up * shoulderHeightOffset;
+            var shoulder = calibration.Shoulder + shoulderShift + Vector3.up * shoulderHeightOffset;
             var local = Quaternion.Inverse(calibration.BodyRotation) * (hand - shoulder);
             var length = local.magnitude;
             if (length < 1e-6f) return true;

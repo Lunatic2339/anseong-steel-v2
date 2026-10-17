@@ -16,7 +16,7 @@ namespace Anseong.EditorTools
         // 기존 레포 DefaultFistPose: 손가락 마디별 접는 각도(1·2·3마디).
         static readonly float[] CurlDegrees = { 55f, 45f, 25f };
 
-        /// <summary>robotRoot 아래 "Arms" 오브젝트에 왼팔·오른팔 드라이버를 만든다. 실패하면 false와 이유.</summary>
+        /// <summary>robotRoot 아래 "Arms" 오브젝트에 왼팔·오른팔 드라이버와 허리 회전을 만든다. 실패하면 false와 이유.</summary>
         public static bool AddArmDrivers(Transform robotRoot, out string report)
         {
             var arms = new GameObject("Arms");
@@ -32,6 +32,24 @@ namespace Anseong.EditorTools
                 }
                 lines.Add(line);
             }
+            var spine = FindUnique(robotRoot, RobotSandboxUtility.SpineBone);
+            if (spine == null)
+            {
+                report = $"허리 뼈({RobotSandboxUtility.SpineBone})를 찾지 못했습니다.";
+                return false;
+            }
+            var torso = arms.AddComponent<TorsoTwistDriver>();
+            var serialized = new SerializedObject(torso);
+            serialized.FindProperty("robotRoot").objectReferenceValue = robotRoot;
+            serialized.FindProperty("spine").objectReferenceValue = spine;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            foreach (var driver in arms.GetComponents<RobotArmDriver>())
+            {
+                var arm = new SerializedObject(driver);
+                arm.FindProperty("torso").objectReferenceValue = torso;
+                arm.ApplyModifiedPropertiesWithoutUndo();
+            }
+            lines.Add("허리 회전: " + spine.name);
             report = string.Join(" / ", lines);
             return true;
         }
@@ -164,14 +182,18 @@ namespace Anseong.EditorTools
         public static int ConnectDrivers(PilotHandInput input, PilotCalibrationFlow flow)
         {
             var drivers = Object.FindObjectsByType<RobotArmDriver>(FindObjectsInactive.Include, FindObjectsSortMode.None);
-            foreach (var driver in drivers)
-            {
-                var serialized = new SerializedObject(driver);
-                serialized.FindProperty("input").objectReferenceValue = input;
-                serialized.FindProperty("calibration").objectReferenceValue = flow;
-                serialized.ApplyModifiedProperties();
-            }
+            foreach (var driver in drivers) Connect(driver, input, flow);
+            foreach (var torso in Object.FindObjectsByType<TorsoTwistDriver>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                Connect(torso, input, flow);
             return drivers.Length;
+        }
+
+        static void Connect(Object component, PilotHandInput input, PilotCalibrationFlow flow)
+        {
+            var serialized = new SerializedObject(component);
+            serialized.FindProperty("input").objectReferenceValue = input;
+            serialized.FindProperty("calibration").objectReferenceValue = flow;
+            serialized.ApplyModifiedProperties();
         }
     }
 }

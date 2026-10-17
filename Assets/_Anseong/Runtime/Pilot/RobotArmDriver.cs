@@ -50,6 +50,9 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("개인 보정(XR Origin의 PilotCalibrationFlow). Add Pilot Input 메뉴가 연결한다.")]
         PilotCalibrationFlow calibration;
 
+        [SerializeField, Tooltip("허리 회전(같은 오브젝트의 TorsoTwistDriver). 비어 있으면 시작할 때 같은 오브젝트에서 찾는다. 없으면 허리 보정 없이 매핑한다.")]
+        TorsoTwistDriver torso;
+
         [Header("매핑")]
         [SerializeField, Tooltip("Linear = 로봇 어깨 + (손 − 사람 어깨) × (로봇 팔 ÷ 개인 팔), 사람 가드가 그대로 커진다(기본). " +
             "GuardMatched = 사람 가드를 아래 로봇 가드 위치로 맞추고 뻗을수록 로봇 정면으로 섞는다.")]
@@ -126,6 +129,7 @@ namespace Anseong.Pilot
         {
             // 프리팹에는 씬의 XR Origin 참조를 저장할 수 없다. Add Pilot Input 메뉴가 연결하지만,
             // 비어 있으면 시작할 때 한 번만 씬에서 찾는다(매 프레임 찾지 않는다).
+            if (torso == null) torso = GetComponent<TorsoTwistDriver>();
             if (input == null) input = FindAnyObjectByType<PilotHandInput>();
             if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
             if (input == null || calibration == null)
@@ -159,7 +163,8 @@ namespace Anseong.Pilot
             var length = solver.Bind.Total;
             Vector3 local;
             var mapped = mappingMode == ArmMappingMode.Linear
-                ? ArmMapping.TryLinear(arm, sample.Position, length, shoulderHeightOffset, out local)
+                ? ArmMapping.TryLinear(arm, sample.Position, length, shoulderHeightOffset,
+                    torso != null ? torso.HumanShoulderShift(side) : Vector3.zero, out local)
                 : ArmMapping.TryGuardMatched(arm, sample.Position, length, RobotGuardLocal(length), out local);
             if (!mapped)
             {

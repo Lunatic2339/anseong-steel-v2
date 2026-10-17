@@ -64,6 +64,15 @@ namespace Anseong.Pilot
         /// <summary>보정이 끝났을 때(다시 보정해도 매번).</summary>
         public event Action Completed;
 
+        /// <summary>머리 회전(트래킹 공간, 손 위치와 같은 좌표계). 머리나 트래킹 공간이 없으면 false.</summary>
+        public bool TryGetHeadRotation(out Quaternion rotation)
+        {
+            rotation = Quaternion.identity;
+            if (head == null) return false;
+            rotation = trackingSpace != null ? Quaternion.Inverse(trackingSpace.rotation) * head.rotation : head.rotation;
+            return true;
+        }
+
         public ArmCalibration Get(PilotSide hand)
         {
             EnsureArms();

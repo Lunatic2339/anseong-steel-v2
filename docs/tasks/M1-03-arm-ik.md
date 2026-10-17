@@ -51,17 +51,20 @@
   - 기존 `ControllerElbowHint`(훅 궤적이면 팔꿈치를 옆으로 들어 올림)를 `ElbowLiftHint`로 옮겨 기본으로 켰다. Inspector에서 끌 수 있다.
   - 솔버의 속도 제한(swivel 180°/초, 아래팔 비틀림 180°/초, 굽힘면 90°/초)은 기존 Practice 값 그대로다. 어깨 → 손 방향 제한만 180°에서 720°/초로 올렸다(펀치 지연 방지, 어깨 근처 뒤집힘 방지용으로만 남김).
   - `MechaArmStability.StableHint`는 옮겼지만 쓰지 않는다(Practice 방식의 swivel 선택이 그 역할을 한다). `SoftDistance`에 시작·한계 비율을 받는 판을 추가했다.
+  - **허리 회전 추가(선우, 10/17, 1차 헤드셋 확인 뒤).** 지시서 "하지 말 것"의 몸통 휘청과는 별개로, 허리를 써서 감았다 치는 동작을 넣기로 했다. 허리 추적 장치가 없어 1인 양팔 모드에서 두 손 선이 가드 때보다 돈 각도 × 0.5 + 고개 yaw × 0.2로 어림잡고(최대 ±30°, 0.06초 따라감), 로봇 `Spine`을 루트 위쪽 축으로 돌린다. 오른손을 뒤로 빼면 오른쪽으로 감기고, 오른손을 뻗으면 왼쪽으로 돈다. 팔 매핑은 사람 어깨도 같은 각도로 돈 것으로 보고 잰다(허리를 돌리며 뻗은 손이 로봇에서도 같은 자세). 2인 모드는 두 조종사 손이 다른 PC에 있어 끄고 M3에서 정한다. 조종석은 머리 뼈를 따라가므로 허리를 돌리면 시점도 옮겨진다(멀미 확인 항목).
 - 바뀐 파일:
   - `Runtime/Core/MechaArmStability.cs` — 기존 레포에서 옮김(네임스페이스 `Anseong.Core`, 비율 지정 `SoftDistance` 추가).
   - `Runtime/Pilot/TwoBoneArmSolver.cs` — `ArmBind`(바인드 포즈 기준값), `ArmPose`, `ArmSolverSettings`(Inspector 수치), 해석적 2본 IK. 기존 `ControllerArmFollower.Practice.cs` 방식을 Transform 없이 다시 씀: 바인드 기준 절대 재구성(41-42·136-137), 내부구(94-105), swivel ±105° + 히스테리시스(185-193), 손목(156-165).
   - `Runtime/Pilot/ArmMapping.cs` — `ArmMappingMode`, `TryLinear`, `TryGuardMatched`, `FistLocal`, `GuardDelta`, `ElbowLiftHint`.
   - `Runtime/Pilot/RobotArmDriver.cs` — 팔마다 하나. 실행 순서 100(Animator 뒤, 조종석 전) LateUpdate에서 위팔·아래팔·손 회전을 덮어쓰고 손가락을 주먹으로 고정. 매핑 방식, 어깨 높이 보정(기본 0), GuardMatched 로봇 가드 위치, 팔 반응(`responseSeconds`·`maxTargetSpeed`, 기본 0 = 즉시), 솔버 수치를 Inspector에 노출. IK 시작 때 `[RobotArmDriver]` 로그(팔 길이·배율, 개발 빌드만).
   - `Runtime/Pilot/PilotCalibrationFlow.cs` — 도달 단계 안내 문구만 "펀치 자세(손등 위, 엄지 안쪽)로".
+  - `Runtime/Pilot/TorsoTwist.cs` — 허리 yaw 추정(`EstimateYaw`), 고개 yaw(`HeadYawFromBody`), 허리 회전에 따른 사람 어깨 이동(`ShoulderShift`). `TorsoTwistSettings`(Inspector 수치).
+  - `Runtime/Pilot/TorsoTwistDriver.cs` — 실행 순서 90(팔 드라이버 전) LateUpdate에서 `Spine` yaw를 덮어쓴다. 클립이 허리를 안 써도 회전이 쌓이지 않게 원래 값을 기억한다. `Robot_Player > Arms`에 붙고, 끄기는 `Twist Enabled`.
   - `Editor/RobotArmSetup.cs` — 두 팔 드라이버 생성, Mixamo 뼈 이름 탐색, 기존 `DefaultFistPose.Configure`를 옮긴 주먹 포즈 계산(계산 뒤 손가락은 원래 회전으로 되돌려 프리팹 바인드 포즈를 바꾸지 않음), 씬의 드라이버에 입력·보정 연결.
   - `Editor/RobotPrefabMenu.cs` — Build Player Robot Prefab이 `Robot_Player` 아래 `Arms`에 왼팔·오른팔 드라이버를 붙인다.
   - `Editor/SceneSetupMenu.cs` — Add Pilot Input이 씬의 팔 드라이버에도 입력·보정을 연결한다.
-  - 테스트: `TwoBoneArmSolverTests`(11: 목표 도달·뼈 방향, 왼팔 팔꿈치 바깥 아래, 도달 밖 단조 수렴, SoftDistance 연속, 내부구, 손목 고정·풀림 한계, 머리 위·몸 뒤·반대쪽 어깨 궤적에서 뒤집힘 없음, 2분 원 그리기 뒤 roll 드리프트 0, 몸 회전 불변, swivel 히스테리시스), `ArmMappingTests`(10: 선형 배율·방향, 끝까지 뻗음, 단조, 어깨 높이 보정, 몸 정면 yaw, 미보정, 가드 맞춤, 주먹 회전 기준, 기존 `ArmMotionValidation` 팔꿈치 힌트 2경우).
-- Claude가 확인한 것: Unity가 없어 **컴파일·Test Runner는 못 돌렸다.** 순수 클래스와 테스트(기존 포함 56개)는 Unity 수학 스텁으로 따로 컴파일해 모두 통과했다. 위팔 회전을 누적 방식으로 바꾸면 roll 드리프트 테스트가 실패하는 것도 확인했다(127°). `RobotArmDriver`·에디터 메뉴는 Unity에서 처음 컴파일된다.
+  - 테스트: `TorsoTwistTests`(7: 가드에서 0, 뒤로 뺀 손 쪽으로 감김·좌우 대칭, 고개 비율·한계, 미보정, 고개 yaw 부호, 어깨 이동, 허리 보정 매핑), `TwoBoneArmSolverTests`(11: 목표 도달·뼈 방향, 왼팔 팔꿈치 바깥 아래, 도달 밖 단조 수렴, SoftDistance 연속, 내부구, 손목 고정·풀림 한계, 머리 위·몸 뒤·반대쪽 어깨 궤적에서 뒤집힘 없음, 2분 원 그리기 뒤 roll 드리프트 0, 몸 회전 불변, swivel 히스테리시스), `ArmMappingTests`(10: 선형 배율·방향, 끝까지 뻗음, 단조, 어깨 높이 보정, 몸 정면 yaw, 미보정, 가드 맞춤, 주먹 회전 기준, 기존 `ArmMotionValidation` 팔꿈치 힌트 2경우).
+- Claude가 확인한 것: Unity가 없어 **컴파일·Test Runner는 못 돌렸다.** 순수 클래스와 테스트(기존 포함 63개)는 Unity 수학 스텁으로 따로 컴파일해 모두 통과했다. 위팔 회전을 누적 방식으로 바꾸면 roll 드리프트 테스트가 실패하는 것도 확인했다(127°). `RobotArmDriver`·에디터 메뉴는 Unity에서 처음 컴파일된다.
 - 사람이 확인할 것:
   - [ ] Unity Console에 `error CS` 없음, 새 `.cs` `.meta` 커밋, EditMode 테스트 전체 통과.
   - [ ] **Anseong → Setup → Build Player Robot Prefab** → Console에 `[RobotPrefabMenu] 팔 드라이버: Left 팔: 위팔 … / Right 팔: …` 로그, `[RobotArmSetup]` 경고 없음(손바닥 판별 경고가 나오면 알려 주기).
@@ -75,6 +78,8 @@
   - [ ] 그립을 쥐면 손목이 고정되고, 놓으면 조금 꺾인다.
   - [ ] 주먹 손가락이 손바닥 쪽으로 접혀 있다(손등 쪽이면 손바닥 판별 문제).
   - [ ] 대기 클립의 손목 180° 뒤집힘이 IK가 켜진 뒤에는 없다.
+  - [ ] 오른손을 뒤로 뺐다 뻗으면 로봇 허리가 오른쪽으로 감겼다 왼쪽으로 돈다(왼손은 반대). 너무 크거나 작으면 `Torso Twist Driver`의 Hand Weight·Max Degrees를 바꿔 보고 고른 값을 적는다.
+  - [ ] 허리가 돌 때 시점이 같이 옮겨져 어지럽지 않은지. 어지러우면 Head Weight를 0으로, 그래도 어지러우면 Twist Enabled를 끄고 적는다.
 - 1차 헤드셋 확인 (선우, 2026-10-17): 첫 Play에서 팔이 움직이지 않음 → 드라이버의 Input·Calibration 연결이 비어 있었음. 비어 있으면 시작할 때 씬에서 한 번 찾고 못 찾으면 경고하도록 수정. 그 뒤 양팔이 손을 따라 잘 움직임. 어색한 점: ① 허리를 써서 팔을 뒤로 뺐다 치는 동작이 로봇에 안 들어감(몸통은 대기 클립 그대로) ② 위팔이 많이 돌 때 어깨 장갑이 몸통을 많이 파고듦. 어깨 장갑이 위팔 뼈와 같이 도는 것으로 보임(선우). 쇄골 뼈가 없어 코드로는 못 막으므로 **A-02에서 어깨 장갑 웨이트를 Spine 위주(위팔은 조금)로** 다시 칠하자고 총괄에 전달.
 - 남은 문제 / 제안:
   - 팔 IK는 손 입력을 Update에서 읽고, 카메라는 렌더 직전 자세를 쓴다. 지연이 느껴지면 손 입력도 렌더 직전에 다시 읽는 방법을 검토한다.
