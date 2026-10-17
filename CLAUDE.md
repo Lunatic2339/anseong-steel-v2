@@ -15,6 +15,7 @@
 | `docs/design/05_boss_patterns.md` | 보스 공격 흐름·기술표·페이즈별 순서·전환 (제안값) |
 | `docs/design/06_feel_and_sound.md` | 조작감 컨셉: 공격·이동 동작별 소리·진동·외골격 |
 | `docs/tasks/` | 작업 지시서. **한 세션 = 지시서 하나 = PR 하나** |
+| `docs/members/` | 조원별 지시서 원본. 팀원에게 요청이 생기면 그 사람 파일의 "다른 작업에서 온 요청"에, 팀원 문제 보고는 `선우.md`에 적는다(규칙: `docs/members/README.md`) |
 
 ## 고정된 결정
 
