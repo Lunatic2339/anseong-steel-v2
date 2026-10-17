@@ -52,6 +52,18 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("피격 흔들림 등을 위한 추가 오프셋(m, 조종석 로컬). 기본 0. 실제 흔들림은 M2에서 코드가 넣는다.")]
         Vector3 additionalOffset;
 
+        [SerializeField, Tooltip("조종석이 따라 흔들릴 본(머리). 비우면 따라가지 않는다. 에디터 메뉴가 채운다.")]
+        Transform followBone;
+
+        [SerializeField, Tooltip("followBone의 기준 위치(m). 루트 원점, 로봇 정면 기준. 이 위치에서 벗어난 만큼만 따라간다. 메뉴가 대기 클립 평균 자세로 채운다.")]
+        Vector3 followReferenceLocal;
+
+        [SerializeField, Range(0f, 1f), Tooltip("본 흔들림을 따라가는 비율. 0 = 루트에 고정(기본, 멀미 방지), 1 = 본과 똑같이. 위치만 따라가고 회전은 따라가지 않는다.")]
+        float followWeight;
+
+        [SerializeField, Tooltip("본을 따라 움직이는 최대 거리(m). 큰 동작 클립에서 카메라가 크게 튀지 않게 한다.")]
+        float maxFollowOffset = 1f;
+
         [SerializeField, Tooltip("이 조종석 안에 둘 XR Origin. 이 Transform의 자식이어야 한다.")]
         XROrigin xrOrigin;
 
@@ -127,7 +139,10 @@ namespace Anseong.Pilot
         public void ApplySeatPose()
         {
             if (!IsValidSeat(activeSeat) || robotRoot == null) return;
-            var (position, rotation) = CockpitSeatMath.RigPose(robotRoot.position, robotRoot.rotation, seats[activeSeat].offsetMeters + additionalOffset);
+            var follow = followBone != null
+                ? CockpitSeatMath.FollowOffset(robotRoot.position, robotRoot.rotation, followBone.position, followReferenceLocal, followWeight, maxFollowOffset)
+                : Vector3.zero;
+            var (position, rotation) = CockpitSeatMath.RigPose(robotRoot.position, robotRoot.rotation, seats[activeSeat].offsetMeters + follow + additionalOffset);
             transform.SetPositionAndRotation(position, rotation);
         }
 

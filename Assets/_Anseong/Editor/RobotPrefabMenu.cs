@@ -104,7 +104,7 @@ namespace Anseong.EditorTools
             // (기본 자세 기준이면 대기 자세의 몸이 더 낮아 좌석이 머리 뒤·위로 밀린다. 1차 헤드셋 확인)
             if (idleClip == null)
                 Debug.LogWarning($"{LogPrefix} 대기 컨트롤러에서 클립을 찾지 못해 기본 자세로 좌석을 잽니다.");
-            if (!RobotSandboxUtility.TryComputeSeatOffsets(player, out var headOffset, out var chestOffset, out var report, idleClip))
+            if (!RobotSandboxUtility.TryComputeSeatOffsets(player, out var headOffset, out var chestOffset, out var headReference, out var report, idleClip))
             {
                 Debug.LogError($"{LogPrefix} {report} 플레이어 프리팹을 만들지 않습니다.");
                 return false;
@@ -115,6 +115,7 @@ namespace Anseong.EditorTools
             var seat = rig.AddComponent<CockpitSeat>();
             var headRenderers = RobotSandboxUtility.FindHeadRenderers(player);
             RobotSandboxUtility.ConfigureSeat(seat, player, headOffset, chestOffset, headRenderers, switchSeat);
+            RobotSandboxUtility.ConfigureFollow(seat, RobotSandboxUtility.FindBone(player, RobotSandboxUtility.HeadBone), headReference);
             seat.ApplySeatPose();
             RobotSandboxUtility.CreateCockpitProps(rig.transform);
 

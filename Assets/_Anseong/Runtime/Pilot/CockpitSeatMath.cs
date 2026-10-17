@@ -25,6 +25,18 @@ namespace Anseong.Pilot
             return (rootPosition + yaw * offsetMeters, yaw);
         }
 
+        /// <summary>
+        /// 본이 기준 위치에서 얼마나 움직였는지를 로봇 정면 기준(yaw만) 오프셋으로 돌려준다. weight배, 길이는 maxOffset까지.
+        /// referenceLocal은 같은 기준(루트 원점, 로봇 정면 yaw)의 본 기준 위치(예: 대기 클립 평균 자세의 머리).
+        /// </summary>
+        public static Vector3 FollowOffset(Vector3 rootPosition, Quaternion robotRotation, Vector3 bonePosition,
+            Vector3 referenceLocal, float weight, float maxOffset)
+        {
+            if (weight <= 0f || maxOffset <= 0f) return Vector3.zero;
+            var local = Quaternion.Inverse(YawOnly(robotRotation)) * (bonePosition - rootPosition);
+            return Vector3.ClampMagnitude((local - referenceLocal) * weight, maxOffset);
+        }
+
         /// <summary>조종석 중심에서 각 조종사 좌석까지의 로컬 오프셋. 두 좌석 간격 = spacing.</summary>
         public static Vector3 SideOffset(PilotSide side, float spacing)
         {
