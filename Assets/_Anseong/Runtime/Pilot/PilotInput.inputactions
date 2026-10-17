@@ -136,6 +136,56 @@
                     "isPartOfComposite": false
                 }
             ]
+        },
+        {
+            "name": "Dev",
+            "id": "b922a63d-ea4d-4a06-bb43-fad13acc1f87",
+            "actions": [
+                {
+                    "name": "Switch Seat",
+                    "type": "Button",
+                    "id": "82645a35-48c3-4ef5-8f93-ca9c6638cba9",
+                    "expectedControlType": "Button",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "f34d4a15-66bc-4a69-9c8f-f31eec19748b",
+                    "path": "<XRController>{LeftHand}/{MenuButton}",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Switch Seat",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "a1c17452-f8f3-4c25-a319-aecb0897ea62",
+                    "path": "<XRController>{LeftHand}/primaryButton",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Switch Seat",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                },
+                {
+                    "name": "",
+                    "id": "313fabf4-aac6-4247-9302-bf5c839d2e47",
+                    "path": "<Keyboard>/tab",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "Switch Seat",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
         }
     ],
     "controlSchemes": []
