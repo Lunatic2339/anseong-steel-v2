@@ -20,6 +20,11 @@ namespace Anseong.EditorTools
         const string PositionActionName = "Position";
         const string RotationActionName = "Rotation";
         const string TrackingStateActionName = "Tracking State";
+        const string GripActionName = "Grip";
+        const string TriggerActionName = "Trigger";
+        const string StickActionName = "Stick";
+        const string DevMapName = "Dev";
+        const string RecalibrateActionName = "Recalibrate";
         const float ProbeCubeSize = 0.1f;
 
         [MenuItem("Anseong/Setup/Add Tracking Probes")]
@@ -55,6 +60,70 @@ namespace Anseong.EditorTools
             if (created > 0)
                 EditorSceneManager.MarkSceneDirty(scene);
             Debug.Log($"[SceneSetupMenu] 트래킹 프로브 {created}개 추가 (이미 있던 것은 건너뜀). 씬을 저장하세요.", origin);
+        }
+
+        [MenuItem("Anseong/Setup/Add Pilot Input")]
+        static void AddPilotInput()
+        {
+            var scene = SceneManager.GetActiveScene();
+            var origin = scene.GetRootGameObjects()
+                .SelectMany(root => root.GetComponentsInChildren<XROrigin>(true))
+                .FirstOrDefault();
+            if (origin == null)
+            {
+                EditorUtility.DisplayDialog("Add Pilot Input",
+                    $"'{scene.name}' 씬에 XR Origin이 없습니다.\nHierarchy 우클릭 → XR → XR Origin (VR)을 먼저 추가하세요.", "확인");
+                return;
+            }
+            var references = AssetDatabase.LoadAllAssetsAtPath(PilotInputPath).OfType<InputActionReference>().ToArray();
+            if (references.Length == 0)
+            {
+                EditorUtility.DisplayDialog("Add Pilot Input", $"입력 액션 에셋을 찾지 못했습니다: {PilotInputPath}", "확인");
+                return;
+            }
+
+            var target = origin.gameObject;
+            var input = target.GetComponent<PilotHandInput>();
+            if (input == null) input = Undo.AddComponent<PilotHandInput>(target);
+            var serializedInput = new SerializedObject(input);
+            var missing = SetHandActions(serializedInput.FindProperty("leftHand"), references, LeftHandMap);
+            missing += SetHandActions(serializedInput.FindProperty("rightHand"), references, RightHandMap);
+            serializedInput.ApplyModifiedProperties();
+
+            var flow = target.GetComponent<PilotCalibrationFlow>();
+            if (flow == null) flow = Undo.AddComponent<PilotCalibrationFlow>(target);
+            var serializedFlow = new SerializedObject(flow);
+            serializedFlow.FindProperty("input").objectReferenceValue = input;
+            serializedFlow.FindProperty("head").objectReferenceValue = origin.Camera != null ? origin.Camera.transform : null;
+            serializedFlow.FindProperty("trackingSpace").objectReferenceValue =
+                origin.CameraFloorOffsetObject != null ? origin.CameraFloorOffsetObject.transform : origin.transform;
+            var recalibrate = FindReference(references, DevMapName, RecalibrateActionName);
+            if (recalibrate == null) missing++;
+            serializedFlow.FindProperty("recalibrateAction").objectReferenceValue = recalibrate;
+            serializedFlow.ApplyModifiedProperties();
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            if (missing > 0)
+                Debug.LogWarning($"[SceneSetupMenu] 찾지 못한 액션이 {missing}개 있습니다: {PilotInputPath}", origin);
+            Debug.Log("[SceneSetupMenu] XR Origin에 PilotHandInput·PilotCalibrationFlow를 연결했습니다(기본 1인 양팔 모드). 씬을 저장하세요.", origin);
+        }
+
+        static int SetHandActions(SerializedProperty hand, InputActionReference[] references, string mapName)
+        {
+            var missing = 0;
+            void Set(string field, string actionName)
+            {
+                var reference = FindReference(references, mapName, actionName);
+                if (reference == null) missing++;
+                hand.FindPropertyRelative(field).objectReferenceValue = reference;
+            }
+            Set("position", PositionActionName);
+            Set("rotation", RotationActionName);
+            Set("trackingState", TrackingStateActionName);
+            Set("grip", GripActionName);
+            Set("trigger", TriggerActionName);
+            Set("stick", StickActionName);
+            return missing;
         }
 
         static bool AddProbe(XROrigin origin, Transform parent, InputActionReference[] references, string mapName, string objectName)

@@ -39,6 +39,31 @@
 - 테스트 통과.
 
 ## 결과 (작업 후 Claude가 작성)
+- 작업 브랜치: `claude/m1-cockpit-input-x0vygh` (M1-01 다음 커밋).
+- 정한 것(지시서에 없던 부분):
+  - **어깨 단계 = 똑바로 서서 팔을 아래로 편하게 내리고 그립.** 어깨 = 내린 손의 수평 위치 + (머리 높이 − 0.25 m), 개인 팔 길이 = 어깨 → 내린 손. 기존 레포는 반대 손을 어깨에 대는 방식이었는데, 1인 양팔 모드에서 양손을 동시에 보정할 수 없어서 바꿨다. 머리 회전은 쓰지 않는다.
+  - **몸 정면 yaw = 도달 단계에서 어깨 → 뻗은 손의 수평 방향.** 머리 방향을 쓰지 않으므로 고개를 돌린 채 보정해도 몸 쪽을 가리킨다. 1인 양팔 모드는 손마다 따로 저장하고 두 값의 차이를 로그에 낸다.
+  - 기본은 1인 양팔 모드(`PilotHandInput.controlsBothArms` = 켬). 2인 모드에서는 `armSide` 손만 보정·공격하고 반대 손 스틱만 이동 입력이다.
+  - 그립은 아날로그 값에 히스테리시스(0.6 쥠 / 0.4 놓음). 보정 단계는 쥐는 순간 한 번 저장하고, 실패해도 놓았다 다시 쥐어야 한다.
+  - 개발용 다시 보정: 왼손 Y 버튼 또는 키보드 R (`Dev/Recalibrate`).
 - 바뀐 파일:
+  - `Runtime/Pilot/PilotInput.inputactions` — 손 맵마다 `Grip`(`{Grip}`), `Trigger`(`{Trigger}`), `Stick`(`{Primary2DAxis}`), `Dev/Recalibrate`(왼손 `secondaryButton`, `R`).
+  - `Runtime/Pilot/PilotHandInput.cs` — 양손을 위치 액션의 장치 기준으로 같은 장치에서 읽어 `PilotHandSample`(추적, 위치·회전, 그립·트리거·스틱, 공격 의도, 팔/이동 역할)로 내놓는다. 실행 순서 −100.
+  - `Runtime/Pilot/PilotHandRoles.cs` — `PilotHandSample` 구조체와 손 역할 규칙(버그 7 방지).
+  - `Runtime/Pilot/AttackIntentGate.cs` — 그립 + 추적일 때만 의도, 끊김 복구 후 그립을 놓기 전까지 무효. 연계 초기화는 하지 않고 끊긴 시간(`LostSeconds`)만 알려 준다(버그 8 분리).
+  - `Runtime/Pilot/ArmCalibration.cs` — 어깨·가드·도달·팔 길이·몸 정면 yaw 저장과 검사, 기존 `backup/local-1015` `MapRadius`·`DistanceForBend`·`MapPractice`(→ `Map`, 몸 기준 좌표로)를 옮김. 판정 수치는 `ArmCalibrationSettings`(Inspector).
+  - `Runtime/Pilot/PilotCalibrationFlow.cs` — 어깨 → 가드 → 도달, Console 안내·결과 로그(에디터·개발 빌드만), 선택 시 기즈모(노랑 어깨, 초록 가드, 하늘색 도달 + 몸 정면 선).
+  - `Editor/SceneSetupMenu.cs` — **Anseong → Setup → Add Pilot Input**: XR Origin에 두 컴포넌트를 붙이고 액션·머리·트래킹 공간을 연결.
+  - 테스트: `AttackIntentGateTests`(6), `ArmCalibrationTests`(14, 기존 `ArmMotionValidation` Core()의 "soft reach 단조·연속", "펴지 않은 손 거부", NaN 거부 포함), `PilotHandRolesTests`(2).
+- Claude가 확인한 것: Unity가 없어 **컴파일·Test Runner는 못 돌렸다.** 순수 클래스와 새 테스트 22개는 Unity 수학 스텁으로 따로 컴파일해 모두 통과했다. `PilotHandInput`·`PilotCalibrationFlow`·메뉴는 Unity에서 처음 컴파일된다.
 - 사람이 확인할 것:
+  - [ ] Unity Console에 `error CS` 없음, 새 `.cs` `.meta` 커밋, EditMode 테스트 전체 통과.
+  - [ ] `Sandbox_Pilot`(M1-01에서 만든 씬)에서 **Anseong → Setup → Add Pilot Input** → 씬 저장. Console에 "찾지 못한 액션" 경고가 없어야 한다.
+  - [ ] Play → 헤드셋: Console 안내대로 양손 보정 3단계를 끝까지 한다(팔 내리기 → 가드 → 정면으로 뻗기, 매번 그립 쥐었다 놓기). 단계마다 `[PilotCalibration]` 로그가 나온다.
+  - [ ] 보정값(어깨 높이, 팔 길이, 도달 거리)이 실제 몸과 대략 맞는지. Y 버튼(또는 R)으로 다시 보정하면 값이 바뀐다.
+  - [ ] 고개를 옆으로 돌린 채 보정해도 "몸 정면 yaw"가 몸 쪽(그때 머리 yaw와 다름)을 가리킨다. XR Origin을 선택하면 Scene 뷰 기즈모로도 볼 수 있다.
+  - [ ] 그립·트리거·스틱이 Inspector 디버그 모드나 로그로 읽히는지는 M1-03·04에서 쓸 때 같이 본다(지금은 보정에 그립만 쓴다).
 - 남은 문제 / 제안:
+  - 어깨 높이 추정(눈 − 0.25 m)은 사람마다 다르다. Head 좌석은 눈이 로봇 어깨보다 약 5 m 높으므로, 이 값과 함께 M1-03에서 어깨 높이 보정 항목으로 조절한다.
+  - `00_plan.md` 기체 점검의 첫 단계 "담당 팔 들기"를 "팔 내리기"로 바꿀지 팀 회의에서 정할 것(관객용 안내 M4 전에).
+  - 보정 중 공격 의도는 막지 않는다(펀치 판정이 아직 없음). M1-05에서 보정 완료 전 공격을 무시할지 정한다.
