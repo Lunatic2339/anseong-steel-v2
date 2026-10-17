@@ -42,16 +42,16 @@
 ## 사람이 할 일 (윤주)
 코드는 전혀 쓰지 않는다. Unity 화면에서 물체를 끌어다 놓고, 옮기고, 크기를 맞추고, 복사하는 작업이다.
 
-0. **Unity 없이 배치도부터**: 위 그림을 보고 종이나 그림판에 우리 맵을 그린다. 어떤 건물을 어디에 둘지(부서질 것 6+1개, 배경 건물 몇 개)를 정한다. 사진을 찍어 선우에게 보낸다.
+0. **Unity 없이 배치도부터**: 위 그림을 보고 종이나 그림판에 우리 맵을 그린다. 어떤 건물을 어디에 둘지(부서질 것 6+1개, 배경 건물 몇 개)를 정한다. 사진을 찍어 팀 단톡방에 올린다.
 1. **처음 세팅은 선우와 같이**: 레포 clone → Unity Hub에서 열기. 처음 여는 데 시간이 걸린다.
 2. **기본 조작 익히기(1시간)**: Scene 뷰에서 마우스 오른쪽 버튼 + WASD로 이동, 마우스 휠로 확대. 물체를 고르고 W(이동)·E(회전)·R(크기) 키. Ctrl+D 복사, Ctrl+Z 되돌리기. Unity 공식 "Scene view navigation" 문서나 짧은 유튜브 영상 하나면 충분하다.
 3. 메뉴 **Anseong → Sandbox → Build Scale Test**를 누르면 65m 로봇과 사람·트럭·건물 크기 기준물이 있는 씬이 생긴다. **File → Save As**로 `Assets/_Anseong/Scenes/Sandbox/Sandbox_Yunju.unity`에 저장한다. 이 씬에서만 작업한다.
 4. 무료 에셋을 고른다. 추천 출처: Unity Asset Store 무료(URP 지원 표시 확인), Poly Haven(CC0 모델·텍스처·HDRI 하늘), Kenney·Quaternius(CC0). **쓴 파일만** `Assets/_Anseong/Art/Environment/Source/<출처이름>/`에 넣고 `Art/Environment/SOURCES.md`에 출처·라이선스를 적는다. 패키지 전체를 넣지 않는다(레포 용량).
-   - 가져온 물체가 **분홍색**으로 보이면 재질 방식이 달라서 그렇다. Window → Rendering → Render Pipeline Converter에서 Material Upgrade를 체크하고 실행한다. 그래도 분홍색이면 고치려 하지 말고 선우에게 알린다.
+   - 가져온 물체가 **분홍색**으로 보이면 재질 방식이 달라서 그렇다. Window → Rendering → Render Pipeline Converter에서 Material Upgrade를 체크하고 실행한다. 그래도 분홍색이면 고치려 하지 말고 팀 단톡방에 알린다.
 5. 배치도와 위 "배치 기준"대로 놓는다. 움직이지 않는 물체는 Inspector에서 Static 체크. 조명은 기본 방향광 하나만 둔다.
 6. 배치한 환경 전체를 빈 오브젝트 `Env_Steelworks` 아래로 묶어 프리팹으로 저장: `Assets/_Anseong/Art/Environment/Env_Steelworks.prefab`.
 7. Game 뷰 Stats 창에서 삼각형 수(Tris)를 보고 한도(30만) 안인지 확인. 넘으면 먼 건물을 단순한 것으로 바꾼다.
-8. 1차(10/28): 바닥 + 트럭·컨테이너 + 부서질 자리 건물(일반 건물로) + 배경 건물 몇 채 + 하늘. 선우와 헤드셋으로 한 번 본다. → Claude Code에 "Sandbox_Yunju 씬과 Env_Steelworks 프리팹 커밋하고 PR 만들어줘"(어려우면 선우가 대신).
+8. 1차(10/28): 바닥 + 트럭·컨테이너 + 부서질 자리 건물(일반 건물로) + 배경 건물 몇 채 + 하늘. PC-A에서 헤드셋으로 한 번 같이 본다. → Claude Code에 "Sandbox_Yunju 씬과 Env_Steelworks 프리팹 커밋하고 PR 만들어줘"(어려우면 팀 단톡방에 말하고 같이 올린다).
 9. 2차(11/19): 제철소 느낌(고로, 쇳물 빛, 연기), 출격 시작 지점의 정비고 문 앞.
 
 ## 하지 말 것

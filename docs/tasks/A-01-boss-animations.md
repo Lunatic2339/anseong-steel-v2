@@ -19,7 +19,7 @@
 6. 파일 이름을 `Boss_<동작>.fbx`(플레이어 전용은 `Pilot_<동작>.fbx`)로 바꾼다. 예: `Boss_PunchLeft.fbx`, `Boss_Knockback.fbx`, `Boss_SlamBoth.fbx`, `Boss_Charge.fbx`, `Boss_Kneel.fbx`, `Boss_WalkBack.fbx`.
 7. 아래 둘 중 하나로 넘긴다.
    - Git을 쓸 수 있으면: 이 레포를 clone → `Assets/_Anseong/Art/Robot/Animation/Source/Mixamo/`에 넣고 Claude Code에 "이 클립들 커밋하고 PR 만들어줘".
-   - 어려우면: 파일을 선우에게 전달(디스코드·드라이브). 선우의 Claude Code 세션이 넣는다.
+   - 어려우면: 드라이브 `안성제철_애니메이션` 폴더에 올리고 팀 단톡방에 링크. 코드 담당(선우)의 Claude Code 세션이 넣는다.
    - 레포의 `Assets/_Anseong/Art/Robot/Source/BossUpdatedCompatible.fbx`를 Mixamo에 올릴 필요는 없다. 기본 캐릭터로 받아도 우리 뼈대에 맞는다.
 8. 기존 레포(`Lunatic2339/anseong-steel`, develop)의 `AnseongSteel/Assets/_BossPrototype/Animation/CombatSource/GroundCast.fbx`를 Mixamo 미리보기나 Unity에서 보고, **두 손 내려찍기**로 쓸 만한지 의견을 적는다.
 
