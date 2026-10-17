@@ -14,7 +14,7 @@ namespace Anseong.Pilot
         Shoulder,
         /// <summary>편한 가드 자세에서 그립.</summary>
         Guard,
-        /// <summary>정면으로 편하게 끝까지 뻗고 그립.</summary>
+        /// <summary>펀치 자세(손등 위, 엄지 안쪽)로 정면으로 편하게 끝까지 뻗고 그립. 이 손 회전이 로봇 주먹 회전 기준이 된다.</summary>
         Reach,
         Complete,
     }
@@ -193,7 +193,7 @@ namespace Anseong.Pilot
                     Log("2/3 가드: 편한 가드 자세에서 그립을 쥐었다 놓으세요.");
                     break;
                 case CalibrationStage.Reach:
-                    Log("3/3 도달: 정면으로 편하게 끝까지 뻗고 그립을 쥐었다 놓으세요.");
+                    Log("3/3 도달: 펀치 자세(손등 위, 엄지 안쪽)로 정면으로 편하게 끝까지 뻗고 그립을 쥐었다 놓으세요.");
                     break;
                 case CalibrationStage.Complete:
                     AlignBodyYawForBothArms();

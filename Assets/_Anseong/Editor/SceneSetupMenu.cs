@@ -102,10 +102,14 @@ namespace Anseong.EditorTools
             serializedFlow.FindProperty("recalibrateAction").objectReferenceValue = recalibrate;
             serializedFlow.ApplyModifiedProperties();
 
+            var drivers = RobotArmSetup.ConnectDrivers(input, flow);
+
             EditorSceneManager.MarkSceneDirty(scene);
             if (missing > 0)
                 Debug.LogWarning($"[SceneSetupMenu] 찾지 못한 액션이 {missing}개 있습니다: {PilotInputPath}", origin);
-            Debug.Log("[SceneSetupMenu] XR Origin에 PilotHandInput·PilotCalibrationFlow를 연결했습니다(기본 1인 양팔 모드). 씬을 저장하세요.", origin);
+            if (drivers == 0)
+                Debug.LogWarning("[SceneSetupMenu] 씬에 RobotArmDriver가 없습니다. Robot_Player 프리팹을 다시 만들고(Build Player Robot Prefab) 이 메뉴를 다시 실행하세요.", origin);
+            Debug.Log($"[SceneSetupMenu] XR Origin에 PilotHandInput·PilotCalibrationFlow를 연결하고 팔 드라이버 {drivers}개에 입력을 연결했습니다(기본 1인 양팔 모드). 씬을 저장하세요.", origin);
         }
 
         static int SetHandActions(SerializedProperty hand, InputActionReference[] references, string mapName)

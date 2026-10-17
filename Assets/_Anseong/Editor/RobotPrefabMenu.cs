@@ -9,7 +9,7 @@ using UnityEngine.SceneManagement;
 namespace Anseong.EditorTools
 {
     /// <summary>
-    /// 플레이어 로봇·보스 프리팹을 메뉴 한 번으로 다시 만든다(M1-01). 열린 씬은 건드리지 않는다.
+    /// 플레이어 로봇·보스 프리팹을 메뉴 한 번으로 다시 만든다(M1-01 조종석, M1-03 두 팔 드라이버). 열린 씬은 건드리지 않는다.
     /// </summary>
     public static class RobotPrefabMenu
     {
@@ -50,6 +50,12 @@ namespace Anseong.EditorTools
                 var player = CreateRobot(model, controller, avatar, "Robot_Player", preview);
                 if (player == null) return;
                 if (!AddCockpit(player, IdleClip(controller), switchSeat)) return;
+                if (!RobotArmSetup.AddArmDrivers(player, out var armReport))
+                {
+                    Debug.LogError($"{LogPrefix} {armReport} 플레이어 프리팹을 만들지 않습니다.");
+                    return;
+                }
+                Debug.Log($"{LogPrefix} 팔 드라이버: {armReport}");
                 Save(player, PlayerPrefabPath);
 
                 var boss = CreateRobot(model, controller, avatar, "Robot_Boss", preview);
