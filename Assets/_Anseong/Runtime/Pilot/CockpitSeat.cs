@@ -58,8 +58,8 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("followBone의 기준 위치(m). 루트 원점, 로봇 정면 기준. 이 위치에서 벗어난 만큼만 따라간다. 메뉴가 대기 클립 평균 자세로 채운다.")]
         Vector3 followReferenceLocal;
 
-        [SerializeField, Range(0f, 1f), Tooltip("본 흔들림을 따라가는 비율. 0 = 루트에 고정(기본, 멀미 방지), 1 = 본과 똑같이. 위치만 따라가고 회전은 따라가지 않는다.")]
-        float followWeight;
+        [SerializeField, Range(0f, 1f), Tooltip("본 흔들림을 따라가는 비율. 0 = 루트에 고정, 1 = 본과 똑같이(기본, M1-01 헤드셋 확인). 위치만 따라가고 회전은 따라가지 않는다.")]
+        float followWeight = 1f;
 
         [SerializeField, Tooltip("본을 따라 움직이는 최대 거리(m). 큰 동작 클립에서 카메라가 크게 튀지 않게 한다.")]
         float maxFollowOffset = 1f;

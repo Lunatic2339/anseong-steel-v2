@@ -264,7 +264,7 @@ namespace Anseong.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
-        /// <summary>조종석이 따라 흔들릴 본과 그 기준 위치를 채운다. 비율(followWeight)은 건드리지 않는다(기본 0).</summary>
+        /// <summary>조종석이 따라 흔들릴 본과 그 기준 위치를 채운다. 비율(followWeight)은 클래스 기본값(1)을 쓴다.</summary>
         public static void ConfigureFollow(CockpitSeat seat, Transform bone, Vector3 referenceLocal)
         {
             var serialized = new SerializedObject(seat);
