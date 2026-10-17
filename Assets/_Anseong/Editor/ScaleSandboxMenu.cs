@@ -1,5 +1,4 @@
 using System.Linq;
-using Anseong.Core;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEditor.SceneManagement;
@@ -13,7 +12,7 @@ namespace Anseong.EditorTools
     /// </summary>
     public static class ScaleSandboxMenu
     {
-        const string RobotModelPath = "Assets/_Anseong/Art/Robot/Source/BossUpdatedCompatible.fbx";
+        const string RobotModelPath = RobotSandboxUtility.RobotModelPath;
         const string IdleClipPath = "Assets/_Anseong/Art/Robot/Animation/Source/Idle.fbx";
         const string IdleControllerPath = "Assets/_Anseong/Art/Robot/Animation/Robot_Idle.controller";
         const string SandboxFolderParent = "Assets/_Anseong/Scenes";
@@ -22,7 +21,7 @@ namespace Anseong.EditorTools
         const string PreviewClipPrefix = "__preview__";
         const string LogPrefix = "[ScaleSandboxMenu]";
 
-        const float RobotHeight = 65f;
+        const float RobotHeight = RobotSandboxUtility.RobotHeight;
 
         const float ReferenceRowZ = -50f;        // 기준물 줄 (로봇 앞)
         const float PersonHeight = 1.8f;
@@ -112,18 +111,12 @@ namespace Anseong.EditorTools
             robot.transform.position = Vector3.zero;
             Undo.RegisterCreatedObjectUndo(robot, "Build Scale Test");
 
-            if (!TryGetRendererBounds(robot, out var bounds))
+            if (!RobotSandboxUtility.FitToHeight(robot, RobotHeight, out var bounds, out var scale, out var offset))
             {
                 Debug.LogError($"{LogPrefix} {model.name}: 렌더러가 없어 높이를 잴 수 없습니다.", robot);
                 return;
             }
-
             var measured = bounds.size.y;
-            var scale = HeightFit.ScaleForHeight(measured, RobotHeight);
-            var pivotY = robot.transform.position.y;
-            var offset = HeightFit.GroundOffset(bounds.min.y, pivotY, scale);
-            robot.transform.localScale *= scale;
-            robot.transform.position += Vector3.up * offset;
 
             var animator = robot.GetComponent<Animator>();
             if (animator == null) animator = robot.AddComponent<Animator>();
@@ -136,17 +129,6 @@ namespace Anseong.EditorTools
             Debug.Log($"{LogPrefix} {model.name}: 측정 높이 {measured:F3} m, 폭 {bounds.size.x:F3} m, 깊이 {bounds.size.z:F3} m " +
                       $"→ 배율 {scale:F3} → 높이 {RobotHeight} m, 바닥 보정 {offset:F3} m. " +
                       $"Idle 바인딩 경로 {matched}/{total} 일치, Avatar {(animator.avatar != null ? animator.avatar.name : "없음")}", robot);
-        }
-
-        static bool TryGetRendererBounds(GameObject root, out Bounds bounds)
-        {
-            bounds = default;
-            var renderers = root.GetComponentsInChildren<Renderer>(true);
-            if (renderers.Length == 0) return false;
-            bounds = renderers[0].bounds;
-            for (var i = 1; i < renderers.Length; i++)
-                bounds.Encapsulate(renderers[i].bounds);
-            return bounds.size.y > 0f;
         }
 
         static (int matched, int total) CountMatchedBindingPaths(Transform root, AnimationClip clip)
