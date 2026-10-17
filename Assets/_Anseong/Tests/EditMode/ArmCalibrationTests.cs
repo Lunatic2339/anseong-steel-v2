@@ -187,6 +187,36 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void BodyYawFromHands_PerpendicularToHandLine()
+        {
+            Assert.AreEqual(0f, ArmCalibration.BodyYawFromHands(new Vector3(-0.2f, 1.35f, 0.5f), new Vector3(0.2f, 1.4f, 0.5f)), 0.1f);
+            var yaw90 = Quaternion.Euler(0f, 90f, 0f);
+            Assert.AreEqual(90f, ArmCalibration.BodyYawFromHands(yaw90 * new Vector3(-0.2f, 1.35f, 0.5f), yaw90 * new Vector3(0.2f, 1.35f, 0.5f)), 0.1f);
+            Assert.IsTrue(float.IsNaN(ArmCalibration.BodyYawFromHands(new Vector3(0f, 1.3f, 0.5f), new Vector3(0.05f, 1.3f, 0.5f))), "두 손이 너무 가까움");
+        }
+
+        [Test]
+        public void BodyYawFromHands_IgnoresWideShoulderEstimate()
+        {
+            // 1차 헤드셋 확인 재현: 어깨가 실제보다 넓게 잡혀 손마다 잰 정면이 ±16°로 벌어져도, 두 손 선 기준은 0°.
+            var left = new ArmCalibration();
+            var right = new ArmCalibration();
+            left.CaptureShoulder(Head, new Vector3(-0.33f, 0.8f, 0f));
+            right.CaptureShoulder(Head, new Vector3(0.33f, 0.8f, 0f));
+            left.CaptureGuard(new Vector3(-0.2f, 1.45f, 0.27f), Quaternion.identity);
+            right.CaptureGuard(new Vector3(0.2f, 1.45f, 0.27f), Quaternion.identity);
+            Assert.AreEqual(CalibrationError.None, left.CaptureReach(new Vector3(-0.2f, 1.35f, 0.46f), Quaternion.identity));
+            Assert.AreEqual(CalibrationError.None, right.CaptureReach(new Vector3(0.2f, 1.35f, 0.46f), Quaternion.identity));
+            Assert.Greater(Mathf.Abs(Mathf.DeltaAngle(left.BodyYawDegrees, right.BodyYawDegrees)), 25f);
+
+            var yaw = ArmCalibration.BodyYawFromHands(left.ReachPoint, right.ReachPoint);
+            Assert.AreEqual(0f, yaw, 0.1f);
+            Assert.IsTrue(left.SetBodyYaw(yaw));
+            Assert.AreEqual(0f, left.BodyYawDegrees, 0.1f);
+            Assert.IsFalse(new ArmCalibration().SetBodyYaw(10f), "보정 전에는 바꾸지 않음");
+        }
+
+        [Test]
         public void Map_NotCalibrated_ReturnsModelGuard()
         {
             var c = new ArmCalibration();

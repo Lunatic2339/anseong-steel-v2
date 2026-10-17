@@ -196,12 +196,31 @@ namespace Anseong.Pilot
                     Log("3/3 도달: 정면으로 편하게 끝까지 뻗고 그립을 쥐었다 놓으세요.");
                     break;
                 case CalibrationStage.Complete:
+                    AlignBodyYawForBothArms();
                     for (var h = 0; h < 2; h++)
                         if (input != null && input.IsArmHand((PilotSide)h)) input.Gate((PilotSide)h).RequireRelease();
                     LogSummary();
                     Completed?.Invoke();
                     break;
             }
+        }
+
+        /// <summary>
+        /// 1인 양팔 모드: 손마다 어깨 → 손으로 잰 정면은 어깨 추정이 좌우로 조금만 틀려도 서로 안쪽·바깥쪽으로 벌어진다
+        /// (1차 헤드셋 확인: 왼손 +16°, 오른손 −16°, 그때 머리 −3°). 두 손을 잇는 선에 수직인 공통 정면으로 맞춘다.
+        /// </summary>
+        void AlignBodyYawForBothArms()
+        {
+            if (input == null || !input.ControlsBothArms || !arms[0].IsComplete || !arms[1].IsComplete) return;
+            var yaw = ArmCalibration.BodyYawFromHands(arms[0].ReachPoint, arms[1].ReachPoint);
+            if (float.IsNaN(yaw))
+            {
+                Log("두 손이 너무 가까워 공통 몸 정면을 정하지 못했습니다. 손마다 잰 정면을 그대로 씁니다.");
+                return;
+            }
+            Log($"공통 몸 정면 {yaw:F0}° (손마다 잰 값: 왼손 {arms[0].BodyYawDegrees:F0}°, 오른손 {arms[1].BodyYawDegrees:F0}°)");
+            arms[0].SetBodyYaw(yaw);
+            arms[1].SetBodyYaw(yaw);
         }
 
         Vector3 HeadPosition()
@@ -261,8 +280,7 @@ namespace Anseong.Pilot
             }
             if (input != null && input.ControlsBothArms)
             {
-                var difference = Mathf.DeltaAngle(arms[0].BodyYawDegrees, arms[1].BodyYawDegrees);
-                text += $"\n  양손 몸 정면 차이 {difference:F0}° (크면 한쪽을 비스듬히 뻗은 것)";
+                text += $"\n  양손 공통 몸 정면 {arms[0].BodyYawDegrees:F0}° (그때 머리 yaw 왼손 {headYawAtReach[0]:F0}°, 오른손 {headYawAtReach[1]:F0}°)";
             }
             Log(text);
         }
