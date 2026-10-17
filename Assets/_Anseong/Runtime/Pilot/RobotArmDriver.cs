@@ -122,6 +122,17 @@ namespace Anseong.Pilot
             solver = new TwoBoneArmSolver(bind, solverSettings);
         }
 
+        void Start()
+        {
+            // 프리팹에는 씬의 XR Origin 참조를 저장할 수 없다. Add Pilot Input 메뉴가 연결하지만,
+            // 비어 있으면 시작할 때 한 번만 씬에서 찾는다(매 프레임 찾지 않는다).
+            if (input == null) input = FindAnyObjectByType<PilotHandInput>();
+            if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
+            if (input == null || calibration == null)
+                Debug.LogWarning($"[RobotArmDriver] {side} 팔: 씬에서 PilotHandInput·PilotCalibrationFlow를 찾지 못해 팔을 움직이지 않습니다. " +
+                                 "XR Origin에 'Anseong → Setup → Add Pilot Input'을 실행하세요.", this);
+        }
+
         void LateUpdate()
         {
             var arm = calibration != null && calibration.IsComplete ? calibration.Get(side) : null;
