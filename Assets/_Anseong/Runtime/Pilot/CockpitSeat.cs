@@ -7,18 +7,18 @@ using UnityEngine.Rendering;
 namespace Anseong.Pilot
 {
     /// <summary>
-    /// 조종석(자기 Transform)을 로봇 본 기준 위치로 매 프레임 옮기고, XR Origin을 그 안의 자기 좌석에 둔다.
+    /// 조종석(자기 Transform)을 로봇 루트 기준 고정 오프셋으로 매 프레임 옮기고, XR Origin을 그 안의 자기 좌석에 둔다.
     /// <para>
-    /// 본 아래에 자식으로 붙이지 않는 이유: 로봇 계층은 약 61배 확대되어 있어 자식이 되면 XR Origin도 확대되고,
-    /// 본의 기울기·흔들림이 그대로 카메라를 흔든다. 그래서 확대되지 않은 이 조종석 Transform을 따로 두고
-    /// Animator 평가 뒤(LateUpdate, 늦은 실행 순서)에 위치를 맞춘다. XR Origin은 이 Transform의 자식이므로
-    /// 카메라 자세는 TrackedPoseDriver가 렌더 직전에 그대로 갱신하고, 지연이 생기지 않는다.
+    /// 애니메이션되는 본을 따라가지 않는 이유: 로봇이 약 61배라 클립에서 머리 본이 1cm 움직이면 카메라가 약 60cm 움직인다.
+    /// 그래서 위치 = 로봇 루트 + 고정 오프셋(m), 회전 = 로봇 루트의 yaw만 쓴다. 확대된 모델 아래에 자식으로 두지 않으므로
+    /// XR Origin도 확대되지 않는다. 로봇 이동 코드가 끝난 뒤(LateUpdate, 늦은 실행 순서)에 위치를 맞추고,
+    /// 카메라 자세는 TrackedPoseDriver가 렌더 직전에 그대로 갱신하므로 지연이 생기지 않는다.
     /// </para>
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
     public class CockpitSeat : MonoBehaviour
     {
-        /// <summary>Animator와 일반 스크립트가 본을 움직인 뒤에 실행한다.</summary>
+        /// <summary>Animator와 일반 스크립트가 로봇을 움직인 뒤에 실행한다.</summary>
         public const int ExecutionOrder = 10000;
 
         [Serializable]
@@ -27,28 +27,42 @@ namespace Anseong.Pilot
             [Tooltip("표시용 이름 (예: Head, ChestTop).")]
             public string label;
 
-            [Tooltip("조종석 위치의 기준이 되는 로봇 본.")]
-            public Transform bone;
-
-            [Tooltip("본에서 조종석 바닥 중심까지의 오프셋. 로봇 정면 기준(X 오른쪽, Y 위, Z 앞), 단위 m(로봇 배율과 무관).")]
+            [Tooltip("로봇 루트에서 조종석 바닥 중심까지의 오프셋. 로봇 정면 기준(X 오른쪽, Y 위, Z 앞), 단위 m(로봇 배율과 무관).")]
             public Vector3 offsetMeters;
 
-            [Tooltip("이 좌석에 앉아 있는 동안 숨길 렌더러(그림자는 남김). 예: 머리 좌석에서 시야를 막는 자기 로봇 머리.")]
+            [Tooltip("이 좌석에 앉아 있는 동안 숨길 렌더러(그림자는 남김). 예: 머리 좌석에서 시야를 막는 자기 로봇 머리. 에디터 메뉴가 채운다.")]
             public Renderer[] hideWhileSeated;
         }
 
-        [SerializeField, Tooltip("조종석 정면 기준. 로봇 모델을 감싼 배율 1 루트(정면 = +Z). yaw만 쓴다.")]
+        [SerializeField, Tooltip("조종석 위치·정면의 기준. 로봇 모델을 감싼 배율 1 루트(정면 = +Z). 위치와 yaw만 쓴다.")]
         Transform robotRoot;
 
-        [SerializeField, Tooltip("좌석 후보. 바닥 높이 = 본 + 오프셋, 눈 높이 = 바닥 + 조종사 실제 키.")]
+        // 기본값: M0-04 측정(키 1.6 m 가정) 눈 높이 Head 57.5 m, ChestTop 52.4 m에서 1.6 m를 뺀 바닥 높이.
+        // 앞뒤·좌우 값은 Build Player Robot Prefab 메뉴가 본 위치에서 다시 계산해 넣는다.
+        [SerializeField, Tooltip("좌석 후보. 바닥 = 루트 + 오프셋, 눈 높이 = 바닥 + 조종사 실제 키.")]
         SeatAnchor[] seats =
         {
-            new SeatAnchor { label = "Head" },
-            new SeatAnchor { label = "ChestTop" },
+            new SeatAnchor { label = "Head", offsetMeters = new Vector3(0f, 55.9f, 0f) },
+            new SeatAnchor { label = "ChestTop", offsetMeters = new Vector3(0f, 50.8f, 0f) },
         };
 
-        [SerializeField, Tooltip("시작할 때 쓸 좌석 번호(seats 배열 인덱스).")]
+        [SerializeField, Tooltip("시작할 때 쓸 좌석 번호(seats 배열 인덱스). 0 = Head(M0-04 결정).")]
         int activeSeat;
+
+        [SerializeField, Tooltip("피격 흔들림 등을 위한 추가 오프셋(m, 조종석 로컬). 기본 0. 실제 흔들림은 M2에서 코드가 넣는다.")]
+        Vector3 additionalOffset;
+
+        [SerializeField, Tooltip("조종석이 따라 흔들릴 본(머리). 비우면 따라가지 않는다. 에디터 메뉴가 채운다.")]
+        Transform followBone;
+
+        [SerializeField, Tooltip("followBone의 기준 위치(m). 루트 원점, 로봇 정면 기준. 이 위치에서 벗어난 만큼만 따라간다. 메뉴가 대기 클립 평균 자세로 채운다.")]
+        Vector3 followReferenceLocal;
+
+        [SerializeField, Range(0f, 1f), Tooltip("본 흔들림을 따라가는 비율. 0 = 루트에 고정, 1 = 본과 똑같이(기본, M1-01 헤드셋 확인). 위치만 따라가고 회전은 따라가지 않는다.")]
+        float followWeight = 1f;
+
+        [SerializeField, Tooltip("본을 따라 움직이는 최대 거리(m). 큰 동작 클립에서 카메라가 크게 튀지 않게 한다.")]
+        float maxFollowOffset = 1f;
 
         [SerializeField, Tooltip("이 조종석 안에 둘 XR Origin. 이 Transform의 자식이어야 한다.")]
         XROrigin xrOrigin;
@@ -72,6 +86,13 @@ namespace Anseong.Pilot
         public int ActiveSeat => activeSeat;
         public int SeatCount => seats != null ? seats.Length : 0;
         public string ActiveSeatLabel => IsValidSeat(activeSeat) ? seats[activeSeat].label : string.Empty;
+
+        /// <summary>좌석 오프셋에 더할 추가 오프셋(m, 조종석 로컬: X 오른쪽, Y 위, Z 앞). 피격 흔들림용.</summary>
+        public Vector3 AdditionalOffset
+        {
+            get => additionalOffset;
+            set => additionalOffset = value;
+        }
 
         void OnEnable()
         {
@@ -118,8 +139,10 @@ namespace Anseong.Pilot
         public void ApplySeatPose()
         {
             if (!IsValidSeat(activeSeat) || robotRoot == null) return;
-            var seat = seats[activeSeat];
-            var (position, rotation) = CockpitSeatMath.RigPose(seat.bone.position, robotRoot.rotation, seat.offsetMeters);
+            var follow = followBone != null
+                ? CockpitSeatMath.FollowOffset(robotRoot.position, robotRoot.rotation, followBone.position, followReferenceLocal, followWeight, maxFollowOffset)
+                : Vector3.zero;
+            var (position, rotation) = CockpitSeatMath.RigPose(robotRoot.position, robotRoot.rotation, seats[activeSeat].offsetMeters + follow + additionalOffset);
             transform.SetPositionAndRotation(position, rotation);
         }
 
@@ -157,7 +180,7 @@ namespace Anseong.Pilot
 
         bool IsValidSeat(int index)
         {
-            return seats != null && index >= 0 && index < seats.Length && seats[index] != null && seats[index].bone != null;
+            return seats != null && index >= 0 && index < seats.Length && seats[index] != null;
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -184,8 +207,8 @@ namespace Anseong.Pilot
             if (seats == null || robotRoot == null) return;
             for (var i = 0; i < seats.Length; i++)
             {
-                if (seats[i] == null || seats[i].bone == null) continue;
-                var (position, rotation) = CockpitSeatMath.RigPose(seats[i].bone.position, robotRoot.rotation, seats[i].offsetMeters);
+                if (seats[i] == null) continue;
+                var (position, rotation) = CockpitSeatMath.RigPose(robotRoot.position, robotRoot.rotation, seats[i].offsetMeters);
                 Gizmos.color = i == activeSeat ? Color.green : Color.yellow;
                 Gizmos.matrix = Matrix4x4.TRS(position, rotation, Vector3.one);
                 Gizmos.DrawWireCube(new Vector3(0f, 0.9f, 0f), new Vector3(seatSpacing + 1f, 1.8f, 1.5f));

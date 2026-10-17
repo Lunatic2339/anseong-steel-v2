@@ -42,6 +42,53 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void RigPose_RootMovedAndYawed_FollowsRootPositionAndYaw()
+        {
+            var root = new Vector3(10f, 0f, 5f);
+            var (position, rotation) = CockpitSeatMath.RigPose(root, Quaternion.Euler(0f, 90f, 0f), new Vector3(0f, 55.9f, 1f));
+            AssertVector(new Vector3(11f, 55.9f, 5f), position);
+            AssertVector(Vector3.right, rotation * Vector3.forward);
+            AssertVector(Vector3.up, rotation * Vector3.up);
+        }
+
+        [Test]
+        public void RigPose_RootTilted_SeatStaysLevelAboveRoot()
+        {
+            // 루트가 앞으로·옆으로 기울어도 오프셋은 yaw만 받아 기울지 않는다(높은 좌석이 크게 휘두르지 않음).
+            var root = new Vector3(3f, 0f, -2f);
+            var tilted = Quaternion.Euler(15f, 40f, 10f);
+            var (position, rotation) = CockpitSeatMath.RigPose(root, tilted, new Vector3(0f, 55.9f, 0f));
+            AssertVector(new Vector3(3f, 55.9f, -2f), position);
+            AssertVector(Vector3.up, rotation * Vector3.up);
+            AssertVector(Quaternion.Euler(0f, 40f, 0f) * Vector3.forward, rotation * Vector3.forward);
+        }
+
+        [Test]
+        public void FollowOffset_ZeroWeight_StaysFixed()
+        {
+            var offset = CockpitSeatMath.FollowOffset(Vector3.zero, Quaternion.identity, new Vector3(0.3f, 47.6f, 1.4f), new Vector3(0f, 47.5f, 1.2f), 0f, 1f);
+            AssertVector(Vector3.zero, offset);
+        }
+
+        [Test]
+        public void FollowOffset_FollowsBoneDeltaInRobotFrame()
+        {
+            // 로봇이 90° 돌아 있어도 본의 움직임을 로봇 정면 기준으로 돌려준다(RigPose가 다시 yaw를 곱한다).
+            var root = new Vector3(5f, 0f, 5f);
+            var yaw = Quaternion.Euler(0f, 90f, 0f);
+            var reference = new Vector3(0f, 47.5f, 1.2f);
+            var bone = root + yaw * (reference + new Vector3(0.1f, -0.2f, 0.05f));
+            AssertVector(new Vector3(0.05f, -0.1f, 0.025f), CockpitSeatMath.FollowOffset(root, yaw, bone, reference, 0.5f, 1f));
+        }
+
+        [Test]
+        public void FollowOffset_ClampedToMax()
+        {
+            var offset = CockpitSeatMath.FollowOffset(Vector3.zero, Quaternion.identity, new Vector3(0f, 50f, 0f), new Vector3(0f, 45f, 0f), 1f, 1f);
+            Assert.AreEqual(1f, offset.magnitude, Eps);
+        }
+
+        [Test]
         public void YawOnly_FacingStraightDown_UsesUpAxis()
         {
             // 앞으로 90도 엎어짐: 정면이 아래, 머리 위쪽 축이 +Z.

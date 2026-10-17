@@ -34,6 +34,33 @@
 - 두 프리팹이 메뉴 한 번으로 다시 만들어진다.
 
 ## 결과 (작업 후 Claude가 작성)
+- 작업 브랜치: `claude/m1-cockpit-input-x0vygh` (M1-02와 같은 브랜치, 커밋은 따로).
+- 방식: 조종석 위치 = 로봇 루트 + 고정 오프셋(m), 회전 = 루트 yaw만. 애니메이션 본을 전혀 읽지 않는다. `Cockpit`은 `Robot_Player` 루트(배율 1)의 자식이고, 매 `LateUpdate`(실행 순서 10000)에 월드 자세를 다시 맞추므로 루트가 기울어도 수평을 유지한다.
 - 바뀐 파일:
+  - `Runtime/Pilot/CockpitSeat.cs` — 좌석에서 `bone` 필드를 없애고 오프셋을 루트 기준으로 바꿈. 기본값 Head 바닥 55.9 m, ChestTop 50.8 m(M0-04 눈 57.5·52.4 m − 키 1.6 m). 피격 흔들림 자리 `additionalOffset`(Inspector, 기본 0) + `AdditionalOffset` 프로퍼티. 숨김 목록·X 버튼 좌석 전환은 그대로.
+  - `Runtime/Pilot/CockpitSeatMath.cs` — 계산은 같고 입력 이름·설명만 루트 기준으로.
+  - `Tests/EditMode/CockpitSeatMathTests.cs` — 2개 추가(루트 이동+yaw를 따름, 루트가 pitch/roll로 기울어도 좌석이 수평이고 높이가 기울지 않음).
+  - `Editor/RobotPrefabMenu.cs` (새 파일) — **Anseong → Setup → Build Player Robot Prefab**. 미리보기 씬에서 조립하므로 열린 씬은 건드리지 않는다. `Prefabs/Robot_Player.prefab`(65 m 모델 + `Robot_Idle.controller` Animator(루트 모션 끔, AlwaysAnimate) + `Cockpit`(좌석 2개, 머리 숨김 목록, 임시 바닥·콘솔·창틀 박스)), `Prefabs/Robot_Boss.prefab`(같은 모델·대기 클립 + `Boss_Tint.mat`, 조종석 없음). 두 프리팹의 모든 SkinnedMeshRenderer에 `updateWhenOffscreen`을 켠다(임시).
+  - `Editor/PilotSandboxMenu.cs` (새 파일) — **Anseong → Sandbox → Build Cockpit Root Test**: 새 씬에 두 프리팹(보스 40 m 앞, 180°)과 바닥.
+  - `Editor/RobotSandboxUtility.cs` — 좌석 오프셋 계산, 머리 렌더러 찾기, 조종석 박스, 보스 색, 액션 찾기를 메뉴들이 같이 쓰도록 `EyeHeightSandboxMenu.cs`에서 옮김. `EyeHeightSandboxMenu.cs`는 이 도우미를 쓰게 정리(동작 같음, 좌석 오프셋만 루트 기준).
+- Claude가 확인한 것: 이 환경에는 Unity가 없어 **컴파일·EditMode 테스트·메뉴 실행을 하지 못했다.** 순수 계산(`CockpitSeatMath` 테스트 8개)만 Unity 수학을 흉내 낸 스텁으로 따로 돌려 통과를 봤다. 새 `.cs`의 `.meta`는 Unity가 만든 뒤 커밋해야 한다.
 - 사람이 확인할 것:
+  - [ ] Unity를 열고 Console에 `error CS`가 없는지, 새 `.cs`·`Prefabs` 폴더의 `.meta`가 생겼는지 → 같이 커밋.
+  - [ ] Test Runner → EditMode 전체 통과.
+  - [ ] **Anseong → Setup → Build Player Robot Prefab** → Console 로그: 높이 65 m 근처(경고 없음), 본 높이가 M0-04와 같은지(Head 55.8 m, 어깨 52.4 m), 숨길 머리 렌더러 11개. 한 번 더 실행해도 같은 프리팹이 다시 만들어지는지.
+  - [ ] **Anseong → Sandbox → Build Cockpit Root Test** → XR Origin (VR) 추가 → **Attach XR Origin To Cockpit** → `Scenes/Sandbox/Sandbox_Pilot.unity`로 저장.
+  - [ ] Play(에디터): Scene 뷰에서 로봇이 대기 클립을 재생하고, `Cockpit`이 움직이지 않는다. `Robot_Player`를 Scene 뷰에서 옮기거나 Y축으로 돌리면 조종석이 따라오고, X·Z축으로 기울이면 조종석은 수평을 유지한다.
+  - [ ] 헤드셋: 대기 클립이 도는 동안 시야가 흔들리지 않는다. 자기 로봇 머리가 보이지 않는다(그림자는 보임). X 버튼으로 좌석 전환.
+  - [ ] 헤드셋: 보스 손가락 깜빡임이 없다.
+- 1차 헤드셋 확인 (선우, 2026-10-17): 프리팹 로그 정상(65 m, 본 높이 M0-04와 같음, 머리 렌더러 11개). 서서 보면 정면이 보인다. 그러나 **Head 좌석은 머리 뒤 링 위치, ChestTop 좌석은 사실상 얼굴 위치**였다. 원인: 좌석을 기본 자세에서 쟀는데 대기 클립에서는 몸이 더 낮다. → 메뉴가 대기 클립을 16번 재생한 평균 자세에서 좌석을 재도록 수정(본 자세는 원래대로 되돌림). 다시 확인 필요.
+- 2차 헤드셋 확인 (선우, 2026-10-17): 대기 클립 기준 좌석에서 시야 정상(Head 눈 49.2 m, ChestTop 44.1 m). X 버튼 좌석 전환 됨. 보스 손가락 깜빡임 없음. 자기 머리 11개는 숨겨졌지만 **머리 둘레에 숨기지 않은 부품이 안쪽 면만 보이는 윤곽처럼 남음** → 녹화 영상 확인: 정면(보스 쪽)은 깨끗하다. 남은 것은 ① 머리 뒤 링(몸통 뼈에 묶여 숨김 목록에서 빠짐, 고개를 들거나 뒤를 볼 때 보임) ② 고개를 숙이면 보이는 자기 가슴판·어깨 장갑(조종석이 몸통 안쪽이라 안쪽 면만 일부 그려짐). 시야를 막지 않고 조종석 모델이 들어오면 대부분 가려지므로 지금은 두기로 제안.
+- 3차 요청 (선우, 2026-10-17): 로봇은 대기 클립으로 흔들리는데 조종석만 고정이라 어색하다. → **실험 옵션** `CockpitSeat.followWeight`(0~1, 기본 0) 추가. 머리 본이 대기 클립 평균 위치에서 벗어난 만큼 × 비율로 조종석 위치만 따라가고(회전은 안 따라감), 최대 `maxFollowOffset` 1 m. 메뉴가 머리 본과 기준 위치를 채운다. 테스트 3개 추가. → 헤드셋 확인(선우): 대기 클립에서 따라가도 괜찮았다. 기본값을 1로 두되 **확정이 아니라 계속 시험할 조절 항목**으로 유지(선우). `02_architecture.md`에 반영. 피격·큰 동작 클립(M2)이 들어올 때마다 다시 본다.
 - 남은 문제 / 제안:
+  - 조종석 모델(성재)은 바닥·뒷벽·천장이 있어야 위 ①② 부품을 가린다. 모델 작업 때 전달.
+  - 대기 클립에서 손목이 180° 돌아 손바닥이 바깥을 향한다(클립 또는 리깅 문제로 보임). 팔·손목은 M1-03 IK가 덮어쓰므로 그때 맞춘다.
+  - 대기 자세는 기본 자세보다 약 8 m 낮다. `02_architecture.md`의 눈 높이를 49.2 m(대기 자세)로 고쳤다.
+  - 좌석은 서 있는 눈높이 1.6 m 기준이다. 앉아서 확인하면 눈이 목·옷깃 부품 안으로 들어가 시야가 가렸다 보였다 한다. 헤드셋 확인은 서서 한다.
+  - 기존 `Sandbox_EyeHeight.unity`의 `CockpitSeat`는 오프셋이 본 기준으로 저장되어 있어 이제 조종석이 땅 높이로 내려간다. 그 씬을 다시 쓰려면 **Build Eye Height Test**로 다시 만든다(M1부터는 `Sandbox_Pilot` 사용 제안).
+  - `updateWhenOffscreen`은 렌더러 291개라 CPU 비용이 있다. 최종 방법(bounds 확대 등)은 A-02 병합 후 정한다.
+  - 대기 클립이 엉덩이를 위아래로 움직여도 조종석은 따라가지 않으므로, 클립에 따라 몸통이 조종석 바닥을 뚫고 보일 수 있다. 헤드셋 확인 때 같이 본다.
+  - 프리팹 저장 위치 `Assets/_Anseong/Prefabs/`는 CLAUDE.md 폴더 표에 없다. 표에 넣을지 팀 회의에서 정할 것.

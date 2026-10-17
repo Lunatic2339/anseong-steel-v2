@@ -14,50 +14,25 @@ namespace Anseong.EditorTools
     /// </summary>
     public static class EyeHeightSandboxMenu
     {
-        const string PilotInputPath = "Assets/_Anseong/Runtime/Pilot/PilotInput.inputactions";
         const string DevMapName = "Dev";
         const string SwitchSeatActionName = "Switch Seat";
-        const string BossFolderParent = "Assets/_Anseong/Art";
-        const string BossFolderName = "Boss";
-        const string BossTintPath = "Assets/_Anseong/Art/Boss/Boss_Tint.mat";
         const string SandboxFolderParent = "Assets/_Anseong/Scenes";
         const string SandboxFolderName = "Sandbox";
         const string SandboxSceneHint = "Assets/_Anseong/Scenes/Sandbox/Sandbox_EyeHeight.unity";
         const string LogPrefix = "[EyeHeightSandboxMenu]";
 
-        // Mixamo 본 이름 (BossUpdatedCompatible.fbx). 런타임은 이 이름을 쓰지 않고 Inspector 참조만 쓴다.
-        const string HeadBone = "mixamorig:Head";
-        const string HeadEndBone = "mixamorig:Head_end";
-        const string SpineBone = "mixamorig:Spine";
-        const string LeftPrefix = "mixamorig:Left";
-        const string RightPrefix = "mixamorig:Right";
-        const string ArmSuffix = "Arm";
-        const string ForeArmSuffix = "ForeArm";
-        const string HandSuffix = "Hand";
+        const string HeadBone = RobotSandboxUtility.HeadBone;
+        const string LeftPrefix = RobotSandboxUtility.LeftPrefix;
+        const string RightPrefix = RobotSandboxUtility.RightPrefix;
+        const string ArmSuffix = RobotSandboxUtility.ArmSuffix;
+        const string ForeArmSuffix = RobotSandboxUtility.ForeArmSuffix;
+        const string HandSuffix = RobotSandboxUtility.HandSuffix;
 
         const float BossDistance = 40f;          // 플레이어 로봇 루트 → 보스 루트 (m)
-        static readonly Color BossColor = new Color(0.45f, 0.06f, 0.05f);
-
-        // 좌석 초기값. 바닥 = 눈 높이 − PilotEyeHeight. 이후 CockpitSeat Inspector에서 조정한다.
-        const float PilotEyeHeight = 1.6f;       // 서 있는 조종사의 눈 높이 가정 (m)
-        const float HeadEyeFraction = 0.4f;      // Head → Head_end 사이 눈 위치 비율
-        const float HeadSeatForward = 0f;        // 머리 좌석 앞뒤 보정 (m)
-        const float ChestSeatForward = 0f;       // 가슴 좌석 앞뒤 보정 (m). 눈 높이 = 어깨(Arm 본) 높이
 
         // 가드 자세: 로봇 정면 기준 방향. X = 바깥쪽(+)/안쪽(−), Y = 위, Z = 앞.
         static readonly Vector3 GuardUpperArmDirection = new Vector3(0.3f, -0.6f, 0.75f);
         static readonly Vector3 GuardForearmDirection = new Vector3(-0.25f, 0.85f, 0.45f);
-
-        // 조종석 박스 (조종석 로컬, 바닥 중심 = 원점, +Z = 앞)
-        const float SeatSpacing = 2.1f;
-        static readonly Vector3 FloorSize = new Vector3(3.6f, 0.05f, 2f);
-        static readonly Vector3 SeatMarkSize = new Vector3(0.6f, 0.005f, 0.6f);
-        static readonly Vector3 ConsoleSize = new Vector3(3.6f, 0.9f, 0.3f);
-        const float ConsoleZ = 1.15f;
-        const float WindowZ = 1.25f;
-        const float WindowTop = 2.4f;
-        const float WindowHalfWidth = 1.85f;
-        const float FrameThickness = 0.12f;
 
         const float GroundSize = 400f;
         const float UnityPlaneSize = 10f;
@@ -79,9 +54,9 @@ namespace Anseong.EditorTools
             RemoveDefaultCameras(scene);
 
             // NewScene이 사용하지 않는 에셋을 내리므로, 액션 참조는 새 씬을 만든 뒤에 불러온다.
-            var switchSeat = FindAction(DevMapName, SwitchSeatActionName);
+            var switchSeat = RobotSandboxUtility.FindAction(DevMapName, SwitchSeatActionName);
             if (switchSeat == null)
-                Debug.LogWarning($"{LogPrefix} '{DevMapName}/{SwitchSeatActionName}' 액션을 찾지 못했습니다. 좌석 전환 없이 만듭니다: {PilotInputPath}");
+                Debug.LogWarning($"{LogPrefix} '{DevMapName}/{SwitchSeatActionName}' 액션을 찾지 못했습니다. 좌석 전환 없이 만듭니다: {RobotSandboxUtility.PilotInputPath}");
 
             var player = CreateRobot(model, "Player Robot", Vector3.zero, 0f);
             var boss = CreateRobot(model, "Boss Robot", Vector3.forward * BossDistance, 180f);
@@ -89,7 +64,7 @@ namespace Anseong.EditorTools
 
             ApplyGuardPose(player);
             ApplyGuardPose(boss);
-            TintBoss(boss);
+            RobotSandboxUtility.TintBoss(boss);
 
             CreateCockpit(player, switchSeat);
             CreateGround();
@@ -206,11 +181,7 @@ namespace Anseong.EditorTools
 
             // 스킨 메시의 컬링 bounds는 T자세 기준으로 저장되어 있어, 팔을 옮기면 손가락 조각이
             // bounds 밖으로 나가 시선에 따라 깜빡인다. 매 프레임 실제 자세로 bounds를 다시 잡게 한다.
-            foreach (var skinned in robotRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-            {
-                Undo.RecordObject(skinned, "Apply Guard Pose");
-                skinned.updateWhenOffscreen = true;
-            }
+            RobotSandboxUtility.EnableUpdateWhenOffscreen(robotRoot);
         }
 
         static Vector3 Mirror(Vector3 direction, float outward)
@@ -225,157 +196,28 @@ namespace Anseong.EditorTools
             bone.rotation = Quaternion.FromToRotation(current, targetDirection) * bone.rotation;
         }
 
-        static void TintBoss(Transform boss)
-        {
-            var renderers = boss.GetComponentsInChildren<Renderer>(true);
-            var tint = GetOrCreateBossTint(renderers);
-            if (tint == null) return;
-            foreach (var r in renderers)
-                r.sharedMaterials = Enumerable.Repeat(tint, r.sharedMaterials.Length).ToArray();
-        }
-
-        static Material GetOrCreateBossTint(Renderer[] renderers)
-        {
-            var material = AssetDatabase.LoadAssetAtPath<Material>(BossTintPath);
-            if (material != null) return material;
-
-            // 로봇 재질과 같은 셰이더(URP Lit)를 쓴다. 텍스처 없이 색만.
-            var source = renderers.SelectMany(r => r.sharedMaterials).FirstOrDefault(m => m != null);
-            if (source == null)
-            {
-                Debug.LogWarning($"{LogPrefix} 로봇 재질이 없어 보스 색을 바꾸지 않습니다.");
-                return null;
-            }
-            if (!AssetDatabase.IsValidFolder($"{BossFolderParent}/{BossFolderName}"))
-                AssetDatabase.CreateFolder(BossFolderParent, BossFolderName);
-
-            material = new Material(source.shader) { color = BossColor };
-            AssetDatabase.CreateAsset(material, BossTintPath);
-            AssetDatabase.SaveAssets();
-            Debug.Log($"{LogPrefix} 보스 색 재질 생성: {BossTintPath}", material);
-            return material;
-        }
-
         static void CreateCockpit(Transform player, InputActionReference switchSeat)
         {
-            var head = FindBone(player, HeadBone);
-            var headEnd = FindBone(player, HeadEndBone);
-            var spine = FindBone(player, SpineBone);
-            var leftArm = FindBone(player, LeftPrefix + ArmSuffix);
-            var rightArm = FindBone(player, RightPrefix + ArmSuffix);
-            var leftHand = FindBone(player, LeftPrefix + HandSuffix);
-            var rightHand = FindBone(player, RightPrefix + HandSuffix);
-            if (head == null || headEnd == null || spine == null || leftArm == null || rightArm == null)
+            if (!RobotSandboxUtility.TryComputeSeatOffsets(player, out var headOffset, out var chestOffset, out var report))
             {
-                Debug.LogError($"{LogPrefix} 좌석 기준 본을 찾지 못했습니다. 조종석을 만들지 않습니다.", player);
+                Debug.LogError($"{LogPrefix} {report} 조종석을 만들지 않습니다.", player);
                 return;
             }
-
-            var toRobot = Quaternion.Inverse(CockpitSeatMath.YawOnly(player.rotation));
-
-            var headEye = Vector3.Lerp(head.position, headEnd.position, HeadEyeFraction);
-            var headFloor = headEye + Vector3.down * PilotEyeHeight;
-            var headOffset = toRobot * (headFloor - head.position) + Vector3.forward * HeadSeatForward;
-
-            var shoulderY = (leftArm.position.y + rightArm.position.y) * 0.5f;
-            var chestFloor = new Vector3(spine.position.x, shoulderY - PilotEyeHeight, spine.position.z);
-            var chestOffset = toRobot * (chestFloor - spine.position) + Vector3.forward * ChestSeatForward;
 
             var rig = new GameObject("Cockpit");
             Undo.RegisterCreatedObjectUndo(rig, "Build Eye Height Test");
             var seat = rig.AddComponent<CockpitSeat>();
-
-            var serialized = new SerializedObject(seat);
-            serialized.FindProperty("robotRoot").objectReferenceValue = player;
-            var seats = serialized.FindProperty("seats");
-            seats.arraySize = 2;
-            SetSeat(seats.GetArrayElementAtIndex(0), "Head", head, headOffset);
-            SetSeat(seats.GetArrayElementAtIndex(1), "ChestTop", spine, chestOffset);
-            serialized.FindProperty("activeSeat").intValue = 0;
-            serialized.FindProperty("seatSpacing").floatValue = SeatSpacing;
-            serialized.FindProperty("switchSeatAction").objectReferenceValue = switchSeat;
-            var headRenderers = FindRenderersMostlyOn(player, head, headEnd);
-            var hidden = seats.GetArrayElementAtIndex(0).FindPropertyRelative("hideWhileSeated");
-            hidden.arraySize = headRenderers.Length;
-            for (var i = 0; i < headRenderers.Length; i++)
-                hidden.GetArrayElementAtIndex(i).objectReferenceValue = headRenderers[i];
-            serialized.ApplyModifiedPropertiesWithoutUndo();
+            var headRenderers = RobotSandboxUtility.FindHeadRenderers(player);
+            RobotSandboxUtility.ConfigureSeat(seat, player, headOffset, chestOffset, headRenderers, switchSeat);
             seat.ApplySeatPose();
 
-            CreateCockpitProps(rig.transform);
+            RobotSandboxUtility.CreateCockpitProps(rig.transform);
 
+            var leftHand = FindBone(player, LeftPrefix + HandSuffix);
+            var rightHand = FindBone(player, RightPrefix + HandSuffix);
             var handY = leftHand != null && rightHand != null ? (leftHand.position.y + rightHand.position.y) * 0.5f : float.NaN;
-            Debug.Log($"{LogPrefix} 본 높이: Head {head.position.y:F1} m, Head_end {headEnd.position.y:F1} m, Spine {spine.position.y:F1} m, " +
-                      $"어깨 {shoulderY:F1} m, 가드 주먹 {handY:F1} m (앞으로 {(leftHand != null ? leftHand.position.z : float.NaN):F1} m)", player);
-            Debug.Log($"{LogPrefix} 좌석 눈 높이(키 {PilotEyeHeight} m 가정): Head {headEye.y:F1} m, ChestTop {shoulderY:F1} m. " +
-                      $"오프셋 Head {headOffset}, ChestTop {chestOffset}. 보스 거리 {BossDistance} m. " +
-                      $"Head 좌석에서 숨길 머리 렌더러 {headRenderers.Length}개", seat);
-        }
-
-        /// <summary>
-        /// 정점의 절반 이상이 주어진 본에 가장 크게 묶인 스킨 메시 렌더러(예: 머리 장갑판).
-        /// </summary>
-        static Renderer[] FindRenderersMostlyOn(Transform robotRoot, params Transform[] bones)
-        {
-            var result = new System.Collections.Generic.List<Renderer>();
-            foreach (var skinned in robotRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true))
-            {
-                var mesh = skinned.sharedMesh;
-                var rendererBones = skinned.bones;
-                if (mesh == null || rendererBones == null || mesh.vertexCount == 0) continue;
-
-                var weights = mesh.boneWeights;
-                if (weights.Length == 0)
-                {
-                    // 가중치가 없으면 rootBone 하나에 붙은 메시다.
-                    if (bones.Contains(skinned.rootBone)) result.Add(skinned);
-                    continue;
-                }
-                var onBones = 0;
-                foreach (var w in weights)
-                {
-                    var index = w.boneIndex0;
-                    if (index >= 0 && index < rendererBones.Length && bones.Contains(rendererBones[index]))
-                        onBones++;
-                }
-                if (onBones * 2 >= weights.Length)
-                    result.Add(skinned);
-            }
-            return result.ToArray();
-        }
-
-        static void SetSeat(SerializedProperty element, string label, Transform bone, Vector3 offset)
-        {
-            element.FindPropertyRelative("label").stringValue = label;
-            element.FindPropertyRelative("bone").objectReferenceValue = bone;
-            element.FindPropertyRelative("offsetMeters").vector3Value = offset;
-        }
-
-        static void CreateCockpitProps(Transform rig)
-        {
-            var root = new GameObject("Cockpit Props");
-            root.transform.SetParent(rig, false);
-
-            CreateBox(root.transform, "Floor", FloorSize, new Vector3(0f, -FloorSize.y * 0.5f, 0f));
-            CreateBox(root.transform, "Seat Mark L", SeatMarkSize, new Vector3(-SeatSpacing * 0.5f, SeatMarkSize.y * 0.5f, 0f));
-            CreateBox(root.transform, "Seat Mark R", SeatMarkSize, new Vector3(SeatSpacing * 0.5f, SeatMarkSize.y * 0.5f, 0f));
-            CreateBox(root.transform, "Console", ConsoleSize, new Vector3(0f, ConsoleSize.y * 0.5f, ConsoleZ));
-
-            var postSize = new Vector3(FrameThickness, WindowTop, FrameThickness);
-            CreateBox(root.transform, "Window Post L", postSize, new Vector3(-WindowHalfWidth, WindowTop * 0.5f, WindowZ));
-            CreateBox(root.transform, "Window Post R", postSize, new Vector3(WindowHalfWidth, WindowTop * 0.5f, WindowZ));
-            CreateBox(root.transform, "Window Top", new Vector3(WindowHalfWidth * 2f + FrameThickness, FrameThickness, FrameThickness),
-                new Vector3(0f, WindowTop, WindowZ));
-        }
-
-        static void CreateBox(Transform parent, string name, Vector3 size, Vector3 localPosition)
-        {
-            var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
-            box.name = name;
-            Object.DestroyImmediate(box.GetComponent<Collider>());
-            box.transform.SetParent(parent, false);
-            box.transform.localScale = size;
-            box.transform.localPosition = localPosition;
+            Debug.Log($"{LogPrefix} {report}. 가드 주먹 {handY:F1} m (앞으로 {(leftHand != null ? leftHand.position.z : float.NaN):F1} m). " +
+                      $"보스 거리 {BossDistance} m. Head 좌석에서 숨길 머리 렌더러 {headRenderers.Length}개", seat);
         }
 
         static void CreateGround()
@@ -392,22 +234,11 @@ namespace Anseong.EditorTools
                 Object.DestroyImmediate(camera.gameObject);
         }
 
-        static Transform FindBone(Transform root, string boneName)
-        {
-            return root.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == boneName);
-        }
+        static Transform FindBone(Transform root, string boneName) => RobotSandboxUtility.FindBone(root, boneName);
 
         static System.Collections.Generic.IEnumerable<T> FindInScene<T>(Scene scene) where T : Component
         {
             return scene.GetRootGameObjects().SelectMany(root => root.GetComponentsInChildren<T>(true));
-        }
-
-        static InputActionReference FindAction(string mapName, string actionName)
-        {
-            return AssetDatabase.LoadAllAssetsAtPath(PilotInputPath)
-                .OfType<InputActionReference>()
-                .FirstOrDefault(r => r.action != null && r.action.actionMap != null &&
-                                     r.action.actionMap.name == mapName && r.action.name == actionName);
         }
 
         static void EnsureSandboxFolder()
