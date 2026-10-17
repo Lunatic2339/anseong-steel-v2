@@ -43,7 +43,7 @@
 ```
 [올림] 이름 / 지시서 번호(예: A-01 우선 1)
 무엇: (예: Boss_PunchLeft.fbx, Boss_Knockback.fbx)
-어디: (예: Assets/_Anseong/Art/Boss/Animations/)
+어디: (예: Assets/_Anseong/Art/Robot/Animation/Source/Mixamo/)  ← 넣을 곳은 docs/폴더_지도.md "2. 내 결과물은 어디에"
 확인해 줄 것: (없으면 "없음")
 ```
 
