@@ -20,6 +20,22 @@
 | 크기·단위 | 원본은 **단위 m, `Armature` 스케일 1**, 임포트 높이 약 1.056m. 65m 배율(약 61.55)은 씬에서 적용한다. M0-03에서 단위 cm·`Armature` 스케일 100인 파일은 Idle 재생 시 몸이 사라졌다. 다시 내보낼 때 반드시 같은 단위·스케일 |
 | 정면 | 모델 정면 = Unity +Z, 위 = +Y |
 | 다시 내보내기 | 모양을 고쳐서 다시 내보낼 때도 위 기준이 같으면 파일만 교체하면 된다 |
+| 루트 이름 | `Armature` 오브젝트 이름을 바꾸지 않는다(Generic 클립이 이 경로로 뼈를 찾는다) |
+| 위로 튀어나온 부품 | 65m는 렌더러 전체 높이로 맞춘다. 머리 위 안테나 등이 생기면 몸 전체가 작아지므로 먼저 총괄에 알린다 |
+| 머리 부품 | 머리 조각은 Head·Head_end 뼈에만 묶인 별도 메시로 둔다(Head 좌석에서 숨김, A-02) |
+
+### 아트를 바꿔 끼우는 방법
+
+**Anseong → Art → Robot Art Settings** 에셋에 새 파일을 넣고 **Anseong → Setup → Build Player Robot Prefab**을 다시 실행한다. 칸이 비어 있으면 지금 기본값을 쓴다.
+
+| 칸 | 넣는 것 | 비우면 |
+|---|---|---|
+| Player Model / Boss Model | 로봇 FBX(A-02 정리본 등). 보스가 비면 플레이어와 같은 파일 | `BossUpdatedCompatible.fbx` |
+| Cockpit Prefab | 조종석 모델. 원점 = 두 좌석 사이 바닥 중심, +Z 앞, 단위 m, 좌석은 좌우 ±1.05m | 회색 상자 |
+| Player / Boss Slot Materials | 슬롯 이름(ArmorMain 등) → 재질. 모델 재질 이름이 슬롯 이름과 같은 칸만 바꾼다(`.001` 무시) | 플레이어: 모델 재질 그대로, 보스: 전부 `Boss_Tint` |
+
+- 애니메이션 FBX는 `Art/Robot/Animation/` 아래(예: `Source/Mixamo/`)에 넣으면 임포트 규칙이 적용된다. 반복 재생 클립은 처음 임포트 때 이름으로 정하고(Idle, Walk, TurnLeft/Right, Boss_WalkBack, Pilot_StrafeLeft/Right), 이후 FBX Inspector에서 Loop Time을 바꾸면 그 값이 유지된다.
+- 프리팹을 다시 만들면 Inspector에서 맞춘 값(좌석 위치, Follow Weight, IK 수치)이 기본값으로 돌아간다. 바꾸기 전에 적어 둔다.
 
 ## 성능 한도 (로봇 1기, PC Link 90fps 목표)
 

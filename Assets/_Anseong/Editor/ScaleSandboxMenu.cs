@@ -12,7 +12,6 @@ namespace Anseong.EditorTools
     /// </summary>
     public static class ScaleSandboxMenu
     {
-        const string RobotModelPath = RobotSandboxUtility.RobotModelPath;
         const string IdleClipPath = "Assets/_Anseong/Art/Robot/Animation/Source/Idle.fbx";
         const string IdleControllerPath = "Assets/_Anseong/Art/Robot/Animation/Robot_Idle.controller";
         const string SandboxFolderParent = "Assets/_Anseong/Scenes";
@@ -41,11 +40,12 @@ namespace Anseong.EditorTools
         [MenuItem("Anseong/Sandbox/Build Scale Test")]
         static void BuildScaleTest()
         {
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(RobotModelPath);
+            var art = RobotArtSettings.Load();
+            var model = art.PlayerModel;
             var idleClip = LoadClip(IdleClipPath);
             if (model == null)
             {
-                EditorUtility.DisplayDialog("Build Scale Test", $"모델을 찾지 못했습니다: {RobotModelPath}", "확인");
+                EditorUtility.DisplayDialog("Build Scale Test", $"모델을 찾지 못했습니다: {art.PlayerModelPath}", "확인");
                 return;
             }
             if (idleClip == null)
@@ -59,7 +59,7 @@ namespace Anseong.EditorTools
             var controller = GetOrCreateIdleController(idleClip);
             var scene = EditorSceneManager.NewScene(NewSceneSetup.DefaultGameObjects, NewSceneMode.Single);
 
-            PlaceRobot(model, RobotModelPath, controller, idleClip);
+            PlaceRobot(model, controller, idleClip);
             CreateGround();
             CreateReferences();
             AimCamera(scene);
@@ -72,10 +72,17 @@ namespace Anseong.EditorTools
         [MenuItem("Anseong/Sandbox/Report Robot Stats")]
         static void ReportRobotStats()
         {
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(RobotModelPath);
+            var art = RobotArtSettings.Load();
+            ReportStats(art.PlayerModel, art.PlayerModelPath);
+            if (art.BossModel != art.PlayerModel)
+                ReportStats(art.BossModel, art.BossModelPath);
+        }
+
+        static void ReportStats(GameObject model, string modelPath)
+        {
             if (model == null)
             {
-                Debug.LogError($"{LogPrefix} 모델을 찾지 못했습니다: {RobotModelPath}");
+                Debug.LogError($"{LogPrefix} 모델을 찾지 못했습니다: {modelPath}");
                 return;
             }
 
@@ -105,7 +112,7 @@ namespace Anseong.EditorTools
                       $"렌더러당 최대 본 {maxBones}", model);
         }
 
-        static void PlaceRobot(GameObject model, string modelPath, AnimatorController controller, AnimationClip idleClip)
+        static void PlaceRobot(GameObject model, AnimatorController controller, AnimationClip idleClip)
         {
             var robot = (GameObject)PrefabUtility.InstantiatePrefab(model);
             robot.transform.position = Vector3.zero;
@@ -121,7 +128,7 @@ namespace Anseong.EditorTools
             var animator = robot.GetComponent<Animator>();
             if (animator == null) animator = robot.AddComponent<Animator>();
             animator.runtimeAnimatorController = controller;
-            animator.avatar = AssetDatabase.LoadAllAssetsAtPath(modelPath).OfType<Avatar>().FirstOrDefault();
+            animator.avatar = RobotArtSettings.AvatarOf(model);
             animator.applyRootMotion = false;
             animator.cullingMode = AnimatorCullingMode.AlwaysAnimate;
 
