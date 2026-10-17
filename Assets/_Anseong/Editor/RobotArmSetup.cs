@@ -1,5 +1,6 @@
 using System.Collections.Generic;
 using System.Linq;
+using Anseong.Combat;
 using Anseong.Pilot;
 using UnityEditor;
 using UnityEngine;
@@ -7,11 +8,16 @@ using UnityEngine;
 namespace Anseong.EditorTools
 {
     /// <summary>
-    /// 플레이어 로봇의 두 팔 드라이버(M1-03)를 붙이고 뼈 참조·주먹 포즈를 채운다. Mixamo 뼈 이름 탐색은 여기서만 한다.
+    /// 플레이어 로봇의 두 팔 드라이버(M1-03)와 펀치 분류(M1-04)를 붙이고 뼈 참조·주먹 포즈를 채운다. Mixamo 뼈 이름 탐색은 여기서만 한다.
     /// </summary>
     static class RobotArmSetup
     {
         const string LogPrefix = "[RobotArmSetup]";
+        const string IndicatorMaterialPath = "Assets/_Anseong/Art/Debug/StrikeIndicator.mat";
+        const string IndicatorFolderParent = "Assets/_Anseong/Art";
+        const string IndicatorFolderName = "Debug";
+        // 표시 구 지름 = 로봇 팔 길이 × 이 값.
+        const float IndicatorSizeRatio = 0.12f;
         static readonly string[] Fingers = { "Index", "Middle", "Ring", "Pinky", "Thumb" };
         // 기존 레포 DefaultFistPose: 손가락 마디별 접는 각도(1·2·3마디).
         static readonly float[] CurlDegrees = { 55f, 45f, 25f };
@@ -50,8 +56,67 @@ namespace Anseong.EditorTools
                 arm.ApplyModifiedPropertiesWithoutUndo();
             }
             lines.Add("허리 회전: " + spine.name);
+            lines.Add(AddPunchClassifier(arms));
             report = string.Join(" / ", lines);
             return true;
+        }
+
+        /// <summary>펀치 분류(M1-04)와 주먹 옆 개발용 표시 구를 붙인다.</summary>
+        static string AddPunchClassifier(GameObject arms)
+        {
+            var classifier = arms.AddComponent<PunchClassifierDriver>();
+            var material = GetOrCreateIndicatorMaterial();
+            var serialized = new SerializedObject(classifier);
+            var list = serialized.FindProperty("indicators");
+            list.arraySize = 2;
+            foreach (var driver in arms.GetComponents<RobotArmDriver>())
+            {
+                var arm = new SerializedObject(driver);
+                var hand = (Transform)arm.FindProperty("hand").objectReferenceValue;
+                var upper = (Transform)arm.FindProperty("upperArm").objectReferenceValue;
+                var fore = (Transform)arm.FindProperty("foreArm").objectReferenceValue;
+                if (hand == null || upper == null || fore == null) continue;
+                var prefix = driver.Side == PilotSide.Left ? RobotSandboxUtility.LeftPrefix : RobotSandboxUtility.RightPrefix;
+                var knuckle = hand.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == prefix + "HandMiddle1");
+                var length = Vector3.Distance(upper.position, fore.position) + Vector3.Distance(fore.position, hand.position);
+
+                var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                sphere.name = $"StrikeIndicator_{driver.Side}";
+                // 명중 판정(M1-05)에 끼어들지 않게 충돌체는 뺀다.
+                Object.DestroyImmediate(sphere.GetComponent<Collider>());
+                sphere.transform.SetParent(hand, false);
+                sphere.transform.position = knuckle != null ? knuckle.position : hand.position;
+                var scale = Mathf.Max(1e-6f, hand.lossyScale.x);
+                sphere.transform.localScale = Vector3.one * (length * IndicatorSizeRatio / scale);
+                var renderer = sphere.GetComponent<MeshRenderer>();
+                renderer.sharedMaterial = material;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                list.GetArrayElementAtIndex((int)driver.Side).objectReferenceValue = renderer;
+            }
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            return "펀치 분류 + 주먹 표시";
+        }
+
+        static Material GetOrCreateIndicatorMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(IndicatorMaterialPath);
+            if (material != null) return material;
+            // 에디터에서만 셰이더를 찾는다(런타임 Shader.Find 금지). 색은 런타임에 MaterialPropertyBlock으로 바꾼다.
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) shader = Shader.Find("Unlit/Color");
+            if (shader == null)
+            {
+                Debug.LogWarning($"{LogPrefix} URP Unlit 셰이더를 찾지 못해 표시 구에 기본 재질을 씁니다.");
+                return null;
+            }
+            if (!AssetDatabase.IsValidFolder($"{IndicatorFolderParent}/{IndicatorFolderName}"))
+                AssetDatabase.CreateFolder(IndicatorFolderParent, IndicatorFolderName);
+            material = new Material(shader) { color = Color.white };
+            AssetDatabase.CreateAsset(material, IndicatorMaterialPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"{LogPrefix} 펀치 표시 재질 생성: {IndicatorMaterialPath}", material);
+            return material;
         }
 
         static bool Configure(RobotArmDriver driver, Transform robotRoot, PilotSide side, out string report)
@@ -185,6 +250,8 @@ namespace Anseong.EditorTools
             foreach (var driver in drivers) Connect(driver, input, flow);
             foreach (var torso in Object.FindObjectsByType<TorsoTwistDriver>(FindObjectsInactive.Include, FindObjectsSortMode.None))
                 Connect(torso, input, flow);
+            foreach (var punch in Object.FindObjectsByType<PunchClassifierDriver>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+                Connect(punch, input, flow);
             return drivers.Length;
         }
 

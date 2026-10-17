@@ -73,6 +73,13 @@ namespace Anseong.Pilot
             return true;
         }
 
+        /// <summary>머리 위치(트래킹 공간, 손 위치와 같은 좌표계). 머리가 없으면 false.</summary>
+        public bool TryGetHeadPosition(out Vector3 position)
+        {
+            position = HeadPosition();
+            return head != null;
+        }
+
         public ArmCalibration Get(PilotSide hand)
         {
             EnsureArms();
