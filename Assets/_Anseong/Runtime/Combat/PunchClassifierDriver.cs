@@ -61,6 +61,9 @@ namespace Anseong.Combat
 
         public PunchClassifier Classifier(PilotSide side) => classifiers[(int)side];
 
+        /// <summary>CSV 명중 열 값을 정하는 함수(M1-05 전투 판정이 넣는다). 비어 있으면 빈칸.</summary>
+        public Func<PilotSide, PunchResult, string> HitColumn { get; set; }
+
         void Awake()
         {
             classifiers[0] = new PunchClassifier(true, settings);
@@ -144,8 +147,9 @@ namespace Anseong.Combat
                 : result.Kind == PunchKind.Uppercut ? uppercutColor : noneColor;
             SetIndicator((int)side, color);
             indicatorUntil[(int)side] = Time.time + indicatorSeconds;
-            WriteDebug(side, result);
+            // 명중 판정(M1-05)이 먼저 결과를 받고 나서 기록해야 CSV 명중 열이 맞는다.
             StrikeCompleted?.Invoke(side, result);
+            WriteDebug(side, result);
         }
 
         void SetIndicator(int index, Color color)
@@ -168,7 +172,7 @@ namespace Anseong.Combat
                     log = new StrikeLog(StrikeLog.DefaultPath(Application.persistentDataPath, DateTime.Now));
                     Debug.Log($"[PunchClassifierDriver] 펀치 기록: {log.Path}", this);
                 }
-                log.Add(side, r);
+                log.Add(side, r, HitColumn != null ? HitColumn(side, r) : string.Empty);
             }
             if (logToConsole)
             {

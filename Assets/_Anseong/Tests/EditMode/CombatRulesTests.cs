@@ -258,5 +258,33 @@ namespace Anseong.Tests
             Assert.AreEqual(0f, assist.Weight);
             Assert.AreEqual(hand, assist.Apply(hand));
         }
+
+        // ── 주먹 접촉 ──
+
+        static Vector3 SphereSurface(Vector3 p, Vector3 center, float radius)
+        {
+            var offset = p - center;
+            return offset.magnitude <= radius ? p : center + offset.normalized * radius;
+        }
+
+        [Test]
+        public void FistContact_FastFistPassingThrough_IsCaught()
+        {
+            var center = new Vector3(0f, 0f, 10f);
+            // 한 프레임에 구(반지름 2)를 앞뒤로 뚫고 지나감: 양 끝은 둘 다 표면에서 멀다.
+            var hit = FistContact.Sweep(new Vector3(0f, 0f, 0f), new Vector3(0f, 0f, 20f), 0.5f,
+                p => SphereSurface(p, center, 2f), out var point);
+            Assert.IsTrue(hit);
+            Assert.Less(point.z, center.z);
+        }
+
+        [Test]
+        public void FistContact_PassingBeside_Misses()
+        {
+            var center = new Vector3(0f, 0f, 10f);
+            var hit = FistContact.Sweep(new Vector3(5f, 0f, 0f), new Vector3(5f, 0f, 20f), 0.5f,
+                p => SphereSurface(p, center, 2f), out _);
+            Assert.IsFalse(hit);
+        }
     }
 }

@@ -11,7 +11,7 @@ namespace Anseong.Combat
 {
     /// <summary>
     /// 펀치 동작 기록(개발용). 동작마다 CSV 한 줄. 쓰기는 모았다가 백그라운드에서 하므로 메인 스레드를 막지 않는다.
-    /// 명중 열은 M1-05가 채운다(지금은 비움).
+    /// 명중 열: 1 = 명중, 0 = 공격이었지만 빗나감, 빈칸 = 공격 아님(M1-05).
     /// </summary>
     public sealed class StrikeLog : IDisposable
     {
@@ -63,9 +63,9 @@ namespace Anseong.Combat
             return float.IsNaN(value) || float.IsInfinity(value) ? string.Empty : value.ToString("F3", CultureInfo.InvariantCulture);
         }
 
-        public void Add(PilotSide arm, PunchResult result)
+        public void Add(PilotSide arm, PunchResult result, string hit = "")
         {
-            pending.Enqueue(FormatRow(arm, result));
+            pending.Enqueue(FormatRow(arm, result, hit));
         }
 
         /// <summary>쌓인 줄을 백그라운드에서 쓴다. 이미 쓰는 중이면 다음에.</summary>

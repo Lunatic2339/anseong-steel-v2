@@ -57,6 +57,7 @@ namespace Anseong.EditorTools
             }
             lines.Add("허리 회전: " + spine.name);
             lines.Add(AddPunchClassifier(arms));
+            lines.Add(CombatSetup.AddPlayerCombat(arms));
             report = string.Join(" / ", lines);
             return true;
         }

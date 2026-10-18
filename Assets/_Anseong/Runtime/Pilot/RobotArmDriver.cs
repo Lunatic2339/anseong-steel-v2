@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -96,6 +97,21 @@ namespace Anseong.Pilot
 
         /// <summary>마지막 주먹 목표(월드, 반응 지연 적용 뒤).</summary>
         public Vector3 LastTarget { get; private set; }
+
+        /// <summary>위팔 뼈 위치(월드, 로봇 어깨).</summary>
+        public Vector3 ShoulderPosition => upperArm != null ? upperArm.position : transform.position;
+
+        /// <summary>로봇 팔 길이(m, 위팔 + 아래팔).</summary>
+        public float ArmLength => solver != null ? solver.Bind.Total : 0f;
+
+        /// <summary>로봇 정면 회전.</summary>
+        public Quaternion BodyRotation => robotRoot != null ? robotRoot.rotation : transform.rotation;
+
+        /// <summary>
+        /// 주먹 목표를 마지막에 한 번 더 옮기는 함수(M1-05 공격 보정이 보스 쪽으로 끌어당길 때). 비어 있으면 손 그대로.
+        /// 받는 값·돌려주는 값은 월드 좌표 주먹 목표.
+        /// </summary>
+        public Func<Vector3, Vector3> TargetModifier { get; set; }
 
         public ArmMappingMode MappingMode
         {
@@ -197,6 +213,7 @@ namespace Anseong.Pilot
             // 목표는 로봇 정면 기준으로 저장하므로 로봇이 돌거나 움직여도 손이 따로 움직인 것으로 보지 않는다.
             var shoulder = upperArm.position;
             LastTarget = shoulder + body * filteredLocal;
+            if (TargetModifier != null) LastTarget = TargetModifier(LastTarget);
             var fist = body * ArmMapping.FistLocal(arm, sample.Rotation);
             var lift = useElbowHint ? elbowHint.Update(ArmMapping.GuardDelta(arm, handPosition), dt) : 0f;
             var pose = solver.Solve(shoulder, LastTarget, fist, body, wristLockMode == WristLockMode.Always || sample.GripHeld ? 1f : 0f, lift, dt);

@@ -63,9 +63,13 @@ namespace Anseong.EditorTools
                 Debug.Log($"{LogPrefix} 팔 드라이버: {armReport}");
                 Save(player, PlayerPrefabPath);
 
-                var boss = CreateRobot(bossModel, controller, RobotArtSettings.AvatarOf(bossModel), "Robot_Boss", preview);
+                // 보스는 휘청 상태가 있는 자기 컨트롤러를 쓴다(M1-05). 플레이어는 대기만.
+                var stagger = art.BossStaggerClip;
+                var bossController = CombatSetup.BuildBossController(IdleClip(controller), stagger);
+                var boss = CreateRobot(bossModel, bossController, RobotArtSettings.AvatarOf(bossModel), "Robot_Boss", preview);
                 if (boss == null) return false;
                 RobotSandboxUtility.TintBoss(boss);
+                Debug.Log($"{LogPrefix} 보스 전투: {CombatSetup.AddBossCombat(boss, stagger)}");
                 Save(boss, BossPrefabPath);
             }
             finally
