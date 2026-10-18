@@ -23,7 +23,7 @@ namespace Anseong.Pilot
     /// 기체 점검 최소판: 담당 팔 손마다 어깨 → 가드 → 도달을 저장한다. 각 단계는 그립을 쥐는 순간 저장하고,
     /// 다음 단계는 그립을 한 번 놓은 뒤에만 받는다. 1인 양팔 모드에서는 양손을 같은 단계에서 각각 저장하고,
     /// 두 손이 모두 저장되면 다음 단계로 간다. 값은 그 판 동안만 메모리에 둔다.
-    /// <para>안내는 개발용 Console 로그와 선택 시 기즈모뿐이다. 관객용 안내 화면은 M4.</para>
+    /// <para>안내는 개발용 Console 로그, 헤드셋 안 테스트 안내판(TestGuidePanel), 선택 시 기즈모다. 관객용 안내 화면은 M4.</para>
     /// </summary>
     public class PilotCalibrationFlow : MonoBehaviour
     {
@@ -63,6 +63,33 @@ namespace Anseong.Pilot
 
         /// <summary>보정이 끝났을 때(다시 보정해도 매번).</summary>
         public event Action Completed;
+
+        /// <summary>안내·저장 결과 한 줄(개발용 로그와 같은 내용). 헤드셋 안 안내판이 받는다. 에디터·개발 빌드에서만 온다.</summary>
+        public event Action<string> Notice;
+
+        /// <summary>이번 단계에서 이 손을 저장했다.</summary>
+        public bool IsCaptured(PilotSide hand) => captured[(int)hand];
+
+        /// <summary>이 손이 보정 대상(담당 팔)이다.</summary>
+        public bool UsesHand(PilotSide hand) => input != null && input.IsArmHand(hand);
+
+        /// <summary>단계별 안내 문장(사람이 읽는 것).</summary>
+        public static string Instruction(CalibrationStage stage)
+        {
+            switch (stage)
+            {
+                case CalibrationStage.Shoulder:
+                    return "1/3 어깨: 똑바로 서서 팔을 아래로 편하게 내린 채 그립을 쥐었다 놓으세요.";
+                case CalibrationStage.Guard:
+                    return "2/3 가드: 편한 가드 자세에서 그립을 쥐었다 놓으세요.";
+                case CalibrationStage.Reach:
+                    return "3/3 도달: 펀치 자세(손등 위, 엄지 안쪽)로 정면으로 편하게 끝까지 뻗고 그립을 쥐었다 놓으세요.";
+                case CalibrationStage.Complete:
+                    return "보정 완료.";
+                default:
+                    return "보정 대기 중.";
+            }
+        }
 
         /// <summary>머리 회전(트래킹 공간, 손 위치와 같은 좌표계). 머리나 트래킹 공간이 없으면 false.</summary>
         public bool TryGetHeadRotation(out Quaternion rotation)
@@ -203,13 +230,13 @@ namespace Anseong.Pilot
             switch (stage)
             {
                 case CalibrationStage.Shoulder:
-                    Log($"보정 시작({HandsLabel()}). 1/3 어깨: 똑바로 서서 팔을 아래로 편하게 내린 채 그립을 쥐었다 놓으세요.");
+                    Log($"보정 시작({HandsLabel()}). {Instruction(stage)}");
                     break;
                 case CalibrationStage.Guard:
-                    Log("2/3 가드: 편한 가드 자세에서 그립을 쥐었다 놓으세요.");
+                    Log(Instruction(stage));
                     break;
                 case CalibrationStage.Reach:
-                    Log("3/3 도달: 펀치 자세(손등 위, 엄지 안쪽)로 정면으로 편하게 끝까지 뻗고 그립을 쥐었다 놓으세요.");
+                    Log(Instruction(stage));
                     break;
                 case CalibrationStage.Complete:
                     AlignBodyYawForBothArms();
@@ -320,6 +347,7 @@ namespace Anseong.Pilot
         void Log(string message)
         {
             Debug.Log($"[PilotCalibration] {message}", this);
+            Notice?.Invoke(message);
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD

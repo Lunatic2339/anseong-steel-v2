@@ -1,5 +1,7 @@
 using System.Linq;
+using Anseong.Combat;
 using Anseong.Pilot;
+using Anseong.UI;
 using Unity.XR.CoreUtils;
 using UnityEditor;
 using UnityEditor.SceneManagement;
@@ -26,6 +28,10 @@ namespace Anseong.EditorTools
         const string DevMapName = "Dev";
         const string RecalibrateActionName = "Recalibrate";
         const float ProbeCubeSize = 0.1f;
+        // 테스트 안내판: 카메라 기준 위치(m)와 글자 크기. 한 줄 높이 ≈ fontSize × characterSize × 0.1 m.
+        static readonly Vector3 PanelOffset = new Vector3(0f, -0.12f, 0.8f);
+        const int PanelFontSize = 64;
+        const float PanelCharacterSize = 0.0022f;
 
         [MenuItem("Anseong/Setup/Add Tracking Probes")]
         static void AddTrackingProbes()
@@ -103,13 +109,53 @@ namespace Anseong.EditorTools
             serializedFlow.ApplyModifiedProperties();
 
             var drivers = RobotArmSetup.ConnectDrivers(input, flow);
+            var panel = AddTestGuidePanel(origin);
 
             EditorSceneManager.MarkSceneDirty(scene);
             if (missing > 0)
                 Debug.LogWarning($"[SceneSetupMenu] 찾지 못한 액션이 {missing}개 있습니다: {PilotInputPath}", origin);
             if (drivers == 0)
                 Debug.LogWarning("[SceneSetupMenu] 씬에 RobotArmDriver가 없습니다. Robot_Player 프리팹을 다시 만들고(Build Player Robot Prefab) 이 메뉴를 다시 실행하세요.", origin);
-            Debug.Log($"[SceneSetupMenu] XR Origin에 PilotHandInput·PilotCalibrationFlow를 연결하고 팔 드라이버 {drivers}개에 입력을 연결했습니다(기본 1인 양팔 모드). 씬을 저장하세요.", origin);
+            Debug.Log($"[SceneSetupMenu] XR Origin에 PilotHandInput·PilotCalibrationFlow를 연결하고 팔 드라이버 {drivers}개에 입력을 연결했습니다(기본 1인 양팔 모드). " +
+                      $"테스트 안내판: {panel}. 씬을 저장하세요.", origin);
+        }
+
+        /// <summary>XR 카메라 앞 아래쪽에 헤드셋에서 보는 테스트 안내판(보정 안내 + 펀치 결과, 개발용)을 만든다. 이미 있으면 그대로 둔다.</summary>
+        static string AddTestGuidePanel(XROrigin origin)
+        {
+            var camera = origin.Camera != null ? origin.Camera.transform : null;
+            if (camera == null) return "카메라가 없어 만들지 않음";
+            if (camera.GetComponentInChildren<TestGuidePanel>(true) != null) return "이미 있음";
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var go = new GameObject("TestGuidePanel");
+            Undo.RegisterCreatedObjectUndo(go, "Add Test Guide Panel");
+            go.transform.SetParent(camera, false);
+            go.transform.localPosition = PanelOffset;
+            go.transform.localRotation = Quaternion.identity;
+            var scale = Mathf.Max(1e-6f, camera.lossyScale.x);
+            go.transform.localScale = Vector3.one / scale;
+            var text = go.AddComponent<TextMesh>();
+            text.font = font;
+            text.fontSize = PanelFontSize;
+            text.characterSize = PanelCharacterSize;
+            text.anchor = TextAnchor.UpperCenter;
+            text.alignment = TextAlignment.Left;
+            text.richText = true;
+            text.color = Color.white;
+            text.text = "보정";
+            var renderer = go.GetComponent<MeshRenderer>();
+            if (font != null) renderer.sharedMaterial = font.material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            var panel = go.AddComponent<TestGuidePanel>();
+            var serialized = new SerializedObject(panel);
+            serialized.FindProperty("text").objectReferenceValue = text;
+            serialized.FindProperty("calibration").objectReferenceValue = origin.GetComponent<PilotCalibrationFlow>();
+            serialized.FindProperty("classifier").objectReferenceValue = Object.FindAnyObjectByType<PunchClassifierDriver>(FindObjectsInactive.Include);
+            serialized.ApplyModifiedProperties();
+            return "XR 카메라 아래에 만듦";
         }
 
         static int SetHandActions(SerializedProperty hand, InputActionReference[] references, string mapName)

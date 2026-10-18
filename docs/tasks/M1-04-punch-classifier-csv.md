@@ -44,7 +44,9 @@
   - CSV 열: 지시서 열 + `rise_m`(어퍼컷 판정값) + `head_forward_m`(동작 중 머리가 앞으로 간 거리, 기록용. 선우가 "훅에서 머리가 앞으로 간다"고 해서 크기를 보려고 넣음). 시각은 게임 시작 뒤 초.
 - 바뀐 파일:
   - `Runtime/Combat/PunchClassifier.cs`(순수 분류기, 설정, 결과), `PunchClassifierDriver.cs`(팔마다 분류, `StrikeCompleted` 이벤트, 표시 구, Console), `StrikeLog.cs`(개발용 CSV, 백그라운드 쓰기)
-  - `Runtime/Pilot/PilotCalibrationFlow.cs`: `TryGetHeadPosition` 추가
+  - `Runtime/UI/TestGuidePanel.cs`: 헤드셋 안 테스트 안내판(선우 요청 10/18, 헤드셋을 벗고 Console을 보지 않게). 보정 중에는 단계 안내·손별 저장 상태·마지막 저장 결과, 보정 뒤에는 종류별 개수(왼/오)·공격 인정 수·최근 동작과 측정값. 한글은 OS 글꼴(맑은 고딕)로 바꿔 쓴다. 에디터·개발 빌드에서만.
+  - `Runtime/Pilot/PilotCalibrationFlow.cs`: `TryGetHeadPosition`, 안내판용 `Notice` 이벤트·`IsCaptured`·`UsesHand`·`Instruction(stage)` 추가(안내 문장은 한 곳에서)
+  - `Editor/SceneSetupMenu.cs`: Add Pilot Input이 XR 카메라 앞 아래(0.8m 앞, 12cm 아래)에 `TestGuidePanel`을 만든다(이미 있으면 그대로).
   - `Editor/RobotArmSetup.cs`: Build Player Robot Prefab이 `Arms`에 `PunchClassifierDriver`와 손마다 표시 구(`StrikeIndicator_Left/Right`, 충돌체 없음)를 붙이고, 재질 `Art/Debug/StrikeIndicator.mat`(URP Unlit)을 처음 한 번 만든다. Add Pilot Input이 입력·보정을 연결한다.
   - `Tests/EditMode/PunchClassifierTests.cs`(15개: 곧은 잽, 바깥→안 훅, 반대 방향 훅, 짧은 훅, 비스듬한 잽, 낮은 잽, 어퍼컷, 느린 가드 올리기, 재장전 안 된 연속 동작, 그립 없음, 중간에 그립 놓음, 추적 유실, 렉, NaN, CSV 열)
   - `docs/design/01_combat_rules.md`(어퍼컷 제안 행), `docs/폴더_지도.md`
@@ -52,6 +54,7 @@
 - 사람이 확인할 것:
   - [ ] `git pull` → Unity 컴파일 에러 없음 → Test Runner EditMode 전부 통과.
   - [ ] **Build Player Robot Prefab** 다시 실행 → 로그 끝에 `펀치 분류 + 주먹 표시`, 양손 주먹 옆에 흰 구. Sandbox_Pilot에서 **Add Pilot Input** 다시 실행.
+  - [ ] 헤드셋 안 시야 아래쪽에 안내판이 보이고 한글이 깨지지 않는지, 글자 크기·위치가 읽기 편한지(크기는 `TestGuidePanel` 오브젝트 Scale로 조정). 보정 단계마다 안내가 바뀌고 손별 "저장됨"이 뜨는지. 보정 뒤 펀치마다 개수·최근 동작이 바뀌는지.
   - [ ] Play → 보정 → Console에 `[PunchClassifierDriver] 펀치 기록: <경로>`(첫 동작 때) 와 동작마다 `[Punch] …` 한 줄. 헤드셋에서:
   - [ ] 손마다 잽 20, 훅 20, 어퍼컷 10. 틀린 동작은 몇 번째였는지 적기(구 색: 잽 파랑, 훅 주황, 어퍼컷 보라, 해당 없음 회색).
   - [ ] 그립 없이 휘두르면 Console `공격 X`.
