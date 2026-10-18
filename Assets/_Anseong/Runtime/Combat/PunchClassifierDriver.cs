@@ -115,8 +115,8 @@ namespace Anseong.Combat
                 var arm = calibration.Get(side);
                 if (!input.IsArmHand(side) || arm == null || !arm.IsComplete) continue;
                 var sample = input.Get(side);
-                var head = calibration.TryGetHeadPosition(out var headPosition) ? arm.ToBody(headPosition).z : 0f;
-                var completed = classifiers[h].Sample(arm.ToBody(sample.Position), sample.Tracked, sample.AttackIntent, now, out var result);
+                var head = calibration.TryGetHeadPosition(out var headPosition) ? arm.ToBody(calibration.CompensateHand(headPosition)).z : 0f;
+                var completed = classifiers[h].Sample(arm.ToBody(calibration.CompensateHand(sample.Position)), sample.Tracked, sample.AttackIntent, now, out var result);
                 var phase = classifiers[h].Phase;
                 // 휘두르기 시작한 프레임의 머리 위치를 잡아 두고 끝날 때 얼마나 앞으로 갔는지 남긴다(기록용).
                 if (phase == PunchPhase.Moving && lastPhase[h] != PunchPhase.Moving) headAtStart[h] = head;

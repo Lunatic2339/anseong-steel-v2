@@ -74,6 +74,10 @@ namespace Anseong.Pilot
         [SerializeField, Min(0f), Tooltip("주먹 목표 최대 속도(m/s, 로봇 크기). 0 = 제한 없음(기본).")]
         float maxTargetSpeed;
 
+        [SerializeField, Tooltip("Always = 손목을 늘 아래팔과 일직선으로 고정(가드·펀치 모두 주먹이 곧게, 기본). 주먹 비틀림은 아래팔이 돌아서 따라간다. " +
+            "GripHeld = 그립을 쥔 동안만 고정하고 놓으면 컨트롤러 각도대로 꺾인다(이전 동작).")]
+        WristLockMode wristLockMode = WristLockMode.Always;
+
         [SerializeField, Tooltip("IK 세부 수치.")]
         ArmSolverSettings solverSettings = new ArmSolverSettings();
 
@@ -158,14 +162,16 @@ namespace Anseong.Pilot
 
             // 추적이 끊기면 샘플이 끊기기 직전 자세를 유지하므로 팔도 그 자리에 멈춘다.
             var sample = input.Get(side);
+            // 플레이어가 걸어 옮긴 만큼은 빼고 잰다(가드 자세로 걸으면 팔이 그대로).
+            var handPosition = calibration.CompensateHand(sample.Position);
             var dt = Time.deltaTime;
             var body = robotRoot.rotation;
             var length = solver.Bind.Total;
             Vector3 local;
             var mapped = mappingMode == ArmMappingMode.Linear
-                ? ArmMapping.TryLinear(arm, sample.Position, length, shoulderHeightOffset,
+                ? ArmMapping.TryLinear(arm, handPosition, length, shoulderHeightOffset,
                     torso != null ? torso.HumanShoulderShift(side) : Vector3.zero, out local)
-                : ArmMapping.TryGuardMatched(arm, sample.Position, length, RobotGuardLocal(length), out local);
+                : ArmMapping.TryGuardMatched(arm, handPosition, length, RobotGuardLocal(length), out local);
             if (!mapped)
             {
                 active = false;
@@ -192,8 +198,8 @@ namespace Anseong.Pilot
             var shoulder = upperArm.position;
             LastTarget = shoulder + body * filteredLocal;
             var fist = body * ArmMapping.FistLocal(arm, sample.Rotation);
-            var lift = useElbowHint ? elbowHint.Update(ArmMapping.GuardDelta(arm, sample.Position), dt) : 0f;
-            var pose = solver.Solve(shoulder, LastTarget, fist, body, sample.GripHeld ? 1f : 0f, lift, dt);
+            var lift = useElbowHint ? elbowHint.Update(ArmMapping.GuardDelta(arm, handPosition), dt) : 0f;
+            var pose = solver.Solve(shoulder, LastTarget, fist, body, wristLockMode == WristLockMode.Always || sample.GripHeld ? 1f : 0f, lift, dt);
 
             upperArm.rotation = pose.Upper;
             foreArm.rotation = pose.Lower;

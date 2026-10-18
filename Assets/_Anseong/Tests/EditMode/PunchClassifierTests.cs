@@ -116,11 +116,45 @@ namespace Anseong.Tests
             {
                 var run = new Run(left, 90);
                 run.Stroke(Hook(left, 0.06f));
-                // 바깥 준비가 10cm보다 짧으면 훅이 아니다. 거의 곧게 나가므로 잽으로 잡힐 수는 있다(규칙상 맞음).
+                // 안쪽 스윕이 짧으면(12cm) 훅이 아니다. 거의 곧게 나가므로 잽으로 잡힐 수는 있다(규칙상 맞음).
                 Assert.AreEqual(1, run.Results.Count);
                 Assert.AreNotEqual(PunchKind.Hook, run.Results[0].Kind, "짧은 훅 " + (left ? "L" : "R"));
                 Assert.Less(run.Results[0].Measure.Outset, 0.10f);
             }
+        }
+
+        [Test]
+        public void WideGuardHook_WithoutWindUp_IsHook_BothArms()
+        {
+            // 가드를 넓게 잡으면 바깥으로 더 빼지 않고 가드에서 바로 안쪽으로 휘두른다.
+            foreach (var left in new[] { true, false })
+            {
+                var s = left ? 1f : -1f;
+                var run = new Run(left, 90);
+                run.Stroke(u => new Vector3(s * 0.3f * (1f - Mathf.Cos(u * Mathf.PI)) / 2f, 0f, 0.3f * Mathf.Sin(u * Mathf.PI / 2f)));
+                AssertSingle(run, PunchKind.Hook, "넓은 가드 훅 " + (left ? "L" : "R"));
+            }
+        }
+
+        [Test]
+        public void BigLoopingHook_WithRiseAndDip_IsHook_NotVerticalMotion()
+        {
+            // 1차 헤드셋 로그(오른손 #14): 옆으로 크게 돌며 위아래로 25cm 넘게 움직인 훅이 '위아래 움직임'으로 버려졌다.
+            Func<float, Vector3> loop = u => Hook(false, 0.25f)(u) + new Vector3(0f, 0.26f * Mathf.Sin(u * Mathf.PI), -0.07f * Mathf.Sin(u * Mathf.PI / 2f));
+            var run = new Run(false, 90);
+            run.Stroke(loop);
+            AssertSingle(run, PunchKind.Hook, "크게 도는 훅");
+
+            var old = new PunchClassifier(false, new PunchClassifierSettings { verticalAgainstWidestSpan = false });
+            old.SetNeutral(Neutral);
+            var results = new List<PunchResult>();
+            double t = 0;
+            Action<Vector3> sample = o => { PunchResult r; if (old.Sample(Neutral + o, true, true, t, out r)) results.Add(r); t += 1.0 / 90; };
+            for (var i = 0; i < 45; i++) sample(Vector3.zero);
+            for (var i = 1; i <= 36; i++) sample(loop(i / 36f));
+            for (var i = 0; i < 18; i++) sample(loop(1f));
+            Assert.AreEqual(1, results.Count);
+            Assert.AreEqual(PunchReason.VerticalMotion, results[0].Reason, "끄면 이전처럼 위아래 움직임");
         }
 
         [Test]

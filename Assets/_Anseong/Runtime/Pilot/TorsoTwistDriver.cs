@@ -64,7 +64,8 @@ namespace Anseong.Pilot
                 var left = calibration.Get(PilotSide.Left);
                 var right = calibration.Get(PilotSide.Right);
                 var headYaw = calibration.TryGetHeadRotation(out var head) ? TorsoTwist.HeadYawFromBody(head, left.BodyYawDegrees) : 0f;
-                targetYaw = TorsoTwist.EstimateYaw(left, right, input.Get(PilotSide.Left).Position, input.Get(PilotSide.Right).Position,
+                targetYaw = TorsoTwist.EstimateYaw(left, right,
+                    calibration.CompensateHand(input.Get(PilotSide.Left).Position), calibration.CompensateHand(input.Get(PilotSide.Right).Position),
                     headYaw, settings);
             }
 

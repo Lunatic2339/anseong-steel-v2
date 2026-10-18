@@ -39,6 +39,9 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("보정 판정 수치.")]
         ArmCalibrationSettings settings = new ArmCalibrationSettings();
 
+        [SerializeField, Tooltip("보정 뒤 몸이 방 안에서 옮겨 가면 보정한 어깨·가드도 따라가게 한다(팔 IK·허리·펀치 분류가 같이 쓴다).")]
+        BodyFollowSettings bodyFollow = new BodyFollowSettings();
+
         [SerializeField, Tooltip("켜질 때 바로 어깨 단계부터 시작한다.")]
         bool startOnEnable = true;
 
@@ -49,6 +52,7 @@ namespace Anseong.Pilot
 #pragma warning restore 0414
 
         ArmCalibration[] arms;
+        readonly BodyFollow follow = new BodyFollow();
         readonly bool[] captured = new bool[2];
         readonly bool[] waitRelease = new bool[2];
         readonly float[] headYawAtReach = new float[2];
@@ -107,6 +111,15 @@ namespace Anseong.Pilot
             return head != null;
         }
 
+        /// <summary>보정 뒤 몸이 옮겨 간 양(트래킹 공간, m). 끄거나 보정 전이면 0.</summary>
+        public Vector3 BodyOffset => follow.Offset;
+
+        /// <summary>
+        /// 손 위치(트래킹 공간)를 "보정한 자리에 서 있는 것처럼" 바꾼다. 보정값(어깨·가드·도달)과 비교하는 모든 곳은 이 값을 쓴다.
+        /// 플레이어가 걸어 옮겨도 가드 자세면 팔이 움직이지 않는다.
+        /// </summary>
+        public Vector3 CompensateHand(Vector3 trackingHand) => trackingHand - follow.Offset;
+
         public ArmCalibration Get(PilotSide hand)
         {
             EnsureArms();
@@ -151,6 +164,7 @@ namespace Anseong.Pilot
         public void Restart()
         {
             EnsureArms();
+            follow.Clear();
             foreach (var arm in arms) arm.Reset();
             for (var h = 0; h < 2; h++)
             {
@@ -163,6 +177,7 @@ namespace Anseong.Pilot
 
         void Update()
         {
+            if (follow.HasReference) follow.Update(HeadPosition(), Time.deltaTime, bodyFollow);
             if (input == null || Stage == CalibrationStage.NotStarted || Stage == CalibrationStage.Complete) return;
 
             var allDone = true;
@@ -240,6 +255,7 @@ namespace Anseong.Pilot
                     break;
                 case CalibrationStage.Complete:
                     AlignBodyYawForBothArms();
+                    if (head != null) follow.SetReference(HeadPosition());
                     for (var h = 0; h < 2; h++)
                         if (input != null && input.IsArmHand((PilotSide)h)) input.Gate((PilotSide)h).RequireRelease();
                     LogSummary();

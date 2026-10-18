@@ -75,6 +75,15 @@ namespace Anseong.Pilot
         public float Swivel;
     }
 
+    /// <summary>손목을 아래팔에 고정하는 때.</summary>
+    public enum WristLockMode
+    {
+        /// <summary>늘 고정. 가드·펀치 모두 주먹이 아래팔과 일직선.</summary>
+        Always,
+        /// <summary>그립을 쥔 동안만 고정, 놓으면 컨트롤러 각도대로 제한된 꺾임(M1-03 동작).</summary>
+        GripHeld,
+    }
+
     [Serializable]
     public class ArmSolverSettings
     {
@@ -123,6 +132,11 @@ namespace Anseong.Pilot
 
         [Tooltip("손목 고정 ↔ 풀림 전환 속도(1/초).")]
         public float wristLockSpeed = 6f;
+
+        [Tooltip("손목을 고정했을 때 주먹을 손등 쪽(+)이나 손바닥 쪽(−)으로 더 젖히는 각도(도). " +
+                 "고정했는데도 손목이 안쪽으로 꺾여 보이면(손등이 아래팔과 평행하지 않으면) +로 올려 맞춘다. 0 = 손목→손가락 뿌리 선을 아래팔과 일직선(이전 동작).")]
+        [Range(-30f, 30f)]
+        public float lockedWristPitchDegrees = 0f;
     }
 
     /// <summary>
@@ -270,6 +284,13 @@ namespace Anseong.Pilot
             float wristRollLimit = settings.freeWristRollDegrees * free;
             float wristRoll = Mathf.Clamp(Vector3.SignedAngle(handBack, gripBack, handForward), -wristRollLimit, wristRollLimit);
             handBack = Quaternion.AngleAxis(wristRoll, handForward) * handBack;
+            if (Mathf.Abs(settings.lockedWristPitchDegrees) > 1e-3f)
+            {
+                // 고정된 만큼만 손등 쪽으로 젖힌다(+ = 손가락 뿌리가 손등 쪽으로).
+                var tilt = Quaternion.AngleAxis(settings.lockedWristPitchDegrees * wristAlignment, Vector3.Cross(handForward, handBack).normalized);
+                handForward = tilt * handForward;
+                handBack = tilt * handBack;
+            }
             var hand = Quaternion.LookRotation(handForward, handBack)
                 * Quaternion.Inverse(Quaternion.LookRotation(bind.FistForwardLocal, bind.FistBackLocal));
 

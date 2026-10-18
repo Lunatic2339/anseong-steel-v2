@@ -34,11 +34,12 @@ namespace Anseong.Combat
         [Tooltip("잽: 좌우폭 ÷ 전진 거리 최대값.")]
         public float maxJabSideRatio = 0.55f;
 
-        [Tooltip("잽: 직진도(처음→가장 앞 거리 ÷ 지나온 길이) 최소값.")]
-        public float minJabStraightness = 0.86f;
+        [Tooltip("잽: 직진도(처음→가장 앞 거리 ÷ 지나온 길이) 최소값. 1차 헤드셋 로그에서 잽이 0.86~0.99로 나와 기준선에 걸리지 않게 0.80(01 초기값 0.86).")]
+        public float minJabStraightness = 0.80f;
 
-        [Tooltip("훅: 바깥으로 준비한 거리 최소값(m, 사람 손).")]
-        public float minHookOutset = 0.10f;
+        [Tooltip("훅: 가드 위치보다 바깥으로 준비한 거리 최소값(m, 사람 손). 0 = 가드에서 바로 안쪽으로 휘둘러도 훅(기본). " +
+                 "가드를 넓게 잡으면 손이 이미 바깥에 있어 더 빼지 않으므로 0으로 둔다(01 규칙 초기값 10cm는 1차 헤드셋에서 훅이 거의 안 잡혀 바꿈).")]
+        public float minHookOutset = 0f;
 
         [Tooltip("훅: 바깥 끝에서 안쪽으로 휘두른 거리 최소값(m).")]
         public float minHookSweep = 0.22f;
@@ -63,6 +64,10 @@ namespace Anseong.Combat
 
         [Tooltip("위아래 폭 ÷ 전진 거리 최대값. 넘으면 가드 올리기·내리기로 본다.")]
         public float maxVerticalRatio = 0.7f;
+
+        [Tooltip("켜면 위아래 폭을 전진 거리와 좌우 폭 중 큰 쪽과 비교한다(옆으로 크게 도는 훅이 '위아래 움직임'으로 버려지지 않게). " +
+                 "끄면 전진 거리와만 비교한다(이전 동작).")]
+        public bool verticalAgainstWidestSpan = true;
 
         [Tooltip("동작 시작 속도(m/s). 이보다 빨라야 휘두름이 시작된다.")]
         public float startSpeed = 0.75f;
@@ -380,16 +385,18 @@ namespace Anseong.Combat
             }
             if (m.Forward < settings.minForward) { result.Reason = PunchReason.InsufficientForward; return result; }
             if (peakSpeed < settings.startSpeed) { result.Reason = PunchReason.TooSlow; return result; }
-            if (maxY - minY > m.Forward * settings.maxVerticalRatio) { result.Reason = PunchReason.VerticalMotion; return result; }
+            var span = settings.verticalAgainstWidestSpan ? Mathf.Max(m.Forward, maxX - minX) : m.Forward;
+            if (maxY - minY > span * settings.maxVerticalRatio) { result.Reason = PunchReason.VerticalMotion; return result; }
 
+            // 안쪽으로 크게 휘어 들어오면 훅이 먼저다(휘어진 22cm 스윕은 잽이 아니다). 그다음 곧게 나가면 잽.
             var hook = m.Outset >= settings.minHookOutset && m.InwardSweep >= settings.minHookSweep && m.ArcRatio >= settings.minHookArcRatio;
-            var jab = m.SideRatio <= settings.maxJabSideRatio && m.Straightness >= settings.minJabStraightness && m.Outset < settings.minHookOutset;
-            if (hook && !jab)
+            var jab = m.SideRatio <= settings.maxJabSideRatio && m.Straightness >= settings.minJabStraightness;
+            if (hook)
             {
                 result.Kind = PunchKind.Hook;
                 result.Reason = PunchReason.Hook;
             }
-            else if (jab && !hook)
+            else if (jab)
             {
                 result.Kind = PunchKind.Jab;
                 result.Reason = PunchReason.Jab;
