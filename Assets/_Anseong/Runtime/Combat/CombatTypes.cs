@@ -1,0 +1,96 @@
+using Anseong.Pilot;
+using UnityEngine;
+
+namespace Anseong.Combat
+{
+    /// <summary>명중을 어떻게 얻었는지.</summary>
+    public enum HitQuality
+    {
+        /// <summary>주먹이 실제로 보스 부위에 닿았다.</summary>
+        Contact,
+        /// <summary>공격 보정이 주먹을 끌어당겨 맞혔다.</summary>
+        Assisted,
+    }
+
+    /// <summary>보스 맞는 부위. 피해 배율·반응은 나중에 부위별로 나눌 수 있게 이름만 둔다.</summary>
+    public enum BossZone
+    {
+        Body,
+        Head,
+    }
+
+    /// <summary>
+    /// 때린 쪽 PC가 만든 명중 보고(02_architecture "누가 무엇을 계산하나"). M1은 로컬 호출, M3에서 서버 RPC 인자 그대로.
+    /// </summary>
+    public struct HitReport
+    {
+        public PilotSide Side;
+        public PunchKind Kind;
+        public HitQuality Quality;
+        public BossZone Zone;
+        /// <summary>그 팔의 동작 번호(PunchClassifier StrikeId). 한 동작은 한 번만 명중.</summary>
+        public int StrikeId;
+        /// <summary>보낸 쪽 시각(초). 서버 판정에는 서버 시각을 쓴다.</summary>
+        public double ClientTime;
+        /// <summary>맞은 자리(월드). 연출용.</summary>
+        public Vector3 Point;
+    }
+
+    /// <summary>
+    /// 전투에서 일어난 일. 소리·진동·보스 애니메이션·효과·외골격·안내판이 모두 이것만 듣고 각자 재생한다.
+    /// 새 연출은 이 목록에 없는 것만 추가하고, 규칙 코드는 연출을 모른다.
+    /// </summary>
+    public enum CombatCue
+    {
+        /// <summary>그립을 쥐어 주먹이 잠김.</summary>
+        GripLock,
+        /// <summary>그립을 놓아 주먹이 풀림.</summary>
+        GripRelease,
+        /// <summary>공격 동작이 시작됨(잽 발사·훅 스윙 소리). Kind = 그 순간 미리 본 종류.</summary>
+        StrikeLaunch,
+        /// <summary>보스에 명중, 피해 확정. Damage·ComboStep 채움.</summary>
+        Hit,
+        /// <summary>그립을 쥐고 친 공격이 명중 없이 끝남.</summary>
+        Miss,
+        /// <summary>연계 단계가 올라감(ComboStep = 1·2·3).</summary>
+        ComboStep,
+        /// <summary>연계가 끊김(헛침·차례 아닌 공격·시간 초과·직접 피해).</summary>
+        ComboBroken,
+        /// <summary>마지막 훅 명중 뒤 부스트 입력창이 열림.</summary>
+        BoostReady,
+        /// <summary>부스트 성공: 추가 피해. Damage 채움.</summary>
+        Boost,
+        /// <summary>부스트 입력창이 그냥 닫힘(시간 초과·그립 놓음).</summary>
+        BoostMissed,
+        /// <summary>보스 HP 0.</summary>
+        BossDefeated,
+    }
+
+    /// <summary>연계가 끊긴 이유.</summary>
+    public enum ComboBreak
+    {
+        None,
+        Miss,
+        WrongTurn,
+        Timeout,
+        Damaged,
+    }
+
+    public struct CombatEvent
+    {
+        public CombatCue Cue;
+        public PilotSide Side;
+        public PunchKind Kind;
+        /// <summary>이 사건으로 준 피해(보스 HP %).</summary>
+        public float Damage;
+        /// <summary>사건 뒤 연계 단계(0 = 연계 없음, 3 = 잽–잽–훅 완성).</summary>
+        public int ComboStep;
+        public ComboBreak Break;
+        /// <summary>사건 뒤 보스 HP(%).</summary>
+        public float BossHealth;
+        public HitQuality Quality;
+        public BossZone Zone;
+        public Vector3 Point;
+        public double Time;
+    }
+}

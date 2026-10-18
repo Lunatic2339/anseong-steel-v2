@@ -62,6 +62,9 @@ namespace Anseong.Combat
         [Tooltip("잽·훅 공통: 중립에서 앞으로 나간 거리 최소값(m). 어퍼컷에는 쓰지 않는다.")]
         public float minForward = 0.18f;
 
+        [Tooltip("중간 판정(휘두르는 도중 종류 미리 보기, M1-05 공격 보정용): 이만큼(m) 앞으로 나가면 판단을 시작한다. 끝 판정의 최소 전진보다 작다.")]
+        public float peekMinForward = 0.12f;
+
         [Tooltip("위아래 폭 ÷ 전진 거리 최대값. 넘으면 가드 올리기·내리기로 본다.")]
         public float maxVerticalRatio = 0.7f;
 
@@ -173,6 +176,21 @@ namespace Anseong.Combat
         }
 
         public PunchPhase Phase { get; private set; }
+
+        /// <summary>휘두르는 중이면 지금 동작의 번호(끝나면 결과의 StrikeId와 같다). 아니면 0.</summary>
+        public int CurrentStrikeId => Phase == PunchPhase.Moving ? strikeCount + 1 : 0;
+
+        /// <summary>
+        /// 휘두르는 도중 지금까지의 궤적으로 종류를 미리 본다(끝 판정과 같은 규칙, 최소 전진만 peekMinForward).
+        /// 동작 내내 공격 의도가 있었고 종류가 정해졌으면 true. 끝 판정과 다를 수 있다(뒤에 휘어 들어오면 잽 → 훅).
+        /// </summary>
+        public bool Peek(out PunchKind kind)
+        {
+            kind = PunchKind.None;
+            if (Phase != PunchPhase.Moving || count < 3 || !intentThroughout) return false;
+            kind = Evaluate(count - 1, previousTime, settings.peekMinForward).Kind;
+            return kind != PunchKind.None;
+        }
         public PunchResult Last { get; private set; }
         public int CompletedCount => strikeCount;
 
@@ -334,7 +352,9 @@ namespace Anseong.Combat
             Phase = phase;
         }
 
-        PunchResult Evaluate(int last, double time)
+        PunchResult Evaluate(int last, double time) => Evaluate(last, time, settings.minForward);
+
+        PunchResult Evaluate(int last, double time, float minForward)
         {
             var result = new PunchResult { Kind = PunchKind.None, Reason = PunchReason.TooShort };
             var m = new PunchMeasure { PeakSpeed = peakSpeed, Duration = (float)(time - began), ArcRatio = 1f };
@@ -383,7 +403,7 @@ namespace Anseong.Combat
                 result.Reason = PunchReason.Uppercut;
                 return result;
             }
-            if (m.Forward < settings.minForward) { result.Reason = PunchReason.InsufficientForward; return result; }
+            if (m.Forward < minForward) { result.Reason = PunchReason.InsufficientForward; return result; }
             if (peakSpeed < settings.startSpeed) { result.Reason = PunchReason.TooSlow; return result; }
             var span = settings.verticalAgainstWidestSpan ? Mathf.Max(m.Forward, maxX - minX) : m.Forward;
             if (maxY - minY > span * settings.maxVerticalRatio) { result.Reason = PunchReason.VerticalMotion; return result; }
