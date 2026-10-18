@@ -69,7 +69,21 @@ namespace Anseong.EditorTools
         }
 
         [MenuItem("Anseong/Setup/Add Pilot Input")]
-        static void AddPilotInput()
+        static void AddPilotInput() => AddPilotInputToActiveScene();
+
+        /// <summary>
+        /// 코드를 받은 뒤 한 번에: Build Player Robot Prefab → Add Pilot Input(지금 열린 씬). 둘 중 하나가 실패하면 거기서 멈춘다.
+        /// 열린 씬은 Sandbox 씬이어야 한다(Main은 선우만).
+        /// </summary>
+        [MenuItem("Anseong/Setup/Rebuild Robot + Pilot Input", priority = 0)]
+        static void RebuildAll()
+        {
+            if (!RobotPrefabMenu.Build()) return false;
+            if (!AddPilotInputToActiveScene()) return false;
+            Debug.Log("[SceneSetupMenu] 프리팹 다시 만들기 + Add Pilot Input 완료. 씬을 저장하세요.");
+        }
+
+        internal static bool AddPilotInputToActiveScene()
         {
             var scene = SceneManager.GetActiveScene();
             var origin = scene.GetRootGameObjects()
@@ -79,13 +93,13 @@ namespace Anseong.EditorTools
             {
                 EditorUtility.DisplayDialog("Add Pilot Input",
                     $"'{scene.name}' 씬에 XR Origin이 없습니다.\nHierarchy 우클릭 → XR → XR Origin (VR)을 먼저 추가하세요.", "확인");
-                return;
+                return false;
             }
             var references = AssetDatabase.LoadAllAssetsAtPath(PilotInputPath).OfType<InputActionReference>().ToArray();
             if (references.Length == 0)
             {
                 EditorUtility.DisplayDialog("Add Pilot Input", $"입력 액션 에셋을 찾지 못했습니다: {PilotInputPath}", "확인");
-                return;
+                return false;
             }
 
             var target = origin.gameObject;
@@ -106,6 +120,13 @@ namespace Anseong.EditorTools
             var recalibrate = FindReference(references, DevMapName, RecalibrateActionName);
             if (recalibrate == null) missing++;
             serializedFlow.FindProperty("recalibrateAction").objectReferenceValue = recalibrate;
+            // 몸 이동 보정 첫 기본값(0.6초)이 씬에 남아 있으면 지금 기본값(0초, 즉시)으로 바꾼다. 일부러 다른 값으로 둔 것은 그대로.
+            var followSeconds = serializedFlow.FindProperty("bodyFollow.followSeconds");
+            if (followSeconds != null && Mathf.Approximately(followSeconds.floatValue, 0.6f))
+            {
+                followSeconds.floatValue = 0f;
+                Debug.Log("[SceneSetupMenu] 몸 이동 보정 Follow Seconds 0.6 → 0(즉시)으로 바꿨습니다.", origin);
+            }
             serializedFlow.ApplyModifiedProperties();
 
             var drivers = RobotArmSetup.ConnectDrivers(input, flow);
@@ -118,6 +139,7 @@ namespace Anseong.EditorTools
                 Debug.LogWarning("[SceneSetupMenu] 씬에 RobotArmDriver가 없습니다. Robot_Player 프리팹을 다시 만들고(Build Player Robot Prefab) 이 메뉴를 다시 실행하세요.", origin);
             Debug.Log($"[SceneSetupMenu] XR Origin에 PilotHandInput·PilotCalibrationFlow를 연결하고 팔 드라이버 {drivers}개에 입력을 연결했습니다(기본 1인 양팔 모드). " +
                       $"테스트 안내판: {panel}. 씬을 저장하세요.", origin);
+            return true;
         }
 
         /// <summary>XR 카메라 앞 아래쪽에 헤드셋에서 보는 테스트 안내판(보정 안내 + 펀치 결과, 개발용)을 만든다. 이미 있으면 그대로 둔다.</summary>

@@ -65,6 +65,7 @@
   - **걸어 움직이면 팔이 움직임** → `Pilot/BodyFollow.cs`: 보정이 끝난 순간 머리 위치를 기준으로 몸이 옮겨 간 양을 바로 따라가고, 팔 IK·허리·펀치 분류가 손 위치에서 그만큼 뺀다(`PilotCalibrationFlow` → Body Follow). 처음엔 0.6초에 걸쳐 따라가게 했는데 가드로 몸을 좌우로 흔들면 팔이 쏠린다는 보고(10/18)로 0초(즉시)로 바꿈. 몸을 기울일 때 팔이 반대로 쏠리면 Follow Amount를 0.7쯤으로.
   - **훅이 거의 안 잡힘** → 넓은 가드에서는 손을 더 빼지 않으므로 바깥 준비 0cm, 훅 조건이 맞으면 잽보다 먼저. 로그의 큰 훅(바깥 53cm, 스윕 57cm)이 "위아래 움직임"으로 버려져서 위아래 폭을 전진·좌우 중 큰 쪽과 비교(`Vertical Against Widest Span`). 잽 직진도 0.86 → 0.80.
   - **손목이 꺾여 고양이 손처럼 보임** → `RobotArmDriver` → Wrist Lock Mode `GripHeld`(기본, 선우 10/18: 공격 중엔 고정, 그립을 놓으면 원래 손목 각도로): 그립을 쥔 동안 주먹을 아래팔과 일직선으로 고정. `Always` = 늘 고정. 주먹 비틀림은 아래팔이 돌아서 따라간다. 고정했는데도 꺾여 보이면 Solver Settings → `Locked Wrist Pitch Degrees`를 +로 올려 손등을 아래팔과 평행하게 맞춘다.
+  - 메뉴 **Anseong → Setup → Rebuild Robot + Pilot Input**: Build Player Robot Prefab + Add Pilot Input을 한 번에(선우 요청, 10/18). 씬에 남은 Follow Seconds 첫 기본값 0.6은 0으로 바꾼다.
   - 테스트: `BodyFollowTests`(7개), 넓은 가드 훅·크게 도는 훅·손목 젖힘 추가. 스텁으로 88개 통과.
   - 확인할 것:
     - [ ] 가드 자세로 몸을 좌우로 흔들거나 한두 걸음 옮겨도 로봇 팔이 그대로인지.

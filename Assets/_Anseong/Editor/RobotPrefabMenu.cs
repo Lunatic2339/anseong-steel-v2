@@ -23,7 +23,10 @@ namespace Anseong.EditorTools
         const float HeightTolerance = 0.5f;      // 맞춘 높이가 65 m에서 이만큼 벗어나면 경고 (m)
 
         [MenuItem("Anseong/Setup/Build Player Robot Prefab")]
-        static void BuildPrefabs()
+        static void BuildPrefabs() => Build();
+
+        /// <summary>플레이어·보스 프리팹을 다시 만든다. 실패하면 false(이유는 대화상자·Console).</summary>
+        internal static bool Build()
         {
             var art = RobotArtSettings.Load();
             var playerModel = art.PlayerModel;
@@ -35,7 +38,7 @@ namespace Anseong.EditorTools
                     $"필요한 에셋을 찾지 못했습니다.\n플레이어 모델: {art.PlayerModelPath}\n보스 모델: {art.BossModelPath}\n대기 컨트롤러: {IdleControllerPath}\n" +
                     "모델은 'Anseong → Art → Robot Art Settings'에서 바꿉니다. " +
                     "컨트롤러가 없으면 'Anseong → Sandbox → Build Scale Test'를 먼저 실행하세요.", "확인");
-                return;
+                return false;
             }
             var switchSeat = RobotSandboxUtility.FindAction(DevMapName, SwitchSeatActionName);
             if (switchSeat == null)
@@ -49,19 +52,19 @@ namespace Anseong.EditorTools
             try
             {
                 var player = CreateRobot(playerModel, controller, RobotArtSettings.AvatarOf(playerModel), "Robot_Player", preview);
-                if (player == null) return;
+                if (player == null) return false;
                 RobotSandboxUtility.ApplyPlayerMaterials(player);
-                if (!AddCockpit(player, IdleClip(controller), switchSeat)) return;
+                if (!AddCockpit(player, IdleClip(controller), switchSeat)) return false;
                 if (!RobotArmSetup.AddArmDrivers(player, out var armReport))
                 {
                     Debug.LogError($"{LogPrefix} {armReport} 플레이어 프리팹을 만들지 않습니다.");
-                    return;
+                    return false;
                 }
                 Debug.Log($"{LogPrefix} 팔 드라이버: {armReport}");
                 Save(player, PlayerPrefabPath);
 
                 var boss = CreateRobot(bossModel, controller, RobotArtSettings.AvatarOf(bossModel), "Robot_Boss", preview);
-                if (boss == null) return;
+                if (boss == null) return false;
                 RobotSandboxUtility.TintBoss(boss);
                 Save(boss, BossPrefabPath);
             }
@@ -72,6 +75,7 @@ namespace Anseong.EditorTools
             AssetDatabase.SaveAssets();
             Debug.Log($"{LogPrefix} 프리팹 생성 완료: {PlayerPrefabPath}, {BossPrefabPath}. " +
                       "'Anseong → Sandbox → Build Cockpit Root Test'로 샌드박스 씬에 배치할 수 있습니다.");
+            return true;
         }
 
         /// <summary>배율 1 루트(정면 +Z) 아래에 65 m로 맞춘 모델 + 대기 Animator. 루트가 조종석의 기준이 된다.</summary>
