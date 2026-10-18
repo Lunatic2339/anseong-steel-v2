@@ -78,8 +78,8 @@ namespace Anseong.EditorTools
         [MenuItem("Anseong/Setup/Rebuild Robot + Pilot Input", priority = 0)]
         static void RebuildAll()
         {
-            if (!RobotPrefabMenu.Build()) return false;
-            if (!AddPilotInputToActiveScene()) return false;
+            if (!RobotPrefabMenu.Build()) return;
+            if (!AddPilotInputToActiveScene()) return;
             Debug.Log("[SceneSetupMenu] 프리팹 다시 만들기 + Add Pilot Input 완료. 씬을 저장하세요.");
         }
 
