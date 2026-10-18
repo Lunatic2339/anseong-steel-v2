@@ -114,6 +114,9 @@ namespace Anseong.Pilot
         /// <summary>보정 뒤 몸이 옮겨 간 양(트래킹 공간, m). 끄거나 보정 전이면 0.</summary>
         public Vector3 BodyOffset => follow.Offset;
 
+        /// <summary>몸 이동 보정이 지금 켜져 있고 기준이 잡혀 있다.</summary>
+        public bool BodyFollowActive => follow.HasReference && bodyFollow != null && bodyFollow.enabled;
+
         /// <summary>
         /// 손 위치(트래킹 공간)를 "보정한 자리에 서 있는 것처럼" 바꾼다. 보정값(어깨·가드·도달)과 비교하는 모든 곳은 이 값을 쓴다.
         /// 플레이어가 걸어 옮겨도 가드 자세면 팔이 움직이지 않는다.
@@ -256,6 +259,8 @@ namespace Anseong.Pilot
                 case CalibrationStage.Complete:
                     AlignBodyYawForBothArms();
                     if (head != null) follow.SetReference(HeadPosition());
+                    Log(head == null ? "몸 이동 보정 꺼짐: 머리(head)가 비어 있습니다. Add Pilot Input을 다시 실행하세요."
+                        : $"몸 이동 보정 {(bodyFollow.enabled ? "켜짐" : "꺼짐")} (Follow Seconds {bodyFollow.followSeconds:F2}, Follow Amount {bodyFollow.followAmount:F2})");
                     for (var h = 0; h < 2; h++)
                         if (input != null && input.IsArmHand((PilotSide)h)) input.Gate((PilotSide)h).RequireRelease();
                     LogSummary();

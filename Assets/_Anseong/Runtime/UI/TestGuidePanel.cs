@@ -46,6 +46,8 @@ namespace Anseong.UI
         string lastNotice = string.Empty;
         int stateKey = -1;
         bool dirty = true;
+        float nextOffsetCheck;
+        Vector3 shownOffset;
 
         void Start()
         {
@@ -92,6 +94,12 @@ namespace Anseong.UI
             {
                 stateKey = key;
                 dirty = true;
+            }
+            // 몸 이동 보정 값은 0.25초마다, 1cm 넘게 바뀌었을 때만 다시 쓴다.
+            if (calibration.IsComplete && Time.unscaledTime >= nextOffsetCheck)
+            {
+                nextOffsetCheck = Time.unscaledTime + 0.25f;
+                if ((calibration.BodyOffset - shownOffset).sqrMagnitude > 0.0001f) dirty = true;
             }
             if (!dirty) return;
             dirty = false;
@@ -176,7 +184,14 @@ namespace Anseong.UI
         void DrawPunches()
         {
             builder.Append("<b>보정 완료</b>  그립을 쥔 채 잽·훅·어퍼컷을 쳐 보세요\n");
-            builder.Append("치고 나면 손을 가드 자리로 잠깐 돌려야 다음 동작을 셉니다\n\n");
+            builder.Append("치고 나면 손을 가드 자리로 잠깐 돌려야 다음 동작을 셉니다\n");
+            shownOffset = calibration.BodyOffset;
+            builder.Append("몸 이동 보정 ");
+            if (calibration.BodyFollowActive)
+                builder.Append("<color=#5BE37D>켜짐</color>  보정 뒤 옮긴 거리 좌우 ").Append(Cm(shownOffset.x))
+                    .Append(" 앞뒤 ").Append(Cm(shownOffset.z)).Append(" 높이 ").Append(Cm(shownOffset.y));
+            else builder.Append("<color=#FF6B6B>꺼짐</color>");
+            builder.Append("\n\n");
             if (classifier == null)
             {
                 builder.Append("(펀치 분류 없음: Build Player Robot Prefab을 다시 실행하세요)\n");

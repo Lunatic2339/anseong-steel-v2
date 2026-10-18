@@ -10,9 +10,15 @@ namespace Anseong.Pilot
                  "끄면 보정한 순간의 위치에 고정된다(이전 동작).")]
         public bool enabled = true;
 
-        [Tooltip("몸 위치를 따라가는 시간(초). 길수록 펀치 중 몸을 숙이는 것은 덜 지우고, 걸어 옮긴 것만 지운다. 0이면 머리를 바로 따라간다.")]
+        [Tooltip("몸 위치를 따라가는 시간(초). 0 = 머리를 바로 따라간다(기본: 가드로 몸을 좌우로 흔들어도 팔이 그대로). " +
+                 "올리면 펀치 중 몸을 숙인 것은 덜 지우지만, 몸을 흔들 때 그만큼 늦게 따라가 팔이 쏠린다(1차 0.6초에서 쏠림 보고, 10/18).")]
         [Min(0f)]
-        public float followSeconds = 0.6f;
+        public float followSeconds = 0f;
+
+        [Tooltip("머리가 옮겨 간 양 중 어깨에 반영할 비율. 1 = 머리만큼(걸어 옮길 때 정확). " +
+                 "허리를 굽혀 몸을 기울이면 어깨는 머리보다 덜 움직이므로, 기울일 때 팔이 반대로 쏠리면 0.7 정도로 낮춘다.")]
+        [Range(0f, 1.5f)]
+        public float followAmount = 1f;
 
         [Tooltip("앉거나 무릎을 굽혀 머리 높이가 바뀌면 어깨 높이도 따라간다.")]
         public bool followHeight = true;
@@ -25,7 +31,7 @@ namespace Anseong.Pilot
     /// <summary>
     /// 보정한 순간의 머리 위치를 기준으로, 지금 몸이 얼마나 옮겨 갔는지(트래킹 공간, m)를 천천히 따라간다.
     /// 손 위치에서 이 값을 빼면 "보정한 자리에 그대로 서 있는 것처럼" 잴 수 있다. 머리를 돌리는 것(회전)은 쓰지 않는다.
-    /// 짧은 움직임(펀치 중 몸 숙임)은 followSeconds 만큼 늦게 따라가므로 대부분 남는다.
+    /// followSeconds를 올리면 짧은 움직임(펀치 중 몸 숙임)은 늦게 따라가 대부분 남는다.
     /// </summary>
     public sealed class BodyFollow
     {
@@ -60,7 +66,7 @@ namespace Anseong.Pilot
                 return;
             }
             if (!Finite(head) || dt <= 0f) return;
-            var target = head - reference;
+            var target = (head - reference) * settings.followAmount;
             if (!settings.followHeight) target.y = 0f;
             target = Vector3.ClampMagnitude(target, settings.maxOffset);
             Offset = settings.followSeconds > 0f

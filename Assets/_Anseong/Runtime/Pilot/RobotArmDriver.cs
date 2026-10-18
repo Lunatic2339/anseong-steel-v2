@@ -74,9 +74,9 @@ namespace Anseong.Pilot
         [SerializeField, Min(0f), Tooltip("주먹 목표 최대 속도(m/s, 로봇 크기). 0 = 제한 없음(기본).")]
         float maxTargetSpeed;
 
-        [SerializeField, Tooltip("Always = 손목을 늘 아래팔과 일직선으로 고정(가드·펀치 모두 주먹이 곧게, 기본). 주먹 비틀림은 아래팔이 돌아서 따라간다. " +
-            "GripHeld = 그립을 쥔 동안만 고정하고 놓으면 컨트롤러 각도대로 꺾인다(이전 동작).")]
-        WristLockMode wristLockMode = WristLockMode.Always;
+        [SerializeField, Tooltip("GripHeld = 그립을 쥔 동안 손목을 아래팔과 일직선으로 고정하고, 놓으면 컨트롤러 각도를 다시 따라간다(기본, 선우 10/18). " +
+            "Always = 그립과 상관없이 늘 고정. 주먹 비틀림은 두 경우 모두 아래팔이 돌아서 따라간다.")]
+        WristLockMode wristLockMode = WristLockMode.GripHeld;
 
         [SerializeField, Tooltip("IK 세부 수치.")]
         ArmSolverSettings solverSettings = new ArmSolverSettings();
