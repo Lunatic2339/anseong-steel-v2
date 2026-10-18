@@ -927,7 +927,7 @@ MonoBehaviour:
   useElbowHint: 1
   responseSeconds: 0
   maxTargetSpeed: 0
-  wristLockMode: 0
+  wristLockMode: 1
   solverSettings:
     maxBendDegrees: 160
     softReachStartBendDegrees: 3
@@ -1003,7 +1003,7 @@ MonoBehaviour:
   useElbowHint: 1
   responseSeconds: 0
   maxTargetSpeed: 0
-  wristLockMode: 0
+  wristLockMode: 1
   solverSettings:
     maxBendDegrees: 160
     softReachStartBendDegrees: 3

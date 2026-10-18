@@ -453,6 +453,12 @@ MonoBehaviour:
     minReachBeyondGuard: 0.08
     maxGuardToReachRatio: 0.85
     minReachHorizontal: 0.15
+  bodyFollow:
+    enabled: 1
+    followSeconds: 0
+    followAmount: 1
+    followHeight: 1
+    maxOffset: 2
   startOnEnable: 1
   recalibrateAction: {fileID: 5863586858937809863, guid: f9bac97bb683d474da3f60f0db4eaaf0, type: 3}
 --- !u!114 &571538632
