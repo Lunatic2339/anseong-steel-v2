@@ -29,13 +29,37 @@ namespace Anseong.Tests
         [Test]
         public void QuickLean_IsMostlyKept()
         {
-            // 펀치 중 0.1초 몸을 숙이는 것은 거의 지우지 않는다(손이 앞으로 간 것으로 남는다).
-            var settings = new BodyFollowSettings();
+            // 따라가는 시간을 주면 펀치 중 0.1초 몸을 숙이는 것은 거의 지우지 않는다(손이 앞으로 간 것으로 남는다).
+            var settings = new BodyFollowSettings { followSeconds = 0.6f };
             var follow = new BodyFollow();
             follow.SetReference(Head);
             var lean = new Vector3(0f, 0f, 0.1f);
             Step(follow, Head + lean, 0.1f, settings);
             Assert.Less(follow.Offset.magnitude, lean.magnitude * 0.2f);
+        }
+
+        [Test]
+        public void Default_SwayIsFollowedImmediately()
+        {
+            // 가드로 몸을 좌우로 흔들면(10/18 보고) 그 프레임에 바로 따라가 팔이 쏠리지 않는다.
+            var settings = new BodyFollowSettings();
+            var follow = new BodyFollow();
+            follow.SetReference(Head);
+            for (var i = 0; i < 90; i++)
+            {
+                var sway = new Vector3(0.2f * Mathf.Sin(i * Dt * Mathf.PI * 2f), 0f, 0f);
+                follow.Update(Head + sway, Dt, settings);
+                Assert.Less(Vector3.Distance(follow.Offset, sway), 1e-4f);
+            }
+        }
+
+        [Test]
+        public void FollowAmount_ScalesOffset()
+        {
+            var follow = new BodyFollow();
+            follow.SetReference(Head);
+            follow.Update(Head + new Vector3(0.3f, 0f, 0f), Dt, new BodyFollowSettings { followAmount = 0.7f });
+            Assert.AreEqual(0.21f, follow.Offset.x, 1e-4f);
         }
 
         [Test]
