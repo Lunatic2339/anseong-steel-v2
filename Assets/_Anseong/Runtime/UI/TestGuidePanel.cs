@@ -26,6 +26,9 @@ namespace Anseong.UI
         [SerializeField, Tooltip("글자를 쓸 TextMesh. 메뉴가 만든다.")]
         TextMesh text;
 
+        [SerializeField, Tooltip("조절·검증 메뉴. 열려 있는 동안 안내판 글자를 숨긴다(10/25: 메뉴와 겹침). 비어 있으면 시작할 때 한 번 찾는다.")]
+        TuningMenu tuningMenu;
+
         [SerializeField, Tooltip("한글을 쓰려고 시작할 때 이 OS 글꼴로 바꾼다(앞에서부터 있는 것). 비우면 TextMesh 글꼴 그대로.")]
         string[] osFontNames = { "Malgun Gothic", "맑은 고딕", "Arial" };
 
@@ -60,6 +63,7 @@ namespace Anseong.UI
             if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
             if (classifier == null) classifier = FindAnyObjectByType<PunchClassifierDriver>();
             if (combat == null) combat = FindAnyObjectByType<CombatDirector>();
+            if (tuningMenu == null) tuningMenu = FindAnyObjectByType<TuningMenu>();
             if (text == null || calibration == null)
             {
                 Debug.LogWarning("[TestGuidePanel] 글자 칸이나 보정 흐름이 없어 안내판을 끕니다. 'Anseong → Setup → Add Pilot Input'을 다시 실행하세요.", this);
@@ -138,8 +142,20 @@ namespace Anseong.UI
             if (renderer != null) renderer.sharedMaterial = font.material;
         }
 
+        MeshRenderer textRenderer;
+
+        /// <summary>조절·검증 메뉴가 열려 있으면 글자를 숨긴다. 숨겼으면 true.</summary>
+        bool HideUnderMenu()
+        {
+            if (textRenderer == null) textRenderer = text.GetComponent<MeshRenderer>();
+            var hide = tuningMenu != null && tuningMenu.IsOpen;
+            if (textRenderer != null && textRenderer.enabled == hide) textRenderer.enabled = !hide;
+            return hide;
+        }
+
         void Update()
         {
+            if (HideUnderMenu()) return;
             // 단계나 손별 저장 상태가 바뀔 때만 다시 쓴다(매 프레임 문자열을 만들지 않는다).
             var key = (int)calibration.Stage * 4 + (calibration.IsCaptured(PilotSide.Left) ? 1 : 0) + (calibration.IsCaptured(PilotSide.Right) ? 2 : 0);
             if (key != stateKey)

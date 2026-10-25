@@ -99,10 +99,8 @@ namespace Anseong.Boss
             list.Describe(g, "할 것: 잽·훅·어퍼컷·부스트로 보스 치기\n볼 것: 거대한 보스가 무게 있게 휘청하고 돌아옴");
             list.AddCheck(g, "boss.stagger", "휘청이 묵직함");
             list.AddCheck(g, "boss.boostStagger", "부스트 휘청이 더 큼");
-            list.AddFloat(g, "boss.fadeIn", "휘청 섞기(초)", () => fadeInSeconds, v => fadeInSeconds = v, 0f, 0.5f, 0.02f);
             list.AddFloat(g, "boss.fadeOut", "대기로 돌아오는 섞기(초)", () => fadeOutSeconds, v => fadeOutSeconds = v, 0f, 1.5f, 0.05f);
             list.AddFloat(g, "boss.hitStagger", "훅·어퍼컷 휘청 길이(초)", () => hitStaggerSeconds, v => hitStaggerSeconds = v, 0f, 2f, 0.05f);
-            list.AddToggle(g, "boss.staggerOnJab", "잽도 휘청", () => staggerOnJab, v => staggerOnJab = v);
         }
     }
 }

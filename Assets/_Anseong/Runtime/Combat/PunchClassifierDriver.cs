@@ -25,6 +25,19 @@ namespace Anseong.Combat
         [SerializeField, Tooltip("잽·훅 기준값(사람 손 m). 01_combat_rules.md 초기값.")]
         PunchClassifierSettings settings = new PunchClassifierSettings();
 
+        [Header("로봇 주먹 맞춤")]
+        [SerializeField, Tooltip("판정을 로봇 주먹이 따라올 때까지 늦춘다(팔 반응 시간을 올리면 사람 손보다 판정이 먼저 나던 문제, 10/25). 분류는 그대로 사람 손 기준.")]
+        bool waitForRobotFist = true;
+
+        [SerializeField, Range(0f, 0.5f), Tooltip("로봇 주먹 목표가 사람 손 목표에 이만큼(팔 길이 배수) 가까워지면 따라온 것으로 본다.")]
+        float catchUpRatio = 0.08f;
+
+        [SerializeField, Min(0f), Tooltip("아무리 늦어도 이 시간(초) 뒤에는 판정을 낸다.")]
+        float maxHoldSeconds = 0.8f;
+
+        [SerializeField, Tooltip("왼팔·오른팔 로봇 팔(같은 오브젝트의 RobotArmDriver). 비어 있으면 시작할 때 한 번 찾는다.")]
+        RobotArmDriver[] robotArms = new RobotArmDriver[2];
+
         [Header("개발용 (에디터·개발 빌드에서만)")]
         [SerializeField, Tooltip("동작마다 persistentDataPath/logs/strikes_<날짜시각>.csv에 한 줄 남긴다.")]
         bool writeCsv = true;
@@ -49,6 +62,7 @@ namespace Anseong.Combat
         static readonly int ColorId = Shader.PropertyToID("_Color");
 
         readonly PunchClassifier[] classifiers = new PunchClassifier[2];
+        readonly StrikeHold[] holds = { new StrikeHold(), new StrikeHold() };
         readonly float[] indicatorUntil = new float[2];
         readonly PunchPhase[] lastPhase = new PunchPhase[2];
         readonly float[] headAtStart = new float[2];
@@ -61,6 +75,14 @@ namespace Anseong.Combat
         public event Action<PilotSide, PunchResult> StrikeCompleted;
 
         public PunchClassifier Classifier(PilotSide side) => classifiers[(int)side];
+
+        /// <summary>끝났지만 로봇 주먹을 기다리며 아직 내지 않은 결과. 그동안에도 명중 판정이 로봇 주먹 접촉을 본다.</summary>
+        public bool TryGetHeld(PilotSide side, out PunchResult result)
+        {
+            var hold = holds[(int)side];
+            result = hold.Result;
+            return hold.Pending;
+        }
 
         /// <summary>CSV 명중 열 값을 정하는 함수(M1-05 전투 판정이 넣는다). 비어 있으면 빈칸.</summary>
         public Func<PilotSide, PunchResult, string> HitColumn { get; set; }
@@ -86,6 +108,10 @@ namespace Anseong.Combat
                 enabled = false;
                 return;
             }
+            if (robotArms == null || robotArms.Length < 2) robotArms = new RobotArmDriver[2];
+            if (robotArms[0] == null || robotArms[1] == null)
+                foreach (var arm in GetComponentsInChildren<RobotArmDriver>())
+                    if (robotArms[(int)arm.Side] == null) robotArms[(int)arm.Side] = arm;
             calibration.Completed += ResetNeutrals;
             if (calibration.IsComplete) ResetNeutrals();
             block = new MaterialPropertyBlock();
@@ -128,8 +154,9 @@ namespace Anseong.Combat
                 if (completed)
                 {
                     result.HeadForward = head - headAtStart[h];
-                    Report(side, result);
+                    Hold(h, result, now);
                 }
+                StepHold(h, now);
                 if (indicatorUntil[h] > 0f && Time.time >= indicatorUntil[h])
                 {
                     indicatorUntil[h] = 0f;
@@ -139,6 +166,32 @@ namespace Anseong.Combat
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             log?.Pump();
 #endif
+        }
+
+        /// <summary>로봇 주먹이 따라올 때까지 결과를 붙잡는다. 앞 결과가 아직 남아 있으면 먼저 내보낸다.</summary>
+        void Hold(int h, PunchResult result, double now)
+        {
+            if (holds[h].Pending)
+            {
+                holds[h].Clear();
+                Report((PilotSide)h, holds[h].Result);
+            }
+            var arm = robotArms[h];
+            if (!waitForRobotFist || arm == null || !arm.IsActive)
+            {
+                Report((PilotSide)h, result);
+                return;
+            }
+            holds[h].Begin(result, arm.FistRatio, now);
+        }
+
+        void StepHold(int h, double now)
+        {
+            if (!holds[h].Pending) return;
+            var arm = robotArms[h];
+            var fist = arm != null ? arm.FistRatio : Vector3.zero;
+            var lag = arm != null && arm.IsActive ? arm.LagRatio : 0f;
+            if (holds[h].Step(fist, lag, now, catchUpRatio, maxHoldSeconds)) Report((PilotSide)h, holds[h].Result);
         }
 
         void Report(PilotSide side, PunchResult result)
@@ -189,6 +242,7 @@ namespace Anseong.Combat
         /// <summary>인게임 조절 메뉴: 펀치 인식 기준(M1-04 검증에서 가장 많이 바꾸는 값).</summary>
         public void AddTuning(TuningList list)
         {
+            list.AddToggle("묵직함", "punch.waitForRobotFist", "판정을 로봇 주먹에 맞춤", () => waitForRobotFist, v => waitForRobotFist = v);
             var s = settings;
             if (s == null) return;
             const string g = "펀치 인식";
@@ -199,32 +253,8 @@ namespace Anseong.Combat
             list.AddCheck(g, "punch.guardRaise", "가드 올리기는 0번");
             list.AddCheck(g, "punch.combo", "잽 연타가 다 세짐");
             list.AddCheck(g, "punch.double", "한 번 친 게 두 번 안 세짐");
-            list.AddFloat(g, "punch.minJabStraightness", "잽 직진도 최소", () => s.minJabStraightness, v => s.minJabStraightness = v, 0.5f, 1f, 0.01f);
-            list.AddFloat(g, "punch.maxJabSideRatio", "잽 좌우폭/전진 최대", () => s.maxJabSideRatio, v => s.maxJabSideRatio = v, 0.2f, 1f, 0.05f);
-            list.AddFloat(g, "punch.minHookSweep", "훅 안쪽 스윕 최소(m)", () => s.minHookSweep, v => s.minHookSweep = v, 0.05f, 0.5f, 0.01f);
-            list.AddFloat(g, "punch.minHookArcRatio", "훅 호/현 최소", () => s.minHookArcRatio, v => s.minHookArcRatio = v, 1f, 1.3f, 0.01f);
-            list.AddFloat(g, "punch.minHookOutset", "훅 바깥 준비 최소(m)", () => s.minHookOutset, v => s.minHookOutset = v, 0f, 0.3f, 0.01f);
-            list.AddFloat(g, "punch.minUppercutRise", "어퍼컷 올림 최소(m)", () => s.minUppercutRise, v => s.minUppercutRise = v, 0.05f, 0.5f, 0.01f);
-            list.AddFloat(g, "punch.minUppercutRiseRatio", "어퍼컷 올림/전진 최소", () => s.minUppercutRiseRatio, v => s.minUppercutRiseRatio = v, 0.3f, 3f, 0.1f, 1);
-            list.AddFloat(g, "punch.maxUppercutSideRatio", "어퍼컷 좌우폭/올림 최대", () => s.maxUppercutSideRatio, v => s.maxUppercutSideRatio = v, 0.2f, 1.5f, 0.05f);
-            list.AddFloat(g, "punch.departUpSpeed", "어퍼컷 시작 위 속도(m/s)", () => s.departUpSpeed, v => s.departUpSpeed = v, 0.1f, 2f, 0.05f);
-            list.AddFloat(g, "punch.minForward", "잽·훅 전진 최소(m)", () => s.minForward, v => s.minForward = v, 0.05f, 0.5f, 0.01f);
-            list.AddFloat(g, "punch.maxVerticalRatio", "위아래 거름 비율 최대", () => s.maxVerticalRatio, v => s.maxVerticalRatio = v, 0.2f, 2f, 0.05f);
-            list.AddToggle(g, "punch.verticalAgainstWidestSpan", "위아래 거름을 큰 폭과 비교", () => s.verticalAgainstWidestSpan, v => s.verticalAgainstWidestSpan = v);
-            list.AddFloat(g, "punch.startSpeed", "동작 시작 속도(m/s)", () => s.startSpeed, v => s.startSpeed = v, 0.2f, 3f, 0.05f);
-            list.AddFloat(g, "punch.departForwardSpeed", "시작 앞 속도(m/s)", () => s.departForwardSpeed, v => s.departForwardSpeed = v, 0.05f, 2f, 0.05f);
-            list.AddFloat(g, "punch.departInwardSpeed", "시작 안쪽 속도(m/s)", () => s.departInwardSpeed, v => s.departInwardSpeed = v, 0.05f, 2f, 0.05f);
+            // 인식 기준값은 strikes CSV로 Claude가 맞춘다(선우 10/25: 직접 볼 값만 메뉴에). Inspector에는 그대로 있다.
             list.AddChoice(g, "punch.rearmMode", "다음 펀치 준비 방식", () => (int)s.rearmMode, v => s.rearmMode = (RearmMode)v, new[] { "거둬들이면", "가드로 돌아오면" });
-            list.AddFloat(g, "punch.rearmRetract", "거둬들이면: 당길 거리(m)", () => s.rearmRetract, v => s.rearmRetract = v, 0.02f, 0.4f, 0.01f);
-            list.AddFloat(g, "punch.rearmRestSeconds", "거둬들이면: 멈춤 준비(초)", () => s.rearmRestSeconds, v => s.rearmRestSeconds = v, 0.1f, 2f, 0.05f);
-            list.AddFloat(g, "punch.minStrikeInterval", "펀치 최소 간격(초)", () => s.minStrikeInterval, v => s.minStrikeInterval = v, 0f, 1f, 0.05f);
-            list.AddFloat(g, "punch.neutralRadius", "가드로: 좌우·위아래 반경(m)", () => s.neutralRadius, v => s.neutralRadius = v, 0.05f, 0.5f, 0.01f);
-            list.AddFloat(g, "punch.neutralForwardBand", "가드로: 앞쪽 허용(m)", () => s.neutralForwardBand, v => s.neutralForwardBand = v, 0f, 0.4f, 0.01f);
-            list.AddFloat(g, "punch.neutralDwell", "준비 머무름(초)", () => s.neutralDwell, v => s.neutralDwell = v, 0f, 1f, 0.05f);
-            list.AddFloat(g, "punch.stopSpeed", "멈춤 속도(m/s)", () => s.stopSpeed, v => s.stopSpeed = v, 0.05f, 1f, 0.05f);
-            list.AddFloat(g, "punch.stopDwell", "멈춤 시간(초)", () => s.stopDwell, v => s.stopDwell = v, 0f, 0.5f, 0.02f);
-            list.AddFloat(g, "punch.retractDistance", "거둬들임 거리(m)", () => s.retractDistance, v => s.retractDistance = v, 0.01f, 0.3f, 0.005f, 3);
-            list.AddFloat(g, "punch.maxStrokeSeconds", "한 동작 최대(초)", () => s.maxStrokeSeconds, v => s.maxStrokeSeconds = v, 0.3f, 3f, 0.05f);
         }
     }
 }

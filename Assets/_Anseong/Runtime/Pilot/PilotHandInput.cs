@@ -228,8 +228,6 @@ namespace Anseong.Pilot
         {
             list.Describe("그립", "할 것: 그립을 살짝·꽉 쥐어 보기\n볼 것: 펀치가 '그립 안 쥠'으로 버려지지 않는지");
             list.AddCheck("그립", "input.grip", "쥐면 바로 인식, 놓으면 바로 풀림");
-            list.AddFloat("그립", "input.gripPress", "그립 누름 기준", () => gripPressThreshold, v => gripPressThreshold = Mathf.Max(v, gripReleaseThreshold + 0.05f), 0.2f, 0.95f, 0.05f);
-            list.AddFloat("그립", "input.gripRelease", "그립 뗌 기준", () => gripReleaseThreshold, v => gripReleaseThreshold = Mathf.Min(v, gripPressThreshold - 0.05f), 0.05f, 0.9f, 0.05f);
         }
     }
 }

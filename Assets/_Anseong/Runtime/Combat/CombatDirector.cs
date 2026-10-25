@@ -152,6 +152,8 @@ namespace Anseong.Combat
                     }
                     if (!resolver.AlreadyHit(side, strike)) TryBeginAssist(h);
                 }
+                // 동작은 끝났지만 로봇 주먹을 기다리는 중이면 그 종류로 계속 접촉·보정을 본다.
+                else if (classifier.TryGetHeld(side, out var held) && held.IsAttack && !resolver.AlreadyHit(side, held.StrikeId)) s.PeekKind = held.Kind;
                 else s.PeekKind = PunchKind.None;
                 s.Assist.Update(Time.deltaTime);
             }
@@ -188,6 +190,7 @@ namespace Anseong.Combat
                 }
                 var punch = classifier.Classifier(side);
                 var strike = punch != null ? punch.CurrentStrikeId : 0;
+                if (strike == 0 && classifier.TryGetHeld(side, out var held) && held.IsAttack) strike = held.StrikeId;
                 if (strike > 0 && !resolver.AlreadyHit(side, strike) && input.IsArmHand(side))
                 {
                     if (TryContact(s.PreviousFist, current, fist.Radius, out var zone, out var point))
@@ -300,11 +303,7 @@ namespace Anseong.Combat
             list.AddCheck(g, "assist.pull", "빗나가도 보스 쪽으로 끌려가 맞음");
             list.AddCheck(g, "assist.natural", "끌림이 어색하지 않음");
             list.AddToggle(g, "assist.enabled", "공격 보정(끄면 실제로 닿아야 명중)", () => a.enabled, v => a.enabled = v);
-            list.AddFloat(g, "assist.rangeRatio", "보정 사거리(팔 길이 배수)", () => a.rangeRatio, v => a.rangeRatio = v, 0.5f, 3f, 0.1f, 1);
-            list.AddFloat(g, "assist.coneDegrees", "보정 각도(도)", () => a.coneDegrees, v => a.coneDegrees = v, 5f, 90f, 5f, 0);
             list.AddFloat(g, "assist.pullSeconds", "끌려가는 시간(초)", () => a.pullSeconds, v => a.pullSeconds = v, 0.02f, 0.6f, 0.02f);
-            list.AddFloat(g, "assist.releaseSeconds", "돌아오는 시간(초)", () => a.releaseSeconds, v => a.releaseSeconds = v, 0.02f, 1f, 0.05f);
-            list.AddFloat(g, "assist.hitAtWeight", "명중으로 볼 끌림(0~1)", () => a.hitAtWeight, v => a.hitAtWeight = v, 0.5f, 1f, 0.05f);
 
             const string c = "연계·부스트";
             list.Describe(c, "할 것: 잽 → 훅 → 어퍼컷 연계, 명중 때 트리거로 부스트\n볼 것: 안내판 연계 단계·부스트, 늦으면 끊김");
@@ -312,19 +311,12 @@ namespace Anseong.Combat
             list.AddCheck(c, "combo.timeout", "늦으면 연계가 끊김");
             list.AddCheck(c, "boost.hit", "부스트가 트리거로 나감");
             list.AddFloat(c, "combo.comboSeconds", "다음 명중 제한(초)", () => combo.comboSeconds, v => combo.comboSeconds = v, 0.5f, 5f, 0.1f, 1);
-            list.AddFloat(c, "combo.minComboGap", "단계 사이 최소(초)", () => combo.minComboGap, v => combo.minComboGap = v, 0f, 0.5f, 0.05f);
-            list.AddToggle(c, "combo.uppercutKeepsCombo", "어퍼컷이 연계 유지", () => combo.uppercutKeepsCombo, v => combo.uppercutKeepsCombo = v);
             list.AddFloat(c, "boost.windowSeconds", "부스트 입력창(초)", () => boost.windowSeconds, v => boost.windowSeconds = v, 0.1f, 2f, 0.05f);
-            list.AddFloat(c, "boost.triggerPress", "트리거 누름 기준", () => triggerPress, v => triggerPress = Mathf.Max(v, triggerRelease + 0.05f), 0.1f, 1f, 0.05f);
 
             const string d = "보스 HP";
             list.Describe(d, "할 것: 보스를 몇 대 치고 HP 막대 보기, 다 채우기로 다시\n볼 것: 명중마다 HP가 줄고 막대가 잘 보임");
             list.AddCheck(d, "boss.hp", "명중마다 HP가 줄어듦");
             list.AddCheck(d, "boss.bar", "HP 막대가 잘 보임");
-            list.AddFloat(d, "boss.jabDamage", "잽 피해(%)", () => bossHealth.jabDamage, v => bossHealth.jabDamage = v, 0f, 20f, 0.5f, 1);
-            list.AddFloat(d, "boss.hookDamage", "훅 피해(%)", () => bossHealth.hookDamage, v => bossHealth.hookDamage = v, 0f, 20f, 0.5f, 1);
-            list.AddFloat(d, "boss.uppercutDamage", "어퍼컷 피해(%)", () => bossHealth.uppercutDamage, v => bossHealth.uppercutDamage = v, 0f, 20f, 0.5f, 1);
-            list.AddFloat(d, "boss.boostDamage", "부스트 추가 피해(%)", () => bossHealth.boostDamage, v => bossHealth.boostDamage = v, 0f, 30f, 0.5f, 1);
             // 값이 아니라 동작: 오른쪽으로 밀면 보스 HP·연계를 처음으로(저장되지 않음).
             list.AddChoice(d, "boss.reset", "보스 HP 다시 채우기(→)", () => 0, v => { if (v == 1 && resolver != null) resolver.Reset(); }, new[] { "-", "채움" });
         }
