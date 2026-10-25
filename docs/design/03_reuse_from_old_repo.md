@@ -15,12 +15,12 @@
 |---|---:|---|---|
 | `VR_test/Assets/Scripts/MechaArmStability.cs` | 68 | `Core`: 팔 끝 도달 완화(SoftDistance), 팔꿈치 방향 안정화(StableHint) | M1-03 |
 | `AS/_Project/RobotPlay/Runtime/IntegratedLanRules.cs` | 20 | `Net`: 시퀀스 wrap 비교, IPv4 검증 | M3(예정) |
-| `AS/_BossPrototype/Runtime/BossMovement.cs` | 213 | `Boss`: 유진 원본 이동. 서버 전용으로. `MoveUp/Down` → `MoveForward/Back` | M2(예정) |
-| `AS/_BossPrototype/Runtime/BossRotation.cs` | 175 | `Boss`: 유진 원본 회전(가속·제동). 143행 새 요청마다 RotationStopped 발생 → 깜빡임 수정 | M2(예정) |
-| `AS/_BossPrototype/Runtime/BossHeavyPunch.cs` | 171 | `Boss`: 애니메이션 이벤트 시점 1회 판정 | M2(예정) |
+| `AS/_BossPrototype/Runtime/BossMovement.cs` | 213 | `Boss`: 유진 원본 이동. 서버 전용으로. `MoveUp/Down` → `MoveForward/Back` | M2-04 |
+| `AS/_BossPrototype/Runtime/BossRotation.cs` | 175 | `Boss`: 유진 원본 회전(가속·제동). 143행 새 요청마다 RotationStopped 발생 → 깜빡임 수정 | M2-04 |
+| `AS/_BossPrototype/Runtime/BossHeavyPunch.cs` | 171 | `Boss`: 애니메이션 이벤트 시점 1회 판정 | M2-02 |
 | `AS/_Project/HudUI/Runtime/SuitDamageState.cs`, `SuitWireframe.cs`, `SuitHudDetail.cs` + `Resources/HudUiLines.shader`, `HudUiText.shader` | 37·67·97 | `UI`: 부위 손상 와이어프레임 HUD | M4(예정) |
-| `AS/_BossPrototype/Runtime/BossAnimationEvents.cs` | 12 | `Boss`: 애니메이션 이벤트 전달 | M2(예정) |
-| `AS/_BossPrototype/Runtime/Combat/Patterns/BossAttackPattern.cs`, `BossHeavyPunchPattern.cs`, `BossGrab.cs` | 12·9·11 | `Boss`: 패턴 베이스 | M2(예정) |
+| `AS/_BossPrototype/Runtime/BossAnimationEvents.cs` | 12 | `Boss`: 애니메이션 이벤트 전달 | M2-02 |
+| `AS/_BossPrototype/Runtime/Combat/Patterns/BossAttackPattern.cs`, `BossHeavyPunchPattern.cs`, `BossGrab.cs` | 12·9·11 | `Boss`: 패턴 베이스 | M2-02 |
 | `AS/_Project/02_Art/PilotV04/Runtime/PilotLocalView.cs` | 30 | `Pilot`: 로컬 파일럿 머리 숨김 | 파일럿 몸을 넣을 때 |
 | `AS/_Project/RobotPlay/Runtime/MechaVRBossTarget.cs` | 34 | `Combat`: 피격 대상 마커. 팔 라벨만 int로 | M1-05 참고 |
 
@@ -38,15 +38,15 @@
 | 보정 UX | `AS/_Project/RobotPlay/Runtime/RobotPilotInput.cs` 216-243 (어깨 → 가드 → 도달, 단계마다 그립 놓기) | 기체 점검 흐름으로 | M1-02 |
 | 그립 회전·knuckle 오프셋 | `VR_test/Assets/Scripts/MechaVRHandTarget.cs` 121-187 | 본 이름은 Inspector 참조로 | M1-03 |
 | 보스 접촉 정지 | `AS/_Project/RobotPlay/Runtime/MechaVRBossContact.cs` | 보스 bounds 브로드페이즈 추가. 루트 직접 이동 금지. 부위는 이름 문자열 대신 컴포넌트로 | M1-05 |
-| 보스 공격 상태기계 | `AS/_BossPrototype/Runtime/Combat/BossCombatController.cs` (Windup→Active→Recovery, Stun, Dead) | NetworkBehaviour, 서버만. 서버 시간. 디버그 telegraph 제거. 미사일 경로 제외 | M2(예정) |
-| 보스 공격 데이터 | `AS/_BossPrototype/Runtime/Combat/BossAttackDefinition.cs` | enum을 계획한 4개 기술로 축소. `IsSword` 분류 수정 | M2(예정) |
-| 보스 애니메이션 | `AS/_BossPrototype/Runtime/BossAnimationDriver.cs` | 서버 상태 + 시작 틱 복제, 클라이언트가 CrossFade. Stagger·Death 재생 추가 | M2(예정) |
-| 좌우 연타 판정 | `AS/_BossPrototype/Runtime/Combat/Patterns/BossAlternatingCombo.cs` | 순간 점 판정 → sweep | M2(예정) |
+| 보스 공격 상태기계 | `AS/_BossPrototype/Runtime/Combat/BossCombatController.cs` (Windup→Active→Recovery, Stun, Dead) | NetworkBehaviour, 서버만. 서버 시간. 디버그 telegraph 제거. 미사일 경로 제외 | M2-02 |
+| 보스 공격 데이터 | `AS/_BossPrototype/Runtime/Combat/BossAttackDefinition.cs` | enum을 계획한 4개 기술로 축소. `IsSword` 분류 수정 | M2-02 |
+| 보스 애니메이션 | `AS/_BossPrototype/Runtime/BossAnimationDriver.cs` | 서버 상태 + 시작 틱 복제, 클라이언트가 CrossFade. Stagger·Death 재생 추가 | M2-02 |
+| 좌우 연타 판정 | `AS/_BossPrototype/Runtime/Combat/Patterns/BossAlternatingCombo.cs` | 순간 점 판정 → sweep | M2-03 |
 | LAN 접속 | `AS/_Project/RobotPlay/Runtime/RobotPlaySession.cs` 184-224(승인·직결), 274(소유 검사), 326-330(협동 이동 공식) | 이 부분만. 나머지 클래스 구조는 버림 | M3(예정) |
 | 진동 우선순위 큐 | `AS/_Project/RobotPlay/Runtime/IntegratedFeedback.cs` 7-14 `PunchHapticQueue` | 컨트롤러 진동 + ESP32 앞단 | M1-05 |
 | 검·방패 | `VR_test/Assets/Scripts/MechaVRSwordEquip.cs`, `MechaVRShieldDeploy.cs`, `Weapons/CapstoneShield/ShieldDeployment.shader` | 검방패 페이즈 진행 시. 입력은 InputActionReference, 충돌체 추가 | 11/19 결정 후 |
-| 보스 쪽 가드 수신 | `AS/_BossPrototype/Runtime/Combat/BossCombatTarget.cs` | 공유 로봇 상태로. 좌/우 가드 = 좌/우 조종사 | M2(예정) |
-| 내려찍기 | `AS/_BossPrototype/Runtime/Combat/Patterns/BossOverheadSmash.cs` | 맨손 클립으로. `IsSword` 분류 수정 | M2(예정) |
+| 보스 쪽 가드 수신 | `AS/_BossPrototype/Runtime/Combat/BossCombatTarget.cs` | 공유 로봇 상태로. 좌/우 가드 = 좌/우 조종사 | M2-03 |
+| 내려찍기 | `AS/_BossPrototype/Runtime/Combat/Patterns/BossOverheadSmash.cs` | 맨손 클립으로. `IsSword` 분류 수정 | M2-03 |
 | 파일럿 몸 IK | `AS/_Project/02_Art/PilotV04/Runtime/PilotReviewRig.cs` | `[ExecuteAlways]` 제거, 검수 기능 분리 | 파일럿 몸을 넣을 때 |
 | 테스트 사양 | `AS/_Project/RobotPlay/Editor/RobotCombatChecks.cs`, `IntegratedRulesChecks.cs`, `AS/_Project/01_Scripts/04_VR/Editor/ArmMotionValidation.cs` Core() 40-92, `VR_test/Assets/Editor/MechaVRBossContactTests.cs` | NUnit EditMode/PlayMode 테스트로 옮김 | M1-02·03·04 |
 
