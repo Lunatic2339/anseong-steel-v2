@@ -70,8 +70,8 @@ namespace Anseong.Pilot
         bool useElbowHint = true;
 
         [Header("팔 반응")]
-        [SerializeField, Min(0f), Tooltip("주먹 목표가 손을 따라가는 시간(초). 0 = 즉시(기본). 키우면 묵직하게 늦게 따라온다. 카메라와는 무관.")]
-        float responseSeconds;
+        [SerializeField, Min(0f), Tooltip("주먹 목표가 손을 따라가는 시간(초). 0 = 즉시. 키우면 묵직하게 늦게 따라온다. 카메라와는 무관. 기본 0.2(선우 10/25 헤드셋 조절값).")]
+        float responseSeconds = 0.2f;
 
         [SerializeField, Min(0f), Tooltip("주먹 목표 최대 속도(m/s, 로봇 크기). 0 = 제한 없음(기본).")]
         float maxTargetSpeed;
