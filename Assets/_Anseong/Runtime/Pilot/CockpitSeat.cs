@@ -59,10 +59,14 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("followBone의 기준 위치(m). 루트 원점, 로봇 정면 기준. 이 위치에서 벗어난 만큼만 따라간다. 메뉴가 대기 클립 평균 자세로 채운다.")]
         Vector3 followReferenceLocal;
 
-        [SerializeField, Range(0f, 1f), Tooltip("본 흔들림을 따라가는 비율. 0 = 루트에 고정, 1 = 본과 똑같이(기본, M1-01 헤드셋 확인). 위치만 따라가고 회전은 따라가지 않는다.")]
+        [SerializeField, Tooltip("Rigid = 조종석을 로봇 몸(followBone)에 완전히 붙인다: 위치·회전을 그대로 따라가 몸통은 조종석에 고정되고 팔만 들어온다(기본, 선우 10/25: 펀치 때 몸 모델이 조종석을 뚫고 움직였다). " +
+            "FollowYaw = 위치 + 좌우 회전만(기울기·끄덕임은 안 따라가 멀미가 덜함). PositionOnly = 위치 흔들림만(처음 방식, 아래 비율·최대 거리).")]
+        CockpitAttach attach = CockpitAttach.Rigid;
+
+        [SerializeField, Range(0f, 1f), Tooltip("PositionOnly: 본 흔들림을 따라가는 비율. 0 = 루트에 고정, 1 = 본과 똑같이(기본, M1-01 헤드셋 확인). 위치만 따라가고 회전은 따라가지 않는다.")]
         float followWeight = 1f;
 
-        [SerializeField, Tooltip("본을 따라 움직이는 최대 거리(m). 큰 동작 클립에서 카메라가 크게 튀지 않게 한다.")]
+        [SerializeField, Tooltip("PositionOnly: 본을 따라 움직이는 최대 거리(m). 큰 동작 클립에서 카메라가 크게 튀지 않게 한다.")]
         float maxFollowOffset = 1f;
 
         [SerializeField, Tooltip("이 조종석 안에 둘 XR Origin. 이 Transform의 자식이어야 한다.")]
@@ -83,6 +87,9 @@ namespace Anseong.Pilot
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         bool enabledSwitchSeat;
 #endif
+        // Rigid·FollowYaw의 본 기준 회전. 애니메이션이 한 번 돈 뒤(첫 LateUpdate) 잡는다(허리 회전은 보정 전이라 0).
+        Quaternion referenceRotation = Quaternion.identity;
+        bool hasReferenceRotation;
 
         public int ActiveSeat => activeSeat;
         public int SeatCount => seats != null ? seats.Length : 0;
@@ -133,6 +140,11 @@ namespace Anseong.Pilot
 
         void LateUpdate()
         {
+            if (!hasReferenceRotation && followBone != null && robotRoot != null)
+            {
+                referenceRotation = CockpitSeatMath.LocalRotation(robotRoot.rotation, followBone.rotation);
+                hasReferenceRotation = true;
+            }
             ApplySeatPose();
         }
 
@@ -140,6 +152,14 @@ namespace Anseong.Pilot
         public void ApplySeatPose()
         {
             if (!IsValidSeat(activeSeat) || robotRoot == null) return;
+            if (attach != CockpitAttach.PositionOnly && followBone != null && hasReferenceRotation)
+            {
+                var (attachedPosition, attachedRotation) = CockpitSeatMath.AttachedPose(robotRoot.position, robotRoot.rotation,
+                    seats[activeSeat].offsetMeters + additionalOffset, followBone.position, followBone.rotation,
+                    followReferenceLocal, referenceRotation, attach == CockpitAttach.FollowYaw);
+                transform.SetPositionAndRotation(attachedPosition, attachedRotation);
+                return;
+            }
             var follow = followBone != null
                 ? CockpitSeatMath.FollowOffset(robotRoot.position, robotRoot.rotation, followBone.position, followReferenceLocal, followWeight, maxFollowOffset)
                 : Vector3.zero;
@@ -147,14 +167,16 @@ namespace Anseong.Pilot
             transform.SetPositionAndRotation(position, rotation);
         }
 
-        /// <summary>인게임 조절 메뉴: 조종석이 로봇 머리 흔들림을 따라가는 정도(선우 10/17, 계속 시험할 항목).</summary>
+        /// <summary>인게임 조절 메뉴: 조종석을 로봇 몸에 붙이는 방식(선우 10/25)과 흔들림.</summary>
         public void AddTuning(TuningList list)
         {
             const string g = "조종석 흔들림";
-            list.Describe(g, "할 것: 펀치 치며 시점 흔들림 보기\n       따라가는 비율 1 → 0.5 → 0 비교\n볼 것: 거대 로봇에 탄 느낌, 멀미 없음");
+            list.Describe(g, "할 것: 펀치·훅 치며 붙이는 방식 완전 고정 → 좌우 회전만 비교\n볼 것: 몸통은 조종석에 고정, 팔만 들어옴, 멀미 없음");
+            list.AddCheck(g, "seat.fixed", "몸통이 조종석을 안 뚫음(팔만 들어옴)");
             list.AddCheck(g, "seat.sway", "흔들림이 로봇에 탄 느낌");
             list.AddCheck(g, "seat.sick", "멀미 없음");
-            list.AddFloat(g, "seat.followWeight", "머리 흔들림 따라가는 비율", () => followWeight, v => followWeight = v, 0f, 1f, 0.1f, 1);
+            list.AddChoice(g, "seat.attach", "로봇 몸에 붙이는 방식", () => (int)attach, v => attach = (CockpitAttach)v, new[] { "완전 고정", "좌우 회전만", "위치만(처음)" });
+            list.AddFloat(g, "seat.followWeight", "위치만: 따라가는 비율", () => followWeight, v => followWeight = v, 0f, 1f, 0.1f, 1);
         }
 
         /// <summary>XR Origin을 조종석 안 자기 좌석(좌/우)에 둔다.</summary>
