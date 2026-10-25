@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Anseong.Core;
 using Anseong.Pilot;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
@@ -11,7 +12,7 @@ namespace Anseong.Combat
     /// 동작이 끝날 때마다 <see cref="StrikeCompleted"/>를 낸다. 명중·피해는 M1-05가 이 이벤트를 받아 정한다.
     /// 개발 빌드에서는 동작마다 CSV 한 줄을 남기고, 로봇 주먹 옆 표시 색을 잠깐 바꾼다.
     /// </summary>
-    public class PunchClassifierDriver : MonoBehaviour
+    public class PunchClassifierDriver : MonoBehaviour, ITunable
     {
         [Header("입력")]
         [SerializeField, Tooltip("손 입력. 비어 있으면 시작할 때 씬에서 한 번 찾는다.")]
@@ -183,6 +184,35 @@ namespace Anseong.Combat
                           $"속도 {m.PeakSpeed:F1}m/s {m.Duration:F2}s", this);
             }
 #endif
+        }
+
+        /// <summary>인게임 조절 메뉴: 펀치 인식 기준(M1-04 검증에서 가장 많이 바꾸는 값).</summary>
+        public void AddTuning(TuningList list)
+        {
+            var s = settings;
+            if (s == null) return;
+            const string g = "펀치 인식";
+            list.AddFloat(g, "punch.minJabStraightness", "잽 직진도 최소", () => s.minJabStraightness, v => s.minJabStraightness = v, 0.5f, 1f, 0.01f);
+            list.AddFloat(g, "punch.maxJabSideRatio", "잽 좌우폭/전진 최대", () => s.maxJabSideRatio, v => s.maxJabSideRatio = v, 0.2f, 1f, 0.05f);
+            list.AddFloat(g, "punch.minHookSweep", "훅 안쪽 스윕 최소(m)", () => s.minHookSweep, v => s.minHookSweep = v, 0.05f, 0.5f, 0.01f);
+            list.AddFloat(g, "punch.minHookArcRatio", "훅 호/현 최소", () => s.minHookArcRatio, v => s.minHookArcRatio = v, 1f, 1.3f, 0.01f);
+            list.AddFloat(g, "punch.minHookOutset", "훅 바깥 준비 최소(m)", () => s.minHookOutset, v => s.minHookOutset = v, 0f, 0.3f, 0.01f);
+            list.AddFloat(g, "punch.minUppercutRise", "어퍼컷 올림 최소(m)", () => s.minUppercutRise, v => s.minUppercutRise = v, 0.05f, 0.5f, 0.01f);
+            list.AddFloat(g, "punch.minUppercutRiseRatio", "어퍼컷 올림/전진 최소", () => s.minUppercutRiseRatio, v => s.minUppercutRiseRatio = v, 0.3f, 3f, 0.1f, 1);
+            list.AddFloat(g, "punch.maxUppercutSideRatio", "어퍼컷 좌우폭/올림 최대", () => s.maxUppercutSideRatio, v => s.maxUppercutSideRatio = v, 0.2f, 1.5f, 0.05f);
+            list.AddFloat(g, "punch.departUpSpeed", "어퍼컷 시작 위 속도(m/s)", () => s.departUpSpeed, v => s.departUpSpeed = v, 0.1f, 2f, 0.05f);
+            list.AddFloat(g, "punch.minForward", "잽·훅 전진 최소(m)", () => s.minForward, v => s.minForward = v, 0.05f, 0.5f, 0.01f);
+            list.AddFloat(g, "punch.maxVerticalRatio", "위아래 거름 비율 최대", () => s.maxVerticalRatio, v => s.maxVerticalRatio = v, 0.2f, 2f, 0.05f);
+            list.AddToggle(g, "punch.verticalAgainstWidestSpan", "위아래 거름을 큰 폭과 비교", () => s.verticalAgainstWidestSpan, v => s.verticalAgainstWidestSpan = v);
+            list.AddFloat(g, "punch.startSpeed", "동작 시작 속도(m/s)", () => s.startSpeed, v => s.startSpeed = v, 0.2f, 3f, 0.05f);
+            list.AddFloat(g, "punch.departForwardSpeed", "시작 앞 속도(m/s)", () => s.departForwardSpeed, v => s.departForwardSpeed = v, 0.05f, 2f, 0.05f);
+            list.AddFloat(g, "punch.departInwardSpeed", "시작 안쪽 속도(m/s)", () => s.departInwardSpeed, v => s.departInwardSpeed = v, 0.05f, 2f, 0.05f);
+            list.AddFloat(g, "punch.neutralRadius", "재장전 반경(m)", () => s.neutralRadius, v => s.neutralRadius = v, 0.03f, 0.4f, 0.01f);
+            list.AddFloat(g, "punch.neutralDwell", "재장전 머무름(초)", () => s.neutralDwell, v => s.neutralDwell = v, 0f, 1f, 0.05f);
+            list.AddFloat(g, "punch.stopSpeed", "멈춤 속도(m/s)", () => s.stopSpeed, v => s.stopSpeed = v, 0.05f, 1f, 0.05f);
+            list.AddFloat(g, "punch.stopDwell", "멈춤 시간(초)", () => s.stopDwell, v => s.stopDwell = v, 0f, 0.5f, 0.02f);
+            list.AddFloat(g, "punch.retractDistance", "거둬들임 거리(m)", () => s.retractDistance, v => s.retractDistance = v, 0.01f, 0.3f, 0.005f, 3);
+            list.AddFloat(g, "punch.maxStrokeSeconds", "한 동작 최대(초)", () => s.maxStrokeSeconds, v => s.maxStrokeSeconds = v, 0.3f, 3f, 0.05f);
         }
     }
 }

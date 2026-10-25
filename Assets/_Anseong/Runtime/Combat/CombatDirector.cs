@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Anseong.Boss;
+using Anseong.Core;
 using Anseong.Pilot;
 using UnityEngine;
 
@@ -14,7 +15,7 @@ namespace Anseong.Combat
     /// 실행 순서: 펀치 분류(Update) 뒤, 팔 IK(LateUpdate 100) 뒤에 접촉을 본다.
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
-    public class CombatDirector : MonoBehaviour
+    public class CombatDirector : MonoBehaviour, ITunable
     {
         public const int ExecutionOrder = 200;
 
@@ -288,6 +289,34 @@ namespace Anseong.Combat
             if (!logToConsole || e.Cue == CombatCue.GripLock || e.Cue == CombatCue.GripRelease) return;
             Debug.Log($"[Combat] {e.Cue} {e.Side} {e.Kind} 피해 {e.Damage:F1}% 연계 {e.ComboStep} 보스 HP {e.BossHealth:F1}%" +
                       (e.Cue == CombatCue.ComboBroken ? $" (끊김: {e.Break})" : e.Cue == CombatCue.Hit ? $" ({e.Quality}, {e.Zone})" : string.Empty), this);
+        }
+
+        /// <summary>인게임 조절 메뉴: 공격 보정·연계·부스트·피해.</summary>
+        public void AddTuning(TuningList list)
+        {
+            const string g = "공격 보정";
+            var a = assist;
+            list.AddToggle(g, "assist.enabled", "공격 보정(끄면 실제로 닿아야 명중)", () => a.enabled, v => a.enabled = v);
+            list.AddFloat(g, "assist.rangeRatio", "보정 사거리(팔 길이 배수)", () => a.rangeRatio, v => a.rangeRatio = v, 0.5f, 3f, 0.1f, 1);
+            list.AddFloat(g, "assist.coneDegrees", "보정 각도(도)", () => a.coneDegrees, v => a.coneDegrees = v, 5f, 90f, 5f, 0);
+            list.AddFloat(g, "assist.pullSeconds", "끌려가는 시간(초)", () => a.pullSeconds, v => a.pullSeconds = v, 0.02f, 0.6f, 0.02f);
+            list.AddFloat(g, "assist.releaseSeconds", "돌아오는 시간(초)", () => a.releaseSeconds, v => a.releaseSeconds = v, 0.02f, 1f, 0.05f);
+            list.AddFloat(g, "assist.hitAtWeight", "명중으로 볼 끌림(0~1)", () => a.hitAtWeight, v => a.hitAtWeight = v, 0.5f, 1f, 0.05f);
+
+            const string c = "연계·부스트";
+            list.AddFloat(c, "combo.comboSeconds", "다음 명중 제한(초)", () => combo.comboSeconds, v => combo.comboSeconds = v, 0.5f, 5f, 0.1f, 1);
+            list.AddFloat(c, "combo.minComboGap", "단계 사이 최소(초)", () => combo.minComboGap, v => combo.minComboGap = v, 0f, 0.5f, 0.05f);
+            list.AddToggle(c, "combo.uppercutKeepsCombo", "어퍼컷이 연계 유지", () => combo.uppercutKeepsCombo, v => combo.uppercutKeepsCombo = v);
+            list.AddFloat(c, "boost.windowSeconds", "부스트 입력창(초)", () => boost.windowSeconds, v => boost.windowSeconds = v, 0.1f, 2f, 0.05f);
+            list.AddFloat(c, "boost.triggerPress", "트리거 누름 기준", () => triggerPress, v => triggerPress = Mathf.Max(v, triggerRelease + 0.05f), 0.1f, 1f, 0.05f);
+
+            const string d = "보스 HP";
+            list.AddFloat(d, "boss.jabDamage", "잽 피해(%)", () => bossHealth.jabDamage, v => bossHealth.jabDamage = v, 0f, 20f, 0.5f, 1);
+            list.AddFloat(d, "boss.hookDamage", "훅 피해(%)", () => bossHealth.hookDamage, v => bossHealth.hookDamage = v, 0f, 20f, 0.5f, 1);
+            list.AddFloat(d, "boss.uppercutDamage", "어퍼컷 피해(%)", () => bossHealth.uppercutDamage, v => bossHealth.uppercutDamage = v, 0f, 20f, 0.5f, 1);
+            list.AddFloat(d, "boss.boostDamage", "부스트 추가 피해(%)", () => bossHealth.boostDamage, v => bossHealth.boostDamage = v, 0f, 30f, 0.5f, 1);
+            // 값이 아니라 동작: 오른쪽으로 밀면 보스 HP·연계를 처음으로(저장되지 않음).
+            list.AddChoice(d, "boss.reset", "보스 HP 다시 채우기(→)", () => 0, v => { if (v == 1 && resolver != null) resolver.Reset(); }, new[] { "-", "채움" });
         }
     }
 }
