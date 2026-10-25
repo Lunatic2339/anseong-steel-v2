@@ -243,20 +243,51 @@ namespace Anseong.Tests
             var assist = new AttackAssist(settings);
             var hand = Vector3.zero;
             var zone = new Vector3(0f, 0f, 10f);
-            assist.Begin(zone);
+            assist.Begin(zone, Vector3.zero);
+            assist.Track(new Vector3(0f, 0f, 0.5f), new Vector3(0f, 0f, 0.5f));
             assist.Update(settings.pullSeconds * 0.5f);
             var half = assist.Apply(hand);
             Assert.Greater(half.z, 0.5f);
             Assert.Less(half.z, 9.5f, "한 번에 붙지 않음(묵직하게)");
-            Assert.IsFalse(assist.ReachedHit);
             assist.Update(settings.pullSeconds);
-            Assert.IsTrue(assist.ReachedHit);
             Assert.AreEqual(10f, assist.Apply(hand).z, 1e-3f);
 
             assist.Release();
             assist.Update(settings.releaseSeconds * 2f);
             Assert.AreEqual(0f, assist.Weight);
             Assert.AreEqual(hand, assist.Apply(hand));
+        }
+
+        [Test]
+        public void Assist_PullFollowsRobotFistProgress()
+        {
+            // 사람 손은 다 뻗었는데 로봇 주먹은 반만 왔으면 끌림도 반만. 주먹이 보스에 먼저 붙지 않는다.
+            var settings = new AttackAssistSettings();
+            var assist = new AttackAssist(settings);
+            var zone = new Vector3(0f, 0f, 10f);
+            assist.Begin(zone, new Vector3(0f, 0f, 0.3f));
+            assist.Update(settings.pullSeconds * 2f);
+            Assert.AreEqual(0f, assist.Apply(Vector3.zero).z, 1e-4f, "아직 안 움직임");
+
+            assist.Track(new Vector3(0f, 0f, 0.6f), new Vector3(0f, 0f, 0.9f));
+            Assert.AreEqual(0.5f, assist.Progress, 1e-4f);
+            Assert.AreEqual(5f, assist.Apply(Vector3.zero).z, 1e-3f);
+
+            assist.Track(new Vector3(0f, 0f, 0.9f), new Vector3(0f, 0f, 0.9f));
+            Assert.AreEqual(1f, assist.Progress, 1e-4f);
+            assist.Track(new Vector3(0f, 0f, 0.8f), new Vector3(0f, 0f, 0.5f));
+            Assert.AreEqual(1f, assist.Progress, 1e-4f, "거둬들여도 줄지 않음");
+        }
+
+        [Test]
+        public void Assist_BeginWhilePulling_KeepsStartAndProgress()
+        {
+            var assist = new AttackAssist();
+            assist.Begin(new Vector3(0f, 0f, 10f), Vector3.zero);
+            assist.Track(new Vector3(0f, 0f, 0.4f), new Vector3(0f, 0f, 0.8f));
+            assist.Begin(new Vector3(1f, 0f, 10f), new Vector3(0f, 0f, 0.4f));
+            Assert.AreEqual(0.5f, assist.Progress, 1e-4f);
+            Assert.AreEqual(new Vector3(1f, 0f, 10f), assist.Point);
         }
 
         // ── 주먹 접촉 ──

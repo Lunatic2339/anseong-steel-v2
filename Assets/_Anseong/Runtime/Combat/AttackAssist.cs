@@ -25,10 +25,6 @@ namespace Anseong.Combat
         [Tooltip("명중·동작 끝 뒤 주먹이 원래 손 위치로 돌아가는 시간(초).")]
         [Min(0.01f)]
         public float releaseSeconds = 0.25f;
-
-        [Tooltip("끌림이 이만큼(0~1) 차면 닿은 것으로 보고 명중시킨다(보정 사거리가 팔 길이보다 멀어 실제로 닿지 못할 때).")]
-        [Range(0.5f, 1f)]
-        public float hitAtWeight = 0.95f;
     }
 
     /// <summary>
@@ -39,6 +35,10 @@ namespace Anseong.Combat
     {
         readonly AttackAssistSettings settings;
         Vector3 point;
+        Vector3 start;
+
+        // 손이 거의 안 움직였을 때(팔 길이 배수) 진행도를 0으로 둔다.
+        const float MinHandTravel = 0.02f;
 
         public AttackAssist(AttackAssistSettings settings = null)
         {
@@ -49,7 +49,12 @@ namespace Anseong.Combat
         public float Weight { get; private set; }
         public bool Pulling { get; private set; }
         public Vector3 Point => point;
-        public bool ReachedHit => Pulling && Weight >= settings.hitAtWeight;
+
+        /// <summary>
+        /// 로봇 주먹이 사람 손을 얼마나 따라왔는지(0~1, 끌기 시작부터 잰 거리 비율). 끌림은 이만큼만 적용해
+        /// 로봇 팔이 다 뻗기 전에 주먹이 보스에 먼저 붙지 않게 한다(선우 10/25: 다 뻗기 전에 진동이 울림).
+        /// </summary>
+        public float Progress { get; private set; }
 
         public static bool InRange(Vector3 shoulder, Quaternion body, Vector3 zonePoint, float armLength, AttackAssistSettings settings)
         {
@@ -62,11 +67,26 @@ namespace Anseong.Combat
             return Vector3.Angle(Vector3.forward, local) <= settings.coneDegrees;
         }
 
-        /// <summary>끌어당기기 시작(이미 당기는 중이면 목표만 바꾼다).</summary>
-        public void Begin(Vector3 zonePoint)
+        /// <summary>끌어당기기 시작(이미 당기는 중이면 목표만 바꾼다). robotRatio = 지금 로봇 주먹 목표(RobotArmDriver.FistRatio).</summary>
+        public void Begin(Vector3 zonePoint, Vector3 robotRatio)
         {
             point = zonePoint;
+            if (Pulling) return;
             Pulling = true;
+            start = robotRatio;
+            Progress = 0f;
+        }
+
+        /// <summary>
+        /// 끄는 동안 매 프레임. robotRatio = 반응 지연 뒤 로봇 주먹, handRatio = 사람 손 목표(둘 다 RobotArmDriver의 팔 길이 배수).
+        /// 진행도는 줄지 않는다(손을 거둬들여도 이미 뻗은 만큼은 유지).
+        /// </summary>
+        public void Track(Vector3 robotRatio, Vector3 handRatio)
+        {
+            if (!Pulling) return;
+            var hand = (handRatio - start).magnitude;
+            if (hand < MinHandTravel) return;
+            Progress = Mathf.Max(Progress, Mathf.Clamp01((robotRatio - start).magnitude / hand));
         }
 
         /// <summary>명중했거나 동작이 끝나 놓는다. 주먹은 releaseSeconds 동안 원래 자리로 돌아간다.</summary>
@@ -76,6 +96,7 @@ namespace Anseong.Combat
         {
             Pulling = false;
             Weight = 0f;
+            Progress = 0f;
         }
 
         public void Update(float dt)
@@ -85,11 +106,11 @@ namespace Anseong.Combat
             Weight = Mathf.MoveTowards(Weight, Pulling ? 1f : 0f, dt / Mathf.Max(0.01f, seconds));
         }
 
-        /// <summary>손에서 나온 주먹 목표를 끌림만큼 보스 부위 쪽으로 옮긴다. 부드럽게 시작·끝나게 SmoothStep.</summary>
+        /// <summary>손에서 나온 주먹 목표를 끌림 × 진행도만큼 보스 부위 쪽으로 옮긴다. 부드럽게 시작·끝나게 SmoothStep.</summary>
         public Vector3 Apply(Vector3 handTarget)
         {
-            if (Weight <= 0f) return handTarget;
-            return Vector3.Lerp(handTarget, point, Mathf.SmoothStep(0f, 1f, Weight));
+            if (Weight <= 0f || Progress <= 0f) return handTarget;
+            return Vector3.Lerp(handTarget, point, Mathf.SmoothStep(0f, 1f, Weight) * Progress);
         }
     }
 }

@@ -155,6 +155,7 @@ namespace Anseong.Combat
                 // 동작은 끝났지만 로봇 주먹을 기다리는 중이면 그 종류로 계속 접촉·보정을 본다.
                 else if (classifier.TryGetHeld(side, out var held) && held.IsAttack && !resolver.AlreadyHit(side, held.StrikeId)) s.PeekKind = held.Kind;
                 else s.PeekKind = PunchKind.None;
+                if (armBySide[h] != null) s.Assist.Track(armBySide[h].FistRatio, armBySide[h].TargetRatio);
                 s.Assist.Update(Time.deltaTime);
             }
             resolver.Tick(now, events);
@@ -168,7 +169,7 @@ namespace Anseong.Combat
             if (!assist.enabled || boss == null || arm == null || fist == null) return;
             if (!boss.TryClosest(fist.Position, out var zone, out var point)) return;
             if (!AttackAssist.InRange(arm.ShoulderPosition, arm.BodyRotation, point, arm.ArmLength, assist)) return;
-            state[h].Assist.Begin(point);
+            state[h].Assist.Begin(point, arm.FistRatio);
             state[h].AssistZone = zone.Zone;
         }
 
@@ -204,8 +205,6 @@ namespace Anseong.Combat
                             s.TouchedPoint = point;
                         }
                     }
-                    else if (s.Assist.ReachedHit && s.PeekKind != PunchKind.None)
-                        Hit(side, s.PeekKind, strike, HitQuality.Assisted, s.AssistZone, s.Assist.Point, now);
                 }
                 s.PreviousFist = current;
             }
@@ -242,7 +241,8 @@ namespace Anseong.Combat
             if (s.Touched == result.StrikeId)
                 Hit(side, result.Kind, result.StrikeId, HitQuality.Contact, s.TouchedZone, s.TouchedPoint, now);
             else if (assisted)
-                // 종류가 인식되고 보스가 보정 범위 안이었으면, 끌림이 다 차기 전에 동작이 끝나도 명중(선우 10/18 공격 보정).
+                // 종류가 인식되고 보스가 보정 범위 안이었으면 명중(선우 10/18 공격 보정). 이 결과는 로봇 주먹이 따라온 뒤에 오므로
+                // 진동·피해도 로봇 팔이 뻗은 때 난다(선우 10/25: 다 뻗기 전에 진동이 울림).
                 Hit(side, result.Kind, result.StrikeId, HitQuality.Assisted, s.AssistZone, s.Assist.Point, now);
             else resolver.ReportMiss(side, result.Kind, result.StrikeId, now, events);
             Dispatch();
