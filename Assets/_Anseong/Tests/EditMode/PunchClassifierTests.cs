@@ -297,26 +297,48 @@ namespace Anseong.Tests
         public void StrikeHold_WaitsForRobotFist()
         {
             var hold = new StrikeHold();
-            var result = new PunchResult { Kind = PunchKind.Jab, StrikeId = 3 };
-            hold.Begin(result, new Vector3(0f, 0f, 0.3f), 0.0);
+            hold.StartStroke(Vector3.zero);
+            hold.Track(new Vector3(0f, 0f, 0.3f), new Vector3(0f, 0f, 0.8f));
+            hold.Begin(new PunchResult { Kind = PunchKind.Jab, StrikeId = 3 }, 0.0);
+            hold.Track(new Vector3(0f, 0f, 0.5f), new Vector3(0f, 0f, 0.8f));
             Assert.IsFalse(hold.Step(new Vector3(0f, 0f, 0.5f), 0.3f, 0.1, 0.08f, 0.8f), "로봇 주먹이 아직 뻗는 중");
-            Assert.IsTrue(hold.Pending);
+            hold.Track(new Vector3(0f, 0f, 0.75f), new Vector3(0f, 0f, 0.8f));
             Assert.IsTrue(hold.Step(new Vector3(0f, 0f, 0.75f), 0.05f, 0.2, 0.08f, 0.8f), "따라잡으면 낸다");
-            Assert.AreEqual(3, hold.Result.StrikeId);
+            var result = hold.Finish(0.6f);
+            Assert.AreEqual(PunchKind.Jab, result.Kind);
+            Assert.AreEqual(3, result.StrikeId);
             Assert.IsFalse(hold.Pending);
         }
 
         [Test]
-        public void StrikeHold_ReleasesWhenRobotFistTurnsBack_OrTimesOut()
+        public void StrikeHold_QuickJabRobotBarelyMoved_IsNotAPunch()
+        {
+            // 10/25 헤드셋: 묵직함 0.6에서 빨리 치고 빼면 로봇 팔은 거의 안 움직였는데 잽·어퍼컷으로 셌다.
+            var hold = new StrikeHold();
+            hold.StartStroke(Vector3.zero);
+            hold.Track(new Vector3(0f, 0f, 0.1f), new Vector3(0f, 0f, 0.8f));
+            hold.Begin(new PunchResult { Kind = PunchKind.Jab }, 0.0);
+            hold.Track(new Vector3(0f, 0f, 0.2f), Vector3.zero);
+            Assert.IsFalse(hold.Step(new Vector3(0f, 0f, 0.2f), 0.2f, 0.05, 0.08f, 0.8f));
+            hold.Track(new Vector3(0f, 0f, 0.15f), Vector3.zero);
+            Assert.IsTrue(hold.Step(new Vector3(0f, 0f, 0.15f), 0.15f, 0.1, 0.08f, 0.8f), "로봇 주먹이 돌아오기 시작");
+            Assert.AreEqual(0.25f, hold.Reach, 1e-4f);
+            var result = hold.Finish(0.6f);
+            Assert.AreEqual(PunchKind.None, result.Kind);
+            Assert.AreEqual(PunchReason.RobotLagged, result.Reason);
+        }
+
+        [Test]
+        public void StrikeHold_ReleasesAtMaxSeconds()
         {
             var hold = new StrikeHold();
-            hold.Begin(new PunchResult(), new Vector3(0f, 0f, 0.3f), 0.0);
-            Assert.IsFalse(hold.Step(new Vector3(0f, 0f, 0.6f), 0.4f, 0.1, 0.08f, 0.8f));
-            Assert.IsTrue(hold.Step(new Vector3(0f, 0f, 0.55f), 0.4f, 0.15, 0.08f, 0.8f), "가장 멀리 간 뒤 돌아오면 낸다");
-
-            hold.Begin(new PunchResult(), Vector3.zero, 1.0);
+            hold.StartStroke(Vector3.zero);
+            hold.Begin(new PunchResult { Kind = PunchKind.Hook }, 1.0);
+            hold.Track(new Vector3(0f, 0f, 0.1f), new Vector3(0f, 0f, 0.12f));
             Assert.IsFalse(hold.Step(new Vector3(0f, 0f, 0.1f), 0.5f, 1.5, 0.08f, 0.8f));
-            Assert.IsTrue(hold.Step(new Vector3(0f, 0f, 0.2f), 0.5f, 1.85, 0.08f, 0.8f), "최대 시간");
+            hold.Track(new Vector3(0f, 0f, 0.11f), new Vector3(0f, 0f, 0.12f));
+            Assert.IsTrue(hold.Step(new Vector3(0f, 0f, 0.11f), 0.5f, 1.85, 0.08f, 0.8f), "최대 시간");
+            Assert.AreEqual(PunchKind.Hook, hold.Finish(0.6f).Kind, "로봇이 거의 따라왔으면 펀치");
         }
 
         [Test]
