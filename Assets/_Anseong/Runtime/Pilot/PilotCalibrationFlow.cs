@@ -419,10 +419,7 @@ namespace Anseong.Pilot
             list.AddCheck(g, "body.crouch", "무릎 굽혀도 주먹 높이 그대로");
             list.AddCheck(g, "body.look", "고개 돌려도 팔이 안 돎");
             list.AddToggle(g, "body.enabled", "몸 이동 보정", () => f.enabled, v => f.enabled = v);
-            list.AddFloat(g, "body.followAmount", "따라가는 비율", () => f.followAmount, v => f.followAmount = v, 0f, 1.5f, 0.05f);
-            list.AddFloat(g, "body.followSeconds", "따라가는 시간(초, 0 = 즉시)", () => f.followSeconds, v => f.followSeconds = v, 0f, 1f, 0.05f);
             list.AddToggle(g, "body.followHeight", "높이도 따라감", () => f.followHeight, v => f.followHeight = v);
-            list.AddFloat(g, "body.maxOffset", "따라가는 최대 거리(m)", () => f.maxOffset, v => f.maxOffset = v, 0.5f, 5f, 0.25f);
         }
     }
 }

@@ -134,20 +134,12 @@ namespace Anseong.Combat
         public void AddTuning(TuningList list)
         {
             const string g = "가드";
-            var s = settings;
             list.Describe(g, "할 것: 넓은 가드·좁은 가드 올리고 내리기, 펀치 치기\n볼 것: 콘솔 불이 가드 때만 켜지고 펀치 중엔 꺼짐");
             list.AddCheck(g, "guard.wide", "넓은 가드도 가드로 켜짐");
             list.AddCheck(g, "guard.punch", "펀치 치는 동안엔 안 켜짐");
             list.AddCheck(g, "guard.down", "팔 내리면 바로 꺼짐");
             list.AddCheck(g, "guard.light", "콘솔 불이 잘 보임");
-            list.AddFloat(g, "guard.zoneX", "가드 영역 좌우 ±(m)", () => s.zoneHalfSize.x, v => s.zoneHalfSize.x = v, 0.05f, 0.6f, 0.01f);
-            list.AddFloat(g, "guard.zoneY", "가드 영역 위아래 ±(m)", () => s.zoneHalfSize.y, v => s.zoneHalfSize.y = v, 0.05f, 0.6f, 0.01f);
-            list.AddFloat(g, "guard.zoneZ", "가드 영역 앞뒤 ±(m)", () => s.zoneHalfSize.z, v => s.zoneHalfSize.z = v, 0.05f, 0.6f, 0.01f);
-            list.AddFloat(g, "guard.minFrontOfFace", "얼굴보다 앞 최소(m)", () => s.minFrontOfFace, v => s.minFrontOfFace = v, -0.2f, 0.4f, 0.01f);
-            list.AddFloat(g, "guard.maxForearmTilt", "전완 기울기 최대(도)", () => s.maxForearmTiltDegrees, v => s.maxForearmTiltDegrees = v, 5f, 90f, 5f, 0);
-            list.AddChoice(g, "guard.forearmSource", "전완 기준", () => (int)s.forearmSource, v => s.forearmSource = (ForearmSource)v, new[] { "사람(컨트롤러)", "로봇(화면)", "둘 중 하나" });
-            list.AddFloat(g, "guard.releaseMargin", "풀림 여유(m)", () => s.releaseMargin, v => s.releaseMargin = v, 0f, 0.1f, 0.01f);
-            list.AddFloat(g, "guard.releaseDegrees", "풀림 여유(도)", () => s.releaseDegrees, v => s.releaseDegrees = v, 0f, 20f, 1f, 0);
+            // 가드 영역·기울기 기준값은 guard CSV로 Claude가 맞춘다(선우 10/25: 직접 볼 값만 메뉴에). Inspector에는 그대로 있다.
         }
     }
 }

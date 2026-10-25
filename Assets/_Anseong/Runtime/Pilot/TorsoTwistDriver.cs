@@ -106,9 +106,7 @@ namespace Anseong.Pilot
             if (settings == null) return;
             var s = settings;
             list.AddFloat(g, "torso.handWeight", "손 비율", () => s.handWeight, v => s.handWeight = v, 0f, 1f, 0.05f);
-            list.AddFloat(g, "torso.headWeight", "고개 비율", () => s.headWeight, v => s.headWeight = v, 0f, 1f, 0.05f);
             list.AddFloat(g, "torso.maxDegrees", "최대 각도(도)", () => s.maxDegrees, v => s.maxDegrees = v, 0f, 60f, 5f, 0);
-            list.AddFloat(g, "torso.responseSeconds", "따라가는 시간(초)", () => s.responseSeconds, v => s.responseSeconds = v, 0f, 0.5f, 0.02f);
         }
     }
 }

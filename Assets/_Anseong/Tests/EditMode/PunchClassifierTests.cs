@@ -249,7 +249,7 @@ namespace Anseong.Tests
             run.Stroke(loop);
             AssertSingle(run, PunchKind.Hook, "크게 도는 훅");
 
-            var old = new PunchClassifier(false, new PunchClassifierSettings { verticalAgainstWidestSpan = false });
+            var old = new PunchClassifier(false, new PunchClassifierSettings { verticalAgainstWidestSpan = false, maxVerticalRatio = 0.7f });
             old.SetNeutral(Neutral);
             var results = new List<PunchResult>();
             double t = 0;
@@ -291,6 +291,44 @@ namespace Anseong.Tests
                 if (run.Classifier.Peek(out var kind)) return (kind, (float)i / n, run.Classifier.CurrentStrikeId);
             }
             return (PunchKind.None, 1f, 0);
+        }
+
+        [Test]
+        public void StrikeHold_WaitsForRobotFist()
+        {
+            var hold = new StrikeHold();
+            var result = new PunchResult { Kind = PunchKind.Jab, StrikeId = 3 };
+            hold.Begin(result, new Vector3(0f, 0f, 0.3f), 0.0);
+            Assert.IsFalse(hold.Step(new Vector3(0f, 0f, 0.5f), 0.3f, 0.1, 0.08f, 0.8f), "로봇 주먹이 아직 뻗는 중");
+            Assert.IsTrue(hold.Pending);
+            Assert.IsTrue(hold.Step(new Vector3(0f, 0f, 0.75f), 0.05f, 0.2, 0.08f, 0.8f), "따라잡으면 낸다");
+            Assert.AreEqual(3, hold.Result.StrikeId);
+            Assert.IsFalse(hold.Pending);
+        }
+
+        [Test]
+        public void StrikeHold_ReleasesWhenRobotFistTurnsBack_OrTimesOut()
+        {
+            var hold = new StrikeHold();
+            hold.Begin(new PunchResult(), new Vector3(0f, 0f, 0.3f), 0.0);
+            Assert.IsFalse(hold.Step(new Vector3(0f, 0f, 0.6f), 0.4f, 0.1, 0.08f, 0.8f));
+            Assert.IsTrue(hold.Step(new Vector3(0f, 0f, 0.55f), 0.4f, 0.15, 0.08f, 0.8f), "가장 멀리 간 뒤 돌아오면 낸다");
+
+            hold.Begin(new PunchResult(), Vector3.zero, 1.0);
+            Assert.IsFalse(hold.Step(new Vector3(0f, 0f, 0.1f), 0.5f, 1.5, 0.08f, 0.8f));
+            Assert.IsTrue(hold.Step(new Vector3(0f, 0f, 0.2f), 0.5f, 1.85, 0.08f, 0.8f), "최대 시간");
+        }
+
+        [Test]
+        public void SmallerHook_IsHook()
+        {
+            // 10/25 헤드셋: 훅이 빡빡하다. 바깥 준비 없이 안쪽으로 19cm만 휘어 들어와도 훅.
+            foreach (var left in new[] { true, false })
+            {
+                var run = new Run(left, 90);
+                run.Stroke(Hook(left, 0.095f));
+                AssertSingle(run, PunchKind.Hook, "작은 훅 " + (left ? "L" : "R"));
+            }
         }
 
         [Test]
