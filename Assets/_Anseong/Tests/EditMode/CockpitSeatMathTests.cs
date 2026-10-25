@@ -113,5 +113,54 @@ namespace Anseong.Tests
             AssertVector(Vector3.zero, (left + right) * 0.5f);
             Assert.Less(left.x, right.x);
         }
+
+        [Test]
+        public void AttachedPose_AtReferencePose_EqualsRigPose()
+        {
+            var root = new Vector3(3f, 0f, 1f);
+            var robot = Quaternion.Euler(0f, 40f, 0f);
+            var offset = new Vector3(0.5f, 55f, 1.2f);
+            var reference = new Vector3(0f, 54f, 0.3f);
+            var referenceRotation = Quaternion.Euler(5f, 0f, 0f);
+            var bonePosition = root + robot * reference;
+            var boneRotation = robot * referenceRotation;
+            var (position, rotation) = CockpitSeatMath.AttachedPose(root, robot, offset, bonePosition, boneRotation, reference, referenceRotation, false);
+            var (rigPosition, rigRotation) = CockpitSeatMath.RigPose(root, robot, offset);
+            AssertVector(rigPosition, position);
+            Assert.AreEqual(1f, Mathf.Abs(Quaternion.Dot(rigRotation, rotation)), Eps);
+        }
+
+        [Test]
+        public void AttachedPose_BoneYaws_SeatTurnsAroundBone()
+        {
+            // 본이 제자리에서 90도 돌면 본 앞 1m에 있던 좌석은 본 오른쪽 1m로 옮겨 가고 같이 돈다.
+            var reference = new Vector3(0f, 50f, 0f);
+            var offset = new Vector3(0f, 50f, 1f);
+            var (position, rotation) = CockpitSeatMath.AttachedPose(Vector3.zero, Quaternion.identity, offset,
+                reference, Quaternion.Euler(0f, 90f, 0f), reference, Quaternion.identity, false);
+            AssertVector(new Vector3(1f, 50f, 0f), position);
+            AssertVector(Vector3.right, rotation * Vector3.forward);
+        }
+
+        [Test]
+        public void AttachedPose_BoneMoves_SeatMovesSameAmount()
+        {
+            var reference = new Vector3(0f, 50f, 0f);
+            var offset = new Vector3(0f, 50f, 1f);
+            var (position, _) = CockpitSeatMath.AttachedPose(Vector3.zero, Quaternion.identity, offset,
+                reference + new Vector3(0f, -0.5f, 2f), Quaternion.identity, reference, Quaternion.identity, false);
+            AssertVector(new Vector3(0f, 49.5f, 3f), position);
+        }
+
+        [Test]
+        public void AttachedPose_FollowYawOnly_DropsPitch()
+        {
+            var reference = new Vector3(0f, 50f, 0f);
+            var offset = new Vector3(0f, 50f, 1f);
+            var (position, rotation) = CockpitSeatMath.AttachedPose(Vector3.zero, Quaternion.identity, offset,
+                reference, Quaternion.Euler(30f, 0f, 0f), reference, Quaternion.identity, true);
+            AssertVector(offset, position);
+            AssertVector(Vector3.up, rotation * Vector3.up);
+        }
     }
 }
