@@ -294,7 +294,7 @@ namespace Anseong.Combat
                       (e.Cue == CombatCue.ComboBroken ? $" (끊김: {e.Break})" : e.Cue == CombatCue.Hit ? $" ({e.Quality}, {e.Zone})" : string.Empty), this);
         }
 
-        /// <summary>인게임 조절 메뉴: 공격 보정·연계·부스트·피해.</summary>
+        /// <summary>인게임 조절 메뉴: 공격 보정·연계·부스트.</summary>
         public void AddTuning(TuningList list)
         {
             const string g = "공격 보정";
@@ -306,19 +306,9 @@ namespace Anseong.Combat
             list.AddFloat(g, "assist.pullSeconds", "끌려가는 시간(초)", () => a.pullSeconds, v => a.pullSeconds = v, 0.02f, 0.6f, 0.02f);
 
             const string c = "연계·부스트";
-            list.Describe(c, "할 것: 잽 → 훅 → 어퍼컷 연계, 명중 때 트리거로 부스트\n볼 것: 안내판 연계 단계·부스트, 늦으면 끊김");
-            list.AddCheck(c, "combo.chain", "연계 단계가 이어짐");
-            list.AddCheck(c, "combo.timeout", "늦으면 연계가 끊김");
-            list.AddCheck(c, "boost.hit", "부스트가 트리거로 나감");
+            list.Describe(c, "할 것: 잽(한 팔) → 잽(다른 팔) → 훅(처음 팔), 훅 명중 직후 트리거로 부스트\n볼 것: 타이밍이 빡빡하면 아래 시간을 늘림");
             list.AddFloat(c, "combo.comboSeconds", "다음 명중 제한(초)", () => combo.comboSeconds, v => combo.comboSeconds = v, 0.5f, 5f, 0.1f, 1);
             list.AddFloat(c, "boost.windowSeconds", "부스트 입력창(초)", () => boost.windowSeconds, v => boost.windowSeconds = v, 0.1f, 2f, 0.05f);
-
-            const string d = "보스 HP";
-            list.Describe(d, "할 것: 보스를 몇 대 치고 HP 막대 보기, 다 채우기로 다시\n볼 것: 명중마다 HP가 줄고 막대가 잘 보임");
-            list.AddCheck(d, "boss.hp", "명중마다 HP가 줄어듦");
-            list.AddCheck(d, "boss.bar", "HP 막대가 잘 보임");
-            // 값이 아니라 동작: 오른쪽으로 밀면 보스 HP·연계를 처음으로(저장되지 않음).
-            list.AddChoice(d, "boss.reset", "보스 HP 다시 채우기(→)", () => 0, v => { if (v == 1 && resolver != null) resolver.Reset(); }, new[] { "-", "채움" });
         }
     }
 }
