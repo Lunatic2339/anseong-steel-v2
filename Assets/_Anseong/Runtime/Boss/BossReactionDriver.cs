@@ -1,4 +1,5 @@
 using Anseong.Combat;
+using Anseong.Core;
 using UnityEngine;
 
 namespace Anseong.Boss
@@ -8,7 +9,7 @@ namespace Anseong.Boss
     /// 전투 이벤트만 듣는다. 클립은 보스 Animator 컨트롤러의 상태 이름으로 고르고, 메뉴가 그 이름으로 컨트롤러를 만든다.
     /// 쓰러짐·밀려남·보스 공격은 M2.
     /// </summary>
-    public class BossReactionDriver : MonoBehaviour
+    public class BossReactionDriver : MonoBehaviour, ITunable
     {
         [SerializeField, Tooltip("전투 판정. 비어 있으면 시작할 때 한 번 찾는다.")]
         CombatDirector director;
@@ -89,6 +90,19 @@ namespace Anseong.Boss
             if (returnAt < 0f || Time.time < returnAt) return;
             returnAt = -1f;
             if (animator.HasState(0, idleHash)) animator.CrossFadeInFixedTime(idleHash, fadeOutSeconds, 0);
+        }
+
+        /// <summary>인게임 조절 메뉴: 보스가 맞고 휘청하는 느낌(묵직함).</summary>
+        public void AddTuning(TuningList list)
+        {
+            const string g = "보스 반응";
+            list.Describe(g, "할 것: 잽·훅·어퍼컷·부스트로 보스 치기\n볼 것: 거대한 보스가 무게 있게 휘청하고 돌아옴");
+            list.AddCheck(g, "boss.stagger", "휘청이 묵직함");
+            list.AddCheck(g, "boss.boostStagger", "부스트 휘청이 더 큼");
+            list.AddFloat(g, "boss.fadeIn", "휘청 섞기(초)", () => fadeInSeconds, v => fadeInSeconds = v, 0f, 0.5f, 0.02f);
+            list.AddFloat(g, "boss.fadeOut", "대기로 돌아오는 섞기(초)", () => fadeOutSeconds, v => fadeOutSeconds = v, 0f, 1.5f, 0.05f);
+            list.AddFloat(g, "boss.hitStagger", "훅·어퍼컷 휘청 길이(초)", () => hitStaggerSeconds, v => hitStaggerSeconds = v, 0f, 2f, 0.05f);
+            list.AddToggle(g, "boss.staggerOnJab", "잽도 휘청", () => staggerOnJab, v => staggerOnJab = v);
         }
     }
 }

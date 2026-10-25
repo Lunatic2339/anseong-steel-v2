@@ -23,6 +23,8 @@ namespace Anseong.Core
         public int Decimals;
         /// <summary>null이 아니면 선택지(값 = 순번). 켜고 끄기는 { "끔", "켬" }.</summary>
         public string[] Choices;
+        /// <summary>검증 체크 항목(값 = 아직/OK/문제). 사람이 헤드셋 안에서 확인한 결과를 적는다.</summary>
+        public bool IsCheck;
         public Func<float> Get;
         public Action<float> Set;
 
@@ -45,6 +47,12 @@ namespace Anseong.Core
     {
         readonly List<TuningItem> items = new List<TuningItem>();
         readonly Dictionary<string, TuningItem> byKey = new Dictionary<string, TuningItem>();
+        readonly Dictionary<string, string> hints = new Dictionary<string, string>();
+        readonly Dictionary<string, int> checks = new Dictionary<string, int>();
+
+        /// <summary>검증 체크 선택지. 0 = 아직(시작값).</summary>
+        public static readonly string[] CheckChoices = { "아직", "OK", "문제" };
+        public const int CheckOk = 1, CheckProblem = 2;
 
         public IReadOnlyList<TuningItem> Items => items;
         public int Selected { get; private set; }
@@ -64,6 +72,38 @@ namespace Anseong.Core
         public TuningItem AddChoice(string group, string key, string label, Func<int> get, Action<int> set, string[] names)
         {
             return Add(group, key, label, () => get(), v => set(Mathf.RoundToInt(v)), 0f, names.Length - 1, 1f, 0, names);
+        }
+
+        /// <summary>묶음의 검증 안내 한 줄(무엇을 하고 무엇을 볼지). 메뉴가 그 묶음을 고르면 위에 띄운다. 먼저 등록한 것을 쓴다.</summary>
+        public void Describe(string group, string hint)
+        {
+            if (!string.IsNullOrEmpty(hint) && !hints.ContainsKey(group)) hints[group] = hint;
+        }
+
+        public string Hint(string group) => group != null && hints.TryGetValue(group, out var hint) ? hint : null;
+
+        /// <summary>헤드셋에서 확인할 것 하나(아직/OK/문제). 값은 목록이 들고 있고 조절값처럼 저장 파일에 남는다.</summary>
+        public TuningItem AddCheck(string group, string key, string label)
+        {
+            var fullKey = "check." + key;
+            if (!checks.ContainsKey(fullKey)) checks[fullKey] = 0;
+            var item = AddChoice(group, fullKey, "[확인] " + label, () => checks[fullKey], v => checks[fullKey] = v, CheckChoices);
+            item.IsCheck = true;
+            return item;
+        }
+
+        /// <summary>검증 체크 개수: 전체, OK, 문제.</summary>
+        public void CountChecks(out int total, out int ok, out int problem)
+        {
+            total = ok = problem = 0;
+            foreach (var item in items)
+            {
+                if (!item.IsCheck) continue;
+                total++;
+                var v = Mathf.RoundToInt(item.Value);
+                if (v == CheckOk) ok++;
+                else if (v == CheckProblem) problem++;
+            }
         }
 
         TuningItem Add(string group, string key, string label, Func<float> get, Action<float> set,
@@ -110,6 +150,8 @@ namespace Anseong.Core
         {
             items.Clear();
             byKey.Clear();
+            hints.Clear();
+            checks.Clear();
             Selected = 0;
         }
 

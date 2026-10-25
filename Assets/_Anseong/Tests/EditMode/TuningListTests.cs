@@ -115,5 +115,37 @@ namespace Anseong.Tests
             Assert.AreEqual("b", list.Items[2].Key);
             Assert.AreEqual("a", list.Items[3].Key);
         }
-    }
+    
+        [Test]
+        public void Checks_CountAndSurviveSaveLoad()
+        {
+            var list = new TuningList();
+            list.Describe("펀치 인식", "할 것: 잽 20번");
+            list.Describe("펀치 인식", "나중 안내는 무시");
+            var jab = list.AddCheck("펀치 인식", "punch.jab", "잽 18번 이상");
+            list.AddCheck("펀치 인식", "punch.hook", "훅 18번 이상");
+            list.AddCheck("묵직함", "arm.heavy", "값 정함");
+            Assert.AreEqual("할 것: 잽 20번", list.Hint("펀치 인식"));
+            Assert.IsNull(list.Hint("묵직함"));
+            Assert.IsTrue(jab.IsCheck);
+            Assert.AreEqual("아직", jab.ValueText());
+
+            list.Adjust(1); // 잽 → OK
+            list.Move(1);
+            list.Adjust(2); // 훅 → 문제
+            list.CountChecks(out var total, out var ok, out var problem);
+            Assert.AreEqual(3, total);
+            Assert.AreEqual(1, ok);
+            Assert.AreEqual(1, problem);
+
+            var saved = list.Serialize();
+            StringAssert.Contains("check.punch.jab=1", saved);
+            StringAssert.DoesNotContain("arm.heavy", saved);
+            var fresh = new TuningList();
+            var restored = fresh.AddCheck("펀치 인식", "punch.jab", "잽 18번 이상");
+            fresh.AddCheck("펀치 인식", "punch.hook", "훅 18번 이상");
+            Assert.AreEqual(2, fresh.Apply(saved));
+            Assert.AreEqual("OK", restored.ValueText());
+        }
+}
 }

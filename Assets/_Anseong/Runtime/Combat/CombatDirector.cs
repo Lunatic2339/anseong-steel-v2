@@ -296,6 +296,9 @@ namespace Anseong.Combat
         {
             const string g = "공격 보정";
             var a = assist;
+            list.Describe(g, "할 것: 보스 옆으로 살짝 빗나가게 치기\n       공격 보정 끄고 켜서 비교\n볼 것: 종류가 맞으면 보스 쪽으로 끌려가 맞음");
+            list.AddCheck(g, "assist.pull", "빗나가도 보스 쪽으로 끌려가 맞음");
+            list.AddCheck(g, "assist.natural", "끌림이 어색하지 않음");
             list.AddToggle(g, "assist.enabled", "공격 보정(끄면 실제로 닿아야 명중)", () => a.enabled, v => a.enabled = v);
             list.AddFloat(g, "assist.rangeRatio", "보정 사거리(팔 길이 배수)", () => a.rangeRatio, v => a.rangeRatio = v, 0.5f, 3f, 0.1f, 1);
             list.AddFloat(g, "assist.coneDegrees", "보정 각도(도)", () => a.coneDegrees, v => a.coneDegrees = v, 5f, 90f, 5f, 0);
@@ -304,6 +307,10 @@ namespace Anseong.Combat
             list.AddFloat(g, "assist.hitAtWeight", "명중으로 볼 끌림(0~1)", () => a.hitAtWeight, v => a.hitAtWeight = v, 0.5f, 1f, 0.05f);
 
             const string c = "연계·부스트";
+            list.Describe(c, "할 것: 잽 → 훅 → 어퍼컷 연계, 명중 때 트리거로 부스트\n볼 것: 안내판 연계 단계·부스트, 늦으면 끊김");
+            list.AddCheck(c, "combo.chain", "연계 단계가 이어짐");
+            list.AddCheck(c, "combo.timeout", "늦으면 연계가 끊김");
+            list.AddCheck(c, "boost.hit", "부스트가 트리거로 나감");
             list.AddFloat(c, "combo.comboSeconds", "다음 명중 제한(초)", () => combo.comboSeconds, v => combo.comboSeconds = v, 0.5f, 5f, 0.1f, 1);
             list.AddFloat(c, "combo.minComboGap", "단계 사이 최소(초)", () => combo.minComboGap, v => combo.minComboGap = v, 0f, 0.5f, 0.05f);
             list.AddToggle(c, "combo.uppercutKeepsCombo", "어퍼컷이 연계 유지", () => combo.uppercutKeepsCombo, v => combo.uppercutKeepsCombo = v);
@@ -311,6 +318,9 @@ namespace Anseong.Combat
             list.AddFloat(c, "boost.triggerPress", "트리거 누름 기준", () => triggerPress, v => triggerPress = Mathf.Max(v, triggerRelease + 0.05f), 0.1f, 1f, 0.05f);
 
             const string d = "보스 HP";
+            list.Describe(d, "할 것: 보스를 몇 대 치고 HP 막대 보기, 다 채우기로 다시\n볼 것: 명중마다 HP가 줄고 막대가 잘 보임");
+            list.AddCheck(d, "boss.hp", "명중마다 HP가 줄어듦");
+            list.AddCheck(d, "boss.bar", "HP 막대가 잘 보임");
             list.AddFloat(d, "boss.jabDamage", "잽 피해(%)", () => bossHealth.jabDamage, v => bossHealth.jabDamage = v, 0f, 20f, 0.5f, 1);
             list.AddFloat(d, "boss.hookDamage", "훅 피해(%)", () => bossHealth.hookDamage, v => bossHealth.hookDamage = v, 0f, 20f, 0.5f, 1);
             list.AddFloat(d, "boss.uppercutDamage", "어퍼컷 피해(%)", () => bossHealth.uppercutDamage, v => bossHealth.uppercutDamage = v, 0f, 20f, 0.5f, 1);
