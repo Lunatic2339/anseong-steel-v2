@@ -45,6 +45,12 @@ namespace Anseong.Combat
         [Tooltip("잽: 직진도(처음→가장 앞 거리 ÷ 지나온 길이) 최소값. 1차 헤드셋 로그에서 잽이 0.86~0.99로 나와 기준선에 걸리지 않게 0.80(01 초기값 0.86).")]
         public float minJabStraightness = 0.80f;
 
+        [Tooltip("대각선 잽: 아주 곧으면(아래 직진도 이상) 좌우폭 ÷ 전진이 이 값까지도 잽(10/25 헤드셋 CSV: 대각선 잽은 0.85~0.96, 직진도 0.92~0.96).")]
+        public float maxDiagonalJabSideRatio = 1.0f;
+
+        [Tooltip("대각선 잽으로 볼 직진도 최소값.")]
+        public float minDiagonalJabStraightness = 0.90f;
+
         [Tooltip("훅: 가드 위치보다 바깥으로 준비한 거리 최소값(m, 사람 손). 0 = 가드에서 바로 안쪽으로 휘둘러도 훅(기본). " +
                  "가드를 넓게 잡으면 손이 이미 바깥에 있어 더 빼지 않으므로 0으로 둔다(01 규칙 초기값 10cm는 1차 헤드셋에서 훅이 거의 안 잡혀 바꿈).")]
         public float minHookOutset = 0f;
@@ -53,10 +59,10 @@ namespace Anseong.Combat
         public float minHookSweep = 0.17f;
 
         [Tooltip("훅: 호 길이 ÷ 현 길이 최소값(휘어진 정도).")]
-        public float minHookArcRatio = 1.01f;
+        public float minHookArcRatio = 1.10f;
 
         [Tooltip("훅: 앞부분과 뒷부분 진행 방향이 꺾인 각도 최소값(도, 위에서 본 평면). 곧게 대각선으로 친 펀치를 훅으로 보지 않게(10/25 헤드셋).")]
-        public float minHookTurnDegrees = 25f;
+        public float minHookTurnDegrees = 15f;
 
         [Tooltip("어퍼컷: 가장 낮은 지점에서 올려친 높이 최소값(m).")]
         public float minUppercutRise = 0.18f;
@@ -519,7 +525,8 @@ namespace Anseong.Combat
             // 안쪽으로 크게 휘어 들어오면 훅이 먼저다(휘어진 22cm 스윕은 잽이 아니다). 그다음 곧게 나가면 잽.
             var hook = m.Outset >= settings.minHookOutset && m.InwardSweep >= settings.minHookSweep && m.ArcRatio >= settings.minHookArcRatio
                 && m.TurnDegrees >= settings.minHookTurnDegrees;
-            var jab = m.SideRatio <= settings.maxJabSideRatio && m.Straightness >= settings.minJabStraightness;
+            var jab = m.SideRatio <= settings.maxJabSideRatio && m.Straightness >= settings.minJabStraightness
+                || m.SideRatio <= settings.maxDiagonalJabSideRatio && m.Straightness >= settings.minDiagonalJabStraightness;
             if (hook)
             {
                 result.Kind = PunchKind.Hook;
