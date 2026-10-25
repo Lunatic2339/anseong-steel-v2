@@ -135,6 +135,11 @@ namespace Anseong.Combat
         {
             const string g = "가드";
             var s = settings;
+            list.Describe(g, "할 것: 넓은 가드·좁은 가드 올리고 내리기, 펀치 치기\n볼 것: 콘솔 불이 가드 때만 켜지고 펀치 중엔 꺼짐");
+            list.AddCheck(g, "guard.wide", "넓은 가드도 가드로 켜짐");
+            list.AddCheck(g, "guard.punch", "펀치 치는 동안엔 안 켜짐");
+            list.AddCheck(g, "guard.down", "팔 내리면 바로 꺼짐");
+            list.AddCheck(g, "guard.light", "콘솔 불이 잘 보임");
             list.AddFloat(g, "guard.zoneX", "가드 영역 좌우 ±(m)", () => s.zoneHalfSize.x, v => s.zoneHalfSize.x = v, 0.05f, 0.6f, 0.01f);
             list.AddFloat(g, "guard.zoneY", "가드 영역 위아래 ±(m)", () => s.zoneHalfSize.y, v => s.zoneHalfSize.y = v, 0.05f, 0.6f, 0.01f);
             list.AddFloat(g, "guard.zoneZ", "가드 영역 앞뒤 ±(m)", () => s.zoneHalfSize.z, v => s.zoneHalfSize.z = v, 0.05f, 0.6f, 0.01f);
