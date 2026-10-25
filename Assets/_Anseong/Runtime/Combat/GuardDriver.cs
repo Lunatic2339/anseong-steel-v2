@@ -1,4 +1,5 @@
 using System;
+using Anseong.Core;
 using Anseong.Pilot;
 using UnityEngine;
 
@@ -10,7 +11,7 @@ namespace Anseong.Combat
     /// 로봇 전완은 팔 IK(LateUpdate 100) 뒤에 읽는다.
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
-    public class GuardDriver : MonoBehaviour
+    public class GuardDriver : MonoBehaviour, ITunable
     {
         public const int ExecutionOrder = 150;
 
@@ -127,6 +128,21 @@ namespace Anseong.Combat
                 if (input.IsArmHand((PilotSide)i)) log.Add(now, (PilotSide)i, results[i]);
             log.Pump();
 #endif
+        }
+
+        /// <summary>인게임 조절 메뉴: 가드 판정.</summary>
+        public void AddTuning(TuningList list)
+        {
+            const string g = "가드";
+            var s = settings;
+            list.AddFloat(g, "guard.zoneX", "가드 영역 좌우 ±(m)", () => s.zoneHalfSize.x, v => s.zoneHalfSize.x = v, 0.05f, 0.6f, 0.01f);
+            list.AddFloat(g, "guard.zoneY", "가드 영역 위아래 ±(m)", () => s.zoneHalfSize.y, v => s.zoneHalfSize.y = v, 0.05f, 0.6f, 0.01f);
+            list.AddFloat(g, "guard.zoneZ", "가드 영역 앞뒤 ±(m)", () => s.zoneHalfSize.z, v => s.zoneHalfSize.z = v, 0.05f, 0.6f, 0.01f);
+            list.AddFloat(g, "guard.minFrontOfFace", "얼굴보다 앞 최소(m)", () => s.minFrontOfFace, v => s.minFrontOfFace = v, -0.2f, 0.4f, 0.01f);
+            list.AddFloat(g, "guard.maxForearmTilt", "전완 기울기 최대(도)", () => s.maxForearmTiltDegrees, v => s.maxForearmTiltDegrees = v, 5f, 90f, 5f, 0);
+            list.AddChoice(g, "guard.forearmSource", "전완 기준", () => (int)s.forearmSource, v => s.forearmSource = (ForearmSource)v, new[] { "사람(컨트롤러)", "로봇(화면)", "둘 중 하나" });
+            list.AddFloat(g, "guard.releaseMargin", "풀림 여유(m)", () => s.releaseMargin, v => s.releaseMargin = v, 0f, 0.1f, 0.01f);
+            list.AddFloat(g, "guard.releaseDegrees", "풀림 여유(도)", () => s.releaseDegrees, v => s.releaseDegrees = v, 0f, 20f, 1f, 0);
         }
     }
 }
