@@ -358,6 +358,11 @@ namespace Anseong.UI
                 case PunchPhase.Moving: builder.Append("휘두르는 중"); break;
                 case PunchPhase.TrackingLost: builder.Append("<color=#FF6B6B>추적 끊김</color>"); break;
                 default:
+                    if (punch.RearmsByRetract)
+                    {
+                        builder.Append("<color=#FFD24D>조금 당기거나 멈추기</color>");
+                        break;
+                    }
                     var o = punch.NeutralOffset;
                     builder.Append("<color=#FFD24D>가드 자리로</color> ");
                     builder.Append(o.z > 0.1f ? "당기기" : Mathf.Abs(o.x) > Mathf.Abs(o.y) ? (o.x > 0f ? "왼쪽으로" : "오른쪽으로") : (o.y > 0f ? "내리기" : "올리기"));
