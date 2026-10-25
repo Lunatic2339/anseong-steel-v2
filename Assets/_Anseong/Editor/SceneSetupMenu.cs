@@ -32,9 +32,12 @@ namespace Anseong.EditorTools
         static readonly Vector3 PanelOffset = new Vector3(0f, -0.12f, 0.8f);
         const int PanelFontSize = 64;
         const float PanelCharacterSize = 0.0022f;
-        // 조절 메뉴: 안내판 왼쪽 위, 시점 쪽으로 조금 돌림(카메라 로컬 m·도).
-        static readonly Vector3 TuningOffset = new Vector3(-0.42f, 0.08f, 0.75f);
-        const float TuningYawDegrees = -25f;
+        // 조절 메뉴(카메라 로컬 m).
+        const float TuningDimDistance = 0.35f;       // 어둡게 하는 막(눈앞)
+        const float TuningTextDistance = 1.0f;       // 표 거리
+        const float TuningLabelX = -0.55f, TuningValueX = 0.12f;
+        const float TuningCharacterSize = 0.0045f;   // 안내판(0.8 m, 0.0022)보다 크게
+        const string TuningDimMaterialPath = "Assets/_Anseong/Art/Debug/TuningDim.mat";
 
         [MenuItem("Anseong/Setup/Add Tracking Probes")]
         static void AddTrackingProbes()
@@ -184,41 +187,101 @@ namespace Anseong.EditorTools
             return "XR 카메라 아래에 만듦";
         }
 
-        /// <summary>헤드셋을 쓴 채 값을 바꾸는 조절 메뉴(개발용). 처음엔 숨김, 오른손 B로 연다.</summary>
+        /// <summary>
+        /// 헤드셋을 쓴 채 값을 바꾸는 조절 메뉴(개발용). 처음엔 숨김, 오른손 B로 열면 눈앞 막이 화면을 어둡게 하고 1 m 앞 가운데에 표가 뜬다.
+        /// 글자(TextMesh 기본 셰이더)는 늘 맨 위에 그려지므로, 막은 글자보다 한 단계 먼저 그린다(렌더 큐 2999).
+        /// </summary>
         static string AddTuningMenu(XROrigin origin)
         {
             var camera = origin.Camera != null ? origin.Camera.transform : null;
             if (camera == null) return "카메라가 없어 만들지 않음";
-            if (camera.GetComponentInChildren<TuningMenu>(true) != null) return "이미 있음";
+            var old = camera.GetComponentInChildren<TuningMenu>(true);
+            if (old != null)
+            {
+                // 10/25 첫 버전(시야 왼쪽 끝 글자)은 지우고 새로 만든다.
+                Undo.DestroyObjectImmediate(old.gameObject);
+            }
 
             var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
-            var go = new GameObject("TuningMenu");
-            Undo.RegisterCreatedObjectUndo(go, "Add Tuning Menu");
-            go.transform.SetParent(camera, false);
-            go.transform.localPosition = TuningOffset;
-            go.transform.localRotation = Quaternion.Euler(0f, TuningYawDegrees, 0f);
-            var scale = Mathf.Max(1e-6f, camera.lossyScale.x);
-            go.transform.localScale = Vector3.one / scale;
-            var text = go.AddComponent<TextMesh>();
-            text.font = font;
-            text.fontSize = PanelFontSize;
-            text.characterSize = PanelCharacterSize;
-            text.anchor = TextAnchor.UpperCenter;
-            text.alignment = TextAlignment.Left;
-            text.richText = true;
-            text.color = Color.white;
-            text.text = "조절 메뉴";
-            var renderer = go.GetComponent<MeshRenderer>();
-            if (font != null) renderer.sharedMaterial = font.material;
-            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
-            renderer.receiveShadows = false;
+            var root = new GameObject("TuningMenu");
+            Undo.RegisterCreatedObjectUndo(root, "Add Tuning Menu");
+            root.transform.SetParent(camera, false);
+            root.transform.localScale = Vector3.one / Mathf.Max(1e-6f, camera.lossyScale.x);
 
-            var menu = go.AddComponent<TuningMenu>();
+            var screen = new GameObject("Screen");
+            screen.transform.SetParent(root.transform, false);
+
+            var dim = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            dim.name = "Dim";
+            Object.DestroyImmediate(dim.GetComponent<Collider>());
+            dim.transform.SetParent(screen.transform, false);
+            dim.transform.localPosition = new Vector3(0f, 0f, TuningDimDistance);
+            dim.transform.localScale = Vector3.one * 3f;
+            var dimRenderer = dim.GetComponent<MeshRenderer>();
+            dimRenderer.sharedMaterial = GetOrCreateDimMaterial();
+            dimRenderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            dimRenderer.receiveShadows = false;
+
+            TextMesh Text(string name, Vector3 position, TextAnchor anchor, float size)
+            {
+                var go = new GameObject(name);
+                go.transform.SetParent(screen.transform, false);
+                go.transform.localPosition = position;
+                var text = go.AddComponent<TextMesh>();
+                text.font = font;
+                text.fontSize = PanelFontSize;
+                text.characterSize = size;
+                text.anchor = anchor;
+                text.alignment = TextAlignment.Left;
+                text.richText = true;
+                text.color = Color.white;
+                var renderer = go.GetComponent<MeshRenderer>();
+                if (font != null) renderer.sharedMaterial = font.material;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                return text;
+            }
+            var d = TuningTextDistance;
+            var title = Text("Title", new Vector3(TuningLabelX, 0.32f, d), TextAnchor.UpperLeft, TuningCharacterSize * 1.2f);
+            var labels = Text("Labels", new Vector3(TuningLabelX, 0.24f, d), TextAnchor.UpperLeft, TuningCharacterSize);
+            var values = Text("Values", new Vector3(TuningValueX, 0.24f, d), TextAnchor.UpperLeft, TuningCharacterSize);
+            var footer = Text("Footer", new Vector3(TuningLabelX, -0.26f, d), TextAnchor.UpperLeft, TuningCharacterSize * 0.85f);
+            screen.SetActive(false);
+
+            var menu = root.AddComponent<TuningMenu>();
             var serialized = new SerializedObject(menu);
-            serialized.FindProperty("text").objectReferenceValue = text;
+            serialized.FindProperty("screen").objectReferenceValue = screen;
+            serialized.FindProperty("title").objectReferenceValue = title;
+            serialized.FindProperty("labels").objectReferenceValue = labels;
+            serialized.FindProperty("values").objectReferenceValue = values;
+            serialized.FindProperty("footer").objectReferenceValue = footer;
             serialized.FindProperty("input").objectReferenceValue = origin.GetComponent<PilotHandInput>();
             serialized.ApplyModifiedProperties();
-            return "XR 카메라 아래에 만듦";
+            return old != null ? "새 화면으로 다시 만듦" : "XR 카메라 아래에 만듦";
+        }
+
+        /// <summary>화면을 어둡게 하는 반투명 검정(URP Unlit 투명). 글자보다 먼저 그리게 큐 2999.</summary>
+        static Material GetOrCreateDimMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(TuningDimMaterialPath);
+            if (material != null) return material;
+            // 에디터에서만 셰이더를 찾는다(런타임 Shader.Find 금지).
+            var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            if (shader == null) return null;
+            material = new Material(shader);
+            material.SetFloat("_Surface", 1f);
+            material.SetFloat("_Blend", 0f);
+            material.SetOverrideTag("RenderType", "Transparent");
+            material.SetFloat("_SrcBlend", (float)UnityEngine.Rendering.BlendMode.SrcAlpha);
+            material.SetFloat("_DstBlend", (float)UnityEngine.Rendering.BlendMode.OneMinusSrcAlpha);
+            material.SetFloat("_ZWrite", 0f);
+            material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
+            material.SetColor("_BaseColor", new Color(0f, 0f, 0f, 0.85f));
+            material.renderQueue = 2999;
+            var folder = System.IO.Path.GetDirectoryName(TuningDimMaterialPath).Replace('\\', '/');
+            if (!AssetDatabase.IsValidFolder(folder)) AssetDatabase.CreateFolder("Assets/_Anseong/Art", "Debug");
+            AssetDatabase.CreateAsset(material, TuningDimMaterialPath);
+            return material;
         }
 
         static int SetHandActions(SerializedProperty hand, InputActionReference[] references, string mapName)

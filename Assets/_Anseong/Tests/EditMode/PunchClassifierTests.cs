@@ -74,6 +74,41 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void Rearm_WhenGuardReturnsOffset_StillCountsNextJabs()
+        {
+            // 10/25 헤드셋: 친 뒤 가드로 돌아오는 자리가 보정한 가드에서 조금 어긋나면 다음 펀치를 못 셌다.
+            var run = new Run(true, 90f);
+            var home = new Vector3(0.15f, -0.12f, -0.05f); // 옆 15cm, 아래 12cm, 몸 쪽 5cm
+            run.Hold(Vector3.zero, 0.5f);
+            for (var k = 0; k < 3; k++)
+            {
+                var n = Mathf.RoundToInt(0.4f * run.Hz);
+                var start = k == 0 ? Vector3.zero : home;
+                for (var i = 1; i <= n; i++) run.Sample(start + Jab((float)i / n));
+                run.Hold(start + Jab(1f), 0.2f);
+                for (var i = 1; i <= n; i++) run.Sample(Vector3.Lerp(start + Jab(1f), home, (float)i / n));
+                run.Hold(home, 0.4f);
+            }
+            Assert.AreEqual(3, run.Results.Count);
+            foreach (var r in run.Results) Assert.AreEqual(PunchKind.Jab, r.Kind, r.Reason.ToString());
+        }
+
+        [Test]
+        public void Rearm_NeedsHandBackFromForward()
+        {
+            var run = new Run(true, 90f);
+            run.Stroke(Jab);
+            Assert.AreEqual(PunchPhase.Ready, run.Classifier.Phase);
+            // 한 번 더 뻗은 채(가드보다 20cm 앞) 멈춰 있으면 다시 준비되지 않는다.
+            var n = Mathf.RoundToInt(0.4f * run.Hz);
+            for (var i = 1; i <= n; i++) run.Sample(Jab((float)i / n));
+            run.Hold(Jab(1f), 0.2f);
+            for (var i = 1; i <= n; i++) run.Sample(Vector3.Lerp(Jab(1f), new Vector3(0f, 0f, 0.2f), (float)i / n));
+            run.Hold(new Vector3(0f, 0f, 0.2f), 0.5f);
+            Assert.AreNotEqual(PunchPhase.Ready, run.Classifier.Phase);
+        }
+
+        [Test]
         public void StraightJab_IsJab_AtAllRates_BothArms()
         {
             foreach (var hz in Rates)
