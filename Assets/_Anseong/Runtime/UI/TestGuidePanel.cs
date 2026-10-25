@@ -23,6 +23,9 @@ namespace Anseong.UI
         [SerializeField, Tooltip("전투 판정(M1-05). 비어 있으면 시작할 때 씬에서 한 번 찾는다. 없으면 펀치 분류만 보여 준다.")]
         CombatDirector combat;
 
+        [SerializeField, Tooltip("가드 판정(M1-06). 비어 있으면 시작할 때 씬에서 한 번 찾는다. 없으면 가드 줄을 쓰지 않는다.")]
+        GuardDriver guard;
+
         [SerializeField, Tooltip("글자를 쓸 TextMesh. 메뉴가 만든다.")]
         TextMesh text;
 
@@ -53,12 +56,14 @@ namespace Anseong.UI
         Vector3 shownOffset;
         string lastCombat = string.Empty;
         bool boostOpen;
+        int guardKey = -1;
 
         void Start()
         {
             if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
             if (classifier == null) classifier = FindAnyObjectByType<PunchClassifierDriver>();
             if (combat == null) combat = FindAnyObjectByType<CombatDirector>();
+            if (guard == null) guard = FindAnyObjectByType<GuardDriver>();
             if (text == null || calibration == null)
             {
                 Debug.LogWarning("[TestGuidePanel] 글자 칸이나 보정 흐름이 없어 안내판을 끕니다. 'Anseong → Setup → Add Pilot Input'을 다시 실행하세요.", this);
@@ -151,6 +156,16 @@ namespace Anseong.UI
             {
                 nextOffsetCheck = Time.unscaledTime + 0.25f;
                 if ((calibration.BodyOffset - shownOffset).sqrMagnitude > 0.0001f) dirty = true;
+                // 가드 판정 이유가 바뀌었을 때만(같은 0.25초 간격).
+                if (guard != null)
+                {
+                    var g = (int)guard.State(PilotSide.Left).Reason * 16 + (int)guard.State(PilotSide.Right).Reason;
+                    if (g != guardKey)
+                    {
+                        guardKey = g;
+                        dirty = true;
+                    }
+                }
             }
             if (!dirty) return;
             dirty = false;
@@ -256,10 +271,43 @@ namespace Anseong.UI
                 Row("<color=#999999>해당 없음</color> ", PunchKind.None);
                 builder.Append("공격 인정    ").Append(attacks[0]).Append("  /  ").Append(attacks[1]).Append('\n');
                 if (combat != null && combat.Resolver != null) DrawCombat();
+                if (guard != null) DrawGuard();
                 builder.Append("──────────────\n");
                 for (var i = 0; i < recentCount; i++) builder.Append(recent[i]).Append('\n');
             }
             builder.Append('\n').Append(recalibrateHint);
+        }
+
+        void DrawGuard()
+        {
+            builder.Append("가드  ");
+            for (var h = 0; h < 2; h++)
+            {
+                var side = (PilotSide)h;
+                builder.Append(h == 0 ? "왼 " : "  /  오 ");
+                if (!guard.UsesHand(side))
+                {
+                    builder.Append('-');
+                    continue;
+                }
+                var state = guard.State(side);
+                if (state.IsGuarding) builder.Append("<color=#5BE37D>가드</color>");
+                else builder.Append("<color=#999999>").Append(GuardReasonName(state.Reason)).Append("</color>");
+            }
+            builder.Append('\n');
+        }
+
+        static string GuardReasonName(GuardReason reason)
+        {
+            switch (reason)
+            {
+                case GuardReason.NotCalibrated: return "보정 전";
+                case GuardReason.Untracked: return "추적 끊김";
+                case GuardReason.OutOfZone: return "가드 자리 밖";
+                case GuardReason.BehindFace: return "얼굴보다 뒤";
+                case GuardReason.ForearmTilted: return "팔뚝이 누움";
+                default: return reason.ToString();
+            }
         }
 
         void DrawCombat()

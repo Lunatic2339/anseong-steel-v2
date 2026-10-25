@@ -107,6 +107,9 @@ namespace Anseong.Pilot
         /// <summary>로봇 정면 회전.</summary>
         public Quaternion BodyRotation => robotRoot != null ? robotRoot.rotation : transform.rotation;
 
+        /// <summary>화면에 보이는 로봇 전완 방향(팔꿈치 → 손목, 월드, 정규화). 뼈가 없으면 0.</summary>
+        public Vector3 ForearmDirection => foreArm != null && hand != null ? (hand.position - foreArm.position).normalized : Vector3.zero;
+
         /// <summary>
         /// 주먹 목표를 마지막에 한 번 더 옮기는 함수(M1-05 공격 보정이 보스 쪽으로 끌어당길 때). 비어 있으면 손 그대로.
         /// 받는 값·돌려주는 값은 월드 좌표 주먹 목표.

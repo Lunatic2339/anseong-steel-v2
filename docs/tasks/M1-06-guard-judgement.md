@@ -31,6 +31,10 @@
 - 헤드셋에서 가드 자세와 표시등이 일치(사람 확인). 테스트 통과.
 
 ## 결과 (작업 후 Claude가 작성)
-- 바뀐 파일:
-- 사람이 확인할 것:
-- 남은 문제 / 제안:
+- 브랜치: `feat/m1-06-guard-judgement`(M1-05 브랜치 위). PR은 M1-05 병합 뒤.
+- 구조: `GuardDriver`(플레이어 Arms)가 팔마다 `GuardRules`를 돌리고, 켜짐·꺼짐 때 `GuardChanged` 이벤트를 낸다. 표시등과 안내판은 이 결과만 본다. M2의 막기 소리(`SFX_Guard`)·진동·외골격은 이 이벤트를 듣는 컴포넌트로 붙인다.
+- 판정: 사람 손(몸 이동 보정 적용)이 보정 가드 위치 ±25cm(몸 기준 상자) 안 + 얼굴보다 5cm 앞 + 전완이 수직에서 40° 안 + 추적 유효. 가드 중엔 3cm·5°만큼 넓혀 경계에서 깜빡이지 않게 했다.
+- 사람 전완 방향: 보정한 펀치(도달) 자세에서 전완 = 몸 정면이라고 보고, 그 뒤 컨트롤러가 돈 만큼 돌린다(컨트롤러 축을 가정하지 않음). 로봇 전완 = IK 결과의 팔꿈치 → 손목. 판정에 쓸 쪽은 `GuardDriver → Settings → Forearm Source`(Human 기본, Robot, Either).
+- 바뀐 파일: `Runtime/Combat/GuardRules.cs`·`GuardDriver.cs`·`GuardLog.cs`(새), `Runtime/UI/GuardIndicator.cs`(새), `Runtime/UI/TestGuidePanel.cs`(가드 줄·이유), `Runtime/Pilot/RobotArmDriver.cs`(`ForearmDirection`), `Editor/CombatSetup.cs`(가드 판정·표시등 생성, 씬 연결), `Editor/SceneSetupMenu.cs`, `Editor/RobotSandboxUtility.cs`(`ConsoleTopFront`), `Tests/EditMode/GuardRulesTests.cs`(10개), `docs/폴더_지도.md`
+- 사람이 확인할 것: Rebuild Robot + Pilot Input → 새 `.meta`와 `Art/Debug/GuardLight.mat` 커밋. 위 "사람이 할 일" 4개. 표시등이 안 켜지면 안내판의 이유를 보고, "팔뚝이 누움"이 계속 나오면 Forearm Source를 Robot이나 Either로 바꿔 비교. CSV는 Console의 `[GuardDriver] 가드 기록:` 경로.
+- 남은 문제 / 제안: 표시등은 기본 조종석 상자의 콘솔 위에 만든다. Robot Art Settings에 조종석 모델을 넣으면 위치가 안 맞을 수 있어 `Cockpit → GuardIndicator`를 Inspector에서 옮긴다. 양팔 가드(`BothGuarding`)는 값만 있고 표시는 M2 강공격 때.
