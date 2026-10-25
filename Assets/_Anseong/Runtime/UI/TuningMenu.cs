@@ -12,13 +12,26 @@ namespace Anseong.UI
     /// 오른손 B로 열고 닫고, 스틱 위아래로 고르고, 좌우로 바꾸고, 오른손 A로 지금 항목을 시작값(씬·프리팹 값)으로 되돌린다(키보드: F1, 방향키, Backspace).
     /// 바꾼 값은 persistentDataPath/tuning.txt에 바로 저장되고 다음 Play에도 적용된다. 그 파일을 올리면 코드 기본값으로 옮긴다.
     /// 메뉴가 열려 있는 동안 스틱은 메뉴에만 쓴다(M2에서 이동 입력이 생기면 그쪽에서 <see cref="IsOpen"/>을 본다).
-    /// Add Pilot Input 메뉴가 XR 카메라 앞 왼쪽에 만든다. 에디터·개발 빌드에서만 동작한다.
+    /// 열면 설정 화면처럼 뒤 화면이 어두워지고 시야 가운데에 표가 뜬다(10/25: 시야 끝 글자는 안 보임). 닫으면 다 숨긴다.
+    /// Add Pilot Input 메뉴가 XR 카메라 아래에 만든다. 에디터·개발 빌드에서만 동작한다.
     /// </summary>
     public class TuningMenu : MonoBehaviour
     {
 #pragma warning disable 0414, 0649
-        [SerializeField, Tooltip("글자를 쓸 TextMesh. 메뉴가 만든다.")]
-        TextMesh text;
+        [SerializeField, Tooltip("열 때 켜고 닫을 때 끄는 화면 묶음(어둡게 하는 막 + 표). 메뉴가 만든다.")]
+        GameObject screen;
+
+        [SerializeField, Tooltip("제목 줄 TextMesh.")]
+        TextMesh title;
+
+        [SerializeField, Tooltip("항목 이름 열 TextMesh(왼쪽).")]
+        TextMesh labels;
+
+        [SerializeField, Tooltip("값 열 TextMesh(오른쪽). 이름 열과 줄 수를 맞춘다.")]
+        TextMesh values;
+
+        [SerializeField, Tooltip("아래 안내 줄 TextMesh(조작법·저장 상태).")]
+        TextMesh footer;
 
         [SerializeField, Tooltip("스틱을 읽을 손 입력. 비어 있으면 시작할 때 한 번 찾는다.")]
         PilotHandInput input;
@@ -32,8 +45,8 @@ namespace Anseong.UI
         [SerializeField, Tooltip("지금 항목을 시작값으로 되돌리는 버튼.")]
         string[] resetBindings = { "<XRController>{RightHand}/primaryButton", "<Keyboard>/backspace" };
 
-        [SerializeField, Range(3, 21), Tooltip("한 번에 보여 줄 줄 수.")]
-        int visibleRows = 11;
+        [SerializeField, Range(3, 21), Tooltip("한 번에 보여 줄 줄 수(묶음 제목 포함).")]
+        int visibleRows = 12;
 
         [SerializeField, Range(0.2f, 0.9f), Tooltip("스틱을 이만큼 밀어야 한 칸 움직인다.")]
         float stickThreshold = 0.6f;
@@ -65,7 +78,7 @@ namespace Anseong.UI
         readonly TuningList list = new TuningList();
         readonly StringBuilder builder = new StringBuilder(1024);
         InputAction toggleAction, resetAction;
-        MeshRenderer textRenderer;
+        readonly StringBuilder valueBuilder = new StringBuilder(512);
         // [0] = 위아래(고르기), [1] = 좌우(바꾸기)
         readonly int[] heldDirection = new int[2];
         readonly float[] heldSince = new float[2];
@@ -79,12 +92,12 @@ namespace Anseong.UI
         void Start()
         {
             if (input == null) input = FindAnyObjectByType<PilotHandInput>();
-            if (text == null)
+            if (screen == null || labels == null || values == null)
             {
+                Debug.LogWarning("[TuningMenu] 화면 구성이 없어 조절 메뉴를 끕니다. 'Anseong → Setup → Rebuild Robot + Pilot Input'을 다시 실행하세요.", this);
                 enabled = false;
                 return;
             }
-            textRenderer = text.GetComponent<MeshRenderer>();
             UseOsFont();
             foreach (var behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
                 if (behaviour is ITunable tunable) tunable.AddTuning(list);
@@ -128,16 +141,21 @@ namespace Anseong.UI
         void UseOsFont()
         {
             if (osFontNames == null || osFontNames.Length == 0) return;
-            var font = Font.CreateDynamicFontFromOSFont(osFontNames, text.fontSize > 0 ? text.fontSize : 32);
+            var font = Font.CreateDynamicFontFromOSFont(osFontNames, labels.fontSize > 0 ? labels.fontSize : 32);
             if (font == null) return;
-            text.font = font;
-            if (textRenderer != null) textRenderer.sharedMaterial = font.material;
+            foreach (var mesh in new[] { title, labels, values, footer })
+            {
+                if (mesh == null) continue;
+                mesh.font = font;
+                var renderer = mesh.GetComponent<MeshRenderer>();
+                if (renderer != null) renderer.sharedMaterial = font.material;
+            }
         }
 
         void SetOpen(bool open)
         {
             IsOpen = open;
-            if (textRenderer != null) textRenderer.enabled = open;
+            screen.SetActive(open);
             dirty = true;
         }
 
@@ -224,31 +242,50 @@ namespace Anseong.UI
         void Redraw()
         {
             builder.Length = 0;
-            builder.Append("<b>조절 메뉴</b>   B 닫기 · 스틱 ↑↓ 고르기 ←→ 바꾸기 · A 시작값\n");
+            valueBuilder.Length = 0;
             var items = list.Items;
-            var half = visibleRows / 2;
-            var first = Mathf.Clamp(list.Selected - half, 0, Mathf.Max(0, items.Count - visibleRows));
-            var last = Mathf.Min(items.Count, first + visibleRows);
-            string group = null;
-            for (var i = first; i < last; i++)
+            var first = FirstVisible(items);
+            string group = first > 0 ? items[first - 1].Group : null;
+            var rows = 0;
+            for (var i = first; i < items.Count && rows < visibleRows; i++)
             {
                 var item = items[i];
                 if (item.Group != group)
                 {
                     group = item.Group;
-                    builder.Append("<color=#7FB2FF>[").Append(group).Append("]</color>\n");
+                    builder.Append("<color=#7FB2FF><b>").Append(group).Append("</b></color>\n");
+                    valueBuilder.Append('\n');
+                    if (++rows >= visibleRows) break;
                 }
                 var selected = i == list.Selected;
                 var changed = !Mathf.Approximately(item.Value, item.Default);
-                builder.Append(selected ? "<color=#FFD24D>> " : "   ").Append(item.Label).Append("  ")
-                    .Append(changed ? "<color=#5BE37D>" : string.Empty).Append(item.ValueText()).Append(changed ? "</color>" : string.Empty);
-                if (selected && changed) builder.Append("  (시작 ").Append(DefaultText(item)).Append(')');
-                if (selected) builder.Append("</color>");
-                builder.Append('\n');
+                builder.Append(selected ? "<color=#FFD24D><b>  > " : "     ").Append(item.Label).Append(selected ? "</b></color>" : string.Empty).Append('\n');
+                valueBuilder.Append(selected ? "<color=#FFD24D><b>◀ " : "   ")
+                    .Append(changed && !selected ? "<color=#5BE37D>" : string.Empty).Append(item.ValueText()).Append(changed && !selected ? "</color>" : string.Empty)
+                    .Append(selected ? " ▶</b></color>" : string.Empty);
+                if (changed) valueBuilder.Append("   <color=#999999>처음 ").Append(DefaultText(item)).Append("</color>");
+                valueBuilder.Append('\n');
+                rows++;
             }
-            builder.Append(list.Selected + 1).Append(" / ").Append(items.Count);
-            if (status.Length > 0) builder.Append("   ").Append(status);
-            text.text = builder.ToString();
+            labels.text = builder.ToString();
+            values.text = valueBuilder.ToString();
+            if (title != null) title.text = $"<b>조절 메뉴</b>   <color=#999999>{list.Selected + 1} / {items.Count}</color>";
+            if (footer != null)
+                footer.text = "B 닫기    스틱 ↑↓ 고르기    ←→ 바꾸기    A 처음 값으로\n<color=#999999>바꾼 값은 자동 저장(다음 Play에도 남음)" +
+                              (status.Length > 0 ? " · " + status : string.Empty) + "</color>";
+        }
+
+        /// <summary>고른 항목이 가운데쯤 오도록 첫 줄을 정한다(묶음 제목 줄도 센다).</summary>
+        int FirstVisible(System.Collections.Generic.IReadOnlyList<TuningItem> items)
+        {
+            var first = list.Selected;
+            var used = 1;
+            while (first > 0 && used < visibleRows / 2)
+            {
+                used += items[first - 1].Group != items[first].Group ? 2 : 1;
+                first--;
+            }
+            return first;
         }
 
         static string DefaultText(TuningItem item)
