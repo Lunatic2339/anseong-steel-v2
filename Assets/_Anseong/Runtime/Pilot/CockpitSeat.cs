@@ -172,9 +172,6 @@ namespace Anseong.Pilot
         {
             const string g = "조종석 흔들림";
             list.Describe(g, "할 것: 펀치·훅 치며 붙이는 방식 완전 고정 → 좌우 회전만 비교\n볼 것: 몸통은 조종석에 고정, 팔만 들어옴, 멀미 없음");
-            list.AddCheck(g, "seat.fixed", "몸통이 조종석을 안 뚫음(팔만 들어옴)");
-            list.AddCheck(g, "seat.sway", "흔들림이 로봇에 탄 느낌");
-            list.AddCheck(g, "seat.sick", "멀미 없음");
             list.AddChoice(g, "seat.attach", "로봇 몸에 붙이는 방식", () => (int)attach, v => attach = (CockpitAttach)v, new[] { "완전 고정", "좌우 회전만", "위치만(처음)" });
             list.AddFloat(g, "seat.followWeight", "위치만: 따라가는 비율", () => followWeight, v => followWeight = v, 0f, 1f, 0.1f, 1);
         }

@@ -280,17 +280,8 @@ namespace Anseong.Pilot
         public void AddTuning(TuningList list)
         {
             list.Describe("묵직함", "할 것: 팔 반응 시간 0 → 0.15 → 0.3마다 잽·훅 10번\n볼 것: 손보다 묵직하게 늦되 답답하지 않게, 시점은 그대로");
-            list.AddCheck("묵직함", "arm.heavy", "육중한 로봇 느낌 값 정함");
-            list.AddCheck("묵직함", "arm.camera", "시점은 안 늦음(멀미 없음)");
-            list.AddCheck("묵직함", "arm.still", "가만히 있으면 로봇 팔도 가만히");
-            list.AddCheck("묵직함", "arm.hitTiming", "판정·진동이 로봇 주먹이 도착할 때 남");
-            // 주먹 최대 속도·손목은 메뉴에서 뺐다(선우 10/25: 메뉴가 너무 많음). Inspector에는 그대로 있다.
+            // 주먹 최대 속도·손목·팔 매핑은 메뉴에서 뺐다(선우 10/25: 메뉴가 너무 많음). Inspector에는 그대로 있다.
             list.AddFloat("묵직함", "arm.responseSeconds", "팔 반응 시간(초, 0 = 즉시)", () => responseSeconds, v => responseSeconds = v, 0f, 0.6f, 0.05f);
-            list.Describe("팔 매핑", "할 것: 가드 자세와 끝까지 뻗기, 매핑 방식 바꿔 비교\n볼 것: 가드가 시야를 안 가리고, 뻗으면 끝까지");
-            list.AddCheck("팔 매핑", "arm.guardPose", "가드 자세가 자연스러움");
-            list.AddCheck("팔 매핑", "arm.reach", "뻗으면 로봇 팔도 끝까지");
-            list.AddChoice("팔 매핑", "arm.mappingMode", "매핑 방식", () => (int)mappingMode, v => mappingMode = (ArmMappingMode)v, new[] { "Linear(기본)", "가드 맞춤" });
-            list.AddFloat("팔 매핑", "arm.shoulderHeightOffset", "어깨 높이 보정(m, +면 주먹 내려감)", () => shoulderHeightOffset, v => shoulderHeightOffset = v, -0.3f, 0.3f, 0.02f);
         }
     }
 }

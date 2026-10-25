@@ -100,8 +100,6 @@ namespace Anseong.Pilot
         {
             const string g = "허리";
             list.Describe(g, "할 것: 허리 회전 끄고 켜서 펀치 비교, 둘러보기\n볼 것: 펀치에 허리가 살짝 따라 돌고 둘러볼 땐 안 돎");
-            list.AddCheck(g, "torso.punch", "펀치에 허리가 따라 돎");
-            list.AddCheck(g, "torso.look", "둘러볼 때 허리 안 돎");
             list.AddToggle(g, "torso.enabled", "허리 회전", () => twistEnabled, v => twistEnabled = v);
             if (settings == null) return;
             var s = settings;
