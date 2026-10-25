@@ -57,6 +57,7 @@ namespace Anseong.UI
         string lastCombat = string.Empty;
         bool boostOpen;
         int guardKey = -1;
+        int readyKey = -1;
 
         void Start()
         {
@@ -166,6 +167,16 @@ namespace Anseong.UI
                         dirty = true;
                     }
                 }
+                // 손별 "다음 펀치 준비" 상태가 바뀌었을 때(10/25: 펀치가 처음 몇 번 뒤 안 세지는 원인을 헤드셋 안에서 보게).
+                if (classifier != null)
+                {
+                    var phaseKey = (int)classifier.Classifier(PilotSide.Left).Phase * 8 + (int)classifier.Classifier(PilotSide.Right).Phase;
+                    if (phaseKey != readyKey || Waiting(PilotSide.Left) || Waiting(PilotSide.Right))
+                    {
+                        readyKey = phaseKey;
+                        dirty = true;
+                    }
+                }
             }
             if (!dirty) return;
             dirty = false;
@@ -272,6 +283,11 @@ namespace Anseong.UI
                 builder.Append("공격 인정    ").Append(attacks[0]).Append("  /  ").Append(attacks[1]).Append('\n');
                 if (combat != null && combat.Resolver != null) DrawCombat();
                 if (guard != null) DrawGuard();
+                builder.Append("다음 펀치    ");
+                ReadyText(PilotSide.Left);
+                builder.Append("  /  ");
+                ReadyText(PilotSide.Right);
+                builder.Append('\n');
                 builder.Append("──────────────\n");
                 for (var i = 0; i < recentCount; i++) builder.Append(recent[i]).Append('\n');
             }
@@ -320,6 +336,33 @@ namespace Anseong.UI
             builder.Append('\n');
             if (combat.Boss == null) builder.Append("<color=#FF6B6B>보스 없음: 모든 공격이 헛침</color>\n");
             if (lastCombat.Length > 0) builder.Append(lastCombat).Append('\n');
+        }
+
+        bool Waiting(PilotSide side)
+        {
+            var phase = classifier.Classifier(side).Phase;
+            return calibration.UsesHand(side) && (phase == PunchPhase.WaitingForNeutral || phase == PunchPhase.Recovering);
+        }
+
+        void ReadyText(PilotSide side)
+        {
+            if (!calibration.UsesHand(side))
+            {
+                builder.Append('-');
+                return;
+            }
+            var punch = classifier.Classifier(side);
+            switch (punch.Phase)
+            {
+                case PunchPhase.Ready: builder.Append("<color=#5BE37D>준비</color>"); break;
+                case PunchPhase.Moving: builder.Append("휘두르는 중"); break;
+                case PunchPhase.TrackingLost: builder.Append("<color=#FF6B6B>추적 끊김</color>"); break;
+                default:
+                    var o = punch.NeutralOffset;
+                    builder.Append("<color=#FFD24D>가드 자리로</color> ");
+                    builder.Append(o.z > 0.1f ? "당기기" : Mathf.Abs(o.x) > Mathf.Abs(o.y) ? (o.x > 0f ? "왼쪽으로" : "오른쪽으로") : (o.y > 0f ? "내리기" : "올리기"));
+                    break;
+            }
         }
 
         void Row(string label, PunchKind kind)

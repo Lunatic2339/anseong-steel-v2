@@ -81,8 +81,12 @@ namespace Anseong.Combat
         [Tooltip("동작 시작: 바깥에서 준비 없이 안쪽으로 가는 속도 최소값(m/s). 훅을 옆에서 바로 시작할 때.")]
         public float departInwardSpeed = 0.35f;
 
-        [Tooltip("재장전: 중립(보정한 가드 위치) 반경(m).")]
-        public float neutralRadius = 0.12f;
+        [Tooltip("재장전: 친 뒤 손이 보정한 가드 위치에서 좌우·위아래로 이만큼(m) 안에 돌아와야 다음 동작을 센다. " +
+                 "10/25 헤드셋: 12cm(앞뒤 포함)는 가드로 돌아오는 자리가 조금만 달라져도 다음 펀치를 영영 못 세서 넓혔다.")]
+        public float neutralRadius = 0.25f;
+
+        [Tooltip("재장전: 앞뒤로는 가드 위치보다 이만큼(m) 앞까지만 돌아오면 된다(가드보다 몸 쪽으로 더 당긴 것은 괜찮다).")]
+        public float neutralForwardBand = 0.10f;
 
         [Tooltip("재장전: 중립 반경 안에 머무를 시간(초).")]
         public float neutralDwell = 0.15f;
@@ -191,6 +195,13 @@ namespace Anseong.Combat
             kind = Evaluate(count - 1, previousTime, settings.peekMinForward).Kind;
             return kind != PunchKind.None;
         }
+
+        /// <summary>마지막 샘플의 손 − 중립(몸 기준, m). 안내판이 "가드 자리로 돌아오세요"를 띄울 때 쓴다.</summary>
+        public Vector3 NeutralOffset { get; private set; }
+
+        /// <summary>지금 손이 재장전 자리 안인지(다음 동작을 셀 수 있는 자리).</summary>
+        public bool AtNeutral(Vector3 offset) => offset.z <= settings.neutralForwardBand
+            && new Vector2(offset.x, offset.y).magnitude <= settings.neutralRadius;
         public PunchResult Last { get; private set; }
         public int CompletedCount => strikeCount;
 
@@ -243,11 +254,12 @@ namespace Anseong.Combat
 
             var completed = false;
             var offset = position - neutral;
+            NeutralOffset = offset;
             switch (Phase)
             {
                 case PunchPhase.WaitingForNeutral:
                 case PunchPhase.Recovering:
-                    if (offset.magnitude <= settings.neutralRadius && velocity.magnitude <= settings.stopSpeed)
+                    if (AtNeutral(offset) && velocity.magnitude <= settings.stopSpeed)
                     {
                         if (homeSince < 0) homeSince = time;
                         if (time - homeSince >= settings.neutralDwell) Phase = PunchPhase.Ready;

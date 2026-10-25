@@ -207,7 +207,8 @@ namespace Anseong.Combat
             list.AddFloat(g, "punch.startSpeed", "동작 시작 속도(m/s)", () => s.startSpeed, v => s.startSpeed = v, 0.2f, 3f, 0.05f);
             list.AddFloat(g, "punch.departForwardSpeed", "시작 앞 속도(m/s)", () => s.departForwardSpeed, v => s.departForwardSpeed = v, 0.05f, 2f, 0.05f);
             list.AddFloat(g, "punch.departInwardSpeed", "시작 안쪽 속도(m/s)", () => s.departInwardSpeed, v => s.departInwardSpeed = v, 0.05f, 2f, 0.05f);
-            list.AddFloat(g, "punch.neutralRadius", "재장전 반경(m)", () => s.neutralRadius, v => s.neutralRadius = v, 0.03f, 0.4f, 0.01f);
+            list.AddFloat(g, "punch.neutralRadius", "재장전 좌우·위아래 반경(m)", () => s.neutralRadius, v => s.neutralRadius = v, 0.05f, 0.5f, 0.01f);
+            list.AddFloat(g, "punch.neutralForwardBand", "재장전 앞쪽 허용(m)", () => s.neutralForwardBand, v => s.neutralForwardBand = v, 0f, 0.4f, 0.01f);
             list.AddFloat(g, "punch.neutralDwell", "재장전 머무름(초)", () => s.neutralDwell, v => s.neutralDwell = v, 0f, 1f, 0.05f);
             list.AddFloat(g, "punch.stopSpeed", "멈춤 속도(m/s)", () => s.stopSpeed, v => s.stopSpeed = v, 0.05f, 1f, 0.05f);
             list.AddFloat(g, "punch.stopDwell", "멈춤 시간(초)", () => s.stopDwell, v => s.stopDwell = v, 0f, 0.5f, 0.02f);
