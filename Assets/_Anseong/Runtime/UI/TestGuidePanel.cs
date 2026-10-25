@@ -314,6 +314,7 @@ namespace Anseong.UI
                 case PunchReason.Ambiguous: return "애매함";
                 case PunchReason.TooLong: return "너무 김";
                 case PunchReason.CapacityExceeded: return "샘플 초과";
+                case PunchReason.RobotLagged: return "로봇 팔이 덜 뻗음";
                 default: return reason.ToString();
             }
         }

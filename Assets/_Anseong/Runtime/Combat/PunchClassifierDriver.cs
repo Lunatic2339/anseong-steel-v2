@@ -35,6 +35,9 @@ namespace Anseong.Combat
         [SerializeField, Min(0f), Tooltip("아무리 늦어도 이 시간(초) 뒤에는 판정을 낸다.")]
         float maxHoldSeconds = 0.8f;
 
+        [SerializeField, Range(0f, 1f), Tooltip("로봇 주먹이 사람 손 목표가 뻗은 거리의 이 비율만큼은 뻗어야 펀치로 친다. 빨리 치고 빼서 로봇 팔이 거의 안 움직이면 '로봇 팔이 덜 뻗음'.")]
+        float minRobotReach = 0.6f;
+
         [SerializeField, Tooltip("왼팔·오른팔 로봇 팔(같은 오브젝트의 RobotArmDriver). 비어 있으면 시작할 때 한 번 찾는다.")]
         RobotArmDriver[] robotArms = new RobotArmDriver[2];
 
@@ -138,7 +141,11 @@ namespace Anseong.Combat
                 var completed = classifiers[h].Sample(arm.ToBody(calibration.CompensateHand(sample.Position)), sample.Tracked, sample.AttackIntent, now, out var result);
                 var phase = classifiers[h].Phase;
                 // 휘두르기 시작한 프레임의 머리 위치를 잡아 두고 끝날 때 얼마나 앞으로 갔는지 남긴다(기록용).
-                if (phase == PunchPhase.Moving && lastPhase[h] != PunchPhase.Moving) headAtStart[h] = head;
+                if (phase == PunchPhase.Moving && lastPhase[h] != PunchPhase.Moving)
+                {
+                    headAtStart[h] = head;
+                    StartStroke(h);
+                }
                 lastPhase[h] = phase;
                 if (completed)
                 {
@@ -157,30 +164,42 @@ namespace Anseong.Combat
 #endif
         }
 
-        /// <summary>로봇 주먹이 따라올 때까지 결과를 붙잡는다. 앞 결과가 아직 남아 있으면 먼저 내보낸다.</summary>
+        RobotArmDriver ArmFor(int h)
+        {
+            var arm = robotArms[h];
+            return waitForRobotFist && arm != null && arm.IsActive ? arm : null;
+        }
+
+        /// <summary>휘두르기 시작: 앞 결과가 아직 남아 있으면 내보내고, 로봇 주먹이 얼마나 따라오는지 재기 시작한다.</summary>
+        void StartStroke(int h)
+        {
+            if (holds[h].Pending) Report((PilotSide)h, holds[h].Finish(minRobotReach));
+            var arm = ArmFor(h);
+            if (arm != null) holds[h].StartStroke(arm.FistRatio);
+            else holds[h].Clear();
+        }
+
+        /// <summary>로봇 주먹이 따라올 때까지 결과를 붙잡는다.</summary>
         void Hold(int h, PunchResult result, double now)
         {
-            if (holds[h].Pending)
+            if (holds[h].Pending) Report((PilotSide)h, holds[h].Finish(minRobotReach));
+            if (ArmFor(h) == null)
             {
                 holds[h].Clear();
-                Report((PilotSide)h, holds[h].Result);
-            }
-            var arm = robotArms[h];
-            if (!waitForRobotFist || arm == null || !arm.IsActive)
-            {
                 Report((PilotSide)h, result);
                 return;
             }
-            holds[h].Begin(result, arm.FistRatio, now);
+            holds[h].Begin(result, now);
         }
 
         void StepHold(int h, double now)
         {
+            var arm = ArmFor(h);
+            if (arm != null) holds[h].Track(arm.FistRatio, arm.TargetRatio);
             if (!holds[h].Pending) return;
-            var arm = robotArms[h];
-            var fist = arm != null ? arm.FistRatio : Vector3.zero;
-            var lag = arm != null && arm.IsActive ? arm.LagRatio : 0f;
-            if (holds[h].Step(fist, lag, now, catchUpRatio, maxHoldSeconds)) Report((PilotSide)h, holds[h].Result);
+            var lag = arm != null ? arm.LagRatio : 0f;
+            if (arm == null || holds[h].Step(arm.FistRatio, lag, now, catchUpRatio, maxHoldSeconds))
+                Report((PilotSide)h, holds[h].Finish(minRobotReach));
         }
 
         void Report(PilotSide side, PunchResult result)
