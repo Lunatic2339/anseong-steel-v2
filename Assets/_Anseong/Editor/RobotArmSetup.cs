@@ -48,6 +48,8 @@ namespace Anseong.EditorTools
             var serialized = new SerializedObject(torso);
             serialized.FindProperty("robotRoot").objectReferenceValue = robotRoot;
             serialized.FindProperty("spine").objectReferenceValue = spine;
+            var head = FindUnique(robotRoot, RobotSandboxUtility.HeadBone);
+            serialized.FindProperty("head").objectReferenceValue = head;
             serialized.ApplyModifiedPropertiesWithoutUndo();
             foreach (var driver in arms.GetComponents<RobotArmDriver>())
             {
@@ -55,7 +57,7 @@ namespace Anseong.EditorTools
                 arm.FindProperty("torso").objectReferenceValue = torso;
                 arm.ApplyModifiedPropertiesWithoutUndo();
             }
-            lines.Add("허리 회전: " + spine.name);
+            lines.Add("허리 회전: " + spine.name + (head != null ? ", 머리 정면 유지: " + head.name : ", 머리 뼈 없음(머리도 같이 돎)"));
             lines.Add(AddPunchClassifier(arms));
             lines.Add(CombatSetup.AddPlayerCombat(arms));
             report = string.Join(" / ", lines);
