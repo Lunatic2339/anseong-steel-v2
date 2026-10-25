@@ -1,3 +1,4 @@
+using Anseong.Core;
 using UnityEngine;
 
 namespace Anseong.Pilot
@@ -8,7 +9,7 @@ namespace Anseong.Pilot
     /// <para>조종석은 머리 뼈 위치를 따라가므로(CockpitSeat followWeight) 허리를 돌리면 시점도 조금 옮겨진다.</para>
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
-    public class TorsoTwistDriver : MonoBehaviour
+    public class TorsoTwistDriver : MonoBehaviour, ITunable
     {
         /// <summary>Animator 평가 뒤, 팔 드라이버(100) 전.</summary>
         public const int ExecutionOrder = 90;
@@ -92,6 +93,19 @@ namespace Anseong.Pilot
             var left = calibration.Get(PilotSide.Left);
             var right = calibration.Get(PilotSide.Right);
             return TorsoTwist.ShoulderShift(side == PilotSide.Left ? left : right, left, right, yaw);
+        }
+
+        /// <summary>인게임 조절 메뉴: 허리 회전.</summary>
+        public void AddTuning(TuningList list)
+        {
+            const string g = "허리";
+            list.AddToggle(g, "torso.enabled", "허리 회전", () => twistEnabled, v => twistEnabled = v);
+            if (settings == null) return;
+            var s = settings;
+            list.AddFloat(g, "torso.handWeight", "손 비율", () => s.handWeight, v => s.handWeight = v, 0f, 1f, 0.05f);
+            list.AddFloat(g, "torso.headWeight", "고개 비율", () => s.headWeight, v => s.headWeight = v, 0f, 1f, 0.05f);
+            list.AddFloat(g, "torso.maxDegrees", "최대 각도(도)", () => s.maxDegrees, v => s.maxDegrees = v, 0f, 60f, 5f, 0);
+            list.AddFloat(g, "torso.responseSeconds", "따라가는 시간(초)", () => s.responseSeconds, v => s.responseSeconds = v, 0f, 0.5f, 0.02f);
         }
     }
 }
