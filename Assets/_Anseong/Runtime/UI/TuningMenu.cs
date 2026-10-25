@@ -74,7 +74,7 @@ namespace Anseong.UI
         bool dirty = true;
 
         // 검증 순서(M1-04_검증_조절값.md)대로 묶음을 보여 준다.
-        static readonly string[] GroupOrder = { "몸 이동", "손목", "펀치 인식", "그립", "묵직함", "팔 매핑", "허리" };
+        static readonly string[] GroupOrder = { "몸 이동", "손목", "펀치 인식", "그립", "묵직함", "공격 보정", "연계·부스트", "보스 HP", "가드", "팔 매핑", "허리" };
 
         void Start()
         {
