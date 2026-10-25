@@ -15,7 +15,7 @@ namespace Anseong.Combat
     /// </summary>
     public sealed class StrikeLog : IDisposable
     {
-        public const string Header = "time_s,arm,kind,reason,side_ratio,straightness,outset_m,inward_sweep_m,arc_ratio,rise_m,head_forward_m,grip,tracked,strike_id,hit";
+        public const string Header = "time_s,arm,kind,reason,side_ratio,straightness,outset_m,inward_sweep_m,arc_ratio,turn_deg,rise_m,head_forward_m,grip,tracked,strike_id,hit";
 
         readonly ConcurrentQueue<string> pending = new ConcurrentQueue<string>();
         readonly string path;
@@ -50,6 +50,7 @@ namespace Anseong.Combat
                 Number(m.Outset),
                 Number(m.InwardSweep),
                 Number(m.ArcRatio),
+                Number(m.TurnDegrees),
                 Number(m.Rise),
                 Number(r.HeadForward),
                 r.GripHeld ? "1" : "0",

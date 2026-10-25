@@ -354,6 +354,22 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void StraightInwardDiagonal_IsNotHook()
+        {
+            // 10/25 헤드셋: 대각선으로 곧게 친 펀치가 훅으로 잡혔다. 안쪽으로 20cm 넘게 가도 곧으면 훅이 아니다.
+            foreach (var left in new[] { true, false })
+            {
+                var s = left ? 1f : -1f;
+                var run = new Run(left, 90);
+                // 살짝 휜(4cm) 대각선: 안쪽 22cm, 앞 40cm. 손은 완전히 곧게 못 친다.
+                run.Stroke(u => new Vector3(s * (0.22f * u - 0.04f * Mathf.Sin(u * Mathf.PI)), 0f, 0.4f * u));
+                Assert.AreEqual(1, run.Results.Count);
+                var r = run.Results[0];
+                Assert.AreNotEqual(PunchKind.Hook, r.Kind, $"대각선 {(left ? "L" : "R")}: 꺾임 {r.Measure.TurnDegrees:F0}°, 호 {r.Measure.ArcRatio:F3}");
+            }
+        }
+
+        [Test]
         public void DiagonalSwipe_IsAmbiguous()
         {
             var run = new Run(true, 90);
