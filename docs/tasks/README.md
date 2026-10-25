@@ -8,7 +8,7 @@
 2. "git pull 하고 docs/tasks/<파일> 읽고 계획 세워줘. 아직 수정하지 마."
 3. 계획 승인 → 모드 **Accept edits** → "계획대로 진행해."
 4. 사람이 할 일(Unity 조작, 헤드셋 확인)을 한다.
-5. "결과 칸 채우고 feat/<이름>-<기능> 브랜치로 커밋하고 PR 만들어줘."
+5. "결과 칸 채우고 feat/m<마일스톤>-<번호>-<내용> 브랜치(예: feat/m1-05-punch-hit-boss-hp)로 커밋하고 PR 만들어줘."
 6. 총괄 채팅에 PR 링크를 보낸다.
 
 파일을 넣을 위치와 기존 파일의 쓰임은 [`docs/폴더_지도.md`](../폴더_지도.md)에 있다.
@@ -28,6 +28,11 @@
 | `M1-05-hit-combat-boss-hp.md` | M1 (10/27) | 선우 | M1-03·04 후 |
 | `M1-06-guard-judgement.md` | M1 (10/27) | 선우 | M1-03 후 (M1-05와 동시) |
 | `M1-07-midterm-build.md` | 중간발표 (10/29) | 선우 | M1-05·06, E-01·S-01 1차 후 |
+| `M2-01-host-server-path.md` | M2 (10/31) | 선우 | M1-05 후. 1인 양팔을 NGO 호스트로 |
+| `M2-02-boss-attack-state-machine.md` | M2 (11/01) | 선우 | M2-01 후, D-01 값 사용 |
+| `M2-03-guard-dodge-pilot-hp.md` | M2 (11/02) | 선우 | M2-02·M1-06 후 |
+| `M2-04-boss-patterns-phases-movement.md` | M2 (11/04) | 선우 | M2-03 후 |
+| `M2-05-finisher-boss-defeat.md` | M2 완료 (11/05) | 선우 | M2-04 후 |
 | `A-01-boss-animations.md` | 아트 (10/29, 11/12) | 유진 (보스 + 플레이어 몸 클립) | 지금 시작 |
 | `A-02-merge-and-material-slots.md` | 아트 (11/05) | 성재 (+유진) | 지금 시작 |
 | `A-03-robot-colors.md` | 아트 (11/19) | 성재 (플레이어 색) + 유진 (보스 색) | A-02 후 |
