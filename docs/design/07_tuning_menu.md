@@ -8,7 +8,7 @@
 | 묶음 | 컴포넌트 | 항목 |
 |---|---|---|
 | 묵직함 | `Pilot/RobotArmDriver` | 팔 반응 시간 |
-| 허리 | `Pilot/TorsoTwistDriver` | 허리 회전, 손 비율, 최대 각도 |
+| 허리 | `Pilot/TorsoTwistDriver` | 허리 회전, 머리·조종석은 정면 유지, 손 비율, 최대 각도 |
 | 조종석 흔들림 | `Pilot/CockpitSeat` | 붙이는 방식(완전 고정/좌우 회전만/위치만), 위치만: 따라가는 비율 |
 | 공격 보정 | `Combat/CombatDirector` | [확인] 2개, 공격 보정 켜기, 끌려가는 시간 |
 | 연계·부스트 | `Combat/CombatDirector` | 다음 명중 제한, 부스트 입력창 |

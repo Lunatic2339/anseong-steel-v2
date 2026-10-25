@@ -6,7 +6,8 @@ namespace Anseong.Pilot
     /// <summary>
     /// 사람 허리 회전(어림값)을 로봇 허리 뼈(Spine) yaw로 덮어쓴다. 팔 드라이버보다 먼저 돌아서 어깨가 같이 돈 뒤 팔 IK가 풀린다.
     /// 1인 양팔 모드에서만 쓴다(2인 모드는 두 조종사의 손이 다른 PC에 있어 M3에서 정한다). 보정 전이나 끄면 0으로 돌아온다.
-    /// <para>조종석은 머리 뼈 위치를 따라가므로(CockpitSeat followWeight) 허리를 돌리면 시점도 조금 옮겨진다.</para>
+    /// <para>조종석은 머리 뼈를 따라가므로(CockpitSeat) 허리를 돌리면 시점도 같이 돈다. 그래서 기본으로 머리 뼈는 반대로 돌려
+    /// 정면을 유지한다(선우 10/25: 조종석 완전 고정에서 좌우로 심하게 돌아 멀미). 허리·어깨·팔만 돈다.</para>
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
     public class TorsoTwistDriver : MonoBehaviour, ITunable
@@ -19,6 +20,12 @@ namespace Anseong.Pilot
 
         [SerializeField, Tooltip("돌릴 허리 뼈(mixamorig:Spine). 메뉴가 채운다.")]
         Transform spine;
+
+        [SerializeField, Tooltip("정면을 유지할 머리 뼈(mixamorig:Head). 메뉴가 채운다. 비어 있으면 머리도 허리와 같이 돈다.")]
+        Transform head;
+
+        [SerializeField, Tooltip("켜면 허리가 돌아도 머리 뼈(와 거기 붙은 조종석)는 정면을 유지한다(기본, 멀미 방지). 끄면 머리도 같이 돈다.")]
+        bool keepHeadForward = true;
 
         [SerializeField, Tooltip("손 입력. 비어 있으면 시작할 때 씬에서 한 번 찾는다.")]
         PilotHandInput input;
@@ -36,6 +43,8 @@ namespace Anseong.Pilot
         float targetYaw;
         Quaternion baseLocal, lastWritten;
         bool written;
+        Quaternion headBaseLocal, headLastWritten;
+        bool headWritten;
 
         /// <summary>지금 적용 중인 허리 yaw(도, 오른쪽 +).</summary>
         public float Yaw => yaw;
@@ -84,6 +93,21 @@ namespace Anseong.Pilot
                 spine.rotation = Quaternion.AngleAxis(yaw, robotRoot.up) * spine.rotation;
             lastWritten = spine.localRotation;
             written = true;
+            CounterRotateHead();
+        }
+
+        // 허리와 같은 방식으로 머리 뼈 원래 값을 기준으로 삼아 반대 yaw를 준다(회전이 쌓이지 않게).
+        void CounterRotateHead()
+        {
+            if (head == null) return;
+            var current = head.localRotation;
+            if (headWritten && Quaternion.Angle(current, headLastWritten) < 0.001f) current = headBaseLocal;
+            headBaseLocal = current;
+            head.localRotation = current;
+            if (keepHeadForward && Mathf.Abs(yaw) >= 0.01f)
+                head.rotation = Quaternion.AngleAxis(-yaw, robotRoot.up) * head.rotation;
+            headLastWritten = head.localRotation;
+            headWritten = true;
         }
 
         /// <summary>팔 매핑용: 이 허리 회전에서 side 쪽 사람 어깨가 움직인 양(트래킹 공간, m).</summary>
@@ -99,8 +123,9 @@ namespace Anseong.Pilot
         public void AddTuning(TuningList list)
         {
             const string g = "허리";
-            list.Describe(g, "할 것: 허리 회전 끄고 켜서 펀치 비교, 둘러보기\n볼 것: 펀치에 허리가 살짝 따라 돌고 둘러볼 땐 안 돎");
+            list.Describe(g, "할 것: 조종석 완전 고정에서 펀치, 머리 정면 유지 켜고 끄고 비교\n볼 것: 허리·어깨만 돌고 시점은 안 돎, 멀미 없음");
             list.AddToggle(g, "torso.enabled", "허리 회전", () => twistEnabled, v => twistEnabled = v);
+            if (head != null) list.AddToggle(g, "torso.keepHeadForward", "머리·조종석은 정면 유지", () => keepHeadForward, v => keepHeadForward = v);
             if (settings == null) return;
             var s = settings;
             list.AddFloat(g, "torso.handWeight", "손 비율", () => s.handWeight, v => s.handWeight = v, 0f, 1f, 0.05f);
