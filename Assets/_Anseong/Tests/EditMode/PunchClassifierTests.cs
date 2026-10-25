@@ -56,14 +56,21 @@ namespace Anseong.Tests
 
         static Vector3 Jab(float u) => new Vector3(0f, 0f, 0.4f * u);
 
-        /// <summary>바깥(왼팔이면 −X)으로 23cm 준비했다가 안쪽으로 46cm 휘어 들어온다.</summary>
+        /// <summary>
+        /// 바깥(왼팔이면 −X)으로 outset만큼 준비했다가(앞으로 10cm) 안쪽으로 110° 원호를 그리며 2 × outset 휘어 들어온다.
+        /// 10/25 헤드셋 CSV에서 실제 훅은 호/현 1.16~1.33이었다(곧은 대각선은 1.01~1.04). 원호 110°는 호/현 약 1.17.
+        /// </summary>
         static Func<float, Vector3> Hook(bool left, float outset = 0.23f)
         {
             var s = left ? 1f : -1f;
-            return u => new Vector3(
-                s * (u < 0.35f ? -outset * u / 0.35f : -outset + 2f * outset * (1f - Mathf.Cos((u - 0.35f) / 0.65f * Mathf.PI)) / 2f),
-                0f,
-                0.4f * Mathf.Sin(u * Mathf.PI / 2f));
+            const float windUp = 0.3f, sweep = 110f * Mathf.Deg2Rad;
+            var radius = 2f * outset / (1f - Mathf.Cos(sweep));
+            return u =>
+            {
+                if (u < windUp) return new Vector3(-s * outset * u / windUp, 0f, 0.1f * u / windUp);
+                var phi = (u - windUp) / (1f - windUp) * sweep;
+                return new Vector3(s * (-outset + radius * (1f - Mathf.Cos(phi))), 0f, 0.1f + radius * Mathf.Sin(phi));
+            };
         }
 
         static void AssertSingle(Run run, PunchKind expected, string label)
@@ -235,7 +242,9 @@ namespace Anseong.Tests
             {
                 var s = left ? 1f : -1f;
                 var run = new Run(left, 90);
-                run.Stroke(u => new Vector3(s * 0.3f * (1f - Mathf.Cos(u * Mathf.PI)) / 2f, 0f, 0.3f * Mathf.Sin(u * Mathf.PI / 2f)));
+                // 안쪽으로 30cm 휘어 들어오는 110° 원호(바깥 준비 없음).
+                var radius = 0.3f / (1f - Mathf.Cos(110f * Mathf.Deg2Rad));
+                run.Stroke(u => new Vector3(s * radius * (1f - Mathf.Cos(u * 110f * Mathf.Deg2Rad)), 0f, radius * Mathf.Sin(u * 110f * Mathf.Deg2Rad)));
                 AssertSingle(run, PunchKind.Hook, "넓은 가드 훅 " + (left ? "L" : "R"));
             }
         }
@@ -249,7 +258,7 @@ namespace Anseong.Tests
             run.Stroke(loop);
             AssertSingle(run, PunchKind.Hook, "크게 도는 훅");
 
-            var old = new PunchClassifier(false, new PunchClassifierSettings { verticalAgainstWidestSpan = false, maxVerticalRatio = 0.7f });
+            var old = new PunchClassifier(false, new PunchClassifierSettings { verticalAgainstWidestSpan = false, maxVerticalRatio = 0.5f });
             old.SetNeutral(Neutral);
             var results = new List<PunchResult>();
             double t = 0;
@@ -322,18 +331,18 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void StraightInwardDiagonal_IsNotHook()
+        public void StraightInwardDiagonal_IsJab_NotHook()
         {
-            // 10/25 헤드셋: 대각선으로 곧게 친 펀치가 훅으로 잡혔다. 안쪽으로 20cm 넘게 가도 곧으면 훅이 아니다.
+            // 10/25 헤드셋: 대각선으로 곧게 친 펀치가 훅으로 잡혔다. 안쪽으로 크게 가도 곧으면 훅이 아니라 잽이다.
             foreach (var left in new[] { true, false })
             {
                 var s = left ? 1f : -1f;
                 var run = new Run(left, 90);
-                // 살짝 휜(4cm) 대각선: 안쪽 22cm, 앞 40cm. 손은 완전히 곧게 못 친다.
-                run.Stroke(u => new Vector3(s * (0.22f * u - 0.04f * Mathf.Sin(u * Mathf.PI)), 0f, 0.4f * u));
+                // 살짝 휜(4cm) 대각선: 안쪽 36cm, 앞 40cm(CSV 대각선 잽 좌우/전진 0.85~0.96). 손은 완전히 곧게 못 친다.
+                run.Stroke(u => new Vector3(s * (0.36f * u - 0.04f * Mathf.Sin(u * Mathf.PI)), 0f, 0.4f * u));
                 Assert.AreEqual(1, run.Results.Count);
                 var r = run.Results[0];
-                Assert.AreNotEqual(PunchKind.Hook, r.Kind, $"대각선 {(left ? "L" : "R")}: 꺾임 {r.Measure.TurnDegrees:F0}°, 호 {r.Measure.ArcRatio:F3}");
+                Assert.AreEqual(PunchKind.Jab, r.Kind, $"대각선 {(left ? "L" : "R")}: 꺾임 {r.Measure.TurnDegrees:F0}°, 호 {r.Measure.ArcRatio:F3}");
             }
         }
 
