@@ -1060,14 +1060,14 @@ MonoBehaviour:
     maxJabSideRatio: 0.55
     minJabStraightness: 0.8
     minHookOutset: 0
-    minHookSweep: 0.22
-    minHookArcRatio: 1.02
+    minHookSweep: 0.17
+    minHookArcRatio: 1.01
     minUppercutRise: 0.18
     minUppercutRiseRatio: 1
     maxUppercutSideRatio: 0.6
     departUpSpeed: 0.5
     minForward: 0.18
-    maxVerticalRatio: 0.7
+    maxVerticalRatio: 0.85
     verticalAgainstWidestSpan: 1
     startSpeed: 0.75
     departForwardSpeed: 0.25
@@ -1085,6 +1085,12 @@ MonoBehaviour:
     maxStrokeSeconds: 1.25
     maxSampleGap: 0.15
     maxTrackingSpeed: 15
+  waitForRobotFist: 1
+  catchUpRatio: 0.08
+  maxHoldSeconds: 0.8
+  robotArms:
+  - {fileID: 0}
+  - {fileID: 0}
   writeCsv: 1
   logToConsole: 1
   indicators:

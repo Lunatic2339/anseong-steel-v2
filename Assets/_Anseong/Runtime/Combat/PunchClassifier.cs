@@ -24,6 +24,8 @@ namespace Anseong.Combat
         TooLong,
         /// <summary>한 동작의 샘플이 너무 많다.</summary>
         CapacityExceeded,
+        /// <summary>로봇 주먹이 따라오기 전에 손을 빼서 로봇 팔이 거의 안 뻗었다(묵직함, 10/25).</summary>
+        RobotLagged,
     }
 
     public enum PunchPhase { WaitingForNeutral, Ready, Moving, Recovering, TrackingLost }
@@ -531,39 +533,72 @@ namespace Anseong.Combat
     /// <summary>
     /// 사람 손으로 끝난 펀치 결과를 로봇 주먹이 따라올 때까지 붙잡아 둔다(10/25 헤드셋: 묵직함 0.3에서 로봇 팔이 다 오기 전에 판정이 먼저 났다).
     /// 로봇 주먹이 목표를 거의 따라잡았거나, 가장 멀리 간 뒤 돌아오기 시작했거나, 최대 시간이 지나면 내보낸다.
+    /// 그때 로봇 주먹이 사람 손 목표만큼 충분히 뻗지 못했으면(빨리 치고 뺀 경우) 펀치로 치지 않는다(10/25: 0.6에서 로봇 팔은 거의 안 움직였는데 판정).
     /// 위치는 로봇 팔 길이 배수(로봇 몸 기준)라 로봇 크기와 무관하다.
     /// </summary>
     public sealed class StrikeHold
     {
         const float TurnBackRatio = 0.01f;
         Vector3 start;
-        float farthest;
+        float robotFarthest, targetFarthest;
         double since;
+        bool tracking;
 
         public bool Pending { get; private set; }
         public PunchResult Result { get; private set; }
 
-        public void Begin(PunchResult result, Vector3 robotFist, double time)
+        /// <summary>로봇 주먹이 뻗은 거리 ÷ 사람 손 목표가 뻗은 거리(휘두르기 시작한 곳부터). 1 = 끝까지 따라감.</summary>
+        public float Reach => targetFarthest > 1e-4f ? robotFarthest / targetFarthest : 1f;
+
+        /// <summary>사람 손이 휘두르기 시작한 순간의 로봇 주먹 목표.</summary>
+        public void StartStroke(Vector3 robotFist)
+        {
+            start = robotFist;
+            robotFarthest = targetFarthest = 0f;
+            tracking = true;
+        }
+
+        /// <summary>휘두르는 동안과 기다리는 동안 매 프레임. robotFist = 반응 지연 뒤 목표, target = 사람 손 그대로의 목표.</summary>
+        public void Track(Vector3 robotFist, Vector3 target)
+        {
+            if (!tracking) return;
+            robotFarthest = Mathf.Max(robotFarthest, (robotFist - start).magnitude);
+            targetFarthest = Mathf.Max(targetFarthest, (target - start).magnitude);
+        }
+
+        public void Begin(PunchResult result, double time)
         {
             Result = result;
-            start = robotFist;
-            farthest = 0f;
             since = time;
             Pending = true;
         }
 
-        /// <summary>robotFist = 로봇 주먹 목표(반응 지연 뒤), lag = 사람 손 목표와의 차이. 둘 다 팔 길이 배수. 내보낼 때 true.</summary>
+        /// <summary>lag = 사람 손 목표와의 차이(팔 길이 배수). 내보낼 때 true(그다음 <see cref="Finish"/>).</summary>
         public bool Step(Vector3 robotFist, float lag, double time, float caughtUp, float maxSeconds)
         {
             if (!Pending) return false;
-            var distance = (robotFist - start).magnitude;
-            farthest = Mathf.Max(farthest, distance);
-            var turnedBack = distance < farthest - TurnBackRatio;
-            if (lag > caughtUp && !turnedBack && time - since < maxSeconds) return false;
-            Pending = false;
-            return true;
+            var turnedBack = tracking && (robotFist - start).magnitude < robotFarthest - TurnBackRatio;
+            return lag <= caughtUp || turnedBack || time - since >= maxSeconds;
         }
 
-        public void Clear() => Pending = false;
+        /// <summary>내보낼 결과. 로봇 주먹이 minReach만큼 따라오지 못했으면 펀치가 아닌 것으로 바꾼다.</summary>
+        public PunchResult Finish(float minReach)
+        {
+            var result = Result;
+            if (tracking && result.Kind != PunchKind.None && Reach < minReach)
+            {
+                result.Kind = PunchKind.None;
+                result.Reason = PunchReason.RobotLagged;
+            }
+            Pending = false;
+            tracking = false;
+            return result;
+        }
+
+        public void Clear()
+        {
+            Pending = false;
+            tracking = false;
+        }
     }
 }

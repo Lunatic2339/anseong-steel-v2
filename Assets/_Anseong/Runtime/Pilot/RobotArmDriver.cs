@@ -99,6 +99,9 @@ namespace Anseong.Pilot
         /// <summary>반응 지연 뒤 주먹 목표(로봇 어깨 기준·로봇 정면 기준, 팔 길이 배수).</summary>
         public Vector3 FistRatio { get; private set; }
 
+        /// <summary>반응 지연 전 주먹 목표(사람 손 그대로, 같은 기준).</summary>
+        public Vector3 TargetRatio { get; private set; }
+
         /// <summary>반응 지연 뒤 주먹 목표가 사람 손 목표보다 뒤처진 거리(팔 길이 배수). 0 = 따라잡음.</summary>
         public float LagRatio { get; private set; }
 
@@ -221,6 +224,7 @@ namespace Anseong.Pilot
             }
 
             FistRatio = length > 0f ? filteredLocal / length : Vector3.zero;
+            TargetRatio = length > 0f ? local / length : Vector3.zero;
             LagRatio = length > 0f ? (local - filteredLocal).magnitude / length : 0f;
 
             // 목표는 로봇 정면 기준으로 저장하므로 로봇이 돌거나 움직여도 손이 따로 움직인 것으로 보지 않는다.
