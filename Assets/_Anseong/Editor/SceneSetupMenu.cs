@@ -32,6 +32,9 @@ namespace Anseong.EditorTools
         static readonly Vector3 PanelOffset = new Vector3(0f, -0.12f, 0.8f);
         const int PanelFontSize = 64;
         const float PanelCharacterSize = 0.0022f;
+        // 조절 메뉴: 안내판 왼쪽 위, 시점 쪽으로 조금 돌림(카메라 로컬 m·도).
+        static readonly Vector3 TuningOffset = new Vector3(-0.42f, 0.08f, 0.75f);
+        const float TuningYawDegrees = -25f;
 
         [MenuItem("Anseong/Setup/Add Tracking Probes")]
         static void AddTrackingProbes()
@@ -132,6 +135,7 @@ namespace Anseong.EditorTools
             var drivers = RobotArmSetup.ConnectDrivers(input, flow);
             var combats = CombatSetup.ConnectScene(input);
             var panel = AddTestGuidePanel(origin);
+            var tuning = AddTuningMenu(origin);
 
             EditorSceneManager.MarkSceneDirty(scene);
             if (missing > 0)
@@ -139,7 +143,7 @@ namespace Anseong.EditorTools
             if (drivers == 0)
                 Debug.LogWarning("[SceneSetupMenu] 씬에 RobotArmDriver가 없습니다. Robot_Player 프리팹을 다시 만들고(Build Player Robot Prefab) 이 메뉴를 다시 실행하세요.", origin);
             Debug.Log($"[SceneSetupMenu] XR Origin에 PilotHandInput·PilotCalibrationFlow를 연결하고 팔 드라이버 {drivers}개에 입력을 연결했습니다(기본 1인 양팔 모드). " +
-                      $"전투 판정 {combats}개에 입력·보스 연결. 테스트 안내판: {panel}. 씬을 저장하세요.", origin);
+                      $"전투 판정 {combats}개에 입력·보스 연결. 테스트 안내판: {panel}. 조절 메뉴(오른손 B): {tuning}. 씬을 저장하세요.", origin);
             return true;
         }
 
@@ -177,6 +181,43 @@ namespace Anseong.EditorTools
             serialized.FindProperty("text").objectReferenceValue = text;
             serialized.FindProperty("calibration").objectReferenceValue = origin.GetComponent<PilotCalibrationFlow>();
             serialized.FindProperty("classifier").objectReferenceValue = Object.FindAnyObjectByType<PunchClassifierDriver>(FindObjectsInactive.Include);
+            serialized.ApplyModifiedProperties();
+            return "XR 카메라 아래에 만듦";
+        }
+
+        /// <summary>헤드셋을 쓴 채 값을 바꾸는 조절 메뉴(개발용). 처음엔 숨김, 오른손 B로 연다.</summary>
+        static string AddTuningMenu(XROrigin origin)
+        {
+            var camera = origin.Camera != null ? origin.Camera.transform : null;
+            if (camera == null) return "카메라가 없어 만들지 않음";
+            if (camera.GetComponentInChildren<TuningMenu>(true) != null) return "이미 있음";
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var go = new GameObject("TuningMenu");
+            Undo.RegisterCreatedObjectUndo(go, "Add Tuning Menu");
+            go.transform.SetParent(camera, false);
+            go.transform.localPosition = TuningOffset;
+            go.transform.localRotation = Quaternion.Euler(0f, TuningYawDegrees, 0f);
+            var scale = Mathf.Max(1e-6f, camera.lossyScale.x);
+            go.transform.localScale = Vector3.one / scale;
+            var text = go.AddComponent<TextMesh>();
+            text.font = font;
+            text.fontSize = PanelFontSize;
+            text.characterSize = PanelCharacterSize;
+            text.anchor = TextAnchor.UpperCenter;
+            text.alignment = TextAlignment.Left;
+            text.richText = true;
+            text.color = Color.white;
+            text.text = "조절 메뉴";
+            var renderer = go.GetComponent<MeshRenderer>();
+            if (font != null) renderer.sharedMaterial = font.material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            var menu = go.AddComponent<TuningMenu>();
+            var serialized = new SerializedObject(menu);
+            serialized.FindProperty("text").objectReferenceValue = text;
+            serialized.FindProperty("input").objectReferenceValue = origin.GetComponent<PilotHandInput>();
             serialized.ApplyModifiedProperties();
             return "XR 카메라 아래에 만듦";
         }

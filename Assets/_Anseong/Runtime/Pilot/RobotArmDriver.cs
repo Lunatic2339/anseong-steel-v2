@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Anseong.Core;
 using UnityEngine;
 using Debug = UnityEngine.Debug;
 
@@ -11,7 +12,7 @@ namespace Anseong.Pilot
     /// 1인 양팔 모드에서는 왼손 → 왼팔, 오른손 → 오른팔. 뼈 참조·주먹 포즈는 Build Player Robot Prefab 메뉴가 채운다.
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
-    public class RobotArmDriver : MonoBehaviour
+    public class RobotArmDriver : MonoBehaviour, ITunable
     {
         /// <summary>Animator 평가 뒤, 조종석(CockpitSeat) 전.</summary>
         public const int ExecutionOrder = 100;
@@ -258,5 +259,18 @@ namespace Anseong.Pilot
             Gizmos.DrawLine(LastPose.Elbow, LastPose.Wrist);
         }
 #endif
+
+        /// <summary>인게임 조절 메뉴. 왼팔·오른팔이 같은 키로 등록해 한 번에 같이 바뀐다.</summary>
+        public void AddTuning(TuningList list)
+        {
+            list.AddFloat("묵직함", "arm.responseSeconds", "팔 반응 시간(초, 0 = 즉시)", () => responseSeconds, v => responseSeconds = v, 0f, 0.6f, 0.05f);
+            list.AddFloat("묵직함", "arm.maxTargetSpeed", "주먹 최대 속도(m/s 로봇, 0 = 제한 없음)", () => maxTargetSpeed, v => maxTargetSpeed = v, 0f, 80f, 5f, 0);
+            list.AddChoice("손목", "arm.wristLockMode", "손목 고정", () => (int)wristLockMode, v => wristLockMode = (WristLockMode)v, new[] { "항상", "그립 쥘 때만" });
+            if (solverSettings != null)
+                list.AddFloat("손목", "arm.lockedWristPitch", "고정 손목 위아래 꺾임(도)", () => solverSettings.lockedWristPitchDegrees, v => solverSettings.lockedWristPitchDegrees = v, -30f, 30f, 2f, 0);
+            list.AddChoice("팔 매핑", "arm.mappingMode", "매핑 방식", () => (int)mappingMode, v => mappingMode = (ArmMappingMode)v, new[] { "Linear(기본)", "가드 맞춤" });
+            list.AddFloat("팔 매핑", "arm.shoulderHeightOffset", "어깨 높이 보정(m, +면 주먹 내려감)", () => shoulderHeightOffset, v => shoulderHeightOffset = v, -0.3f, 0.3f, 0.02f);
+            list.AddToggle("팔 매핑", "arm.useElbowHint", "팔꿈치 들기 힌트", () => useElbowHint, v => useElbowHint = v);
+        }
     }
 }

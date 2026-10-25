@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Anseong.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Debug = UnityEngine.Debug;
@@ -25,7 +26,7 @@ namespace Anseong.Pilot
     /// 두 손이 모두 저장되면 다음 단계로 간다. 값은 그 판 동안만 메모리에 둔다.
     /// <para>안내는 개발용 Console 로그, 헤드셋 안 테스트 안내판(TestGuidePanel), 선택 시 기즈모다. 관객용 안내 화면은 M4.</para>
     /// </summary>
-    public class PilotCalibrationFlow : MonoBehaviour
+    public class PilotCalibrationFlow : MonoBehaviour, ITunable
     {
         [SerializeField, Tooltip("손 입력(같은 XR Origin의 PilotHandInput).")]
         PilotHandInput input;
@@ -406,5 +407,18 @@ namespace Anseong.Pilot
             }
         }
 #endif
+
+        /// <summary>인게임 조절 메뉴: 몸 이동 보정.</summary>
+        public void AddTuning(TuningList list)
+        {
+            var f = bodyFollow;
+            if (f == null) return;
+            const string g = "몸 이동";
+            list.AddToggle(g, "body.enabled", "몸 이동 보정", () => f.enabled, v => f.enabled = v);
+            list.AddFloat(g, "body.followAmount", "따라가는 비율", () => f.followAmount, v => f.followAmount = v, 0f, 1.5f, 0.05f);
+            list.AddFloat(g, "body.followSeconds", "따라가는 시간(초, 0 = 즉시)", () => f.followSeconds, v => f.followSeconds = v, 0f, 1f, 0.05f);
+            list.AddToggle(g, "body.followHeight", "높이도 따라감", () => f.followHeight, v => f.followHeight = v);
+            list.AddFloat(g, "body.maxOffset", "따라가는 최대 거리(m)", () => f.maxOffset, v => f.maxOffset = v, 0.5f, 5f, 0.25f);
+        }
     }
 }
