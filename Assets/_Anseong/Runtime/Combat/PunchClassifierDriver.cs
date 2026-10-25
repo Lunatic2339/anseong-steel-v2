@@ -12,7 +12,7 @@ namespace Anseong.Combat
     /// 동작이 끝날 때마다 <see cref="StrikeCompleted"/>를 낸다. 명중·피해는 M1-05가 이 이벤트를 받아 정한다.
     /// 개발 빌드에서는 동작마다 CSV 한 줄을 남기고, 로봇 주먹 옆 표시 색을 잠깐 바꾼다.
     /// </summary>
-    public class PunchClassifierDriver : MonoBehaviour, ITunable
+    public class PunchClassifierDriver : MonoBehaviour
     {
         [Header("입력")]
         [SerializeField, Tooltip("손 입력. 비어 있으면 시작할 때 씬에서 한 번 찾는다.")]
@@ -256,24 +256,6 @@ namespace Anseong.Combat
                           $"속도 {m.PeakSpeed:F1}m/s {m.Duration:F2}s", this);
             }
 #endif
-        }
-
-        /// <summary>인게임 조절 메뉴: 펀치 인식 기준(M1-04 검증에서 가장 많이 바꾸는 값).</summary>
-        public void AddTuning(TuningList list)
-        {
-            list.AddToggle("묵직함", "punch.waitForRobotFist", "판정을 로봇 주먹에 맞춤", () => waitForRobotFist, v => waitForRobotFist = v);
-            var s = settings;
-            if (s == null) return;
-            const string g = "펀치 인식";
-            list.Describe(g, "할 것: 그립 쥐고 팔마다 잽 20·훅 20·어퍼컷 10\n       가드 올리기 10, 잽 연타 10\n볼 것: 안내판 종류별 개수·실패 이유(90% 목표)");
-            list.AddCheck(g, "punch.jab", "잽 20번 중 18번 이상");
-            list.AddCheck(g, "punch.hook", "훅 20번 중 18번 이상");
-            list.AddCheck(g, "punch.uppercut", "어퍼컷 10번 중 9번 이상");
-            list.AddCheck(g, "punch.guardRaise", "가드 올리기는 0번");
-            list.AddCheck(g, "punch.combo", "잽 연타가 다 세짐");
-            list.AddCheck(g, "punch.double", "한 번 친 게 두 번 안 세짐");
-            // 인식 기준값은 strikes CSV로 Claude가 맞춘다(선우 10/25: 직접 볼 값만 메뉴에). Inspector에는 그대로 있다.
-            list.AddChoice(g, "punch.rearmMode", "다음 펀치 준비 방식", () => (int)s.rearmMode, v => s.rearmMode = (RearmMode)v, new[] { "거둬들이면", "가드로 돌아오면" });
         }
     }
 }

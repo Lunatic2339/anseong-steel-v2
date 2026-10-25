@@ -44,22 +44,24 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void ToggleAndChoice_Wrap()
+        public void ToggleChoiceAndSelection_StopAtEnds()
         {
             var box = new Box();
             var list = Make(box);
             list.Move(2);
-            list.Adjust(1);
+            Assert.IsTrue(list.Adjust(1));
             Assert.IsTrue(box.C);
-            list.Adjust(1);
+            Assert.IsFalse(list.Adjust(1), "켬에서 더 밀어도 그대로");
+            Assert.IsTrue(box.C);
+            list.Adjust(-1);
             Assert.IsFalse(box.C);
             list.Move(1);
-            list.Adjust(-1);
-            Assert.AreEqual(1, box.D);
+            Assert.IsFalse(list.Adjust(-1), "첫 선택지에서 왼쪽은 그대로");
+            Assert.AreEqual(0, box.D);
             list.Move(1);
-            Assert.AreEqual(0, list.Selected);
-            list.Move(-1);
-            Assert.AreEqual(3, list.Selected);
+            Assert.AreEqual(3, list.Selected, "마지막에서 아래로 가도 그대로");
+            list.Move(-10);
+            Assert.AreEqual(0, list.Selected, "처음에서 위로 가도 그대로");
         }
 
         [Test]

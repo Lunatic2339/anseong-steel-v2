@@ -26,7 +26,7 @@ namespace Anseong.Pilot
     /// 두 손이 모두 저장되면 다음 단계로 간다. 값은 그 판 동안만 메모리에 둔다.
     /// <para>안내는 개발용 Console 로그, 헤드셋 안 테스트 안내판(TestGuidePanel), 선택 시 기즈모다. 관객용 안내 화면은 M4.</para>
     /// </summary>
-    public class PilotCalibrationFlow : MonoBehaviour, ITunable
+    public class PilotCalibrationFlow : MonoBehaviour
     {
         [SerializeField, Tooltip("손 입력(같은 XR Origin의 PilotHandInput).")]
         PilotHandInput input;
@@ -407,19 +407,5 @@ namespace Anseong.Pilot
             }
         }
 #endif
-
-        /// <summary>인게임 조절 메뉴: 몸 이동 보정.</summary>
-        public void AddTuning(TuningList list)
-        {
-            var f = bodyFollow;
-            if (f == null) return;
-            const string g = "몸 이동";
-            list.Describe(g, "할 것: 보정 뒤 앞뒤·좌우로 걷고, 무릎 굽히고, 고개 돌리기\n볼 것: 팔이 쏠리거나 돌지 않고 주먹 높이 그대로");
-            list.AddCheck(g, "body.walk", "걸어도 팔이 안 쏠림");
-            list.AddCheck(g, "body.crouch", "무릎 굽혀도 주먹 높이 그대로");
-            list.AddCheck(g, "body.look", "고개 돌려도 팔이 안 돎");
-            list.AddToggle(g, "body.enabled", "몸 이동 보정", () => f.enabled, v => f.enabled = v);
-            list.AddToggle(g, "body.followHeight", "높이도 따라감", () => f.followHeight, v => f.followHeight = v);
-        }
     }
 }
