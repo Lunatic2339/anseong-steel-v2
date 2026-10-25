@@ -28,6 +28,12 @@ namespace Anseong.Combat
 
     public enum PunchPhase { WaitingForNeutral, Ready, Moving, Recovering, TrackingLost }
 
+    /// <summary>
+    /// 다음 펀치를 셀 준비가 되는 조건. Retract = 친 뒤 주먹을 거둬들이면(어디서든, 선우 10/25 기본),
+    /// GuardReturn = 보정한 가드 자리로 돌아와 잠깐 머물러야(M1-04 처음 방식).
+    /// </summary>
+    public enum RearmMode { Retract, GuardReturn }
+
     [Serializable]
     public class PunchClassifierSettings
     {
@@ -78,7 +84,20 @@ namespace Anseong.Combat
         [Tooltip("동작 시작: 바깥에서 준비 없이 안쪽으로 가는 속도 최소값(m/s). 훅을 옆에서 바로 시작할 때.")]
         public float departInwardSpeed = 0.35f;
 
-        [Tooltip("재장전: 친 뒤 손이 보정한 가드 위치에서 좌우·위아래로 이만큼(m) 안에 돌아와야 다음 동작을 센다. " +
+        [Tooltip("다음 펀치 준비 방식. Retract = 친 뒤 거둬들이면 어디서든(기본, 펀치 모양도 그 펀치를 시작한 자리 기준으로 잰다). " +
+                 "GuardReturn = 보정한 가드 자리로 돌아와야(처음 방식, 모양은 가드 자리 기준).")]
+        public RearmMode rearmMode = RearmMode.Retract;
+
+        [Tooltip("Retract: 가장 멀리 뻗은 곳에서 친 방향 반대로 이만큼(m) 거둬들이면 다음 펀치 준비.")]
+        public float rearmRetract = 0.10f;
+
+        [Tooltip("Retract: 거둬들이지 않아도 손이 이 시간(초) 동안 멈춰 있으면 그 자리에서 다음 펀치 준비.")]
+        public float rearmRestSeconds = 0.4f;
+
+        [Tooltip("펀치가 끝난 뒤 다음 펀치를 셀 때까지 최소 시간(초). 무한 연타를 막는다(육중한 로봇).")]
+        public float minStrikeInterval = 0.25f;
+
+        [Tooltip("GuardReturn 재장전: 친 뒤 손이 보정한 가드 위치에서 좌우·위아래로 이만큼(m) 안에 돌아와야 다음 동작을 센다. " +
                  "10/25 헤드셋: 12cm(앞뒤 포함)는 가드로 돌아오는 자리가 조금만 달라져도 다음 펀치를 영영 못 세서 넓혔다.")]
         public float neutralRadius = 0.25f;
 
@@ -163,6 +182,10 @@ namespace Anseong.Combat
         readonly float inwardSign;
         readonly Vector3[] points = new Vector3[Capacity];
         Vector3 neutral, previous;
+        // origin = 궤적을 재는 기준(Retract: 이 펀치를 시작한 자리, GuardReturn: 가드). anchor = 준비 중 마지막으로 멈춘 자리.
+        // peak·strokeDirection = 끝난 펀치의 가장 먼 점과 친 방향(거둬들임 판정).
+        Vector3 origin, anchor, peak, strokeDirection;
+        double finishedAt = double.NegativeInfinity, restSince = -1;
         double previousTime, began, quietSince = -1, homeSince = -1;
         float peakSpeed, maxForward;
         int count, peakForwardIndex, returnStart = -1, strikeCount;
@@ -235,21 +258,29 @@ namespace Anseong.Combat
             }
 
             var completed = false;
-            var offset = position - neutral;
-            NeutralOffset = offset;
+            var retractMode = settings.rearmMode == RearmMode.Retract;
+            NeutralOffset = position - neutral;
+            var offset = Phase == PunchPhase.Moving ? position - origin
+                : retractMode && Phase == PunchPhase.Ready ? position - anchor
+                : position - neutral;
             switch (Phase)
             {
                 case PunchPhase.WaitingForNeutral:
                 case PunchPhase.Recovering:
-                    if (AtNeutral(offset) && velocity.magnitude <= settings.stopSpeed)
+                    if (retractMode ? RearmByRetract(position, velocity, time) : RearmAtGuard(offset, velocity, time))
                     {
-                        if (homeSince < 0) homeSince = time;
-                        if (time - homeSince >= settings.neutralDwell) Phase = PunchPhase.Ready;
+                        Phase = PunchPhase.Ready;
+                        anchor = position;
                     }
-                    else homeSince = -1;
                     break;
 
                 case PunchPhase.Ready:
+                    // 거둬들이기 방식: 멈춰 있거나 더 당기는 동안 출발점을 따라 옮긴다(가드 자리가 어디든 거기서 시작).
+                    if (retractMode && (velocity.magnitude <= settings.stopSpeed || velocity.z < -RetractSpeed))
+                    {
+                        anchor = position;
+                        offset = Vector3.zero;
+                    }
                     // 옆으로 준비하는 건 괜찮지만 가드를 올리고 내리거나 뒤로 빼는 건 시작이 아니다.
                     var departure = velocity.z > settings.departForwardSpeed
                         || velocity.y > settings.departUpSpeed
@@ -260,6 +291,8 @@ namespace Anseong.Combat
                         points[count++] = previous;
                         points[count++] = position;
                         began = previousTime;
+                        origin = retractMode ? anchor : neutral;
+                        offset = position - origin;
                         peakSpeed = velocity.magnitude;
                         maxForward = offset.z;
                         peakForwardIndex = 1;
@@ -319,6 +352,9 @@ namespace Anseong.Combat
             return completed;
         }
 
+        /// <summary>거둬들이면 다음 준비(true) / 가드로 돌아와야 준비(false).</summary>
+        public bool RearmsByRetract => settings.rearmMode == RearmMode.Retract;
+
         PunchResult Finish(double time, PunchReason? rejected = null, int last = -1, bool tracked = true)
         {
             var result = Evaluate(last < 0 ? count - 1 : last, time);
@@ -333,16 +369,68 @@ namespace Anseong.Combat
             result.StartTime = began;
             result.EndTime = time;
             Last = result;
+            RememberStroke(last < 0 ? count - 1 : last);
+            finishedAt = time;
             Phase = PunchPhase.Recovering;
-            homeSince = quietSince = -1;
+            homeSince = quietSince = restSince = -1;
             return result;
+        }
+
+        /// <summary>끝난 펀치에서 시작점으로부터 가장 먼 점과 그 방향(거둬들임 판정용).</summary>
+        void RememberStroke(int last)
+        {
+            if (count == 0)
+            {
+                peak = previous;
+                strokeDirection = Vector3.forward;
+                return;
+            }
+            var start = points[0];
+            var far = 0;
+            var best = -1f;
+            for (var i = 1; i <= Mathf.Min(last, count - 1); i++)
+            {
+                var d = (points[i] - start).sqrMagnitude;
+                if (d > best) { best = d; far = i; }
+            }
+            peak = points[far];
+            var direction = peak - start;
+            strokeDirection = direction.sqrMagnitude > 1e-6f ? direction.normalized : Vector3.forward;
+        }
+
+        /// <summary>GuardReturn: 보정한 가드 자리 안에서 느리게 neutralDwell 동안.</summary>
+        bool RearmAtGuard(Vector3 offset, Vector3 velocity, double time)
+        {
+            if (AtNeutral(offset) && velocity.magnitude <= settings.stopSpeed)
+            {
+                if (homeSince < 0) homeSince = time;
+                return time - homeSince >= settings.neutralDwell;
+            }
+            homeSince = -1;
+            return false;
+        }
+
+        /// <summary>Retract: 최소 간격이 지났고, (친 방향 반대로 rearmRetract 거둬들임 또는 rearmRestSeconds 동안 멈춤).
+        /// 처음(추적 복구 뒤 등)에는 끝난 펀치가 없으니 멈춤만 본다.</summary>
+        bool RearmByRetract(Vector3 position, Vector3 velocity, double time)
+        {
+            if (velocity.magnitude <= settings.stopSpeed)
+            {
+                if (restSince < 0) restSince = time;
+            }
+            else restSince = -1;
+            if (time - finishedAt < settings.minStrikeInterval) return false;
+            var rested = restSince >= 0 && time - restSince >= (Phase == PunchPhase.Recovering ? settings.rearmRestSeconds : settings.neutralDwell);
+            if (Phase != PunchPhase.Recovering) return rested;
+            var retreat = Vector3.Dot(peak - position, strokeDirection);
+            return retreat >= settings.rearmRetract || rested;
         }
 
         void Discard(PunchPhase phase)
         {
             hasPrevious = false;
             count = 0;
-            homeSince = quietSince = -1;
+            homeSince = quietSince = restSince = -1;
             Phase = phase;
         }
 
@@ -362,7 +450,7 @@ namespace Anseong.Combat
             var jabEnd = Mathf.Min(last, peakForwardIndex);
             for (var i = 0; i <= last; i++)
             {
-                var p = points[i] - neutral;
+                var p = points[i] - origin;
                 minX = Mathf.Min(minX, p.x);
                 maxX = Mathf.Max(maxX, p.x);
                 minY = Mathf.Min(minY, p.y);
