@@ -127,6 +127,22 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void WristLocked_PitchOffset_TiltsTowardBackOfHand()
+        {
+            var settings = new ArmSolverSettings { lockedWristPitchDegrees = 15f };
+            var solver = new TwoBoneArmSolver(LeftBind(), settings);
+            var target = Shoulder + new Vector3(0f, -3f, 18f);
+            var pose = Solve(solver, target, wristLock: 1f, frames: 60);
+            var bind = solver.Bind;
+            var forearm = (pose.Wrist - pose.Elbow).normalized;
+            var fistForward = pose.Hand * bind.FistForwardLocal;
+            var fistBack = pose.Hand * bind.FistBackLocal;
+            Assert.AreEqual(15f, Vector3.Angle(fistForward, forearm), 0.5f, "고정 + 젖힘 각도");
+            // 손등 쪽으로 젖히면 아래팔 방향이 손바닥 쪽(손등 반대)에 놓인다.
+            Assert.Less(Vector3.Dot(forearm, fistBack), 0f, "손등 쪽으로 젖힘");
+        }
+
+        [Test]
         public void WristFree_BendsTowardFistUpToLimit()
         {
             var solver = NewSolver();

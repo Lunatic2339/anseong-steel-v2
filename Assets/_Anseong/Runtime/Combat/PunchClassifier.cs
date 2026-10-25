@@ -1,0 +1,621 @@
+using System;
+using UnityEngine;
+
+namespace Anseong.Combat
+{
+    public enum PunchKind { None, Jab, Hook, Uppercut }
+
+    /// <summary>분류 결과의 이유. 잽·훅이면 Jab·Hook, 아니면 왜 아닌지.</summary>
+    public enum PunchReason
+    {
+        Jab,
+        Hook,
+        Uppercut,
+        /// <summary>궤적이 너무 짧다(0.06초 미만이거나 샘플 3개 미만).</summary>
+        TooShort,
+        /// <summary>전진 거리가 기준보다 짧다.</summary>
+        InsufficientForward,
+        TooSlow,
+        /// <summary>위아래 움직임이 크다(가드 올리기·내리기).</summary>
+        VerticalMotion,
+        /// <summary>잽도 훅도 아니다(비스듬히 휘두름).</summary>
+        Ambiguous,
+        /// <summary>한 동작이 너무 길다.</summary>
+        TooLong,
+        /// <summary>한 동작의 샘플이 너무 많다.</summary>
+        CapacityExceeded,
+        /// <summary>로봇 주먹이 따라오기 전에 손을 빼서 로봇 팔이 거의 안 뻗었다(묵직함, 10/25).</summary>
+        RobotLagged,
+    }
+
+    public enum PunchPhase { WaitingForNeutral, Ready, Moving, Recovering, TrackingLost }
+
+    /// <summary>
+    /// 다음 펀치를 셀 준비가 되는 조건. Retract = 친 뒤 주먹을 거둬들이면(어디서든, 선우 10/25 기본),
+    /// GuardReturn = 보정한 가드 자리로 돌아와 잠깐 머물러야(M1-04 처음 방식).
+    /// </summary>
+    public enum RearmMode { Retract, GuardReturn }
+
+    [Serializable]
+    public class PunchClassifierSettings
+    {
+        [Tooltip("잽: 좌우폭 ÷ 전진 거리 최대값.")]
+        public float maxJabSideRatio = 0.55f;
+
+        [Tooltip("잽: 직진도(처음→가장 앞 거리 ÷ 지나온 길이) 최소값. 1차 헤드셋 로그에서 잽이 0.86~0.99로 나와 기준선에 걸리지 않게 0.80(01 초기값 0.86).")]
+        public float minJabStraightness = 0.80f;
+
+        [Tooltip("대각선 잽: 아주 곧으면(아래 직진도 이상) 좌우폭 ÷ 전진이 이 값까지도 잽(10/25 헤드셋 CSV: 대각선 잽은 0.85~0.96, 직진도 0.92~0.96).")]
+        public float maxDiagonalJabSideRatio = 1.0f;
+
+        [Tooltip("대각선 잽으로 볼 직진도 최소값.")]
+        public float minDiagonalJabStraightness = 0.90f;
+
+        [Tooltip("훅: 가드 위치보다 바깥으로 준비한 거리 최소값(m, 사람 손). 0 = 가드에서 바로 안쪽으로 휘둘러도 훅(기본). " +
+                 "가드를 넓게 잡으면 손이 이미 바깥에 있어 더 빼지 않으므로 0으로 둔다(01 규칙 초기값 10cm는 1차 헤드셋에서 훅이 거의 안 잡혀 바꿈).")]
+        public float minHookOutset = 0f;
+
+        [Tooltip("훅: 바깥 끝에서 안쪽으로 휘두른 거리 최소값(m).")]
+        public float minHookSweep = 0.17f;
+
+        [Tooltip("훅: 호 길이 ÷ 현 길이 최소값(휘어진 정도).")]
+        public float minHookArcRatio = 1.10f;
+
+        [Tooltip("훅: 앞부분과 뒷부분 진행 방향이 꺾인 각도 최소값(도, 위에서 본 평면). 곧게 대각선으로 친 펀치를 훅으로 보지 않게(10/25 헤드셋).")]
+        public float minHookTurnDegrees = 15f;
+
+        [Tooltip("어퍼컷: 가장 낮은 지점에서 올려친 높이 최소값(m).")]
+        public float minUppercutRise = 0.18f;
+
+        [Tooltip("어퍼컷: 올려친 높이 ÷ 전진 거리 최소값. 앞으로보다 위로 더 가야 어퍼컷.")]
+        public float minUppercutRiseRatio = 1.0f;
+
+        [Tooltip("어퍼컷: 좌우폭 ÷ 올려친 높이 최대값. 넘으면 옆으로 휘두른 것.")]
+        public float maxUppercutSideRatio = 0.6f;
+
+        [Tooltip("동작 시작: 위로 올라가는 속도 최소값(m/s). 어퍼컷 시작.")]
+        public float departUpSpeed = 0.5f;
+
+        [Tooltip("잽·훅 공통: 중립에서 앞으로 나간 거리 최소값(m). 어퍼컷에는 쓰지 않는다.")]
+        public float minForward = 0.18f;
+
+        [Tooltip("위아래 폭 ÷ 전진 거리 최대값. 넘으면 가드 올리기·내리기로 본다.")]
+        public float maxVerticalRatio = 0.85f;
+
+        [Tooltip("켜면 위아래 폭을 전진 거리와 좌우 폭 중 큰 쪽과 비교한다(옆으로 크게 도는 훅이 '위아래 움직임'으로 버려지지 않게). " +
+                 "끄면 전진 거리와만 비교한다(이전 동작).")]
+        public bool verticalAgainstWidestSpan = true;
+
+        [Tooltip("동작 시작 속도(m/s). 이보다 빨라야 휘두름이 시작된다.")]
+        public float startSpeed = 0.75f;
+
+        [Tooltip("동작 시작: 앞으로 나가는 속도 최소값(m/s).")]
+        public float departForwardSpeed = 0.25f;
+
+        [Tooltip("동작 시작: 바깥에서 준비 없이 안쪽으로 가는 속도 최소값(m/s). 훅을 옆에서 바로 시작할 때.")]
+        public float departInwardSpeed = 0.35f;
+
+        [Tooltip("다음 펀치 준비 방식. Retract = 친 뒤 거둬들이면 어디서든(기본, 펀치 모양도 그 펀치를 시작한 자리 기준으로 잰다). " +
+                 "GuardReturn = 보정한 가드 자리로 돌아와야(처음 방식, 모양은 가드 자리 기준).")]
+        public RearmMode rearmMode = RearmMode.Retract;
+
+        [Tooltip("Retract: 가장 멀리 뻗은 곳에서 친 방향 반대로 이만큼(m) 거둬들이면 다음 펀치 준비.")]
+        public float rearmRetract = 0.10f;
+
+        [Tooltip("Retract: 거둬들이지 않아도 손이 이 시간(초) 동안 멈춰 있으면 그 자리에서 다음 펀치 준비.")]
+        public float rearmRestSeconds = 0.4f;
+
+        [Tooltip("펀치가 끝난 뒤 다음 펀치를 셀 때까지 최소 시간(초). 무한 연타를 막는다(육중한 로봇).")]
+        public float minStrikeInterval = 0.25f;
+
+        [Tooltip("GuardReturn 재장전: 친 뒤 손이 보정한 가드 위치에서 좌우·위아래로 이만큼(m) 안에 돌아와야 다음 동작을 센다. " +
+                 "10/25 헤드셋: 12cm(앞뒤 포함)는 가드로 돌아오는 자리가 조금만 달라져도 다음 펀치를 영영 못 세서 넓혔다.")]
+        public float neutralRadius = 0.25f;
+
+        [Tooltip("재장전: 앞뒤로는 가드 위치보다 이만큼(m) 앞까지만 돌아오면 된다(가드보다 몸 쪽으로 더 당긴 것은 괜찮다).")]
+        public float neutralForwardBand = 0.10f;
+
+        [Tooltip("재장전: 중립 반경 안에 머무를 시간(초).")]
+        public float neutralDwell = 0.15f;
+
+        [Tooltip("멈춤 속도(m/s). 이보다 느리게 stopDwell 동안 있으면 동작이 끝난다.")]
+        public float stopSpeed = 0.20f;
+
+        [Tooltip("멈춤 판정 시간(초).")]
+        public float stopDwell = 0.10f;
+
+        [Tooltip("손을 거둬들이기 시작하면 동작을 끝낸다: 가장 앞에서 이만큼(m) 물러났을 때.")]
+        public float retractDistance = 0.065f;
+
+        [Tooltip("한 동작 최대 길이(초).")]
+        public float maxStrokeSeconds = 1.25f;
+
+        [Tooltip("샘플 사이가 이보다(초) 길면(렉) 그 동작을 버리고 중립부터 다시 센다.")]
+        public float maxSampleGap = 0.15f;
+
+        [Tooltip("이보다 빠른 손 속도(m/s)는 추적 튐으로 보고 그 동작을 버린다.")]
+        public float maxTrackingSpeed = 15f;
+    }
+
+    /// <summary>궤적 측정값. 길이는 사람 손 m.</summary>
+    public struct PunchMeasure
+    {
+        /// <summary>좌우폭 ÷ 전진(잽 판정).</summary>
+        public float SideRatio;
+        /// <summary>직진도(잽 판정).</summary>
+        public float Straightness;
+        /// <summary>바깥 준비 거리(훅 판정).</summary>
+        public float Outset;
+        /// <summary>안쪽 스윕 거리(훅 판정).</summary>
+        public float InwardSweep;
+        /// <summary>호 ÷ 현(훅 판정).</summary>
+        public float ArcRatio;
+        /// <summary>앞부분 진행 방향과 뒷부분 진행 방향 사이 각도(도, 위에서 본 평면). 곧은 대각선은 0 가까이, 훅은 크다.</summary>
+        public float TurnDegrees;
+        /// <summary>가장 낮은 지점 뒤로 올라간 높이(어퍼컷 판정).</summary>
+        public float Rise;
+        public float Forward;
+        public float PeakSpeed;
+        public float Duration;
+    }
+
+    /// <summary>끝난 동작 하나.</summary>
+    public struct PunchResult
+    {
+        /// <summary>이 팔에서 몇 번째 동작인지(1부터). 한 동작 = 한 번.</summary>
+        public int StrikeId;
+        public PunchKind Kind;
+        public PunchReason Reason;
+        public PunchMeasure Measure;
+        /// <summary>동작 내내 공격 의도(그립 + 추적)가 있었다.</summary>
+        public bool GripHeld;
+        /// <summary>동작 내내 추적이 유효했다. 끊기면 그 자리에서 동작을 끝내고 false.</summary>
+        public bool Tracked;
+        public double StartTime, EndTime;
+        /// <summary>동작 중 머리가 몸 정면으로 움직인 거리(m). 분류에는 쓰지 않는 기록용, 드라이버가 채운다.</summary>
+        public float HeadForward;
+
+        /// <summary>공격으로 센다(잽·훅 + 그립 + 추적). 명중은 M1-05가 따로 본다.</summary>
+        public bool IsAttack => Kind != PunchKind.None && GripHeld && Tracked;
+    }
+
+    /// <summary>
+    /// 사람 손 궤적 하나를 잽·훅·어퍼컷·해당 없음으로 나눈다(잽·훅은 기존 레포 PunchTrajectoryRecognizer를 옮김, 어퍼컷은 새로 추가).
+    /// 좌표는 보정한 몸 기준(어깨 원점, +X 오른쪽, +Y 위, +Z 몸 정면, m). 중립은 보정한 가드 위치.
+    /// 프레임마다 모든 샘플을 넣는다(빠른 펀치 샘플을 버리지 않는다).
+    /// 친 뒤 중립 반경 안에 잠깐 머물러야 다음 동작을 센다(재장전).
+    /// </summary>
+    public sealed class PunchClassifier
+    {
+        const int Capacity = 512;
+        // 기존 값: 중립에서 이만큼은 나가야 시작, 이만큼 앞으로 나가야 옆 출발 인정, 이 속도로 물러나면 거둬들임.
+        const float DepartMinOffset = 0.035f, SideDepartMinForward = 0.015f, RetractSpeed = 0.30f, MinDuration = 0.06f;
+
+        readonly PunchClassifierSettings settings;
+        readonly float inwardSign;
+        readonly Vector3[] points = new Vector3[Capacity];
+        Vector3 neutral, previous;
+        // origin = 궤적을 재는 기준(Retract: 이 펀치를 시작한 자리, GuardReturn: 가드). anchor = 준비 중 마지막으로 멈춘 자리.
+        // peak·strokeDirection = 끝난 펀치의 가장 먼 점과 친 방향(거둬들임 판정).
+        Vector3 origin, anchor, peak, strokeDirection;
+        double finishedAt = double.NegativeInfinity, restSince = -1;
+        double previousTime, began, quietSince = -1, homeSince = -1;
+        float peakSpeed, maxForward;
+        int count, peakForwardIndex, returnStart = -1, strikeCount;
+        bool hasPrevious, intentThroughout;
+
+        /// <param name="leftArm">왼팔이면 몸 안쪽이 +X, 오른팔이면 −X.</param>
+        public PunchClassifier(bool leftArm, PunchClassifierSettings settings)
+        {
+            inwardSign = leftArm ? 1f : -1f;
+            this.settings = settings ?? new PunchClassifierSettings();
+            Phase = PunchPhase.TrackingLost;
+        }
+
+        public PunchPhase Phase { get; private set; }
+
+        /// <summary>마지막 샘플의 손 − 중립(몸 기준, m). 안내판이 "가드 자리로 돌아오세요"를 띄울 때 쓴다.</summary>
+        public Vector3 NeutralOffset { get; private set; }
+
+        /// <summary>지금 손이 재장전 자리 안인지(다음 동작을 셀 수 있는 자리).</summary>
+        public bool AtNeutral(Vector3 offset) => offset.z <= settings.neutralForwardBand
+            && new Vector2(offset.x, offset.y).magnitude <= settings.neutralRadius;
+        public PunchResult Last { get; private set; }
+        public int CompletedCount => strikeCount;
+
+        /// <summary>보정이 끝날 때마다 중립(몸 기준 가드 위치)을 넣는다. 진행 중인 동작은 버린다.</summary>
+        public void SetNeutral(Vector3 bodyGuard)
+        {
+            neutral = bodyGuard;
+            Discard(PunchPhase.WaitingForNeutral);
+        }
+
+        /// <summary>
+        /// 샘플 하나. 동작이 끝났으면 true와 결과.
+        /// tracked = 이 손 추적이 유효함, intent = 공격 의도(그립 + 추적, AttackIntentGate).
+        /// </summary>
+        public bool Sample(Vector3 position, bool tracked, bool intent, double time, out PunchResult result)
+        {
+            result = default(PunchResult);
+            if (!tracked || !Finite(position) || double.IsNaN(time) || double.IsInfinity(time))
+            {
+                // 휘두르던 중이면 그 동작을 공격 아님으로 끝낸다(분류는 남긴다).
+                if (Phase == PunchPhase.Moving)
+                {
+                    result = Finish(previousTime, null, -1, false);
+                    Discard(PunchPhase.TrackingLost);
+                    return true;
+                }
+                Discard(PunchPhase.TrackingLost);
+                return false;
+            }
+            if (Phase == PunchPhase.TrackingLost) Phase = PunchPhase.WaitingForNeutral;
+            if (!hasPrevious)
+            {
+                previous = position;
+                previousTime = time;
+                hasPrevious = true;
+                return false;
+            }
+            var dt = (float)(time - previousTime);
+            if (dt <= 0f) return false;
+            var velocity = (position - previous) / dt;
+            if (dt > settings.maxSampleGap || velocity.magnitude > settings.maxTrackingSpeed)
+            {
+                // 렉이나 추적 튐: 속도 기록이 깨졌으니 이 동작은 버리고 중립부터 다시.
+                Discard(PunchPhase.WaitingForNeutral);
+                previous = position;
+                previousTime = time;
+                hasPrevious = true;
+                return false;
+            }
+
+            var completed = false;
+            var retractMode = settings.rearmMode == RearmMode.Retract;
+            NeutralOffset = position - neutral;
+            var offset = Phase == PunchPhase.Moving ? position - origin
+                : retractMode && Phase == PunchPhase.Ready ? position - anchor
+                : position - neutral;
+            switch (Phase)
+            {
+                case PunchPhase.WaitingForNeutral:
+                case PunchPhase.Recovering:
+                    if (retractMode ? RearmByRetract(position, velocity, time) : RearmAtGuard(offset, velocity, time))
+                    {
+                        Phase = PunchPhase.Ready;
+                        anchor = position;
+                    }
+                    break;
+
+                case PunchPhase.Ready:
+                    // 거둬들이기 방식: 멈춰 있거나 더 당기는 동안 출발점을 따라 옮긴다(가드 자리가 어디든 거기서 시작).
+                    if (retractMode && (velocity.magnitude <= settings.stopSpeed || velocity.z < -RetractSpeed))
+                    {
+                        anchor = position;
+                        offset = Vector3.zero;
+                    }
+                    // 옆으로 준비하는 건 괜찮지만 가드를 올리고 내리거나 뒤로 빼는 건 시작이 아니다.
+                    var departure = velocity.z > settings.departForwardSpeed
+                        || velocity.y > settings.departUpSpeed
+                        || (-velocity.x * inwardSign > settings.departInwardSpeed && offset.z > SideDepartMinForward);
+                    if (velocity.magnitude >= settings.startSpeed && offset.magnitude > DepartMinOffset && departure)
+                    {
+                        count = 0;
+                        points[count++] = previous;
+                        points[count++] = position;
+                        began = previousTime;
+                        origin = retractMode ? anchor : neutral;
+                        offset = position - origin;
+                        peakSpeed = velocity.magnitude;
+                        maxForward = offset.z;
+                        peakForwardIndex = 1;
+                        quietSince = -1;
+                        returnStart = -1;
+                        intentThroughout = intent;
+                        Phase = PunchPhase.Moving;
+                    }
+                    break;
+
+                case PunchPhase.Moving:
+                    intentThroughout &= intent;
+                    peakSpeed = Mathf.Max(peakSpeed, velocity.magnitude);
+                    if (count == points.Length)
+                    {
+                        result = Finish(time, PunchReason.CapacityExceeded);
+                        completed = true;
+                        break;
+                    }
+                    points[count++] = position;
+                    if (offset.z >= maxForward)
+                    {
+                        maxForward = offset.z;
+                        peakForwardIndex = count - 1;
+                    }
+                    var retracting = velocity.z < -RetractSpeed && -velocity.z > Mathf.Abs(velocity.x) * 0.8f
+                        && Vector3.Dot(velocity, -offset) > 0.02f;
+                    if (retracting && returnStart < 0) returnStart = count - 2;
+                    if (!retracting) returnStart = -1;
+
+                    if (velocity.magnitude < settings.stopSpeed)
+                    {
+                        if (quietSince < 0) quietSince = time;
+                        if (time - quietSince >= settings.stopDwell)
+                        {
+                            result = Finish(time);
+                            completed = true;
+                            break;
+                        }
+                    }
+                    else quietSince = -1;
+                    if (returnStart >= 0 && maxForward - offset.z > settings.retractDistance)
+                    {
+                        result = Finish(time, null, returnStart);
+                        completed = true;
+                        break;
+                    }
+                    if (time - began > settings.maxStrokeSeconds)
+                    {
+                        result = Finish(time, PunchReason.TooLong);
+                        completed = true;
+                    }
+                    break;
+            }
+            previous = position;
+            previousTime = time;
+            return completed;
+        }
+
+        /// <summary>거둬들이면 다음 준비(true) / 가드로 돌아와야 준비(false).</summary>
+        public bool RearmsByRetract => settings.rearmMode == RearmMode.Retract;
+
+        PunchResult Finish(double time, PunchReason? rejected = null, int last = -1, bool tracked = true)
+        {
+            var result = Evaluate(last < 0 ? count - 1 : last, time);
+            if (rejected.HasValue)
+            {
+                result.Kind = PunchKind.None;
+                result.Reason = rejected.Value;
+            }
+            result.StrikeId = ++strikeCount;
+            result.GripHeld = intentThroughout && tracked;
+            result.Tracked = tracked;
+            result.StartTime = began;
+            result.EndTime = time;
+            Last = result;
+            RememberStroke(last < 0 ? count - 1 : last);
+            finishedAt = time;
+            Phase = PunchPhase.Recovering;
+            homeSince = quietSince = restSince = -1;
+            return result;
+        }
+
+        /// <summary>끝난 펀치에서 시작점으로부터 가장 먼 점과 그 방향(거둬들임 판정용).</summary>
+        void RememberStroke(int last)
+        {
+            if (count == 0)
+            {
+                peak = previous;
+                strokeDirection = Vector3.forward;
+                return;
+            }
+            var start = points[0];
+            var far = 0;
+            var best = -1f;
+            for (var i = 1; i <= Mathf.Min(last, count - 1); i++)
+            {
+                var d = (points[i] - start).sqrMagnitude;
+                if (d > best) { best = d; far = i; }
+            }
+            peak = points[far];
+            var direction = peak - start;
+            strokeDirection = direction.sqrMagnitude > 1e-6f ? direction.normalized : Vector3.forward;
+        }
+
+        /// <summary>GuardReturn: 보정한 가드 자리 안에서 느리게 neutralDwell 동안.</summary>
+        bool RearmAtGuard(Vector3 offset, Vector3 velocity, double time)
+        {
+            if (AtNeutral(offset) && velocity.magnitude <= settings.stopSpeed)
+            {
+                if (homeSince < 0) homeSince = time;
+                return time - homeSince >= settings.neutralDwell;
+            }
+            homeSince = -1;
+            return false;
+        }
+
+        /// <summary>Retract: 최소 간격이 지났고, (친 방향 반대로 rearmRetract 거둬들임 또는 rearmRestSeconds 동안 멈춤).
+        /// 처음(추적 복구 뒤 등)에는 끝난 펀치가 없으니 멈춤만 본다.</summary>
+        bool RearmByRetract(Vector3 position, Vector3 velocity, double time)
+        {
+            if (velocity.magnitude <= settings.stopSpeed)
+            {
+                if (restSince < 0) restSince = time;
+            }
+            else restSince = -1;
+            if (time - finishedAt < settings.minStrikeInterval) return false;
+            var rested = restSince >= 0 && time - restSince >= (Phase == PunchPhase.Recovering ? settings.rearmRestSeconds : settings.neutralDwell);
+            if (Phase != PunchPhase.Recovering) return rested;
+            var retreat = Vector3.Dot(peak - position, strokeDirection);
+            return retreat >= settings.rearmRetract || rested;
+        }
+
+        void Discard(PunchPhase phase)
+        {
+            hasPrevious = false;
+            count = 0;
+            homeSince = quietSince = restSince = -1;
+            Phase = phase;
+        }
+
+        PunchResult Evaluate(int last, double time)
+        {
+            var result = new PunchResult { Kind = PunchKind.None, Reason = PunchReason.TooShort };
+            var m = new PunchMeasure { PeakSpeed = peakSpeed, Duration = (float)(time - began), ArcRatio = 1f };
+            if (last < 2 || m.Duration < MinDuration)
+            {
+                result.Measure = m;
+                return result;
+            }
+
+            float minX = 0f, maxX = 0f, minY = 0f, maxY = 0f, minInward = 0f, maxInward = float.NegativeInfinity, path = 0f;
+            float lowest = float.PositiveInfinity;
+            int outer = 0, inner = 0;
+            var jabEnd = Mathf.Min(last, peakForwardIndex);
+            for (var i = 0; i <= last; i++)
+            {
+                var p = points[i] - origin;
+                minX = Mathf.Min(minX, p.x);
+                maxX = Mathf.Max(maxX, p.x);
+                minY = Mathf.Min(minY, p.y);
+                maxY = Mathf.Max(maxY, p.y);
+                lowest = Mathf.Min(lowest, p.y);
+                m.Rise = Mathf.Max(m.Rise, p.y - lowest);
+                m.Forward = Mathf.Max(m.Forward, p.z);
+                var x = p.x * inwardSign;
+                // 가장 바깥 지점(outer)과 그 뒤 가장 안쪽 지점(inner).
+                if (x < minInward) { minInward = x; outer = i; maxInward = x; inner = i; }
+                if (i >= outer && x >= maxInward) { maxInward = x; inner = i; }
+                if (i > 0 && i <= jabEnd) path += Vector3.Distance(points[i], points[i - 1]);
+            }
+            m.Outset = -minInward;
+            m.InwardSweep = Mathf.Max(0f, maxInward - minInward);
+            var arc = 0f;
+            for (var i = outer + 1; i <= inner; i++) arc += Vector3.Distance(points[i], points[i - 1]);
+            var chord = Vector3.Distance(points[outer], points[inner]);
+            m.ArcRatio = chord > 0.01f ? arc / chord : 1f;
+            m.TurnDegrees = Turn(last);
+            m.Straightness = path > 0.01f ? Vector3.Distance(points[0], points[jabEnd]) / path : 0f;
+            m.SideRatio = m.Forward > 1e-4f ? (maxX - minX) / m.Forward : float.PositiveInfinity;
+            result.Measure = m;
+
+            // 어퍼컷은 앞으로 덜 나가고 위아래로 크게 움직이므로 전진·수직 거름보다 먼저 본다.
+            if (peakSpeed >= settings.startSpeed && m.Rise >= settings.minUppercutRise
+                && m.Rise >= Mathf.Max(0f, m.Forward) * settings.minUppercutRiseRatio
+                && maxX - minX <= m.Rise * settings.maxUppercutSideRatio)
+            {
+                result.Kind = PunchKind.Uppercut;
+                result.Reason = PunchReason.Uppercut;
+                return result;
+            }
+            if (m.Forward < settings.minForward) { result.Reason = PunchReason.InsufficientForward; return result; }
+            if (peakSpeed < settings.startSpeed) { result.Reason = PunchReason.TooSlow; return result; }
+            var span = settings.verticalAgainstWidestSpan ? Mathf.Max(m.Forward, maxX - minX) : m.Forward;
+            if (maxY - minY > span * settings.maxVerticalRatio) { result.Reason = PunchReason.VerticalMotion; return result; }
+
+            // 안쪽으로 크게 휘어 들어오면 훅이 먼저다(휘어진 22cm 스윕은 잽이 아니다). 그다음 곧게 나가면 잽.
+            var hook = m.Outset >= settings.minHookOutset && m.InwardSweep >= settings.minHookSweep && m.ArcRatio >= settings.minHookArcRatio
+                && m.TurnDegrees >= settings.minHookTurnDegrees;
+            var jab = m.SideRatio <= settings.maxJabSideRatio && m.Straightness >= settings.minJabStraightness
+                || m.SideRatio <= settings.maxDiagonalJabSideRatio && m.Straightness >= settings.minDiagonalJabStraightness;
+            if (hook)
+            {
+                result.Kind = PunchKind.Hook;
+                result.Reason = PunchReason.Hook;
+            }
+            else if (jab)
+            {
+                result.Kind = PunchKind.Jab;
+                result.Reason = PunchReason.Jab;
+            }
+            else result.Reason = PunchReason.Ambiguous;
+            return result;
+        }
+
+        /// <summary>위에서 본 평면(x, z)에서 궤적 앞 35%와 뒤 35%의 진행 방향 사이 각도(도). 길이로 나눈다(샘플 간격과 무관).</summary>
+        float Turn(int last)
+        {
+            var total = 0f;
+            for (var i = 1; i <= last; i++) total += Flat(points[i] - points[i - 1]).magnitude;
+            if (total < 0.02f) return 0f;
+            int a = last, b = 0;
+            var run = 0f;
+            for (var i = 1; i <= last; i++)
+            {
+                run += Flat(points[i] - points[i - 1]).magnitude;
+                if (a == last && run >= total * 0.35f) a = i;
+                if (run <= total * 0.65f) b = i;
+            }
+            var first = Flat(points[a] - points[0]);
+            var end = Flat(points[last] - points[b]);
+            if (first.magnitude < 1e-3f || end.magnitude < 1e-3f) return 0f;
+            var cos = Mathf.Clamp((first.x * end.x + first.y * end.y) / (first.magnitude * end.magnitude), -1f, 1f);
+            return Mathf.Acos(cos) * Mathf.Rad2Deg;
+        }
+
+        static Vector2 Flat(Vector3 v) => new Vector2(v.x, v.z);
+
+        static bool Finite(Vector3 v) => !float.IsNaN(v.x + v.y + v.z) && !float.IsInfinity(v.x + v.y + v.z);
+    }
+
+    /// <summary>
+    /// 사람 손으로 끝난 펀치 결과를 로봇 주먹이 따라올 때까지 붙잡아 둔다(10/25 헤드셋: 묵직함 0.3에서 로봇 팔이 다 오기 전에 판정이 먼저 났다).
+    /// 로봇 주먹이 목표를 거의 따라잡았거나, 가장 멀리 간 뒤 돌아오기 시작했거나, 최대 시간이 지나면 내보낸다.
+    /// 그때 로봇 주먹이 사람 손 목표만큼 충분히 뻗지 못했으면(빨리 치고 뺀 경우) 펀치로 치지 않는다(10/25: 0.6에서 로봇 팔은 거의 안 움직였는데 판정).
+    /// 위치는 로봇 팔 길이 배수(로봇 몸 기준)라 로봇 크기와 무관하다.
+    /// </summary>
+    public sealed class StrikeHold
+    {
+        const float TurnBackRatio = 0.01f;
+        Vector3 start;
+        float robotFarthest, targetFarthest;
+        double since;
+        bool tracking;
+
+        public bool Pending { get; private set; }
+        public PunchResult Result { get; private set; }
+
+        /// <summary>로봇 주먹이 뻗은 거리 ÷ 사람 손 목표가 뻗은 거리(휘두르기 시작한 곳부터). 1 = 끝까지 따라감.</summary>
+        public float Reach => targetFarthest > 1e-4f ? robotFarthest / targetFarthest : 1f;
+
+        /// <summary>사람 손이 휘두르기 시작한 순간의 로봇 주먹 목표.</summary>
+        public void StartStroke(Vector3 robotFist)
+        {
+            start = robotFist;
+            robotFarthest = targetFarthest = 0f;
+            tracking = true;
+        }
+
+        /// <summary>휘두르는 동안과 기다리는 동안 매 프레임. robotFist = 반응 지연 뒤 목표, target = 사람 손 그대로의 목표.</summary>
+        public void Track(Vector3 robotFist, Vector3 target)
+        {
+            if (!tracking) return;
+            robotFarthest = Mathf.Max(robotFarthest, (robotFist - start).magnitude);
+            targetFarthest = Mathf.Max(targetFarthest, (target - start).magnitude);
+        }
+
+        public void Begin(PunchResult result, double time)
+        {
+            Result = result;
+            since = time;
+            Pending = true;
+        }
+
+        /// <summary>lag = 사람 손 목표와의 차이(팔 길이 배수). 내보낼 때 true(그다음 <see cref="Finish"/>).</summary>
+        public bool Step(Vector3 robotFist, float lag, double time, float caughtUp, float maxSeconds)
+        {
+            if (!Pending) return false;
+            var turnedBack = tracking && (robotFist - start).magnitude < robotFarthest - TurnBackRatio;
+            return lag <= caughtUp || turnedBack || time - since >= maxSeconds;
+        }
+
+        /// <summary>내보낼 결과. 로봇 주먹이 minReach만큼 따라오지 못했으면 펀치가 아닌 것으로 바꾼다.</summary>
+        public PunchResult Finish(float minReach)
+        {
+            var result = Result;
+            if (tracking && result.Kind != PunchKind.None && Reach < minReach)
+            {
+                result.Kind = PunchKind.None;
+                result.Reason = PunchReason.RobotLagged;
+            }
+            Pending = false;
+            tracking = false;
+            return result;
+        }
+
+        public void Clear()
+        {
+            Pending = false;
+            tracking = false;
+        }
+    }
+}

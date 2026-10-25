@@ -1,5 +1,6 @@
 using System;
 using System.Diagnostics;
+using Anseong.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using Debug = UnityEngine.Debug;
@@ -23,9 +24,9 @@ namespace Anseong.Pilot
     /// 기체 점검 최소판: 담당 팔 손마다 어깨 → 가드 → 도달을 저장한다. 각 단계는 그립을 쥐는 순간 저장하고,
     /// 다음 단계는 그립을 한 번 놓은 뒤에만 받는다. 1인 양팔 모드에서는 양손을 같은 단계에서 각각 저장하고,
     /// 두 손이 모두 저장되면 다음 단계로 간다. 값은 그 판 동안만 메모리에 둔다.
-    /// <para>안내는 개발용 Console 로그와 선택 시 기즈모뿐이다. 관객용 안내 화면은 M4.</para>
+    /// <para>안내는 개발용 Console 로그, 헤드셋 안 테스트 안내판(TestGuidePanel), 선택 시 기즈모다. 관객용 안내 화면은 M4.</para>
     /// </summary>
-    public class PilotCalibrationFlow : MonoBehaviour
+    public class PilotCalibrationFlow : MonoBehaviour, ITunable
     {
         [SerializeField, Tooltip("손 입력(같은 XR Origin의 PilotHandInput).")]
         PilotHandInput input;
@@ -39,6 +40,9 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("보정 판정 수치.")]
         ArmCalibrationSettings settings = new ArmCalibrationSettings();
 
+        [SerializeField, Tooltip("보정 뒤 몸이 방 안에서 옮겨 가면 보정한 어깨·가드도 따라가게 한다(팔 IK·허리·펀치 분류가 같이 쓴다).")]
+        BodyFollowSettings bodyFollow = new BodyFollowSettings();
+
         [SerializeField, Tooltip("켜질 때 바로 어깨 단계부터 시작한다.")]
         bool startOnEnable = true;
 
@@ -49,6 +53,7 @@ namespace Anseong.Pilot
 #pragma warning restore 0414
 
         ArmCalibration[] arms;
+        readonly BodyFollow follow = new BodyFollow();
         readonly bool[] captured = new bool[2];
         readonly bool[] waitRelease = new bool[2];
         readonly float[] headYawAtReach = new float[2];
@@ -64,6 +69,33 @@ namespace Anseong.Pilot
         /// <summary>보정이 끝났을 때(다시 보정해도 매번).</summary>
         public event Action Completed;
 
+        /// <summary>안내·저장 결과 한 줄(개발용 로그와 같은 내용). 헤드셋 안 안내판이 받는다. 에디터·개발 빌드에서만 온다.</summary>
+        public event Action<string> Notice;
+
+        /// <summary>이번 단계에서 이 손을 저장했다.</summary>
+        public bool IsCaptured(PilotSide hand) => captured[(int)hand];
+
+        /// <summary>이 손이 보정 대상(담당 팔)이다.</summary>
+        public bool UsesHand(PilotSide hand) => input != null && input.IsArmHand(hand);
+
+        /// <summary>단계별 안내 문장(사람이 읽는 것).</summary>
+        public static string Instruction(CalibrationStage stage)
+        {
+            switch (stage)
+            {
+                case CalibrationStage.Shoulder:
+                    return "1/3 어깨: 똑바로 서서 팔을 아래로 편하게 내린 채 그립을 쥐었다 놓으세요.";
+                case CalibrationStage.Guard:
+                    return "2/3 가드: 편한 가드 자세에서 그립을 쥐었다 놓으세요.";
+                case CalibrationStage.Reach:
+                    return "3/3 도달: 펀치 자세(손등 위, 엄지 안쪽)로 정면으로 편하게 끝까지 뻗고 그립을 쥐었다 놓으세요.";
+                case CalibrationStage.Complete:
+                    return "보정 완료.";
+                default:
+                    return "보정 대기 중.";
+            }
+        }
+
         /// <summary>머리 회전(트래킹 공간, 손 위치와 같은 좌표계). 머리나 트래킹 공간이 없으면 false.</summary>
         public bool TryGetHeadRotation(out Quaternion rotation)
         {
@@ -72,6 +104,25 @@ namespace Anseong.Pilot
             rotation = trackingSpace != null ? Quaternion.Inverse(trackingSpace.rotation) * head.rotation : head.rotation;
             return true;
         }
+
+        /// <summary>머리 위치(트래킹 공간, 손 위치와 같은 좌표계). 머리가 없으면 false.</summary>
+        public bool TryGetHeadPosition(out Vector3 position)
+        {
+            position = HeadPosition();
+            return head != null;
+        }
+
+        /// <summary>보정 뒤 몸이 옮겨 간 양(트래킹 공간, m). 끄거나 보정 전이면 0.</summary>
+        public Vector3 BodyOffset => follow.Offset;
+
+        /// <summary>몸 이동 보정이 지금 켜져 있고 기준이 잡혀 있다.</summary>
+        public bool BodyFollowActive => follow.HasReference && bodyFollow != null && bodyFollow.enabled;
+
+        /// <summary>
+        /// 손 위치(트래킹 공간)를 "보정한 자리에 서 있는 것처럼" 바꾼다. 보정값(어깨·가드·도달)과 비교하는 모든 곳은 이 값을 쓴다.
+        /// 플레이어가 걸어 옮겨도 가드 자세면 팔이 움직이지 않는다.
+        /// </summary>
+        public Vector3 CompensateHand(Vector3 trackingHand) => trackingHand - follow.Offset;
 
         public ArmCalibration Get(PilotSide hand)
         {
@@ -117,6 +168,7 @@ namespace Anseong.Pilot
         public void Restart()
         {
             EnsureArms();
+            follow.Clear();
             foreach (var arm in arms) arm.Reset();
             for (var h = 0; h < 2; h++)
             {
@@ -129,6 +181,7 @@ namespace Anseong.Pilot
 
         void Update()
         {
+            if (follow.HasReference) follow.Update(HeadPosition(), Time.deltaTime, bodyFollow);
             if (input == null || Stage == CalibrationStage.NotStarted || Stage == CalibrationStage.Complete) return;
 
             var allDone = true;
@@ -196,16 +249,19 @@ namespace Anseong.Pilot
             switch (stage)
             {
                 case CalibrationStage.Shoulder:
-                    Log($"보정 시작({HandsLabel()}). 1/3 어깨: 똑바로 서서 팔을 아래로 편하게 내린 채 그립을 쥐었다 놓으세요.");
+                    Log($"보정 시작({HandsLabel()}). {Instruction(stage)}");
                     break;
                 case CalibrationStage.Guard:
-                    Log("2/3 가드: 편한 가드 자세에서 그립을 쥐었다 놓으세요.");
+                    Log(Instruction(stage));
                     break;
                 case CalibrationStage.Reach:
-                    Log("3/3 도달: 펀치 자세(손등 위, 엄지 안쪽)로 정면으로 편하게 끝까지 뻗고 그립을 쥐었다 놓으세요.");
+                    Log(Instruction(stage));
                     break;
                 case CalibrationStage.Complete:
                     AlignBodyYawForBothArms();
+                    if (head != null) follow.SetReference(HeadPosition());
+                    Log(head == null ? "몸 이동 보정 꺼짐: 머리(head)가 비어 있습니다. Add Pilot Input을 다시 실행하세요."
+                        : $"몸 이동 보정 {(bodyFollow.enabled ? "켜짐" : "꺼짐")} (Follow Seconds {bodyFollow.followSeconds:F2}, Follow Amount {bodyFollow.followAmount:F2})");
                     for (var h = 0; h < 2; h++)
                         if (input != null && input.IsArmHand((PilotSide)h)) input.Gate((PilotSide)h).RequireRelease();
                     LogSummary();
@@ -313,6 +369,7 @@ namespace Anseong.Pilot
         void Log(string message)
         {
             Debug.Log($"[PilotCalibration] {message}", this);
+            Notice?.Invoke(message);
         }
 
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -350,5 +407,19 @@ namespace Anseong.Pilot
             }
         }
 #endif
+
+        /// <summary>인게임 조절 메뉴: 몸 이동 보정.</summary>
+        public void AddTuning(TuningList list)
+        {
+            var f = bodyFollow;
+            if (f == null) return;
+            const string g = "몸 이동";
+            list.Describe(g, "할 것: 보정 뒤 앞뒤·좌우로 걷고, 무릎 굽히고, 고개 돌리기\n볼 것: 팔이 쏠리거나 돌지 않고 주먹 높이 그대로");
+            list.AddCheck(g, "body.walk", "걸어도 팔이 안 쏠림");
+            list.AddCheck(g, "body.crouch", "무릎 굽혀도 주먹 높이 그대로");
+            list.AddCheck(g, "body.look", "고개 돌려도 팔이 안 돎");
+            list.AddToggle(g, "body.enabled", "몸 이동 보정", () => f.enabled, v => f.enabled = v);
+            list.AddToggle(g, "body.followHeight", "높이도 따라감", () => f.followHeight, v => f.followHeight = v);
+        }
     }
 }

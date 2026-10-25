@@ -1,3 +1,4 @@
+using Anseong.Core;
 using UnityEngine;
 
 namespace Anseong.Pilot
@@ -8,7 +9,7 @@ namespace Anseong.Pilot
     /// <para>조종석은 머리 뼈 위치를 따라가므로(CockpitSeat followWeight) 허리를 돌리면 시점도 조금 옮겨진다.</para>
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
-    public class TorsoTwistDriver : MonoBehaviour
+    public class TorsoTwistDriver : MonoBehaviour, ITunable
     {
         /// <summary>Animator 평가 뒤, 팔 드라이버(100) 전.</summary>
         public const int ExecutionOrder = 90;
@@ -64,7 +65,8 @@ namespace Anseong.Pilot
                 var left = calibration.Get(PilotSide.Left);
                 var right = calibration.Get(PilotSide.Right);
                 var headYaw = calibration.TryGetHeadRotation(out var head) ? TorsoTwist.HeadYawFromBody(head, left.BodyYawDegrees) : 0f;
-                targetYaw = TorsoTwist.EstimateYaw(left, right, input.Get(PilotSide.Left).Position, input.Get(PilotSide.Right).Position,
+                targetYaw = TorsoTwist.EstimateYaw(left, right,
+                    calibration.CompensateHand(input.Get(PilotSide.Left).Position), calibration.CompensateHand(input.Get(PilotSide.Right).Position),
                     headYaw, settings);
             }
 
@@ -91,6 +93,20 @@ namespace Anseong.Pilot
             var left = calibration.Get(PilotSide.Left);
             var right = calibration.Get(PilotSide.Right);
             return TorsoTwist.ShoulderShift(side == PilotSide.Left ? left : right, left, right, yaw);
+        }
+
+        /// <summary>인게임 조절 메뉴: 허리 회전.</summary>
+        public void AddTuning(TuningList list)
+        {
+            const string g = "허리";
+            list.Describe(g, "할 것: 허리 회전 끄고 켜서 펀치 비교, 둘러보기\n볼 것: 펀치에 허리가 살짝 따라 돌고 둘러볼 땐 안 돎");
+            list.AddCheck(g, "torso.punch", "펀치에 허리가 따라 돎");
+            list.AddCheck(g, "torso.look", "둘러볼 때 허리 안 돎");
+            list.AddToggle(g, "torso.enabled", "허리 회전", () => twistEnabled, v => twistEnabled = v);
+            if (settings == null) return;
+            var s = settings;
+            list.AddFloat(g, "torso.handWeight", "손 비율", () => s.handWeight, v => s.handWeight = v, 0f, 1f, 0.05f);
+            list.AddFloat(g, "torso.maxDegrees", "최대 각도(도)", () => s.maxDegrees, v => s.maxDegrees = v, 0f, 60f, 5f, 0);
         }
     }
 }

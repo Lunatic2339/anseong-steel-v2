@@ -1,4 +1,5 @@
 using System;
+using Anseong.Core;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -13,7 +14,7 @@ namespace Anseong.Pilot
     /// </para>
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
-    public class PilotHandInput : MonoBehaviour
+    public class PilotHandInput : MonoBehaviour, ITunable
     {
         /// <summary>IK·펀치 판정·보정보다 먼저 읽는다.</summary>
         public const int ExecutionOrder = -100;
@@ -220,6 +221,13 @@ namespace Anseong.Pilot
         static void DisableIf(bool enabledHere, InputActionReference reference)
         {
             if (enabledHere && reference != null && reference.action != null) reference.action.Disable();
+        }
+
+        /// <summary>인게임 조절 메뉴: 그립 기준.</summary>
+        public void AddTuning(TuningList list)
+        {
+            list.Describe("그립", "할 것: 그립을 살짝·꽉 쥐어 보기\n볼 것: 펀치가 '그립 안 쥠'으로 버려지지 않는지");
+            list.AddCheck("그립", "input.grip", "쥐면 바로 인식, 놓으면 바로 풀림");
         }
     }
 }

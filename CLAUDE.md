@@ -1,6 +1,8 @@
 # 안성제철 (anseong-steel-v2)
 
 두 조종사가 65m 거대 로봇의 팔을 하나씩 맡아 보스 한 기를 쓰러뜨리는 협동 VR 맨손 전투. 5인 캡스톤, **공개 시연 2026-12-11**.
+**게임 전체를 관통하는 개념: 복싱 게임이 아니라 육중한 로봇을 조종하는 메카 게임.** 로봇 동작은 빠릿빠릿하지 않고 묵직하게(시점은 늦추지 않음). 모든 기능·수치·애니메이션·소리는 이 기준으로 정한다(`06_feel_and_sound.md` 맨 위).
+
 이 파일은 모든 Claude Code 세션이 시작할 때 읽는다. 짧게 유지하고, 자세한 내용은 아래 문서를 읽는다.
 
 ## 먼저 읽을 문서
@@ -49,6 +51,7 @@ Hardware/Exo/firmware/   ESP32 펌웨어 (Unity 밖)
 
 - 규칙·수학은 MonoBehaviour와 분리된 순수 클래스로 만들고 `Tests/EditMode`에 NUnit 테스트를 붙인다.
 - 조정할 수치는 `[SerializeField]` + `[Tooltip]`으로 Inspector에 노출한다. 클래스 기본값 = 기획 문서의 초기값.
+- 헤드셋을 쓰고 조절할 수치는 인게임 조절 메뉴에도 넣는다(선우 10/25). 컴포넌트가 `Anseong.Core.ITunable`을 구현해 `AddTuning`에서 항목을 등록하면 `UI/TuningMenu`(오른손 B)에 나온다.
 - 금지: `[InitializeOnLoad]`, `RuntimeInitializeOnLoadMethod`, 런타임 `OnGUI` 디버그 UI, 런타임 `Shader.Find`, 매 프레임 `GetComponent`·`Find*`, 문자열 오브젝트 이름이나 숫자 레이어 하드코딩, 런타임 코드의 `UnityEditor` 참조.
 - 디버그·검증 코드는 `Editor/` 또는 `#if UNITY_EDITOR || DEVELOPMENT_BUILD` 안에만 둔다.
 - 시간은 네트워크 코드에서 `NetworkManager.ServerTime`을 쓴다. `Time.time`을 서버 판정에 쓰지 않는다.
