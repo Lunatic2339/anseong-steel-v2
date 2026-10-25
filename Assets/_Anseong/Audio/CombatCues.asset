@@ -1,0 +1,169 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15a85a6e67c9d954695085bddbce80c9, type: 3}
+  m_Name: CombatCues
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Combat.CombatCueSet
+  entries:
+  - cue: 0
+    kind: 0
+    soundName: SFX_GripLock
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0.15
+    hapticSeconds: 0.03
+  - cue: 1
+    kind: 0
+    soundName: SFX_GripRelease
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+  - cue: 2
+    kind: 1
+    soundName: SFX_JabLaunch
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+  - cue: 2
+    kind: 2
+    soundName: SFX_HookSwing
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+  - cue: 2
+    kind: 3
+    soundName: SFX_HookSwing
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+  - cue: 3
+    kind: 1
+    soundName: SFX_PunchHit
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0.5
+    hapticSeconds: 0.08
+  - cue: 3
+    kind: 2
+    soundName: SFX_HookHit
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0.8
+    hapticSeconds: 0.15
+  - cue: 3
+    kind: 3
+    soundName: SFX_HookHit
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0.7
+    hapticSeconds: 0.12
+  - cue: 3
+    kind: 2
+    soundName: SFX_BossStagger
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0
+    hapticSeconds: 0
+  - cue: 4
+    kind: 0
+    soundName: SFX_PunchWhoosh
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+  - cue: 5
+    kind: 0
+    soundName: SFX_ComboStep
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0.15
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+  - cue: 7
+    kind: 0
+    soundName: SFX_BoostReady
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+  - cue: 8
+    kind: 0
+    soundName: SFX_Boost
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 1
+    hapticSeconds: 0.25
+  - cue: 8
+    kind: 0
+    soundName: SFX_BoostHit
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0
+    hapticSeconds: 0
