@@ -192,6 +192,13 @@ namespace Anseong.Combat
             var s = settings;
             if (s == null) return;
             const string g = "펀치 인식";
+            list.Describe(g, "할 것: 그립 쥐고 팔마다 잽 20·훅 20·어퍼컷 10\n       가드 올리기 10, 잽 연타 10\n볼 것: 안내판 종류별 개수·실패 이유(90% 목표)");
+            list.AddCheck(g, "punch.jab", "잽 20번 중 18번 이상");
+            list.AddCheck(g, "punch.hook", "훅 20번 중 18번 이상");
+            list.AddCheck(g, "punch.uppercut", "어퍼컷 10번 중 9번 이상");
+            list.AddCheck(g, "punch.guardRaise", "가드 올리기는 0번");
+            list.AddCheck(g, "punch.combo", "잽 연타가 다 세짐");
+            list.AddCheck(g, "punch.double", "한 번 친 게 두 번 안 세짐");
             list.AddFloat(g, "punch.minJabStraightness", "잽 직진도 최소", () => s.minJabStraightness, v => s.minJabStraightness = v, 0.5f, 1f, 0.01f);
             list.AddFloat(g, "punch.maxJabSideRatio", "잽 좌우폭/전진 최대", () => s.maxJabSideRatio, v => s.maxJabSideRatio = v, 0.2f, 1f, 0.05f);
             list.AddFloat(g, "punch.minHookSweep", "훅 안쪽 스윕 최소(m)", () => s.minHookSweep, v => s.minHookSweep = v, 0.05f, 0.5f, 0.01f);

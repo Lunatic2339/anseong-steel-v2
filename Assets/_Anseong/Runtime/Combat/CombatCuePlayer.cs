@@ -1,3 +1,4 @@
+using Anseong.Core;
 using Anseong.Pilot;
 using UnityEngine;
 using UnityEngine.XR;
@@ -8,7 +9,7 @@ namespace Anseong.Combat
     /// 전투 이벤트를 듣고 <see cref="CombatCueSet"/> 표대로 소리와 컨트롤러 진동을 낸다. 표가 비어 있거나 소리 칸이 비면 조용히 넘어간다.
     /// 외골격 명령(H-01 뒤)도 같은 방식으로 이벤트를 듣는 컴포넌트를 하나 더 붙이면 된다.
     /// </summary>
-    public class CombatCuePlayer : MonoBehaviour
+    public class CombatCuePlayer : MonoBehaviour, ITunable
     {
         [SerializeField, Tooltip("전투 판정. 비어 있으면 시작할 때 한 번 찾는다.")]
         CombatDirector director;
@@ -100,6 +101,16 @@ namespace Anseong.Combat
             if (!device.isValid || !device.SendHapticImpulse(0u, amplitude, seconds)) return;
             hapticUntil[h] = now + seconds;
             hapticAmplitude[h] = amplitude;
+        }
+
+        /// <summary>인게임 조절 메뉴: 소리·진동 확인(소리 파일은 나중에 꽂는다).</summary>
+        public void AddTuning(TuningList list)
+        {
+            const string g = "소리·진동";
+            list.Describe(g, "할 것: 명중·빗나감·부스트·연계 끊김 때 듣고 느끼기\n볼 것: 이벤트마다 소리·진동이 맞게 나옴");
+            list.AddCheck(g, "cue.sound", "명중 때 소리 남");
+            list.AddCheck(g, "cue.haptic", "명중 때 컨트롤러 진동");
+            list.AddToggle(g, "cue.haptics", "컨트롤러 진동", () => haptics, v => haptics = v);
         }
     }
 }

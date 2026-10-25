@@ -1,4 +1,5 @@
 using System;
+using Anseong.Core;
 using Unity.XR.CoreUtils;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -16,7 +17,7 @@ namespace Anseong.Pilot
     /// </para>
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
-    public class CockpitSeat : MonoBehaviour
+    public class CockpitSeat : MonoBehaviour, ITunable
     {
         /// <summary>Animator와 일반 스크립트가 로봇을 움직인 뒤에 실행한다.</summary>
         public const int ExecutionOrder = 10000;
@@ -144,6 +145,17 @@ namespace Anseong.Pilot
                 : Vector3.zero;
             var (position, rotation) = CockpitSeatMath.RigPose(robotRoot.position, robotRoot.rotation, seats[activeSeat].offsetMeters + follow + additionalOffset);
             transform.SetPositionAndRotation(position, rotation);
+        }
+
+        /// <summary>인게임 조절 메뉴: 조종석이 로봇 머리 흔들림을 따라가는 정도(선우 10/17, 계속 시험할 항목).</summary>
+        public void AddTuning(TuningList list)
+        {
+            const string g = "조종석 흔들림";
+            list.Describe(g, "할 것: 펀치 치며 시점 흔들림 보기\n       따라가는 비율 1 → 0.5 → 0 비교\n볼 것: 거대 로봇에 탄 느낌, 멀미 없음");
+            list.AddCheck(g, "seat.sway", "흔들림이 로봇에 탄 느낌");
+            list.AddCheck(g, "seat.sick", "멀미 없음");
+            list.AddFloat(g, "seat.followWeight", "머리 흔들림 따라가는 비율", () => followWeight, v => followWeight = v, 0f, 1f, 0.1f, 1);
+            list.AddFloat(g, "seat.maxFollowOffset", "따라가는 최대 거리(m)", () => maxFollowOffset, v => maxFollowOffset = v, 0f, 3f, 0.1f, 1);
         }
 
         /// <summary>XR Origin을 조종석 안 자기 좌석(좌/우)에 둔다.</summary>
