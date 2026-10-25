@@ -48,10 +48,10 @@ namespace Anseong.Combat
         public float minHookOutset = 0f;
 
         [Tooltip("훅: 바깥 끝에서 안쪽으로 휘두른 거리 최소값(m).")]
-        public float minHookSweep = 0.22f;
+        public float minHookSweep = 0.17f;
 
         [Tooltip("훅: 호 길이 ÷ 현 길이 최소값(휘어진 정도).")]
-        public float minHookArcRatio = 1.02f;
+        public float minHookArcRatio = 1.01f;
 
         [Tooltip("어퍼컷: 가장 낮은 지점에서 올려친 높이 최소값(m).")]
         public float minUppercutRise = 0.18f;
@@ -69,7 +69,7 @@ namespace Anseong.Combat
         public float minForward = 0.18f;
 
         [Tooltip("위아래 폭 ÷ 전진 거리 최대값. 넘으면 가드 올리기·내리기로 본다.")]
-        public float maxVerticalRatio = 0.7f;
+        public float maxVerticalRatio = 0.85f;
 
         [Tooltip("켜면 위아래 폭을 전진 거리와 좌우 폭 중 큰 쪽과 비교한다(옆으로 크게 도는 훅이 '위아래 움직임'으로 버려지지 않게). " +
                  "끄면 전진 거리와만 비교한다(이전 동작).")]
@@ -506,5 +506,44 @@ namespace Anseong.Combat
         }
 
         static bool Finite(Vector3 v) => !float.IsNaN(v.x + v.y + v.z) && !float.IsInfinity(v.x + v.y + v.z);
+    }
+
+    /// <summary>
+    /// 사람 손으로 끝난 펀치 결과를 로봇 주먹이 따라올 때까지 붙잡아 둔다(10/25 헤드셋: 묵직함 0.3에서 로봇 팔이 다 오기 전에 판정이 먼저 났다).
+    /// 로봇 주먹이 목표를 거의 따라잡았거나, 가장 멀리 간 뒤 돌아오기 시작했거나, 최대 시간이 지나면 내보낸다.
+    /// 위치는 로봇 팔 길이 배수(로봇 몸 기준)라 로봇 크기와 무관하다.
+    /// </summary>
+    public sealed class StrikeHold
+    {
+        const float TurnBackRatio = 0.01f;
+        Vector3 start;
+        float farthest;
+        double since;
+
+        public bool Pending { get; private set; }
+        public PunchResult Result { get; private set; }
+
+        public void Begin(PunchResult result, Vector3 robotFist, double time)
+        {
+            Result = result;
+            start = robotFist;
+            farthest = 0f;
+            since = time;
+            Pending = true;
+        }
+
+        /// <summary>robotFist = 로봇 주먹 목표(반응 지연 뒤), lag = 사람 손 목표와의 차이. 둘 다 팔 길이 배수. 내보낼 때 true.</summary>
+        public bool Step(Vector3 robotFist, float lag, double time, float caughtUp, float maxSeconds)
+        {
+            if (!Pending) return false;
+            var distance = (robotFist - start).magnitude;
+            farthest = Mathf.Max(farthest, distance);
+            var turnedBack = distance < farthest - TurnBackRatio;
+            if (lag > caughtUp && !turnedBack && time - since < maxSeconds) return false;
+            Pending = false;
+            return true;
+        }
+
+        public void Clear() => Pending = false;
     }
 }

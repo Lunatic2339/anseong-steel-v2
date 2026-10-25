@@ -95,6 +95,12 @@ namespace Anseong.Pilot
         /// <summary>마지막 풀이 결과(월드).</summary>
         public ArmPose LastPose { get; private set; }
 
+        /// <summary>반응 지연 뒤 주먹 목표(로봇 어깨 기준·로봇 정면 기준, 팔 길이 배수).</summary>
+        public Vector3 FistRatio { get; private set; }
+
+        /// <summary>반응 지연 뒤 주먹 목표가 사람 손 목표보다 뒤처진 거리(팔 길이 배수). 0 = 따라잡음.</summary>
+        public float LagRatio { get; private set; }
+
         /// <summary>마지막 주먹 목표(월드, 반응 지연 적용 뒤).</summary>
         public Vector3 LastTarget { get; private set; }
 
@@ -195,6 +201,9 @@ namespace Anseong.Pilot
                 filteredLocal = Vector3.MoveTowards(filteredLocal, local, maxTargetSpeed * dt);
             }
 
+            FistRatio = length > 0f ? filteredLocal / length : Vector3.zero;
+            LagRatio = length > 0f ? (local - filteredLocal).magnitude / length : 0f;
+
             // 목표는 로봇 정면 기준으로 저장하므로 로봇이 돌거나 움직여도 손이 따로 움직인 것으로 보지 않는다.
             var shoulder = upperArm.position;
             LastTarget = shoulder + body * filteredLocal;
@@ -250,6 +259,7 @@ namespace Anseong.Pilot
             list.AddCheck("묵직함", "arm.heavy", "육중한 로봇 느낌 값 정함");
             list.AddCheck("묵직함", "arm.camera", "시점은 안 늦음(멀미 없음)");
             list.AddCheck("묵직함", "arm.still", "가만히 있으면 로봇 팔도 가만히");
+            list.AddCheck("묵직함", "arm.hitTiming", "판정이 로봇 주먹이 도착할 때 남");
             list.AddFloat("묵직함", "arm.responseSeconds", "팔 반응 시간(초, 0 = 즉시)", () => responseSeconds, v => responseSeconds = v, 0f, 0.6f, 0.05f);
             list.AddFloat("묵직함", "arm.maxTargetSpeed", "주먹 최대 속도(m/s 로봇, 0 = 제한 없음)", () => maxTargetSpeed, v => maxTargetSpeed = v, 0f, 80f, 5f, 0);
             list.Describe("손목", "할 것: 그립 쥐고·놓고 손목 돌려 보기\n볼 것: 쥐면 일자, 놓으면 컨트롤러 각도, 흐느적 없음");
@@ -263,7 +273,6 @@ namespace Anseong.Pilot
             list.AddCheck("팔 매핑", "arm.reach", "뻗으면 로봇 팔도 끝까지");
             list.AddChoice("팔 매핑", "arm.mappingMode", "매핑 방식", () => (int)mappingMode, v => mappingMode = (ArmMappingMode)v, new[] { "Linear(기본)", "가드 맞춤" });
             list.AddFloat("팔 매핑", "arm.shoulderHeightOffset", "어깨 높이 보정(m, +면 주먹 내려감)", () => shoulderHeightOffset, v => shoulderHeightOffset = v, -0.3f, 0.3f, 0.02f);
-            list.AddToggle("팔 매핑", "arm.useElbowHint", "팔꿈치 들기 힌트", () => useElbowHint, v => useElbowHint = v);
         }
     }
 }

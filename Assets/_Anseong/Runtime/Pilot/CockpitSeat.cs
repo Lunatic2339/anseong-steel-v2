@@ -155,7 +155,6 @@ namespace Anseong.Pilot
             list.AddCheck(g, "seat.sway", "흔들림이 로봇에 탄 느낌");
             list.AddCheck(g, "seat.sick", "멀미 없음");
             list.AddFloat(g, "seat.followWeight", "머리 흔들림 따라가는 비율", () => followWeight, v => followWeight = v, 0f, 1f, 0.1f, 1);
-            list.AddFloat(g, "seat.maxFollowOffset", "따라가는 최대 거리(m)", () => maxFollowOffset, v => maxFollowOffset = v, 0f, 3f, 0.1f, 1);
         }
 
         /// <summary>XR Origin을 조종석 안 자기 좌석(좌/우)에 둔다.</summary>
