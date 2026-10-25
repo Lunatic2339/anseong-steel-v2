@@ -414,6 +414,10 @@ namespace Anseong.Pilot
             var f = bodyFollow;
             if (f == null) return;
             const string g = "몸 이동";
+            list.Describe(g, "할 것: 보정 뒤 앞뒤·좌우로 걷고, 무릎 굽히고, 고개 돌리기\n볼 것: 팔이 쏠리거나 돌지 않고 주먹 높이 그대로");
+            list.AddCheck(g, "body.walk", "걸어도 팔이 안 쏠림");
+            list.AddCheck(g, "body.crouch", "무릎 굽혀도 주먹 높이 그대로");
+            list.AddCheck(g, "body.look", "고개 돌려도 팔이 안 돎");
             list.AddToggle(g, "body.enabled", "몸 이동 보정", () => f.enabled, v => f.enabled = v);
             list.AddFloat(g, "body.followAmount", "따라가는 비율", () => f.followAmount, v => f.followAmount = v, 0f, 1.5f, 0.05f);
             list.AddFloat(g, "body.followSeconds", "따라가는 시간(초, 0 = 즉시)", () => f.followSeconds, v => f.followSeconds = v, 0f, 1f, 0.05f);

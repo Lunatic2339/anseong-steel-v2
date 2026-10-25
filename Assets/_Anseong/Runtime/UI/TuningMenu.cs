@@ -87,7 +87,7 @@ namespace Anseong.UI
         bool dirty = true;
 
         // 검증 순서(M1-04_검증_조절값.md)대로 묶음을 보여 준다.
-        static readonly string[] GroupOrder = { "몸 이동", "손목", "펀치 인식", "그립", "묵직함", "팔 매핑", "허리" };
+        static readonly string[] GroupOrder = { "몸 이동", "손목", "펀치 인식", "그립", "묵직함", "조종석 흔들림", "허리", "팔 매핑", "공격 보정", "연계·부스트", "보스 반응", "보스 HP", "소리·진동", "가드" };
 
         void Start()
         {
@@ -247,6 +247,16 @@ namespace Anseong.UI
             var first = FirstVisible(items);
             string group = first > 0 ? items[first - 1].Group : null;
             var rows = 0;
+            // 고른 항목 묶음의 검증 안내(무엇을 하고 무엇을 볼지)를 맨 위에. 값 열은 그 줄을 비워 둔다.
+            var hint = list.Current != null ? list.Hint(list.Current.Group) : null;
+            if (hint != null)
+            {
+                builder.Append("<color=#C8C8C8>").Append(hint).Append("</color>\n\n");
+                var lines = 2;
+                foreach (var c in hint) if (c == '\n') lines++;
+                for (var i = 0; i < lines; i++) valueBuilder.Append('\n');
+                rows += lines;
+            }
             for (var i = first; i < items.Count && rows < visibleRows; i++)
             {
                 var item = items[i];
@@ -260,16 +270,22 @@ namespace Anseong.UI
                 var selected = i == list.Selected;
                 var changed = !Mathf.Approximately(item.Value, item.Default);
                 builder.Append(selected ? "<color=#FFD24D><b>  > " : "     ").Append(item.Label).Append(selected ? "</b></color>" : string.Empty).Append('\n');
+                var color = !changed || selected ? null
+                    : !item.IsCheck ? "#5BE37D"
+                    : Mathf.RoundToInt(item.Value) == TuningList.CheckOk ? "#5BE37D" : "#FF6B6B";
                 valueBuilder.Append(selected ? "<color=#FFD24D><b>◀ " : "   ")
-                    .Append(changed && !selected ? "<color=#5BE37D>" : string.Empty).Append(item.ValueText()).Append(changed && !selected ? "</color>" : string.Empty)
+                    .Append(color != null ? "<color=" + color + ">" : string.Empty).Append(item.ValueText()).Append(color != null ? "</color>" : string.Empty)
                     .Append(selected ? " ▶</b></color>" : string.Empty);
-                if (changed) valueBuilder.Append("   <color=#999999>처음 ").Append(DefaultText(item)).Append("</color>");
+                if (changed && !item.IsCheck) valueBuilder.Append("   <color=#999999>처음 ").Append(DefaultText(item)).Append("</color>");
                 valueBuilder.Append('\n');
                 rows++;
             }
             labels.text = builder.ToString();
             values.text = valueBuilder.ToString();
-            if (title != null) title.text = $"<b>조절 메뉴</b>   <color=#999999>{list.Selected + 1} / {items.Count}</color>";
+            list.CountChecks(out var checkTotal, out var checkOk, out var checkProblem);
+            if (title != null)
+                title.text = $"<b>조절 · 검증 메뉴</b>   <color=#999999>{list.Selected + 1} / {items.Count}</color>" +
+                             (checkTotal > 0 ? $"   확인 <color=#5BE37D>OK {checkOk}</color> · <color=#FF6B6B>문제 {checkProblem}</color> / {checkTotal}" : string.Empty);
             if (footer != null)
                 footer.text = "B 닫기    스틱 ↑↓ 고르기    ←→ 바꾸기    A 처음 값으로\n<color=#999999>바꾼 값은 자동 저장(다음 Play에도 남음)" +
                               (status.Length > 0 ? " · " + status : string.Empty) + "</color>";

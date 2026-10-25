@@ -246,11 +246,21 @@ namespace Anseong.Pilot
         /// <summary>인게임 조절 메뉴. 왼팔·오른팔이 같은 키로 등록해 한 번에 같이 바뀐다.</summary>
         public void AddTuning(TuningList list)
         {
+            list.Describe("묵직함", "할 것: 팔 반응 시간 0 → 0.15 → 0.3마다 잽·훅 10번\n       그다음 주먹 최대 속도 30 → 20\n볼 것: 손보다 묵직하게 늦되 답답하지 않게, 시점은 그대로");
+            list.AddCheck("묵직함", "arm.heavy", "육중한 로봇 느낌 값 정함");
+            list.AddCheck("묵직함", "arm.camera", "시점은 안 늦음(멀미 없음)");
+            list.AddCheck("묵직함", "arm.still", "가만히 있으면 로봇 팔도 가만히");
             list.AddFloat("묵직함", "arm.responseSeconds", "팔 반응 시간(초, 0 = 즉시)", () => responseSeconds, v => responseSeconds = v, 0f, 0.6f, 0.05f);
             list.AddFloat("묵직함", "arm.maxTargetSpeed", "주먹 최대 속도(m/s 로봇, 0 = 제한 없음)", () => maxTargetSpeed, v => maxTargetSpeed = v, 0f, 80f, 5f, 0);
+            list.Describe("손목", "할 것: 그립 쥐고·놓고 손목 돌려 보기\n볼 것: 쥐면 일자, 놓으면 컨트롤러 각도, 흐느적 없음");
+            list.AddCheck("손목", "arm.wristGrip", "쥐면 손목 일자");
+            list.AddCheck("손목", "arm.wristFree", "놓으면 컨트롤러 각도로");
             list.AddChoice("손목", "arm.wristLockMode", "손목 고정", () => (int)wristLockMode, v => wristLockMode = (WristLockMode)v, new[] { "항상", "그립 쥘 때만" });
             if (solverSettings != null)
                 list.AddFloat("손목", "arm.lockedWristPitch", "고정 손목 위아래 꺾임(도)", () => solverSettings.lockedWristPitchDegrees, v => solverSettings.lockedWristPitchDegrees = v, -30f, 30f, 2f, 0);
+            list.Describe("팔 매핑", "할 것: 가드 자세와 끝까지 뻗기, 매핑 방식 바꿔 비교\n볼 것: 가드가 시야를 안 가리고, 뻗으면 끝까지");
+            list.AddCheck("팔 매핑", "arm.guardPose", "가드 자세가 자연스러움");
+            list.AddCheck("팔 매핑", "arm.reach", "뻗으면 로봇 팔도 끝까지");
             list.AddChoice("팔 매핑", "arm.mappingMode", "매핑 방식", () => (int)mappingMode, v => mappingMode = (ArmMappingMode)v, new[] { "Linear(기본)", "가드 맞춤" });
             list.AddFloat("팔 매핑", "arm.shoulderHeightOffset", "어깨 높이 보정(m, +면 주먹 내려감)", () => shoulderHeightOffset, v => shoulderHeightOffset = v, -0.3f, 0.3f, 0.02f);
             list.AddToggle("팔 매핑", "arm.useElbowHint", "팔꿈치 들기 힌트", () => useElbowHint, v => useElbowHint = v);
