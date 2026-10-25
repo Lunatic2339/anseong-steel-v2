@@ -55,6 +55,9 @@ namespace Anseong.Combat
         [Tooltip("훅: 호 길이 ÷ 현 길이 최소값(휘어진 정도).")]
         public float minHookArcRatio = 1.01f;
 
+        [Tooltip("훅: 앞부분과 뒷부분 진행 방향이 꺾인 각도 최소값(도, 위에서 본 평면). 곧게 대각선으로 친 펀치를 훅으로 보지 않게(10/25 헤드셋).")]
+        public float minHookTurnDegrees = 25f;
+
         [Tooltip("어퍼컷: 가장 낮은 지점에서 올려친 높이 최소값(m).")]
         public float minUppercutRise = 0.18f;
 
@@ -141,6 +144,8 @@ namespace Anseong.Combat
         public float InwardSweep;
         /// <summary>호 ÷ 현(훅 판정).</summary>
         public float ArcRatio;
+        /// <summary>앞부분 진행 방향과 뒷부분 진행 방향 사이 각도(도, 위에서 본 평면). 곧은 대각선은 0 가까이, 훅은 크다.</summary>
+        public float TurnDegrees;
         /// <summary>가장 낮은 지점 뒤로 올라간 높이(어퍼컷 판정).</summary>
         public float Rise;
         public float Forward;
@@ -472,6 +477,7 @@ namespace Anseong.Combat
             for (var i = outer + 1; i <= inner; i++) arc += Vector3.Distance(points[i], points[i - 1]);
             var chord = Vector3.Distance(points[outer], points[inner]);
             m.ArcRatio = chord > 0.01f ? arc / chord : 1f;
+            m.TurnDegrees = Turn(last);
             m.Straightness = path > 0.01f ? Vector3.Distance(points[0], points[jabEnd]) / path : 0f;
             m.SideRatio = m.Forward > 1e-4f ? (maxX - minX) / m.Forward : float.PositiveInfinity;
             result.Measure = m;
@@ -491,7 +497,8 @@ namespace Anseong.Combat
             if (maxY - minY > span * settings.maxVerticalRatio) { result.Reason = PunchReason.VerticalMotion; return result; }
 
             // 안쪽으로 크게 휘어 들어오면 훅이 먼저다(휘어진 22cm 스윕은 잽이 아니다). 그다음 곧게 나가면 잽.
-            var hook = m.Outset >= settings.minHookOutset && m.InwardSweep >= settings.minHookSweep && m.ArcRatio >= settings.minHookArcRatio;
+            var hook = m.Outset >= settings.minHookOutset && m.InwardSweep >= settings.minHookSweep && m.ArcRatio >= settings.minHookArcRatio
+                && m.TurnDegrees >= settings.minHookTurnDegrees;
             var jab = m.SideRatio <= settings.maxJabSideRatio && m.Straightness >= settings.minJabStraightness;
             if (hook)
             {
@@ -506,6 +513,29 @@ namespace Anseong.Combat
             else result.Reason = PunchReason.Ambiguous;
             return result;
         }
+
+        /// <summary>위에서 본 평면(x, z)에서 궤적 앞 35%와 뒤 35%의 진행 방향 사이 각도(도). 길이로 나눈다(샘플 간격과 무관).</summary>
+        float Turn(int last)
+        {
+            var total = 0f;
+            for (var i = 1; i <= last; i++) total += Flat(points[i] - points[i - 1]).magnitude;
+            if (total < 0.02f) return 0f;
+            int a = last, b = 0;
+            var run = 0f;
+            for (var i = 1; i <= last; i++)
+            {
+                run += Flat(points[i] - points[i - 1]).magnitude;
+                if (a == last && run >= total * 0.35f) a = i;
+                if (run <= total * 0.65f) b = i;
+            }
+            var first = Flat(points[a] - points[0]);
+            var end = Flat(points[last] - points[b]);
+            if (first.magnitude < 1e-3f || end.magnitude < 1e-3f) return 0f;
+            var cos = Mathf.Clamp((first.x * end.x + first.y * end.y) / (first.magnitude * end.magnitude), -1f, 1f);
+            return Mathf.Acos(cos) * Mathf.Rad2Deg;
+        }
+
+        static Vector2 Flat(Vector3 v) => new Vector2(v.x, v.z);
 
         static bool Finite(Vector3 v) => !float.IsNaN(v.x + v.y + v.z) && !float.IsInfinity(v.x + v.y + v.z);
     }
