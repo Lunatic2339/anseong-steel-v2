@@ -20,9 +20,9 @@ namespace Anseong.Tests
             public readonly float Hz;
             public double Time;
 
-            public Run(bool left, float hz)
+            public Run(bool left, float hz, PunchClassifierSettings settings = null)
             {
-                Classifier = new PunchClassifier(left, new PunchClassifierSettings());
+                Classifier = new PunchClassifier(left, settings ?? new PunchClassifierSettings());
                 Classifier.SetNeutral(Neutral);
                 Hz = hz;
             }
@@ -51,6 +51,8 @@ namespace Anseong.Tests
                 Hold(Vector3.zero, 0.3f, intent);
             }
         }
+
+        static PunchClassifierSettings GuardReturn() => new PunchClassifierSettings { rearmMode = RearmMode.GuardReturn };
 
         static Vector3 Jab(float u) => new Vector3(0f, 0f, 0.4f * u);
 
@@ -94,9 +96,9 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void Rearm_NeedsHandBackFromForward()
+        public void GuardReturnMode_Rearm_NeedsHandBackFromForward()
         {
-            var run = new Run(true, 90f);
+            var run = new Run(true, 90f, GuardReturn());
             run.Stroke(Jab);
             Assert.AreEqual(PunchPhase.Ready, run.Classifier.Phase);
             // 한 번 더 뻗은 채(가드보다 20cm 앞) 멈춰 있으면 다시 준비되지 않는다.
@@ -106,6 +108,73 @@ namespace Anseong.Tests
             for (var i = 1; i <= n; i++) run.Sample(Vector3.Lerp(Jab(1f), new Vector3(0f, 0f, 0.2f), (float)i / n));
             run.Hold(new Vector3(0f, 0f, 0.2f), 0.5f);
             Assert.AreNotEqual(PunchPhase.Ready, run.Classifier.Phase);
+        }
+
+        [Test]
+        public void Retract_HalfPullBack_CountsNextJab()
+        {
+            // 가드까지 안 돌아와도 반쯤(20cm) 거둬들였다 다시 뻗으면 센다(연타).
+            var run = new Run(true, 90);
+            run.Hold(Vector3.zero, 0.5f);
+            var n = 36;
+            for (var k = 0; k < 3; k++)
+            {
+                var from = k == 0 ? Vector3.zero : Jab(0.5f);
+                var m = k == 0 ? n : n / 2; // 다시 뻗기도 초속 1m
+                for (var i = 1; i <= m; i++) run.Sample(Vector3.Lerp(from, Jab(1f), (float)i / m));
+                run.Hold(Jab(1f), 0.2f);
+                for (var i = 1; i <= n; i++) run.Sample(Vector3.Lerp(Jab(1f), Jab(0.5f), (float)i / n));
+            }
+            Assert.AreEqual(3, run.Results.Count);
+            foreach (var r in run.Results) Assert.AreEqual(PunchKind.Jab, r.Kind, r.Reason.ToString());
+        }
+
+        [Test]
+        public void Retract_SmallWobble_DoesNotRearm()
+        {
+            // 뻗은 채 5cm만 흔들리면 다시 준비되지 않는다(한 번 친 걸 두 번 세지 않음).
+            var run = new Run(true, 90);
+            run.Hold(Vector3.zero, 0.5f);
+            var n = 36;
+            for (var i = 1; i <= n; i++) run.Sample(Jab((float)i / n));
+            run.Hold(Jab(1f), 0.2f);
+            Assert.AreEqual(1, run.Results.Count);
+            for (var k = 0; k < 4; k++)
+            {
+                for (var i = 1; i <= 9; i++) run.Sample(Vector3.Lerp(Jab(1f), Jab(0.875f), i / 9f));
+                for (var i = 1; i <= 9; i++) run.Sample(Vector3.Lerp(Jab(0.875f), Jab(1f), i / 9f));
+            }
+            Assert.AreEqual(1, run.Results.Count);
+            Assert.AreEqual(PunchPhase.Recovering, run.Classifier.Phase);
+        }
+
+        [Test]
+        public void Retract_RestingWhereverHandIs_Rearms()
+        {
+            // 거둬들이지 않아도 그 자리에서 잠깐(0.4초) 멈추면 다음 준비.
+            var run = new Run(true, 90);
+            run.Hold(Vector3.zero, 0.5f);
+            var n = 36;
+            for (var i = 1; i <= n; i++) run.Sample(Jab((float)i / n));
+            run.Hold(Jab(1f), 0.3f);
+            Assert.AreEqual(PunchPhase.Recovering, run.Classifier.Phase);
+            run.Hold(Jab(1f), 0.3f);
+            Assert.AreEqual(PunchPhase.Ready, run.Classifier.Phase);
+        }
+
+        [Test]
+        public void Retract_MinInterval_BlocksInstantRearm()
+        {
+            var settings = new PunchClassifierSettings { minStrikeInterval = 1.0f };
+            var run = new Run(true, 90, settings);
+            run.Hold(Vector3.zero, 0.5f);
+            var n = 36;
+            for (var i = 1; i <= n; i++) run.Sample(Jab((float)i / n));
+            run.Hold(Jab(1f), 0.2f);
+            for (var i = 1; i <= 18; i++) run.Sample(Vector3.Lerp(Jab(1f), Jab(0.5f), i / 18f));
+            Assert.AreEqual(PunchPhase.Recovering, run.Classifier.Phase, "최소 간격 전에는 거둬들여도 아직");
+            run.Hold(Jab(0.5f), 0.8f);
+            Assert.AreEqual(PunchPhase.Ready, run.Classifier.Phase);
         }
 
         [Test]
@@ -264,9 +333,9 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void SecondStrikeWithoutReload_IsNotCounted_UntilNeutral()
+        public void GuardReturnMode_SecondStrikeWithoutReload_IsNotCounted_UntilNeutral()
         {
-            var run = new Run(true, 90);
+            var run = new Run(true, 90, GuardReturn());
             run.Hold(Vector3.zero, 0.5f);
             var n = 36;
             for (var i = 1; i <= n; i++) run.Sample(Jab((float)i / n));
