@@ -1072,7 +1072,12 @@ MonoBehaviour:
     startSpeed: 0.75
     departForwardSpeed: 0.25
     departInwardSpeed: 0.35
-    neutralRadius: 0.12
+    rearmMode: 0
+    rearmRetract: 0.1
+    rearmRestSeconds: 0.4
+    minStrikeInterval: 0.25
+    neutralRadius: 0.25
+    neutralForwardBand: 0.1
     neutralDwell: 0.15
     stopSpeed: 0.2
     stopDwell: 0.1
