@@ -3,4 +3,4 @@
 |---|---|---|---|---|---|
 | YunjuBase / Sandbox_Yunju | AI-assisted Unity primitives | Coastal placement base | User direction + OpenAI Codex | Original primitive geometry; OpenAI terms; existing team robots reused | https://openai.com/policies/terms-of-use/ |
 | Assets/Warehouse/ (Warehouse.prefab) | OpenAI Codex / Unity primitives | Original modular steelworks shed | User direction + Codex | Original generated geometry and code; OpenAI terms | https://openai.com/policies/terms-of-use/ |
-
+| Assets/Smokestack/ | OpenAI Codex / procedural mesh | Original tapered hollow industrial chimney | User direction + Codex; user-supplied visual reference only | Original generated geometry/code; source model not downloaded | https://openai.com/policies/terms-of-use/ |
