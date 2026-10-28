@@ -43,6 +43,13 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("보정 뒤 몸이 방 안에서 옮겨 가면 보정한 어깨·가드도 따라가게 한다(팔 IK·허리·펀치 분류가 같이 쓴다).")]
         BodyFollowSettings bodyFollow = new BodyFollowSettings();
 
+        [SerializeField, Tooltip("1인 양팔 모드: 보정이 끝날 때 두 어깨를 어깨 단계의 머리 좌우로 대칭이 되게 옮긴다(기본, 선우 10/28: 보정 뒤 두 팔이 한쪽으로 쏠림). " +
+            "끄면 내린 손 위치 그대로.")]
+        bool centerShouldersOnHead = true;
+
+        Vector3 headAtShoulder;
+        bool hasHeadAtShoulder;
+
         [SerializeField, Tooltip("켜질 때 바로 어깨 단계부터 시작한다.")]
         bool startOnEnable = true;
 
@@ -220,6 +227,11 @@ namespace Anseong.Pilot
             {
                 case CalibrationStage.Shoulder:
                     error = arm.CaptureShoulder(HeadPosition(), sample.Position);
+                    if (error == CalibrationError.None && head != null)
+                    {
+                        headAtShoulder = HeadPosition();
+                        hasHeadAtShoulder = true;
+                    }
                     break;
                 case CalibrationStage.Guard:
                     error = arm.CaptureGuard(sample.Position, sample.Rotation);
@@ -286,6 +298,12 @@ namespace Anseong.Pilot
             Log($"공통 몸 정면 {yaw:F0}° (손마다 잰 값: 왼손 {arms[0].BodyYawDegrees:F0}°, 오른손 {arms[1].BodyYawDegrees:F0}°)");
             arms[0].SetBodyYaw(yaw);
             arms[1].SetBodyYaw(yaw);
+            if (!centerShouldersOnHead || !hasHeadAtShoulder) return;
+            var (left, right) = ArmCalibration.SymmetricShoulders(arms[0].Shoulder, arms[1].Shoulder, headAtShoulder, yaw);
+            Log($"어깨를 머리 좌우 대칭으로: 왼쪽 {(left - arms[0].Shoulder).magnitude * 100f:F0}cm, 오른쪽 {(right - arms[1].Shoulder).magnitude * 100f:F0}cm 옮김 " +
+                $"(어깨 간격 {Vector3.Distance(left, right) * 100f:F0}cm)");
+            arms[0].MoveShoulder(left);
+            arms[1].MoveShoulder(right);
         }
 
         Vector3 HeadPosition()
