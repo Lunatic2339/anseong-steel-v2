@@ -17,7 +17,7 @@ namespace Anseong.EditorTools
         const string LogPrefix = "[PcEyeViewMenu]";
         // 02_architecture: Head 좌석 눈높이 약 49.2 m(대기 자세, M1-01). 플레이어 로봇 원점에서 보스(+Z)를 본다.
         const float EyeHeight = 49.2f;
-        const float FarClip = 4000f;
+        const float FarClip = 20000f;   // 윤주 맵의 먼 산(약 3~7 km, 폭 20 km)까지 보이게
         const float CameraDepth = 50f;
 
         [MenuItem("Anseong/Sandbox/Add PC Robot Eye View")]
