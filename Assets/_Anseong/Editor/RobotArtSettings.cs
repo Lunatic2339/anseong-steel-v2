@@ -14,6 +14,7 @@ namespace Anseong.EditorTools
     {
         public const string AssetPath = "Assets/_Anseong/Editor/RobotArtSettings.asset";
         public const string DefaultModelPath = "Assets/_Anseong/Art/Robot/Source/BossUpdatedCompatible.fbx";
+        public const string DefaultComparisonArmsPath = "Assets/_Anseong/Art/_Temp_PlayerArms/player_robot_arms.fbx";
 
         [Serializable]
         public struct SlotMaterial
@@ -34,6 +35,10 @@ namespace Anseong.EditorTools
                                  "좌석은 원점에서 좌우 ±1.05 m(SeatSpacing 2.1 m의 절반).")]
         GameObject cockpitPrefab;
 
+        [SerializeField, Tooltip("비교용 팔 모델 FBX(팔만 있는 모델). 'Anseong → Sandbox → Add Comparison Arms'가 쓴다. 비우면 성재 임시 팔(_Temp_PlayerArms). " +
+                                 "뼈 이름 UpperArm/LowerArm/Hand + .L/.R, 손가락 Thumb/Index/Middle/Ring/Little.01~03.L/R.")]
+        GameObject comparisonArms;
+
         [SerializeField, Tooltip("플레이어 재질 슬롯. 맞는 이름의 재질만 바꾸고 나머지는 모델 재질 그대로 둔다. 비우면 모델 재질 그대로.")]
         SlotMaterial[] playerSlotMaterials = new SlotMaterial[0];
 
@@ -43,6 +48,8 @@ namespace Anseong.EditorTools
         public GameObject PlayerModel => playerModel != null ? playerModel : AssetDatabase.LoadAssetAtPath<GameObject>(DefaultModelPath);
         public GameObject BossModel => bossModel != null ? bossModel : PlayerModel;
         public GameObject CockpitPrefab => cockpitPrefab;
+        public GameObject ComparisonArms => comparisonArms != null ? comparisonArms : AssetDatabase.LoadAssetAtPath<GameObject>(DefaultComparisonArmsPath);
+        public string ComparisonArmsPath => comparisonArms != null ? AssetDatabase.GetAssetPath(comparisonArms) : DefaultComparisonArmsPath;
         public SlotMaterial[] PlayerSlotMaterials => playerSlotMaterials ?? new SlotMaterial[0];
         public SlotMaterial[] BossSlotMaterials => bossSlotMaterials ?? new SlotMaterial[0];
 
