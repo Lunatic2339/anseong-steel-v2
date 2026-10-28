@@ -12,3 +12,6 @@
 | Assets/HarborCrane/ | OpenAI Codex / procedural mesh | Original static rail-mounted harbour crane | User direction + Codex | Original geometry/code, no external models/textures | https://openai.com/policies/terms-of-use/ |
 | Assets/ShippingContainer/ | OpenAI Codex / procedural mesh | Original 20-foot style closed container | User direction + Codex | Original geometry/code; UV-unwrapped OBJ included; no external textures | https://openai.com/policies/terms-of-use/ |
 | Assets/UtilityPlant/ | OpenAI Codex / procedural mesh | Original white industrial utility building and lattice towers | User photo as visual reference only | Original geometry/code; not a verified reconstruction; UV OBJ included | https://openai.com/policies/terms-of-use/ |
+
+| Assets/StorageSilo/ | OpenAI Codex / procedural mesh and texture | Original raised corrugated dry bulk silo | User image used for general visual reference | Original geometry/code/texture; no source model copied | https://openai.com/policies/terms-of-use/ |
+| Assets/ScreeningTrees/ | OpenAI Codex / procedural mesh | Original stylised dense evergreen privacy trees and hedge row | User description; general upright evergreen silhouette | Original geometry/code; no external assets | https://openai.com/policies/terms-of-use/ |
