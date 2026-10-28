@@ -74,6 +74,15 @@ namespace Anseong.Pilot
                 : target;
         }
 
+        /// <summary>
+        /// 헤드셋(눈) 위치 → 목 위치. 머리를 돌리거나 끄덕이면 눈은 목을 중심으로 크게 움직이지만 몸은 그대로라,
+        /// 눈 대신 목을 따라가야 고개만 돌려도 팔이 밀리지 않는다(선우 10/28). eyeToNeck = 머리 로컬(X 오른쪽, Y 위, Z 앞) 오프셋.
+        /// </summary>
+        public static Vector3 NeckPoint(Vector3 eye, Quaternion headRotation, Vector3 eyeToNeck)
+        {
+            return eye + headRotation * eyeToNeck;
+        }
+
         static bool Finite(Vector3 v) => !float.IsNaN(v.x + v.y + v.z) && !float.IsInfinity(v.x + v.y + v.z);
     }
 }

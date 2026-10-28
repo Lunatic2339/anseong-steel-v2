@@ -269,7 +269,48 @@ namespace Anseong.Pilot
             LastPose = pose;
             active = true;
             ApplyFingers();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Trace(arm, handPosition, sample.GripHeld);
+#endif
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // 팔 궤적 기록(선우 10/28: "오른손 잽이 왼쪽으로 꺾임"을 기록으로 보려고). 초당 30줄.
+        // hand = 사람 손(몸 기준, 사람 어깨 원점, m), target·fist = 로봇 목표·주먹(로봇 정면 기준, 로봇 팔 길이 배수),
+        // head_yaw = 몸 정면 대비 고개 yaw(°), body = 몸 이동 보정량(m).
+        const string TraceHeader = "time_s,arm,grip,hand_x,hand_y,hand_z,target_x,target_y,target_z,fist_x,fist_y,fist_z,head_yaw,body_dx,body_dy,body_dz";
+        const double TraceInterval = 1.0 / 30.0;
+        CsvLog trace;
+        double nextTrace;
+
+        void Trace(ArmCalibration arm, Vector3 handPosition, bool grip)
+        {
+            var now = Time.timeAsDouble;
+            if (now < nextTrace) return;
+            nextTrace = now + TraceInterval;
+            if (trace == null) trace = new CsvLog(CsvLog.DefaultPath(LogFolder.Root, "arm_" + side, DateTime.Now), TraceHeader);
+            var h = arm.ToBody(handPosition);
+            var headYaw = float.NaN;
+            if (calibration.TryGetHeadRotation(out var headRotation))
+            {
+                var forward = headRotation * Vector3.forward;
+                headYaw = Mathf.DeltaAngle(arm.BodyYawDegrees, Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg);
+            }
+            var b = calibration.BodyOffset;
+            trace.Add(string.Join(",", CsvLog.Number((float)now), side.ToString(), grip ? "1" : "0",
+                CsvLog.Number(h.x), CsvLog.Number(h.y), CsvLog.Number(h.z),
+                CsvLog.Number(TargetRatio.x), CsvLog.Number(TargetRatio.y), CsvLog.Number(TargetRatio.z),
+                CsvLog.Number(FistRatio.x), CsvLog.Number(FistRatio.y), CsvLog.Number(FistRatio.z),
+                CsvLog.Number(headYaw, "F1"), CsvLog.Number(b.x), CsvLog.Number(b.y), CsvLog.Number(b.z)));
+            trace.Pump();
+        }
+
+        void OnDestroy()
+        {
+            trace?.Dispose();
+            trace = null;
+        }
+#endif
 
         Vector3 RobotGuardLocal(float length)
         {

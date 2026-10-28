@@ -20,13 +20,33 @@ namespace Anseong.Pilot
         Complete,
     }
 
+    /// <summary>보정 때 몸 정면(yaw)을 무엇으로 정하나.</summary>
+    public enum BodyYawSource
+    {
+        /// <summary>도달 단계 때 머리(헤드셋) 정면. 손·어깨 추정 오차에 영향받지 않는다(기본, 선우 10/28).</summary>
+        Head,
+        /// <summary>손으로 잰 정면(1인 양팔: 두 도달 손을 잇는 선에 수직, 한 팔: 어깨 → 손). 10/28 이전 방식.</summary>
+        Hands,
+    }
+
+    /// <summary>보정이 끝날 때 사람 어깨를 어디에 두나.</summary>
+    public enum ShoulderPlacement
+    {
+        /// <summary>도달 손 바로 뒤(좌우 = 도달 손, 앞뒤 = 목). 보정 때처럼 정면으로 뻗으면 로봇도 정면(기본, 선우 10/28).</summary>
+        BehindReach,
+        /// <summary>1인 양팔: 머리 좌우 대칭, 간격은 내린 손으로 잰 값(10/28 오전 방식).</summary>
+        MirrorHead,
+        /// <summary>내린 손 위치 그대로(처음 방식).</summary>
+        Hanging,
+    }
+
     /// <summary>
     /// 기체 점검 최소판: 담당 팔 손마다 어깨 → 가드 → 도달을 저장한다. 각 단계는 그립을 쥐는 순간 저장하고,
     /// 다음 단계는 그립을 한 번 놓은 뒤에만 받는다. 1인 양팔 모드에서는 양손을 같은 단계에서 각각 저장하고,
     /// 두 손이 모두 저장되면 다음 단계로 간다. 값은 그 판 동안만 메모리에 둔다.
     /// <para>안내는 개발용 Console 로그, 헤드셋 안 테스트 안내판(TestGuidePanel), 선택 시 기즈모다. 관객용 안내 화면은 M4.</para>
     /// </summary>
-    public class PilotCalibrationFlow : MonoBehaviour
+    public class PilotCalibrationFlow : MonoBehaviour, ITunable
     {
         [SerializeField, Tooltip("손 입력(같은 XR Origin의 PilotHandInput).")]
         PilotHandInput input;
@@ -43,11 +63,24 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("보정 뒤 몸이 방 안에서 옮겨 가면 보정한 어깨·가드도 따라가게 한다(팔 IK·허리·펀치 분류가 같이 쓴다).")]
         BodyFollowSettings bodyFollow = new BodyFollowSettings();
 
-        [SerializeField, Tooltip("1인 양팔 모드: 보정이 끝날 때 두 어깨를 어깨 단계의 머리 좌우로 대칭이 되게 옮긴다(기본, 선우 10/28: 보정 뒤 두 팔이 한쪽으로 쏠림). " +
-            "끄면 내린 손 위치 그대로.")]
-        bool centerShouldersOnHead = true;
+        [SerializeField, Tooltip("몸 정면 기준. Head = 도달 단계 때 헤드셋 정면(기본, 선우 10/28: 손으로 잰 정면은 어깨 추정이 틀리면 같이 틀어짐). " +
+            "Hands = 손으로 잰 정면(이전 방식). 바꾸면 다시 보정해야 적용된다.")]
+        BodyYawSource bodyYawSource = BodyYawSource.Head;
 
-        Vector3 headAtShoulder;
+        [SerializeField, Tooltip("보정이 끝날 때 사람 어깨 위치. BehindReach = 도달 손 바로 뒤(기본, 선우 10/28: 오른손 잽이 왼쪽으로 꺾임). " +
+            "MirrorHead = 머리 좌우 대칭(1인 양팔만). Hanging = 내린 손 그대로. 바꾸면 다시 보정해야 적용된다.")]
+        ShoulderPlacement shoulderPlacement = ShoulderPlacement.BehindReach;
+
+        [SerializeField, Tooltip("BehindReach: 목에서 어깨까지 좌우 거리 한계(m). 보정 때 손을 너무 모으거나 벌려도 이 안으로 자른다.")]
+        Vector2 shoulderHalfWidthRange = new Vector2(0.1f, 0.3f);
+
+        [SerializeField, Tooltip("몸 이동 보정이 헤드셋(눈) 대신 목을 따라간다(기본, 선우 10/28: 고개만 돌려도 팔이 밀림). 끄면 눈 위치(이전 동작).")]
+        bool followNeck = true;
+
+        [SerializeField, Tooltip("헤드셋(눈) → 목 오프셋(m, 머리 로컬: X 오른쪽, Y 위, Z 앞). 고개 회전 중심.")]
+        Vector3 eyeToNeck = new Vector3(0f, -0.1f, -0.09f);
+
+        Vector3 neckAtShoulder;
         bool hasHeadAtShoulder;
 
         [SerializeField, Tooltip("켜질 때 바로 어깨 단계부터 시작한다.")]
@@ -188,7 +221,7 @@ namespace Anseong.Pilot
 
         void Update()
         {
-            if (follow.HasReference) follow.Update(HeadPosition(), Time.deltaTime, bodyFollow);
+            if (follow.HasReference) follow.Update(FollowPoint(), Time.deltaTime, bodyFollow);
             if (input == null || Stage == CalibrationStage.NotStarted || Stage == CalibrationStage.Complete) return;
 
             var allDone = true;
@@ -229,7 +262,7 @@ namespace Anseong.Pilot
                     error = arm.CaptureShoulder(HeadPosition(), sample.Position);
                     if (error == CalibrationError.None && head != null)
                     {
-                        headAtShoulder = HeadPosition();
+                        neckAtShoulder = NeckPosition();
                         hasHeadAtShoulder = true;
                     }
                     break;
@@ -270,8 +303,9 @@ namespace Anseong.Pilot
                     Log(Instruction(stage));
                     break;
                 case CalibrationStage.Complete:
-                    AlignBodyYawForBothArms();
-                    if (head != null) follow.SetReference(HeadPosition());
+                    AlignBodyYaw();
+                    PlaceShoulders();
+                    if (head != null) follow.SetReference(FollowPoint());
                     Log(head == null ? "몸 이동 보정 꺼짐: 머리(head)가 비어 있습니다. Add Pilot Input을 다시 실행하세요."
                         : $"몸 이동 보정 {(bodyFollow.enabled ? "켜짐" : "꺼짐")} (Follow Seconds {bodyFollow.followSeconds:F2}, Follow Amount {bodyFollow.followAmount:F2})");
                     for (var h = 0; h < 2; h++)
@@ -283,27 +317,94 @@ namespace Anseong.Pilot
         }
 
         /// <summary>
-        /// 1인 양팔 모드: 손마다 어깨 → 손으로 잰 정면은 어깨 추정이 좌우로 조금만 틀려도 서로 안쪽·바깥쪽으로 벌어진다
-        /// (1차 헤드셋 확인: 왼손 +16°, 오른손 −16°, 그때 머리 −3°). 두 손을 잇는 선에 수직인 공통 정면으로 맞춘다.
+        /// 몸 정면을 정한다. Head: 도달 단계 때 머리 정면(1인 양팔이면 두 손 저장 때의 평균).
+        /// Hands: 1인 양팔은 두 도달 손을 잇는 선에 수직(1차 헤드셋 확인: 손마다 잰 값이 왼손 +16°, 오른손 −16°로 벌어짐), 한 팔은 손마다 잰 값.
         /// </summary>
-        void AlignBodyYawForBothArms()
+        void AlignBodyYaw()
         {
-            if (input == null || !input.ControlsBothArms || !arms[0].IsComplete || !arms[1].IsComplete) return;
-            var yaw = ArmCalibration.BodyYawFromHands(arms[0].ReachPoint, arms[1].ReachPoint);
-            if (float.IsNaN(yaw))
+            if (input == null) return;
+            var both = input.ControlsBothArms && arms[0].IsComplete && arms[1].IsComplete;
+            var handLine = both ? ArmCalibration.BodyYawFromHands(arms[0].ReachPoint, arms[1].ReachPoint) : float.NaN;
+            if (bodyYawSource == BodyYawSource.Head && head != null)
+            {
+                var yaw = both ? ArmCalibration.MeanYaw(headYawAtReach[0], headYawAtReach[1]) : float.NaN;
+                for (var h = 0; h < 2; h++)
+                {
+                    if (!arms[h].IsComplete || !input.IsArmHand((PilotSide)h)) continue;
+                    var armYaw = both ? yaw : headYawAtReach[h];
+                    Log($"{(PilotSide)h} 몸 정면 {armYaw:F0}° = 머리 정면 (손으로 잰 값 {arms[h].BodyYawDegrees:F0}°" +
+                        (both && !float.IsNaN(handLine) ? $", 두 손 선 {handLine:F0}°)" : ")"));
+                    arms[h].SetBodyYaw(armYaw);
+                }
+                return;
+            }
+            if (!both) return;
+            if (float.IsNaN(handLine))
             {
                 Log("두 손이 너무 가까워 공통 몸 정면을 정하지 못했습니다. 손마다 잰 정면을 그대로 씁니다.");
                 return;
             }
-            Log($"공통 몸 정면 {yaw:F0}° (손마다 잰 값: 왼손 {arms[0].BodyYawDegrees:F0}°, 오른손 {arms[1].BodyYawDegrees:F0}°)");
-            arms[0].SetBodyYaw(yaw);
-            arms[1].SetBodyYaw(yaw);
-            if (!centerShouldersOnHead || !hasHeadAtShoulder) return;
-            var (left, right) = ArmCalibration.SymmetricShoulders(arms[0].Shoulder, arms[1].Shoulder, headAtShoulder, yaw);
-            Log($"어깨를 머리 좌우 대칭으로: 왼쪽 {(left - arms[0].Shoulder).magnitude * 100f:F0}cm, 오른쪽 {(right - arms[1].Shoulder).magnitude * 100f:F0}cm 옮김 " +
-                $"(어깨 간격 {Vector3.Distance(left, right) * 100f:F0}cm)");
-            arms[0].MoveShoulder(left);
-            arms[1].MoveShoulder(right);
+            Log($"공통 몸 정면 {handLine:F0}° (손마다 잰 값: 왼손 {arms[0].BodyYawDegrees:F0}°, 오른손 {arms[1].BodyYawDegrees:F0}°)");
+            arms[0].SetBodyYaw(handLine);
+            arms[1].SetBodyYaw(handLine);
+        }
+
+        /// <summary>몸 정면이 정해진 뒤 어깨를 옮긴다(<see cref="ShoulderPlacement"/>).</summary>
+        void PlaceShoulders()
+        {
+            if (input == null || !hasHeadAtShoulder || shoulderPlacement == ShoulderPlacement.Hanging) return;
+            if (shoulderPlacement == ShoulderPlacement.MirrorHead)
+            {
+                if (!input.ControlsBothArms || !arms[0].IsComplete || !arms[1].IsComplete) return;
+                var (left, right) = ArmCalibration.SymmetricShoulders(arms[0].Shoulder, arms[1].Shoulder, neckAtShoulder, arms[0].BodyYawDegrees);
+                LogShoulderMove(PilotSide.Left, left);
+                LogShoulderMove(PilotSide.Right, right);
+                arms[0].MoveShoulder(left);
+                arms[1].MoveShoulder(right);
+                return;
+            }
+            for (var h = 0; h < 2; h++)
+            {
+                var arm = arms[h];
+                if (!arm.IsComplete || !input.IsArmHand((PilotSide)h)) continue;
+                var shoulder = ArmCalibration.ShoulderFromReach(neckAtShoulder, arm.Shoulder.y, arm.ReachPoint, arm.BodyYawDegrees,
+                    h == (int)PilotSide.Right, shoulderHalfWidthRange.x, shoulderHalfWidthRange.y);
+                LogShoulderMove((PilotSide)h, shoulder);
+                arm.MoveShoulder(shoulder);
+            }
+        }
+
+        void LogShoulderMove(PilotSide hand, Vector3 shoulder)
+        {
+            var arm = arms[(int)hand];
+            var lateral = Vector3.Dot(shoulder - neckAtShoulder, arm.BodyRotation * Vector3.right);
+            Log($"{hand} 어깨 옮김 {(shoulder - arm.Shoulder).magnitude * 100f:F0}cm ({shoulderPlacement}): 목에서 좌우 {lateral * 100f:F0}cm");
+        }
+
+        /// <summary>몸 이동 보정이 따라가는 점: 목(기본) 또는 헤드셋(눈).</summary>
+        Vector3 FollowPoint() => followNeck ? NeckPosition() : HeadPosition();
+
+        /// <summary>목 위치(트래킹 공간). 머리 회전 중심이라 고개를 돌려도 거의 움직이지 않는다.</summary>
+        Vector3 NeckPosition()
+        {
+            var eye = HeadPosition();
+            return TryGetHeadRotation(out var rotation) ? BodyFollow.NeckPoint(eye, rotation, eyeToNeck) : eye;
+        }
+
+        /// <summary>인게임 조절 메뉴: 보정 방식(선우 10/28). 바꾼 뒤 다시 보정해야 적용된다.</summary>
+        public void AddTuning(TuningList list)
+        {
+            const string g = "보정";
+            list.Describe(g, "할 것: 방식을 바꾸고 다시 보정 → 정면 잽·좌우로 한 걸음 옮겨 잽·고개 돌리고 가드\n볼 것: 잽이 곧게 나감, 옮기거나 고개 돌려도 팔이 안 밀림");
+            list.AddChoice(g, "calib.bodyYaw", "몸 정면 기준(다시 보정)", () => (int)bodyYawSource, v => bodyYawSource = (BodyYawSource)v, new[] { "머리", "손(이전)" });
+            list.AddChoice(g, "calib.shoulder", "어깨 위치(다시 보정)", () => (int)shoulderPlacement, v => shoulderPlacement = (ShoulderPlacement)v,
+                new[] { "뻗은 손 뒤", "머리 대칭", "내린 손(처음)" });
+            list.AddToggle(g, "calib.followNeck", "목 기준 따라가기", () => followNeck, v =>
+            {
+                followNeck = v;
+                // 기준점이 바뀌므로 지금 자리를 새 기준으로 잡는다(안 그러면 눈–목 차이만큼 팔이 튄다).
+                if (follow.HasReference) follow.SetReference(FollowPoint());
+            });
         }
 
         Vector3 HeadPosition()

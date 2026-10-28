@@ -213,6 +213,29 @@ namespace Anseong.Pilot
             return (new Vector3(l.x, left.y, l.z), new Vector3(r.x, right.y, r.z));
         }
 
+        /// <summary>
+        /// 어깨를 "보정 때 뻗은 손의 바로 뒤"에 둔다(선우 10/28: 오른손 잽이 왼쪽으로 꺾임, 기기별 편차).
+        /// 좌우 = 도달 손의 몸 좌우 위치(목 기준, minHalf~maxHalf로 제한), 앞뒤 = 목, 높이 = shoulderY.
+        /// 그래서 보정 때처럼 정면으로 뻗으면 로봇도 정면으로 뻗는다. 컨트롤러 원점 차이·어깨 폭 차이가 저절로 맞는다.
+        /// </summary>
+        public static Vector3 ShoulderFromReach(Vector3 neck, float shoulderY, Vector3 reach, float bodyYawDegrees, bool rightArm,
+            float minHalf = 0.1f, float maxHalf = 0.3f)
+        {
+            var side = Quaternion.Euler(0f, bodyYawDegrees, 0f) * Vector3.right;
+            var lateral = Vector3.Dot(new Vector3(reach.x - neck.x, 0f, reach.z - neck.z), side);
+            lateral = rightArm ? Mathf.Clamp(lateral, minHalf, maxHalf) : Mathf.Clamp(lateral, -maxHalf, -minHalf);
+            var p = new Vector3(neck.x, 0f, neck.z) + side * lateral;
+            return new Vector3(p.x, shoulderY, p.z);
+        }
+
+        /// <summary>두 yaw(°)의 평균(원형). 350°와 10°의 평균은 0°.</summary>
+        public static float MeanYaw(float a, float b)
+        {
+            var ra = a * Mathf.Deg2Rad;
+            var rb = b * Mathf.Deg2Rad;
+            return Mathf.Atan2(Mathf.Sin(ra) + Mathf.Sin(rb), Mathf.Cos(ra) + Mathf.Cos(rb)) * Mathf.Rad2Deg;
+        }
+
         /// <summary>보정이 끝난 뒤 어깨 위치만 옮긴다(도달 거리는 새 어깨에서 다시 잰다). 끝나지 않았으면 false.</summary>
         public bool MoveShoulder(Vector3 shoulder)
         {
