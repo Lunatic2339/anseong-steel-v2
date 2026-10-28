@@ -237,6 +237,17 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void Assist_JudgeOnly_NearMissWithinAllowance()
+        {
+            var settings = new AttackAssistSettings();
+            Assert.AreEqual(AssistMode.JudgeOnly, settings.mode, "기본은 판정만(선우 10/28)");
+            Assert.IsTrue(AttackAssist.CountsAsNearMiss(settings.nearMissMeters - 0.1f, settings));
+            Assert.IsFalse(AttackAssist.CountsAsNearMiss(settings.nearMissMeters + 0.1f, settings), "크게 빗나가면 헛침");
+            Assert.IsFalse(AttackAssist.CountsAsNearMiss(0f, new AttackAssistSettings { enabled = false }), "보정 끄면 실제로 닿아야");
+            Assert.IsFalse(AttackAssist.CountsAsNearMiss(0f, new AttackAssistSettings { mode = AssistMode.Pull }), "끌어당기기 방식은 따로");
+        }
+
+        [Test]
         public void Assist_PullsOverTime_ThenReleases()
         {
             var settings = new AttackAssistSettings();

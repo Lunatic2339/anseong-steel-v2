@@ -3,6 +3,13 @@ using UnityEngine;
 
 namespace Anseong.Combat
 {
+    /// <summary>공격 보정 방식. JudgeOnly = 주먹은 그대로, 보스 근처를 지나가면 판정만 명중(기본, 선우 10/28). Pull = 주먹을 보스 쪽으로 끌어당겨 맞힘(10/18 처음 방식).</summary>
+    public enum AssistMode
+    {
+        JudgeOnly,
+        Pull,
+    }
+
     [Serializable]
     public class AttackAssistSettings
     {
@@ -10,11 +17,19 @@ namespace Anseong.Combat
                  "끄면 주먹이 실제로 보스 부위에 닿아야만 명중(01 처음 규칙).")]
         public bool enabled = true;
 
-        [Tooltip("보정 사거리: 로봇 어깨에서 보스 부위까지 거리가 로봇 팔 길이의 이 배수 안이면 끌어당긴다.")]
+        [Tooltip("JudgeOnly = 주먹을 끌지 않고, 로봇 주먹이 보스 부위 근처(아래 허용 거리)를 지나가면 판정만 명중(기본, 선우 10/28: 강제로 맞추는 게 아니라 적당히 빗맞아도 맞은 걸로). " +
+                 "Pull = 주먹을 보스 쪽으로 끌어당겨 맞힌다(처음 방식).")]
+        public AssistMode mode = AssistMode.JudgeOnly;
+
+        [Tooltip("JudgeOnly: 로봇 주먹(명중 구 겉면)이 보스 부위에서 이 거리(m, 로봇 크기) 안을 지나가면 명중. 로봇 배율 약 40이라 4m ≈ 사람 손 10cm.")]
+        [Min(0f)]
+        public float nearMissMeters = 4f;
+
+        [Tooltip("Pull: 보정 사거리: 로봇 어깨에서 보스 부위까지 거리가 로봇 팔 길이의 이 배수 안이면 끌어당긴다.")]
         [Min(0.5f)]
         public float rangeRatio = 1.4f;
 
-        [Tooltip("보정 각도(도): 보스 부위가 로봇 정면에서 좌우로 이 안이면 끌어당긴다.")]
+        [Tooltip("Pull: 보정 각도(도): 보스 부위가 로봇 정면에서 좌우로 이 안이면 끌어당긴다.")]
         [Range(5f, 90f)]
         public float coneDegrees = 40f;
 
@@ -55,6 +70,10 @@ namespace Anseong.Combat
         /// 로봇 팔이 다 뻗기 전에 주먹이 보스에 먼저 붙지 않게 한다(선우 10/25: 다 뻗기 전에 진동이 울림).
         /// </summary>
         public float Progress { get; private set; }
+
+        /// <summary>JudgeOnly에서 주먹 겉면과 보스 부위 사이 가장 가까웠던 거리(gap)가 명중으로 칠 만큼 가까운지.</summary>
+        public static bool CountsAsNearMiss(float gap, AttackAssistSettings settings) =>
+            settings != null && settings.enabled && settings.mode == AssistMode.JudgeOnly && gap <= settings.nearMissMeters;
 
         public static bool InRange(Vector3 shoulder, Quaternion body, Vector3 zonePoint, float armLength, AttackAssistSettings settings)
         {

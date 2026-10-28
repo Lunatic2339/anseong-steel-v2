@@ -31,8 +31,12 @@ namespace Anseong.EditorTools
         const string IdleState = "Idle";
         const string StaggerState = "Stagger";
         const string BodyBone = "mixamorig:Spine2";
-        // 플레이어 루트 → 보스 루트 근접 거리(m, 제안값): 로봇 팔 19.4 m × 0.95 + 보스 몸통 반지름 7.8 m. M2에서 확정(05 "근접 거리").
-        const float MeleeDistance = 26f;
+        // 플레이어 루트 → 보스 루트 근접 거리(제안값, M2에서 확정, 05 "근접 거리"). 선우 10/28: 끝까지 뻗어야 겨우 닿는 아슬아슬한 거리.
+        // = 다 뻗은 주먹 겉면(팔 19.4 m × 0.97 + 주먹 구 반지름) + 판정만 허용 거리 × 이 비율 + 보스 몸통 반지름 7.8 m. 허용 4 m면 약 30 m.
+        const float RobotArmLength = 19.4f;
+        const float FullReachRatio = 0.97f;
+        const float BossBodyRadius = 7.8f;
+        const float NearMissFraction = 0.5f;
 
         // 로봇 키(65 m) 대비 크기.
         const float FistRadiusRatio = 0.06f;        // 로봇 팔 길이 대비 주먹 구 반지름
@@ -154,21 +158,24 @@ namespace Anseong.EditorTools
         }
 
         /// <summary>
-        /// Sandbox 씬에서만: 보스가 근접 거리보다 멀면 플레이어 쪽으로 당겨 둔다(M1에는 접근 이동이 없음, M2에서 걸어서 다가감).
-        /// 보는 거리 40 m(04)에서는 팔 길이 19 m로 닿지 않아 공격 보정 범위 밖이다.
+        /// Sandbox 씬에서만: 보스를 근접 거리에 둔다(M1에는 접근 이동이 없음, M2에서 걸어서 다가감).
+        /// 근접 거리는 공격 보정 허용 거리 기준이라, 허용 거리를 바꾸고 메뉴를 다시 돌리면 보스도 따라 옮겨진다.
         /// </summary>
         static void PullBossToMelee(BossTarget boss, CombatDirector director)
         {
+            var allowance = new SerializedObject(director).FindProperty("assist.nearMissMeters");
+            var meleeDistance = RobotArmLength * FullReachRatio + RobotArmLength * FistRadiusRatio
+                + (allowance != null ? allowance.floatValue : 0f) * NearMissFraction + BossBodyRadius;
             var scene = boss.gameObject.scene;
             if (!scene.path.Replace('\\', '/').Contains("/Scenes/Sandbox/")) return;
             var player = director.transform.root;
             var offset = boss.transform.position - player.position;
             offset.y = 0f;
-            if (offset.magnitude <= MeleeDistance + 0.5f || offset.sqrMagnitude < 1e-4f) return;
+            if (Mathf.Abs(offset.magnitude - meleeDistance) <= 0.5f || offset.sqrMagnitude < 1e-4f) return;
             Undo.RecordObject(boss.transform, "Pull Boss To Melee");
             var from = offset.magnitude;
-            boss.transform.position = player.position + offset.normalized * MeleeDistance + Vector3.up * (boss.transform.position.y - player.position.y);
-            Debug.Log($"{LogPrefix} Sandbox 보스를 근접 거리로 옮겼습니다: {from:F1} m → {MeleeDistance:F1} m(제안값, M2에서 팔 길이로 확정).", boss);
+            boss.transform.position = player.position + offset.normalized * meleeDistance + Vector3.up * (boss.transform.position.y - player.position.y);
+            Debug.Log($"{LogPrefix} Sandbox 보스를 근접 거리로 옮겼습니다: {from:F1} m → {meleeDistance:F1} m(끝까지 뻗어야 닿는 거리, 공격 보정 허용 거리 기준).", boss);
         }
 
         /// <summary>소리 표 에셋. 없으면 S-01 기본 줄로 만들고, 비어 있는 소리 칸은 Audio 폴더에서 같은 이름으로 시작하는 파일로 채운다.</summary>
