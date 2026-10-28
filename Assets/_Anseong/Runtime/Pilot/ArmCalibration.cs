@@ -21,6 +21,14 @@ namespace Anseong.Pilot
         ReachTooShort,
         /// <summary>도달: 위·아래로 뻗어서 몸 정면을 정할 수 없다.</summary>
         ReachNotForward,
+        /// <summary>정면 뻗기: 손이 몸 가운데를 넘어 반대쪽에 있다.</summary>
+        ReachWrongSide,
+        /// <summary>정면 뻗기: 손이 어깨 높이가 아니다(너무 높거나 낮다).</summary>
+        ReachNotLevel,
+        /// <summary>정면 뻗기: 고개를 숙이거나 들고 있다.</summary>
+        LookForward,
+        /// <summary>정면 뻗기를 먼저 저장해야 한다.</summary>
+        ReachMissing,
     }
 
     /// <summary>개인 보정 수치. 클래스 기본값 = 기존 레포(backup/local-1015 ArmReachCalibration)에서 쓰던 값.</summary>
@@ -56,6 +64,22 @@ namespace Anseong.Pilot
 
         [Tooltip("도달: 어깨 → 손의 수평 길이가 이 값 이상이어야 몸 정면을 정한다(m).")]
         public float minReachHorizontal = 0.15f;
+
+        [Header("2단계 보정 (선우 10/28)")]
+        [Tooltip("정면 뻗기: 목에서 어깨까지 좌우 거리 한계(m). 손을 너무 모으거나 벌려도 이 안으로 자른다.")]
+        public Vector2 shoulderHalfWidth = new Vector2(0.1f, 0.3f);
+
+        [Tooltip("정면 뻗기: 어깨가 목보다 아래인 거리 한계(m). 뻗은 손 높이를 어깨 높이로 쓰고 이 안으로 자른다.")]
+        public Vector2 shoulderBelowNeck = new Vector2(0.05f, 0.3f);
+
+        [Tooltip("정면 뻗기: 손이 목보다 이만큼 넘게 위·아래면 다시 하게 한다(m). (위, 아래)")]
+        public Vector2 forwardLevelLimit = new Vector2(0.1f, 0.5f);
+
+        [Tooltip("정면 뻗기: 손이 목보다 이만큼 이상 앞에 있어야 한다(m).")]
+        public float minForwardReach = 0.25f;
+
+        [Tooltip("정면 뻗기: 고개를 이 각도(°) 넘게 숙이거나 들면 다시 하게 한다.")]
+        public float maxHeadPitch = 25f;
     }
 
     /// <summary>
@@ -88,6 +112,8 @@ namespace Anseong.Pilot
         }
 
         public bool HasShoulder { get; private set; }
+        /// <summary>2단계 보정: 정면 뻗기를 저장했다(가드만 남음).</summary>
+        public bool HasReach { get; private set; }
         public bool HasGuard { get; private set; }
         public bool IsComplete { get; private set; }
 
@@ -116,7 +142,7 @@ namespace Anseong.Pilot
 
         public void Reset()
         {
-            HasShoulder = HasGuard = IsComplete = false;
+            HasShoulder = HasGuard = HasReach = IsComplete = false;
             Shoulder = Guard = ReachPoint = Vector3.zero;
             GuardRotation = ReachRotation = Quaternion.identity;
             ArmLength = EffectiveReach = BodyYawDegrees = 0f;
@@ -184,6 +210,72 @@ namespace Anseong.Pilot
             BodyYawDegrees = Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg;
             IsComplete = true;
             return CalibrationError.None;
+        }
+
+        /// <summary>
+        /// 2단계 보정 1/2 정면 뻗기(선우 10/28: 어떤 기기·체격이든 정면 = 정면). 이전 보정은 모두 지운다.
+        /// neck = 그때 목 위치, bodyYawDegrees = 그때 헤드셋 정면. 어깨는 뻗은 손 바로 뒤:
+        /// 좌우 = 손(목 기준 shoulderHalfWidth 안), 높이 = 손(목 아래 shoulderBelowNeck 안), 앞뒤 = 목.
+        /// 그래서 이렇게 뻗은 손은 몸 정면 그대로이고, 컨트롤러 기준점·어깨 폭 차이가 저절로 상쇄된다.
+        /// </summary>
+        public CalibrationError CaptureForward(Vector3 neck, float bodyYawDegrees, Vector3 hand, Quaternion rotation, bool rightArm)
+        {
+            if (!Finite(neck) || !Finite(hand) || !ValidRotation(rotation) || float.IsNaN(bodyYawDegrees) || float.IsInfinity(bodyYawDegrees))
+                return CalibrationError.InvalidPose;
+            var body = Quaternion.Euler(0f, bodyYawDegrees, 0f);
+            var local = Quaternion.Inverse(body) * (hand - neck);
+            if (local.z < settings.minForwardReach) return CalibrationError.ReachNotForward;
+            if (local.y > settings.forwardLevelLimit.x || local.y < -settings.forwardLevelLimit.y) return CalibrationError.ReachNotLevel;
+            var sign = rightArm ? 1f : -1f;
+            var outward = local.x * sign;
+            if (outward < -0.02f) return CalibrationError.ReachWrongSide;
+
+            var lateral = Mathf.Clamp(outward, settings.shoulderHalfWidth.x, settings.shoulderHalfWidth.y) * sign;
+            var drop = Mathf.Clamp(-local.y, settings.shoulderBelowNeck.x, settings.shoulderBelowNeck.y);
+            var shoulder = neck + body * new Vector3(lateral, -drop, 0f);
+            var reach = Vector3.Distance(hand, shoulder);
+            if (reach < settings.minReachDistance || reach > settings.maxReachDistance) return CalibrationError.ReachTooShort;
+
+            Reset();
+            Shoulder = shoulder;
+            ArmLength = EffectiveReach = reach;
+            ReachPoint = hand;
+            ReachRotation = rotation.normalized;
+            BodyYawDegrees = bodyYawDegrees;
+            HasShoulder = HasReach = true;
+            return CalibrationError.None;
+        }
+
+        /// <summary>2단계 보정 2/2 가드: 정면 뻗기 뒤에 저장하면 보정이 끝난다. hand는 몸 이동 보정을 뺀 값.</summary>
+        public CalibrationError CaptureGuardAfterReach(Vector3 hand, Quaternion rotation)
+        {
+            if (!HasReach) return CalibrationError.ReachMissing;
+            if (!Finite(hand) || !ValidRotation(rotation)) return CalibrationError.InvalidPose;
+            var guard = Vector3.Distance(Shoulder, hand);
+            if (guard < settings.minGuardDistance || EffectiveReach - guard < settings.minReachBeyondGuard ||
+                guard / EffectiveReach > settings.maxGuardToReachRatio)
+                return CalibrationError.GuardOutOfRange;
+            Guard = hand;
+            GuardRotation = rotation.normalized;
+            HasGuard = true;
+            IsComplete = true;
+            return CalibrationError.None;
+        }
+
+        /// <summary>
+        /// 1인 양팔: 두 손을 저장한 순간이 조금 달라 목·고개가 다를 수 있다. 공통 목(두 목의 가운데)·공통 정면(평균)으로 맞추고,
+        /// 손은 자기 목이 공통 목에서 벗어난 만큼 옮겨 "같은 순간"처럼 만든다.
+        /// </summary>
+        public static (Vector3 neck, float yaw) CommonReference(Vector3 neckLeft, float yawLeft, Vector3 neckRight, float yawRight)
+        {
+            return ((neckLeft + neckRight) * 0.5f, MeanYaw(yawLeft, yawRight));
+        }
+
+        /// <summary>목·손 → 고개 숙임(°, 아래가 +). forward = 헤드셋 정면 방향.</summary>
+        public static float HeadPitchDegrees(Vector3 forward)
+        {
+            var flat = new Vector2(forward.x, forward.z).magnitude;
+            return Mathf.Atan2(-forward.y, flat) * Mathf.Rad2Deg;
         }
 
         /// <summary>

@@ -255,7 +255,7 @@ namespace Anseong.UI
         void DrawCalibration()
         {
             builder.Append("<b>보정</b>  (양손 그립을 쥐었다 놓으면 저장)\n\n");
-            builder.Append(PilotCalibrationFlow.Instruction(calibration.Stage)).Append("\n\n");
+            builder.Append(calibration.CurrentInstruction).Append("\n\n");
             if (calibration.Stage != CalibrationStage.NotStarted)
             {
                 Hand("왼손", PilotSide.Left);
