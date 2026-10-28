@@ -13,7 +13,7 @@
 | 조종석 비우기 | `Pilot/CockpitClearZone` | 조종석 안 로봇 몸 숨김(켜기), 비울 폭·높이·앞뒤 길이(m) |
 | 보정 | `Pilot/PilotCalibrationFlow` | 보정 순서(2단계: 정면 뻗기→가드 / 3단계 이전), 보정 뒤 정면 잽으로 맞춤 |
 | 공격 보정 | `Combat/CombatDirector` | [확인] 2개, 공격 보정 켜기, 보정 방식(판정만/끌어당기기), 허용 거리(잽·어퍼컷 / 훅), 끌려가는 시간 |
-| 연계·부스트 | `Combat/CombatDirector` | 다음 명중 제한, 부스트 입력창 |
+| 연계·부스트 | `Combat/CombatDirector` | 다음 명중 제한, 부스트 입력창, 보스 HP 다시 채우기 |
 | 가드 (06 브랜치) | `Combat/GuardDriver` | 06 지시서대로 |
 
 목록과 선택지는 끝에서 멈춘다(반대쪽으로 넘어가지 않음, 선우 10/25).

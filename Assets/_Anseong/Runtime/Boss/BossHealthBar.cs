@@ -54,6 +54,8 @@ namespace Anseong.Boss
 
         void LateUpdate()
         {
+            // 명중 신호가 없이 바뀐 HP(다시 채우기)도 따라가게 매 프레임 읽는다.
+            if (director.Resolver != null) target = director.Resolver.Boss.Fraction;
             if (!Mathf.Approximately(shown, target))
             {
                 shown = smoothSeconds > 0f ? Mathf.MoveTowards(shown, target, Time.deltaTime / smoothSeconds) : target;
