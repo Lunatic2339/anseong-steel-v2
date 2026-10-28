@@ -44,3 +44,7 @@
 
 - HighlightedFactoryLayout: 기존 자체 에셋455개 재배치, 자체 생성 비정형 도로 메시. 외부 에셋 없음.
 
+
+- StaffDormitory: 포스코 광양 기가타운 생활관 공개 사진과 POSCO A&C 주거 브로슈어를 형태 참고한 자체 제작 메시/재질. 사진 파일은 포함하지 않음. 출처 상세 StaffDormitory/ReferencesAndLayout.md.
+- RefinedFactoryRoads: 기존 도로 중심선을 유지한 자체 생성 정리 메시.
+

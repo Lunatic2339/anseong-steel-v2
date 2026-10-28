@@ -6,7 +6,7 @@ using UnityEditor;
 using UnityEditor.SceneManagement;
 using Object=UnityEngine.Object;
 namespace CoastalFactory.Editor {
-public static class LeftFactoryDistrictBuilder {
+public static partial class LeftFactoryDistrictBuilder {
  const string Root="Assets/_Anseong/Art/Environment/Assets/IndustrialBuildings";
  static readonly List<GameObject> pieces=new List<GameObject>();
  static void Folder(string p){if(AssetDatabase.IsValidFolder(p))return;var parent=Path.GetDirectoryName(p).Replace('\\','/');Folder(parent);AssetDatabase.CreateFolder(parent,Path.GetFileName(p));}
