@@ -57,7 +57,10 @@ namespace Anseong.Combat
             public Func<Vector3, Vector3> Modifier;
             public BossZone AssistZone;
             public PunchKind PeekKind;
-            public int Launched, Touched;
+            public int Launched, Touched, NearStrike;
+            public float NearGap;
+            public BossZone NearZone;
+            public Vector3 NearPoint;
             public BossZone TouchedZone;
             public Vector3 TouchedPoint, PreviousFist;
             public bool HasPreviousFist, GripDown, TriggerDown;
@@ -166,7 +169,7 @@ namespace Anseong.Combat
         {
             var arm = armBySide[h];
             var fist = fistBySide[h];
-            if (!assist.enabled || boss == null || arm == null || fist == null) return;
+            if (!assist.enabled || assist.mode != AssistMode.Pull || boss == null || arm == null || fist == null) return;
             if (!boss.TryClosest(fist.Position, out var zone, out var point)) return;
             if (!AttackAssist.InRange(arm.ShoulderPosition, arm.BodyRotation, point, arm.ArmLength, assist)) return;
             state[h].Assist.Begin(point, arm.FistRatio);
@@ -194,6 +197,7 @@ namespace Anseong.Combat
                 if (strike == 0 && classifier.TryGetHeld(side, out var held) && held.IsAttack) strike = held.StrikeId;
                 if (strike > 0 && !resolver.AlreadyHit(side, strike) && input.IsArmHand(side))
                 {
+                    TrackNearMiss(s, strike, current, fist.Radius);
                     if (TryContact(s.PreviousFist, current, fist.Radius, out var zone, out var point))
                     {
                         if (s.PeekKind != PunchKind.None) Hit(side, s.PeekKind, strike, HitQuality.Contact, zone, point, now);
@@ -209,6 +213,23 @@ namespace Anseong.Combat
                 s.PreviousFist = current;
             }
             Dispatch();
+        }
+
+        // 판정만 보정: 이 동작 동안 로봇 주먹 겉면이 보스 부위에 가장 가까웠던 거리와 그 자리.
+        void TrackNearMiss(ArmState s, int strike, Vector3 fist, float radius)
+        {
+            if (!assist.enabled || assist.mode != AssistMode.JudgeOnly || boss == null) return;
+            if (s.NearStrike != strike)
+            {
+                s.NearStrike = strike;
+                s.NearGap = float.PositiveInfinity;
+            }
+            if (!boss.TryClosest(fist, out var zone, out var surface)) return;
+            var gap = Mathf.Max(0f, Vector3.Distance(fist, surface) - radius);
+            if (gap >= s.NearGap) return;
+            s.NearGap = gap;
+            s.NearZone = zone.Zone;
+            s.NearPoint = surface;
         }
 
         bool TryContact(Vector3 from, Vector3 to, float radius, out BossZone zone, out Vector3 point)
@@ -244,7 +265,14 @@ namespace Anseong.Combat
                 // 종류가 인식되고 보스가 보정 범위 안이었으면 명중(선우 10/18 공격 보정). 이 결과는 로봇 주먹이 따라온 뒤에 오므로
                 // 진동·피해도 로봇 팔이 뻗은 때 난다(선우 10/25: 다 뻗기 전에 진동이 울림).
                 Hit(side, result.Kind, result.StrikeId, HitQuality.Assisted, s.AssistZone, s.Assist.Point, now);
-            else resolver.ReportMiss(side, result.Kind, result.StrikeId, now, events);
+            else if (s.NearStrike == result.StrikeId && AttackAssist.CountsAsNearMiss(s.NearGap, assist))
+                // 판정만 보정(선우 10/28): 주먹은 그대로 두고, 보스 근처를 지나갔으면 명중으로 친다.
+                Hit(side, result.Kind, result.StrikeId, HitQuality.Assisted, s.NearZone, s.NearPoint, now);
+            else
+            {
+                LogNearMiss(s, result.StrikeId);
+                resolver.ReportMiss(side, result.Kind, result.StrikeId, now, events);
+            }
             Dispatch();
         }
 
@@ -286,6 +314,14 @@ namespace Anseong.Combat
             events.RemoveRange(0, count);
         }
 
+        // 헛침일 때 보스까지 얼마나 모자랐는지(허용 거리를 정할 때 본다).
+        [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+        void LogNearMiss(ArmState s, int strike)
+        {
+            if (!logToConsole || !assist.enabled || assist.mode != AssistMode.JudgeOnly || s.NearStrike != strike) return;
+            Debug.Log($"[Combat] 빗나감: 로봇 주먹이 보스까지 {s.NearGap:F1}m 모자람 (허용 {assist.nearMissMeters:F1}m)", this);
+        }
+
         [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
         void Log(CombatEvent e)
         {
@@ -299,11 +335,13 @@ namespace Anseong.Combat
         {
             const string g = "공격 보정";
             var a = assist;
-            list.Describe(g, "할 것: 보스 옆으로 살짝 빗나가게 치기\n       공격 보정 끄고 켜서 비교\n볼 것: 종류가 맞으면 보스 쪽으로 끌려가 맞음");
-            list.AddCheck(g, "assist.pull", "빗나가도 보스 쪽으로 끌려가 맞음");
-            list.AddCheck(g, "assist.natural", "끌림이 어색하지 않음");
+            list.Describe(g, "할 것: 보스 옆을 살짝 빗겨 치기, 크게 빗겨 치기\n       판정만 ↔ 끌어당기기, 보정 끄고 켜서 비교\n볼 것: 살짝 빗맞으면 명중, 크게 빗나가면 헛침");
+            list.AddCheck(g, "assist.near", "살짝 빗맞아도 명중");
+            list.AddCheck(g, "assist.far", "크게 빗나가면 헛침");
             list.AddToggle(g, "assist.enabled", "공격 보정(끄면 실제로 닿아야 명중)", () => a.enabled, v => a.enabled = v);
-            list.AddFloat(g, "assist.pullSeconds", "끌려가는 시간(초)", () => a.pullSeconds, v => a.pullSeconds = v, 0.02f, 0.6f, 0.02f);
+            list.AddChoice(g, "assist.mode", "보정 방식", () => (int)a.mode, v => a.mode = (AssistMode)v, new[] { "판정만(주먹 그대로)", "주먹 끌어당기기" });
+            list.AddFloat(g, "assist.nearMiss", "판정만: 빗맞음 허용 거리(m)", () => a.nearMissMeters, v => a.nearMissMeters = v, 0f, 15f, 0.5f, 1);
+            list.AddFloat(g, "assist.pullSeconds", "끌어당기기: 끌려가는 시간(초)", () => a.pullSeconds, v => a.pullSeconds = v, 0.02f, 0.6f, 0.02f);
 
             const string c = "연계·부스트";
             list.Describe(c, "할 것: 잽(한 팔) → 잽(다른 팔) → 훅(처음 팔), 훅 명중 직후 트리거로 부스트\n볼 것: 타이밍이 빡빡하면 아래 시간을 늘림");
