@@ -15,6 +15,7 @@ namespace Anseong.EditorTools
         public const string AssetPath = "Assets/_Anseong/Editor/RobotArtSettings.asset";
         public const string DefaultModelPath = "Assets/_Anseong/Art/Robot/Source/BossUpdatedCompatible.fbx";
         public const string DefaultStaggerPath = "Assets/_Anseong/Art/Robot/Animation/Source/Stagger.fbx";
+        public const string DefaultComparisonArmsPath = "Assets/_Anseong/Art/_Temp_PlayerArms/player_robot_arms.fbx";
 
         [Serializable]
         public struct SlotMaterial
@@ -38,6 +39,10 @@ namespace Anseong.EditorTools
         [SerializeField, Tooltip("보스가 맞았을 때 휘청 클립(M1-05). 비우면 Art/Robot/Animation/Source/Stagger.fbx. 같은 Mixamo 뼈 이름이어야 한다.")]
         AnimationClip bossStaggerClip;
 
+        [SerializeField, Tooltip("비교용 팔 모델 FBX(팔만 있는 모델). 'Anseong → Sandbox → Add Comparison Arms'가 쓴다. 비우면 성재 임시 팔(_Temp_PlayerArms). " +
+                                 "뼈 이름 UpperArm/LowerArm/Hand + .L/.R, 손가락 Thumb/Index/Middle/Ring/Little.01~03.L/R.")]
+        GameObject comparisonArms;
+
         [SerializeField, Tooltip("플레이어 재질 슬롯. 맞는 이름의 재질만 바꾸고 나머지는 모델 재질 그대로 둔다. 비우면 모델 재질 그대로.")]
         SlotMaterial[] playerSlotMaterials = new SlotMaterial[0];
 
@@ -54,6 +59,8 @@ namespace Anseong.EditorTools
         {
             return AssetDatabase.LoadAllAssetsAtPath(path).OfType<AnimationClip>().FirstOrDefault(c => !c.name.StartsWith("__preview__"));
         }
+        public GameObject ComparisonArms => comparisonArms != null ? comparisonArms : AssetDatabase.LoadAssetAtPath<GameObject>(DefaultComparisonArmsPath);
+        public string ComparisonArmsPath => comparisonArms != null ? AssetDatabase.GetAssetPath(comparisonArms) : DefaultComparisonArmsPath;
         public SlotMaterial[] PlayerSlotMaterials => playerSlotMaterials ?? new SlotMaterial[0];
         public SlotMaterial[] BossSlotMaterials => bossSlotMaterials ?? new SlotMaterial[0];
 

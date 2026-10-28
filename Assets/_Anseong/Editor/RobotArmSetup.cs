@@ -136,9 +136,19 @@ namespace Anseong.EditorTools
             if (lower.parent != upper || hand.parent != lower)
                 Debug.LogWarning($"{LogPrefix} {side}: 위팔 → 아래팔 → 손이 바로 부모·자식이 아닙니다. 사이 뼈가 있으면 IK 결과가 어긋날 수 있습니다.");
 
-            if (!TryMeasureFist(hand, prefix, out var joints, out var fistRotations, out var forward, out var back, out var palmCheck))
+            return ConfigureBones(driver, robotRoot, side, upper, lower, hand, (finger, joint) => $"{prefix}Hand{finger}{joint}", out report);
+        }
+
+        /// <summary>
+        /// 이미 찾은 위팔·아래팔·손 뼈로 드라이버를 채운다. fingerBone(손가락, 마디 1~3) = 손가락 뼈 이름.
+        /// 손가락 이름은 Index·Middle·Ring·Pinky·Thumb로 넘긴다. 손가락을 못 찾으면 false.
+        /// </summary>
+        public static bool ConfigureBones(RobotArmDriver driver, Transform robotRoot, PilotSide side, Transform upper, Transform lower, Transform hand,
+            System.Func<string, int, string> fingerBone, out string report)
+        {
+            if (!TryMeasureFist(hand, fingerBone, out var joints, out var fistRotations, out var forward, out var back, out var palmCheck))
             {
-                report = $"{side} 손가락 뼈({prefix}HandIndex1 등)를 찾지 못했습니다.";
+                report = $"{side} 손가락 뼈({fingerBone("Index", 1)} 등)를 찾지 못했습니다.";
                 return false;
             }
 
@@ -174,7 +184,7 @@ namespace Anseong.EditorTools
         /// 손가락 뼈를 원래 회전으로 되돌린다(프리팹의 바인드 포즈를 바꾸지 않는다).
         /// palmCheck: 가운뎃손가락 굽은 방향과 손바닥 쪽의 내적(클수록 판별이 확실).
         /// </summary>
-        static bool TryMeasureFist(Transform hand, string prefix, out Transform[] joints, out Quaternion[] fist,
+        static bool TryMeasureFist(Transform hand, System.Func<string, int, string> fingerBone, out Transform[] joints, out Quaternion[] fist,
             out Vector3 forwardLocal, out Vector3 backLocal, out float palmCheck)
         {
             joints = null;
@@ -182,7 +192,7 @@ namespace Anseong.EditorTools
             forwardLocal = backLocal = Vector3.zero;
             palmCheck = 0f;
             var children = hand.GetComponentsInChildren<Transform>(true);
-            Transform Bone(string finger, int joint) => children.FirstOrDefault(t => t.name == $"{prefix}Hand{finger}{joint}");
+            Transform Bone(string finger, int joint) => children.FirstOrDefault(t => t.name == fingerBone(finger, joint));
 
             var ordered = new List<Transform>();
             foreach (var finger in Fingers)
