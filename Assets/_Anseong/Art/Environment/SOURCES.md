@@ -5,3 +5,4 @@
 | Assets/Warehouse/ (Warehouse.prefab) | OpenAI Codex / Unity primitives | Original modular steelworks shed | User direction + Codex | Original generated geometry and code; OpenAI terms | https://openai.com/policies/terms-of-use/ |
 | Assets/Smokestack/ | OpenAI Codex / procedural mesh | Original tapered hollow industrial chimney | User direction + Codex; user-supplied visual reference only | Original generated geometry/code; source model not downloaded | https://openai.com/policies/terms-of-use/ |
 | Assets/SteelTruck/ | OpenAI Codex / procedural mesh | Original low-poly steel coil transport truck | User direction + Codex | Original geometry/code, no external models/textures | https://openai.com/policies/terms-of-use/ |
+| Assets/ScrapDumpTruck/ | OpenAI Codex / procedural mesh | Original low-poly scrap-loaded dump truck | User direction + Codex | Original geometry/code, no external models/textures | https://openai.com/policies/terms-of-use/ |
