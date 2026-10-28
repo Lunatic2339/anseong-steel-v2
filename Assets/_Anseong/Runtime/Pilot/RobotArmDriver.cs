@@ -309,6 +309,7 @@ namespace Anseong.Pilot
         {
             list.Describe("묵직함", "할 것: 따라가는 방식 경로 가속 ↔ 부드럽게 비교, 잽·훅 10번씩\n       경로 가속은 출발 속도·가속도, 부드럽게는 반응 시간\n볼 것: 묵직하게 출발해 끝에 타격감, 가만히 있으면 로봇 팔도 가만히");
             // 주먹 최대 속도·손목·팔 매핑은 메뉴에서 뺐다(선우 10/25: 메뉴가 너무 많음). Inspector에는 그대로 있다.
+            if (solverSettings != null) list.AddToggle("묵직함", "arm.holdElbow", "뻗은 팔은 팔꿈치 고정(손목만 돎)", () => solverSettings.holdElbowWhenExtended, v => solverSettings.holdElbowWhenExtended = v);
             list.AddToggle("묵직함", "arm.deadzone", "작은 손 떨림 무시", () => deadzone.enabled, v => deadzone.enabled = v);
             list.AddFloat("묵직함", "arm.deadzoneRadius", "무시할 떨림 크기(cm)", () => deadzone.radiusMeters * 100f, v => deadzone.radiusMeters = v / 100f, 0f, 5f, 0.5f, 1);
             list.AddChoice("묵직함", "arm.responseMode", "따라가는 방식", () => (int)responseMode, v => responseMode = (ArmResponseMode)v, new[] { "경로 가속(느리게→빠르게)", "부드럽게(처음 방식)" });

@@ -222,6 +222,20 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void ExtendedArm_TurningFist_DoesNotSwingElbow()
+        {
+            // 거의 다 뻗은 팔(92%)에서 주먹을 위·옆으로 40° 돌려도 팔꿈치는 거의 그대로(선우 10/28).
+            var target = Shoulder + new Vector3(0f, -2f, (Upper + Lower) * 0.92f);
+            var straight = Solve(NewSolver(), target, frames: 90);
+            var turned = Solve(NewSolver(), target, Quaternion.Euler(-40f, 40f, 0f) * FistToward(target), frames: 90);
+            Assert.Less(Vector3.Distance(straight.Elbow, turned.Elbow), 0.3f, "팔꿈치가 원을 그리지 않음");
+
+            var settings = new ArmSolverSettings { holdElbowWhenExtended = false };
+            var old = Solve(new TwoBoneArmSolver(LeftBind(), settings), target, Quaternion.Euler(-40f, 40f, 0f) * FistToward(target), frames: 90);
+            Assert.Greater(Vector3.Distance(straight.Elbow, old.Elbow), 0.3f, "끄면 예전처럼 주먹 방향이 팔꿈치를 돌림");
+        }
+
+        [Test]
         public void BoundSwivel_HoldsSideNearOppositeLimits()
         {
             Assert.AreEqual(50f, TwoBoneArmSolver.BoundSwivel(50f, 0f), 1e-4f);

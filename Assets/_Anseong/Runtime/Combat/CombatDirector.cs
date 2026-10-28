@@ -266,12 +266,12 @@ namespace Anseong.Combat
                 // 종류가 인식되고 보스가 보정 범위 안이었으면 명중(선우 10/18 공격 보정). 이 결과는 로봇 주먹이 따라온 뒤에 오므로
                 // 진동·피해도 로봇 팔이 뻗은 때 난다(선우 10/25: 다 뻗기 전에 진동이 울림).
                 Hit(side, result.Kind, result.StrikeId, HitQuality.Assisted, s.AssistZone, s.Assist.Point, now);
-            else if (s.NearStrike == result.StrikeId && AttackAssist.CountsAsNearMiss(s.NearGap, assist))
+            else if (s.NearStrike == result.StrikeId && AttackAssist.CountsAsNearMiss(s.NearGap, assist, result.Kind))
                 // 판정만 보정(선우 10/28): 주먹은 그대로 두고, 보스 근처를 지나갔으면 명중으로 친다.
                 Hit(side, result.Kind, result.StrikeId, HitQuality.Assisted, s.NearZone, s.NearPoint, now);
             else
             {
-                LogNearMiss(s, result.StrikeId);
+                LogNearMiss(s, result.StrikeId, result.Kind);
                 resolver.ReportMiss(side, result.Kind, result.StrikeId, now, events);
             }
             Dispatch();
@@ -327,10 +327,10 @@ namespace Anseong.Combat
 
         // 헛침일 때 보스까지 얼마나 모자랐는지(허용 거리를 정할 때 본다).
         [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
-        void LogNearMiss(ArmState s, int strike)
+        void LogNearMiss(ArmState s, int strike, PunchKind kind)
         {
             if (!logToConsole || !assist.enabled || assist.mode != AssistMode.JudgeOnly || s.NearStrike != strike) return;
-            Debug.Log($"[Combat] 빗나감: 로봇 주먹이 보스까지 {s.NearGap:F1}m 모자람 (허용 {assist.nearMissMeters:F1}m)", this);
+            Debug.Log($"[Combat] 빗나감: 로봇 주먹이 보스까지 {s.NearGap:F1}m 모자람 ({kind} 허용 {AttackAssist.Allowance(assist, kind):F1}m)", this);
         }
 
         [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
@@ -352,6 +352,7 @@ namespace Anseong.Combat
             list.AddToggle(g, "assist.enabled", "공격 보정(끄면 실제로 닿아야 명중)", () => a.enabled, v => a.enabled = v);
             list.AddChoice(g, "assist.mode", "보정 방식", () => (int)a.mode, v => a.mode = (AssistMode)v, new[] { "판정만(주먹 그대로)", "주먹 끌어당기기" });
             list.AddFloat(g, "assist.nearMiss", "판정만: 빗맞음 허용 거리(m)", () => a.nearMissMeters, v => a.nearMissMeters = v, 0f, 15f, 0.5f, 1);
+            list.AddFloat(g, "assist.hookNearMiss", "판정만: 훅 허용 거리(m)", () => a.hookNearMissMeters, v => a.hookNearMissMeters = v, 0f, 20f, 0.5f, 1);
             list.AddFloat(g, "assist.pullSeconds", "끌어당기기: 끌려가는 시간(초)", () => a.pullSeconds, v => a.pullSeconds = v, 0.02f, 0.6f, 0.02f);
 
             const string c = "연계·부스트";

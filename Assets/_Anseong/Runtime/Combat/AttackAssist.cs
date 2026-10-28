@@ -25,6 +25,10 @@ namespace Anseong.Combat
         [Min(0f)]
         public float nearMissMeters = 4f;
 
+        [Tooltip("JudgeOnly: 훅만 따로 쓰는 허용 거리(m, 로봇 크기). 훅은 옆으로 휘둘러 리치가 짧아 넓게 준다(선우 10/28: 훅이 잘 안 닿음).")]
+        [Min(0f)]
+        public float hookNearMissMeters = 8f;
+
         [Tooltip("Pull: 보정 사거리: 로봇 어깨에서 보스 부위까지 거리가 로봇 팔 길이의 이 배수 안이면 끌어당긴다.")]
         [Min(0.5f)]
         public float rangeRatio = 1.4f;
@@ -72,8 +76,12 @@ namespace Anseong.Combat
         public float Progress { get; private set; }
 
         /// <summary>JudgeOnly에서 주먹 겉면과 보스 부위 사이 가장 가까웠던 거리(gap)가 명중으로 칠 만큼 가까운지.</summary>
-        public static bool CountsAsNearMiss(float gap, AttackAssistSettings settings) =>
-            settings != null && settings.enabled && settings.mode == AssistMode.JudgeOnly && gap <= settings.nearMissMeters;
+        public static bool CountsAsNearMiss(float gap, AttackAssistSettings settings, PunchKind kind = PunchKind.Jab) =>
+            settings != null && settings.enabled && settings.mode == AssistMode.JudgeOnly && gap <= Allowance(settings, kind);
+
+        /// <summary>그 펀치 종류의 판정만 허용 거리(m).</summary>
+        public static float Allowance(AttackAssistSettings settings, PunchKind kind) =>
+            kind == PunchKind.Hook ? settings.hookNearMissMeters : settings.nearMissMeters;
 
         public static bool InRange(Vector3 shoulder, Quaternion body, Vector3 zonePoint, float armLength, AttackAssistSettings settings)
         {

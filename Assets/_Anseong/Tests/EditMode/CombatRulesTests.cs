@@ -245,6 +245,7 @@ namespace Anseong.Tests
             Assert.IsFalse(AttackAssist.CountsAsNearMiss(settings.nearMissMeters + 0.1f, settings), "크게 빗나가면 헛침");
             Assert.IsFalse(AttackAssist.CountsAsNearMiss(0f, new AttackAssistSettings { enabled = false }), "보정 끄면 실제로 닿아야");
             Assert.IsFalse(AttackAssist.CountsAsNearMiss(0f, new AttackAssistSettings { mode = AssistMode.Pull }), "끌어당기기 방식은 따로");
+            Assert.IsTrue(AttackAssist.CountsAsNearMiss(settings.nearMissMeters + 1f, settings, PunchKind.Hook), "훅은 허용 거리가 더 넓음");
         }
 
         [Test]
