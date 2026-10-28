@@ -70,7 +70,14 @@ namespace Anseong.Pilot
         bool useElbowHint = true;
 
         [Header("팔 반응")]
-        [SerializeField, Min(0f), Tooltip("주먹 목표가 손을 따라가는 시간(초). 0 = 즉시. 키우면 묵직하게 늦게 따라온다. 카메라와는 무관. 기본 0.2(선우 10/25 헤드셋 조절값).")]
+        [SerializeField, Tooltip("PathAccelerate = 손이 지나간 경로를 따라 처음엔 느리게 출발해 가속(기본, 선우 10/28: 묵직하게 시작해 끝에 타격감). " +
+            "Smooth = 목표 쪽으로 부드럽게 늦게(팔 반응 시간·최대 속도, 10/25까지 방식).")]
+        ArmResponseMode responseMode = ArmResponseMode.PathAccelerate;
+
+        [SerializeField, Tooltip("PathAccelerate 수치(로봇 팔 길이 배수).")]
+        ArmPathSettings path = new ArmPathSettings();
+
+        [SerializeField, Min(0f), Tooltip("Smooth: 주먹 목표가 손을 따라가는 시간(초). 0 = 즉시. 키우면 묵직하게 늦게 따라온다. 카메라와는 무관. 기본 0.2(선우 10/25 헤드셋 조절값).")]
         float responseSeconds = 0.2f;
 
         [SerializeField, Min(0f), Tooltip("주먹 목표 최대 속도(m/s, 로봇 크기). 0 = 제한 없음(기본).")]
@@ -89,6 +96,7 @@ namespace Anseong.Pilot
         TwoBoneArmSolver solver;
         readonly ElbowLiftHint elbowHint = new ElbowLiftHint();
         readonly HandDeadzone handDeadzone = new HandDeadzone();
+        readonly ArmPathFollower pathFollower = new ArmPathFollower();
         Vector3 filteredLocal, filteredVelocity;
         bool active;
 
@@ -211,18 +219,32 @@ namespace Anseong.Pilot
                 return;
             }
 
-            if (!active || responseSeconds <= 0f && maxTargetSpeed <= 0f)
+            if (!active)
             {
                 filteredLocal = local;
                 filteredVelocity = Vector3.zero;
+                pathFollower.Reset(local);
+            }
+            else if (responseMode == ArmResponseMode.PathAccelerate)
+            {
+                filteredLocal = pathFollower.Step(local, length, dt, path);
+                filteredVelocity = Vector3.zero;
+            }
+            else if (responseSeconds <= 0f && maxTargetSpeed <= 0f)
+            {
+                filteredLocal = local;
+                filteredVelocity = Vector3.zero;
+                pathFollower.Reset(local);
             }
             else if (responseSeconds > 0f)
             {
+                pathFollower.Reset(local);
                 filteredLocal = Vector3.SmoothDamp(filteredLocal, local, ref filteredVelocity, responseSeconds,
                     maxTargetSpeed > 0f ? maxTargetSpeed : Mathf.Infinity, dt);
             }
             else
             {
+                pathFollower.Reset(local);
                 filteredLocal = Vector3.MoveTowards(filteredLocal, local, maxTargetSpeed * dt);
             }
 
@@ -282,11 +304,14 @@ namespace Anseong.Pilot
         /// <summary>인게임 조절 메뉴. 왼팔·오른팔이 같은 키로 등록해 한 번에 같이 바뀐다.</summary>
         public void AddTuning(TuningList list)
         {
-            list.Describe("묵직함", "할 것: 팔 반응 시간 0 → 0.15 → 0.3마다 잽·훅 10번\n       가드로 가만히 있으며 작은 손 떨림 무시 켜고 끄고 비교\n볼 것: 손보다 묵직하게 늦되 답답하지 않게, 가만히 있으면 로봇 팔도 가만히");
+            list.Describe("묵직함", "할 것: 따라가는 방식 경로 가속 ↔ 부드럽게 비교, 잽·훅 10번씩\n       경로 가속은 출발 속도·가속도, 부드럽게는 반응 시간\n볼 것: 묵직하게 출발해 끝에 타격감, 가만히 있으면 로봇 팔도 가만히");
             // 주먹 최대 속도·손목·팔 매핑은 메뉴에서 뺐다(선우 10/25: 메뉴가 너무 많음). Inspector에는 그대로 있다.
             list.AddToggle("묵직함", "arm.deadzone", "작은 손 떨림 무시", () => deadzone.enabled, v => deadzone.enabled = v);
             list.AddFloat("묵직함", "arm.deadzoneRadius", "무시할 떨림 크기(cm)", () => deadzone.radiusMeters * 100f, v => deadzone.radiusMeters = v / 100f, 0f, 5f, 0.5f, 1);
-            list.AddFloat("묵직함", "arm.responseSeconds", "팔 반응 시간(초, 0 = 즉시)", () => responseSeconds, v => responseSeconds = v, 0f, 0.6f, 0.05f);
+            list.AddChoice("묵직함", "arm.responseMode", "따라가는 방식", () => (int)responseMode, v => responseMode = (ArmResponseMode)v, new[] { "경로 가속(느리게→빠르게)", "부드럽게(처음 방식)" });
+            list.AddFloat("묵직함", "arm.pathStart", "경로 가속: 출발 속도(팔 길이/초)", () => path.startSpeed, v => path.startSpeed = v, 0.1f, 3f, 0.1f, 1);
+            list.AddFloat("묵직함", "arm.pathAccel", "경로 가속: 가속도(팔 길이/초²)", () => path.acceleration, v => path.acceleration = v, 0f, 40f, 1f, 0);
+            list.AddFloat("묵직함", "arm.responseSeconds", "부드럽게: 팔 반응 시간(초, 0 = 즉시)", () => responseSeconds, v => responseSeconds = v, 0f, 0.6f, 0.05f);
         }
     }
 }
