@@ -48,7 +48,16 @@
 - 헤드셋 눈→목 오프셋은 기본 (0, −0.10, −0.09) m. Inspector에서 조절.
 - 기록: `logs/arm_<팔>_*.csv`(손·로봇 주먹·고개, 초당 30줄)로 기기를 바꿨을 때 차이를 바로 비교한다.
 
-## 이미 들어간 것 (10/28, `feat/m1-05-punch-hit-boss-hp`)
+## 구현 (10/28, `feat/m1-05-punch-hit-boss-hp`, 선우 2단계 결정)
 
-- 몸 정면 = 헤드셋, 어깨 = 뻗은 손 뒤, 목 기준 따라가기, 팔 궤적 기록. 조절 메뉴 "보정"에서 이전 방식과 비교 가능.
-- 남은 것: 2단계로 줄이기(어깨 높이·팔 길이를 정면 뻗기에서), 확인 범위·안내, 보정 직후 확인, 가상 조종사 시뮬레이션 테스트.
+| 무엇 | 어디 |
+|---|---|
+| 순서 선택 `steps`(TwoStep 기본 / ThreeStep 이전) | `Pilot/PilotCalibrationFlow` |
+| 정면 뻗기 `CaptureForward`, 가드 `CaptureGuardAfterReach`, 공통 기준 `CommonReference` | `Pilot/ArmCalibration` |
+| 고개 숙임 거절(25°), 두 손 높이 차 15cm 넘으면 경고 | `PilotCalibrationFlow.CaptureForward/FinishForward` |
+| 몸 이동 보정 기준 = 정면 뻗기 때 목. 가드도 목 기준으로 저장 | `FinishForward` |
+| 정면 잽 확인 `ReportJab`(첫 잽 3번 평균, 8° 이내면 어깨 최대 6cm 옮김) | `PilotCalibrationFlow`, `Combat/PunchClassifierDriver` |
+| 가상 조종사 테스트(조종사 162명(몸 방향·어깨 폭·높이·팔 길이·컨트롤러) × 서 있는 자리 3 × 고개 3 × 양손 = 정면 잽 2916번, 가장 큰 오차 0.94°) | `Tests/EditMode/CalibrationSimulationTests` |
+| 조절 메뉴 "보정": 보정 순서, 보정 뒤 정면 잽으로 맞춤 | `PilotCalibrationFlow.AddTuning` |
+
+가상 조종사 가정: 어깨 관절은 목과 같은 앞뒤 위치, 컨트롤러 기준점 차이 ±4cm, 눈→목 차이 ±1.5cm, 보정 때 고개 ±1.5°.

@@ -177,6 +177,8 @@ namespace Anseong.Combat
         public double StartTime, EndTime;
         /// <summary>동작 중 머리가 몸 정면으로 움직인 거리(m). 분류에는 쓰지 않는 기록용, 드라이버가 채운다.</summary>
         public float HeadForward;
+        /// <summary>가장 멀리 뻗은 점(몸 기준, 사람 어깨 원점, m). 보정 뒤 정면 잽 확인이 쓴다.</summary>
+        public Vector3 PeakPoint;
 
         /// <summary>공격으로 센다(잽·훅 + 그립 + 추적). 명중은 M1-05가 따로 본다.</summary>
         public bool IsAttack => Kind != PunchKind.None && GripHeld && Tracked;
@@ -471,6 +473,7 @@ namespace Anseong.Combat
         {
             var result = new PunchResult { Kind = PunchKind.None, Reason = PunchReason.TooShort };
             var m = new PunchMeasure { PeakSpeed = peakSpeed, Duration = (float)(time - began), ArcRatio = 1f };
+            if (last >= 0) result.PeakPoint = points[Mathf.Clamp(peakForwardIndex, 0, last)];
             if (last < 2 || m.Duration < MinDuration)
             {
                 result.Measure = m;

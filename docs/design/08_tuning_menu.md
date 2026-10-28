@@ -11,7 +11,7 @@
 | 허리 | `Pilot/TorsoTwistDriver` | 허리 회전, 머리·조종석은 정면 유지, 손 비율, 최대 각도 |
 | 조종석 흔들림 | `Pilot/CockpitSeat` | 붙이는 방식(완전 고정/좌우 회전만/위치만), 보정 때 정면·가운데 맞춤, 위치만: 따라가는 비율 |
 | 조종석 비우기 | `Pilot/CockpitClearZone` | 조종석 안 로봇 몸 숨김(켜기), 비울 폭·높이·앞뒤 길이(m) |
-| 보정 | `Pilot/PilotCalibrationFlow` | 몸 정면 기준(머리/손), 어깨 위치(뻗은 손 뒤/머리 대칭/내린 손), 목 기준 따라가기 |
+| 보정 | `Pilot/PilotCalibrationFlow` | 보정 순서(2단계: 정면 뻗기→가드 / 3단계 이전), 보정 뒤 정면 잽으로 맞춤 |
 | 공격 보정 | `Combat/CombatDirector` | [확인] 2개, 공격 보정 켜기, 보정 방식(판정만/끌어당기기), 허용 거리(잽·어퍼컷 / 훅), 끌려가는 시간 |
 | 연계·부스트 | `Combat/CombatDirector` | 다음 명중 제한, 부스트 입력창 |
 | 가드 (06 브랜치) | `Combat/GuardDriver` | 06 지시서대로 |

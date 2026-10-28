@@ -124,6 +124,7 @@ namespace Anseong.Combat
                 foreach (var arm in GetComponentsInChildren<RobotArmDriver>())
                     if (robotArms[(int)arm.Side] == null) robotArms[(int)arm.Side] = arm;
             calibration.Completed += ResetNeutrals;
+            calibration.Adjusted += ResetNeutrals;
             if (calibration.IsComplete) ResetNeutrals();
             block = new MaterialPropertyBlock();
             for (var i = 0; i < indicators.Length; i++) SetIndicator(i, idleColor);
@@ -131,7 +132,11 @@ namespace Anseong.Combat
 
         void OnDestroy()
         {
-            if (calibration != null) calibration.Completed -= ResetNeutrals;
+            if (calibration != null)
+            {
+                calibration.Completed -= ResetNeutrals;
+                calibration.Adjusted -= ResetNeutrals;
+            }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             log?.Dispose();
             log = null;
@@ -230,6 +235,7 @@ namespace Anseong.Combat
                 : result.Kind == PunchKind.Uppercut ? uppercutColor : noneColor;
             SetIndicator((int)side, color);
             indicatorUntil[(int)side] = Time.time + indicatorSeconds;
+            if (result.Kind == PunchKind.Jab) calibration.ReportJab(side, result.PeakPoint);
             // 명중 판정(M1-05)이 먼저 결과를 받고 나서 기록해야 CSV 명중 열이 맞는다.
             StrikeCompleted?.Invoke(side, result);
             WriteDebug(side, result);
