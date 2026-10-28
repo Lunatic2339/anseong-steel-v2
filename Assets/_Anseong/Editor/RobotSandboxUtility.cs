@@ -41,7 +41,7 @@ namespace Anseong.EditorTools
         public const float SeatSpacing = 2.1f;
         static readonly Vector3 FloorSize = new Vector3(3.6f, 0.05f, 2f);
         static readonly Vector3 SeatMarkSize = new Vector3(0.6f, 0.005f, 0.6f);
-        static readonly Vector3 ConsoleSize = new Vector3(3.6f, 0.9f, 0.3f);
+        static readonly Vector3 ConsoleSize = new Vector3(3.6f, 0.5f, 0.3f);   // 선우 10/28: 앞 벽(콘솔) 낮춤 0.9 → 0.5
         const float ConsoleZ = 1.15f;
         const float WindowZ = 1.25f;
         const float WindowTop = 2.4f;
@@ -211,6 +211,36 @@ namespace Anseong.EditorTools
             var headEnd = FindBone(robotRoot, HeadEndBone);
             if (head == null || headEnd == null) return new Renderer[0];
             return FindRenderersMostlyOn(robotRoot, head, headEnd);
+        }
+
+        /// <summary>
+        /// 조종석 비움(CockpitClearZone)이 숨길 수 있는 로봇 몸 렌더러: 스킨 메시 전부에서
+        /// 아래팔·손(손가락 포함)에 주로 묶인 것과 except(머리 좌석 숨김 목록)를 뺀다. 주먹은 늘 보이게.
+        /// </summary>
+        public static Renderer[] FindClearZoneRenderers(Transform robotRoot, Renderer[] except)
+        {
+            var armBones = new List<Transform>();
+            foreach (var prefix in new[] { LeftPrefix, RightPrefix })
+            {
+                var forearm = FindBone(robotRoot, prefix + ForeArmSuffix);
+                if (forearm != null) armBones.AddRange(forearm.GetComponentsInChildren<Transform>(true));
+            }
+            var arms = new HashSet<Renderer>(FindRenderersMostlyOn(robotRoot, armBones.ToArray()));
+            var skip = new HashSet<Renderer>(except ?? new Renderer[0]);
+            return robotRoot.GetComponentsInChildren<SkinnedMeshRenderer>(true)
+                .Where(r => !arms.Contains(r) && !skip.Contains(r))
+                .Cast<Renderer>().ToArray();
+        }
+
+        /// <summary>CockpitClearZone의 숨김 후보 목록을 채운다.</summary>
+        public static void ConfigureClearZone(CockpitClearZone zone, Renderer[] candidates)
+        {
+            var serialized = new SerializedObject(zone);
+            var list = serialized.FindProperty("candidates");
+            list.arraySize = candidates.Length;
+            for (var i = 0; i < candidates.Length; i++)
+                list.GetArrayElementAtIndex(i).objectReferenceValue = candidates[i];
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         /// <summary>
