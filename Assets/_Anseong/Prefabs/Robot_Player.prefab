@@ -610,11 +610,14 @@ MonoBehaviour:
   additionalOffset: {x: 0, y: 0, z: 0}
   followBone: {fileID: 1308540052482540190}
   followReferenceLocal: {x: 0.06553791, y: 47.486164, z: 1.1727283}
+  attach: 0
   followWeight: 1
   maxFollowOffset: 1
   xrOrigin: {fileID: 0}
   side: 0
   seatSpacing: 2.1
+  alignToCalibration: 1
+  calibration: {fileID: 0}
   switchSeatAction: {fileID: 7401664881759802552, guid: f9bac97bb683d474da3f60f0db4eaaf0, type: 3}
 --- !u!1 &4070106720247521099
 GameObject:
@@ -1021,6 +1024,10 @@ MonoBehaviour:
   useElbowHint: 1
   responseSeconds: 0.2
   maxTargetSpeed: 0
+  deadzone:
+    enabled: 1
+    radiusMeters: 0.015
+    angleDegrees: 3
   wristLockMode: 1
   solverSettings:
     maxBendDegrees: 160
@@ -1097,6 +1104,10 @@ MonoBehaviour:
   useElbowHint: 1
   responseSeconds: 0.2
   maxTargetSpeed: 0
+  deadzone:
+    enabled: 1
+    radiusMeters: 0.015
+    angleDegrees: 3
   wristLockMode: 1
   solverSettings:
     maxBendDegrees: 160
@@ -1127,6 +1138,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Anseong.Runtime::Anseong.Pilot.TorsoTwistDriver
   robotRoot: {fileID: 8677032748000622808}
   spine: {fileID: 7168155168197243212}
+  head: {fileID: 1308540052482540190}
+  keepHeadForward: 1
   input: {fileID: 0}
   calibration: {fileID: 0}
   twistEnabled: 1
@@ -1224,11 +1237,12 @@ MonoBehaviour:
   boss: {fileID: 0}
   assist:
     enabled: 1
+    mode: 0
+    nearMissMeters: 4
     rangeRatio: 1.4
     coneDegrees: 40
     pullSeconds: 0.15
     releaseSeconds: 0.25
-    hitAtWeight: 0.95
   combo:
     comboSeconds: 2.4
     minComboGap: 0.15
