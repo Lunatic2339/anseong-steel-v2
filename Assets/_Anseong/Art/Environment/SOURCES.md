@@ -8,3 +8,4 @@
 | Assets/ScrapDumpTruck/ | OpenAI Codex / procedural mesh | Original low-poly scrap-loaded dump truck | User direction + Codex | Original geometry/code, no external models/textures | https://openai.com/policies/terms-of-use/ |
 | Assets/StreetLight/ | OpenAI Codex / procedural mesh | Original low-poly industrial street light | User direction + Codex | Original geometry/code, no external models/textures | https://openai.com/policies/terms-of-use/ |
 | Assets/Quay/ | OpenAI Codex / procedural mesh | Original modular concrete quay wall | User direction + Codex | Original geometry/code, no external models/textures | https://openai.com/policies/terms-of-use/ |
+| Assets/SteelCargo/ | OpenAI Codex / procedural mesh | Original steel coil, slab stack and H-beam bundle | User direction + Codex | Original geometry/code, no external models/textures | https://openai.com/policies/terms-of-use/ |
