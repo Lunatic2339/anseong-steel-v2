@@ -223,5 +223,29 @@ namespace Anseong.Tests
             var modelGuard = new Vector3(1f, 2f, 3f);
             AssertVector(modelGuard, c.Map(Vector3.one, Vector3.zero, modelGuard, 18f));
         }
+            [Test]
+        public void SymmetricShoulders_CenterOnHead_KeepSpacingAndHeight()
+        {
+            // 왼손이 바깥으로 6cm 더 처져서 두 어깨가 머리 왼쪽으로 3cm 치우침. 몸 정면 0°.
+            var left = new Vector3(-0.24f, 1.40f, 0.02f);
+            var right = new Vector3(0.12f, 1.38f, -0.01f);
+            var head = new Vector3(0f, 1.62f, 0f);
+            var (l, r) = ArmCalibration.SymmetricShoulders(left, right, head, 0f);
+            Assert.AreEqual(-0.18f, l.x, 1e-4f);
+            Assert.AreEqual(0.18f, r.x, 1e-4f);
+            Assert.AreEqual(0f, l.z, 1e-4f);
+            Assert.AreEqual(1.40f, l.y, 1e-4f);
+            Assert.AreEqual(1.38f, r.y, 1e-4f);
+        }
+
+        [Test]
+        public void SymmetricShoulders_FollowBodyYaw()
+        {
+            var yaw = 90f; // 몸 정면 = +X, 오른쪽 = −Z
+            var (l, r) = ArmCalibration.SymmetricShoulders(new Vector3(0f, 1.4f, 0.3f), new Vector3(0f, 1.4f, -0.1f), new Vector3(1f, 1.6f, 0f), yaw);
+            Assert.AreEqual(1f, l.x, 1e-4f);
+            Assert.AreEqual(0.2f, l.z, 1e-4f);
+            Assert.AreEqual(-0.2f, r.z, 1e-4f);
+        }
     }
 }

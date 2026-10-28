@@ -110,7 +110,9 @@ namespace Anseong.UI
                 try
                 {
                     var applied = list.Apply(File.ReadAllText(path));
-                    if (applied > 0) Debug.Log($"[TuningMenu] 저장한 조절값 {applied}개 적용: {path}", this);
+                    // 어떤 값이 시작값과 다른지 기록에 남긴다(10/28: 예전에 꺼 둔 공격 보정이 남아 있어 헷갈렸다).
+                    if (applied > 0) Debug.Log($"[TuningMenu] 저장한 조절값 {applied}개 적용: {path} | 시작값과 다른 값: " +
+                        list.Serialize().Replace("\n", " ; "), this);
                 }
                 catch (IOException e)
                 {

@@ -199,6 +199,29 @@ namespace Anseong.Pilot
             return Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg;
         }
 
+        /// <summary>
+        /// 1인 양팔 모드: 두 어깨를 머리(어깨 단계 때, 똑바로 선 자세) 좌우로 대칭이 되게 옮긴 위치. 간격은 잰 두 어깨의 몸 좌우 거리 그대로.
+        /// 내린 손으로 어깨를 재면 한쪽 손이 몸 안쪽·바깥쪽으로 조금만 처져도 두 팔이 같은 쪽으로 쏠린다(선우 10/28: 왼손 가드가 22cm 안쪽, 오른손은 7cm).
+        /// </summary>
+        public static (Vector3 left, Vector3 right) SymmetricShoulders(Vector3 left, Vector3 right, Vector3 head, float bodyYawDegrees)
+        {
+            var side = Quaternion.Euler(0f, bodyYawDegrees, 0f) * Vector3.right;
+            var half = Mathf.Abs(Vector3.Dot(right - left, side)) * 0.5f;
+            var center = new Vector3(head.x, 0f, head.z);
+            var l = center - side * half;
+            var r = center + side * half;
+            return (new Vector3(l.x, left.y, l.z), new Vector3(r.x, right.y, r.z));
+        }
+
+        /// <summary>보정이 끝난 뒤 어깨 위치만 옮긴다(도달 거리는 새 어깨에서 다시 잰다). 끝나지 않았으면 false.</summary>
+        public bool MoveShoulder(Vector3 shoulder)
+        {
+            if (!IsComplete || !Finite(shoulder)) return false;
+            Shoulder = shoulder;
+            EffectiveReach = Mathf.Max(0.01f, Vector3.Distance(ReachPoint, Shoulder));
+            return true;
+        }
+
         /// <summary>도달까지 끝난 보정의 몸 정면 yaw를 바꾼다(1인 양팔 모드에서 두 손 공통 정면으로 맞출 때).</summary>
         public bool SetBodyYaw(float degrees)
         {
