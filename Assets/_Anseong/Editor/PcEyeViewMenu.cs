@@ -17,9 +17,24 @@ namespace Anseong.EditorTools
         const string LogPrefix = "[PcEyeViewMenu]";
         // 02_architecture: Head 좌석 눈높이 약 49.2 m(대기 자세, M1-01). 플레이어 로봇 원점에서 보스(+Z)를 본다.
         const float EyeHeight = 49.2f;
-        const float FarClip = 20000f;   // 윤주 맵의 먼 산(약 3~7 km, 폭 20 km)까지 보이게
+        const float FarClip = 40000f;   // 윤주 맵의 먼 산(약 3~7 km, 폭 20 km)까지 보이게
         const float CameraDepth = 50f;
 
+        [MenuItem("Anseong/Sandbox/Expand Scene View Distance")]
+        static void ExpandSceneViewDistance()
+        {
+            foreach (SceneView view in SceneView.sceneViews)
+            {
+                var settings = view.cameraSettings;
+                settings.dynamicClip = false;
+                settings.nearClip = 0.3f;
+                settings.farClip = FarClip;
+                settings.fieldOfView = 70f;
+                view.cameraSettings = settings;
+                view.Repaint();
+            }
+            Debug.Log("[PcEyeViewMenu] Scene view distance: 40 km, vertical FOV: 70 degrees.");
+        }
         [MenuItem("Anseong/Sandbox/Add PC Robot Eye View")]
         static void Add()
         {
@@ -35,6 +50,7 @@ namespace Anseong.EditorTools
             go.transform.SetPositionAndRotation(new Vector3(0f, EyeHeight, 0f), Quaternion.identity);
             var camera = go.AddComponent<Camera>();
             camera.farClipPlane = FarClip;
+            camera.fieldOfView = 80f;
             camera.depth = Mathf.Max(CameraDepth, Object.FindObjectsByType<Camera>(FindObjectsSortMode.None)
                 .Where(c => c != camera).Select(c => c.depth + 1f).DefaultIfEmpty(0f).Max());
             go.AddComponent<PcEyeViewCamera>();

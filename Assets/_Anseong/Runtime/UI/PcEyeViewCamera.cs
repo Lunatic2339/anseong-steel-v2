@@ -26,6 +26,20 @@ namespace Anseong.UI
         [SerializeField, Tooltip("켜면 Q/E로 높이를 바꿀 수 있다. 끄면 시작 높이(로봇 눈높이)에 고정.")]
         bool allowHeightChange = true;
 
+        [SerializeField, Range(45f, 100f), Tooltip("PC 맵 확인용 세로 시야각. VR 카메라에는 적용하지 않는다.")]
+        float previewFieldOfView = 80f;
+
+        [SerializeField, Min(1000f), Tooltip("PC 미리보기에서 표시할 최대 거리(m). 원경 지형까지 포함한다.")]
+        float previewFarClip = 40000f;
+
+        void OnEnable()
+        {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            var previewCamera = GetComponent<Camera>();
+            previewCamera.fieldOfView = previewFieldOfView;
+            previewCamera.farClipPlane = previewFarClip;
+#endif
+        }
         float yaw, pitch;
         Vector3 startPosition;
         Quaternion startRotation;
