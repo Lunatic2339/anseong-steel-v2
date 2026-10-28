@@ -57,7 +57,8 @@ namespace Anseong.Combat
             public Func<Vector3, Vector3> Modifier;
             public BossZone AssistZone;
             public PunchKind PeekKind;
-            public int Launched, Touched, NearStrike;
+            public int Launched, Touched, NearStrike, HitStrike;
+            public HitQuality HitHow;
             public float NearGap;
             public BossZone NearZone;
             public Vector3 NearPoint;
@@ -281,13 +282,23 @@ namespace Anseong.Combat
             var report = new HitReport { Side = side, Kind = kind, StrikeId = strike, Quality = quality, Zone = zone, Point = point, ClientTime = now };
             // M3: 여기서 서버 RPC로 보낸다. 지금은 같은 PC에서 바로 판정.
             resolver.Resolve(report, now, events);
-            state[(int)side].Assist.Release();
+            var s = state[(int)side];
+            s.Assist.Release();
+            s.HitStrike = strike;
+            s.HitHow = quality;
         }
 
         string HitColumn(PilotSide side, PunchResult result)
         {
             if (!result.IsAttack) return string.Empty;
-            return resolver.AlreadyHit(side, result.StrikeId) ? "1" : "0";
+            var s = state[(int)side];
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            var hit = resolver.AlreadyHit(side, result.StrikeId);
+            var how = hit && s.HitStrike == result.StrikeId ? s.HitHow.ToString() : string.Empty;
+            var gap = s.NearStrike == result.StrikeId && !float.IsInfinity(s.NearGap) ? s.NearGap.ToString("F2", c) : string.Empty;
+            var arm = armBySide[(int)side];
+            var reach = arm != null ? arm.FistRatio.magnitude.ToString("F2", c) : string.Empty;
+            return string.Join(",", hit ? "1" : "0", how, gap, reach);
         }
 
         void Emit(CombatCue cue, PilotSide side, PunchKind kind, double now)

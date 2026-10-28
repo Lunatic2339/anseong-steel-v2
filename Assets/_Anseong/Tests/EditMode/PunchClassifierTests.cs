@@ -518,7 +518,7 @@ namespace Anseong.Tests
             var row = StrikeLog.FormatRow(PilotSide.Left, run.Results[0]);
             Assert.AreEqual(StrikeLog.Header.Split(',').Length, row.Split(',').Length);
             StringAssert.Contains(",Left,Jab,Jab,", row);
-            StringAssert.EndsWith(",1,", row, "strike_id 1, 명중 칸은 비움");
+            StringAssert.EndsWith(",1,,,,", row, "strike_id 1, 명중 칸 4개는 비움");
             Assert.AreEqual("strikes_20261017_134500.csv",
                 System.IO.Path.GetFileName(StrikeLog.DefaultPath("root", new DateTime(2026, 10, 17, 13, 45, 0))));
         }

@@ -10,7 +10,7 @@ namespace Anseong.UI
     /// <summary>
     /// 헤드셋을 쓴 채 조절값을 바꾸는 인게임 메뉴(개발용, 선우 10/25). 씬에서 <see cref="ITunable"/>을 구현한 컴포넌트를 시작할 때 한 번 모아 항목을 만든다.
     /// 오른손 B로 열고 닫고, 스틱 위아래로 고르고, 좌우로 바꾸고, 오른손 A로 지금 항목을 시작값(씬·프리팹 값)으로 되돌린다(키보드: F1, 방향키, Backspace).
-    /// 바꾼 값은 persistentDataPath/tuning.txt에 바로 저장되고 다음 Play에도 적용된다. 그 파일을 올리면 코드 기본값으로 옮긴다.
+    /// 바꾼 값은 tuning.txt(에디터: 프로젝트 Logs/Anseong, 빌드: persistentDataPath)에 바로 저장되고 다음 Play에도 적용된다. 그 파일을 올리면 코드 기본값으로 옮긴다.
     /// 메뉴가 열려 있는 동안 스틱은 메뉴에만 쓴다(M2에서 이동 입력이 생기면 그쪽에서 <see cref="IsOpen"/>을 본다).
     /// 열면 설정 화면처럼 뒤 화면이 어두워지고 시야 가운데에 표가 뜬다(10/25: 시야 끝 글자는 안 보임). 닫으면 다 숨긴다.
     /// Add Pilot Input 메뉴가 XR 카메라 아래에 만든다. 에디터·개발 빌드에서만 동작한다.
@@ -60,7 +60,7 @@ namespace Anseong.UI
         [SerializeField, Min(0.1f), Tooltip("값을 바꾸는 스틱을 이 시간(초) 넘게 밀고 있으면 한 번에 5칸씩.")]
         float fastAfter = 1.5f;
 
-        [SerializeField, Tooltip("저장 파일 이름(persistentDataPath 아래).")]
+        [SerializeField, Tooltip("저장 파일 이름(LogFolder.Root 아래: 에디터는 프로젝트 Logs/Anseong, 빌드는 persistentDataPath).")]
         string fileName = "tuning.txt";
 
         [SerializeField, Tooltip("시작할 때 저장 파일 값을 적용한다. 끄면 늘 코드 기본값으로 시작.")]
@@ -103,7 +103,8 @@ namespace Anseong.UI
                 if (behaviour is ITunable tunable) tunable.AddTuning(list);
             list.SortByGroup(GroupOrder);
 
-            path = Path.Combine(Application.persistentDataPath, fileName);
+            path = Path.Combine(LogFolder.Root, fileName);
+            MoveOldSave();
             if (loadSaved && File.Exists(path))
             {
                 try
@@ -230,6 +231,7 @@ namespace Anseong.UI
             dirty = true;
             try
             {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
                 File.WriteAllText(path, "# 안성제철 인게임 조절값. 이 파일을 총괄 채팅에 올리면 코드 기본값으로 옮긴다.\n" + list.Serialize(), new UTF8Encoding(false));
                 status = "저장됨";
             }
@@ -310,5 +312,19 @@ namespace Anseong.UI
             return item.Default.ToString("F" + item.Decimals, System.Globalization.CultureInfo.InvariantCulture);
         }
 #endif
+
+        // 예전 저장 위치(persistentDataPath)에만 파일이 있으면 새 위치로 한 번 옮겨 둔다(10/28, 기록을 프로젝트 Logs 폴더로 모음).
+        void MoveOldSave()
+        {
+            var old = Path.Combine(Application.persistentDataPath, fileName);
+            if (old == path || File.Exists(path) || !File.Exists(old)) return;
+            try
+            {
+                Directory.CreateDirectory(Path.GetDirectoryName(path));
+                File.Copy(old, path);
+            }
+            catch (IOException) { }
+            catch (System.UnauthorizedAccessException) { }
+        }
     }
 }
