@@ -78,6 +78,13 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("두 조종사 좌석 중심 사이 거리(m). 실제 바닥 테이프 간격과 같게.")]
         float seatSpacing = 2.1f;
 
+        [SerializeField, Tooltip("켜면 보정이 끝날 때 조종사가 보정한 몸 정면을 조종석 정면으로, 그때 머리를 좌석 가운데로 맞춘다(기본, 선우 10/28). " +
+            "끄면 헤드셋 트래킹 원점 그대로(헤드셋마다 방향이 달라 팔이 한쪽으로 쏠려 보일 수 있다).")]
+        bool alignToCalibration = true;
+
+        [SerializeField, Tooltip("개인 보정. 비어 있으면 시작할 때 씬에서 한 번 찾는다.")]
+        PilotCalibrationFlow calibration;
+
         // 직렬화 레이아웃을 빌드 종류와 무관하게 맞추려고 #if 밖에 둔다. 사용은 개발 빌드에서만.
 #pragma warning disable 0414
         [SerializeField, Tooltip("다음 좌석으로 전환하는 버튼 액션(에디터·개발 빌드 전용).")]
@@ -90,6 +97,10 @@ namespace Anseong.Pilot
         // Rigid·FollowYaw의 본 기준 회전. 애니메이션이 한 번 돈 뒤(첫 LateUpdate) 잡는다(허리 회전은 보정 전이라 0).
         Quaternion referenceRotation = Quaternion.identity;
         bool hasReferenceRotation;
+        // 보정 때 맞춘 XR Origin 자세(좌석 오프셋 포함). 보정 전이면 없음.
+        Vector3 alignedPosition;
+        Quaternion alignedRotation = Quaternion.identity;
+        bool aligned;
 
         public int ActiveSeat => activeSeat;
         public int SeatCount => seats != null ? seats.Length : 0;
@@ -124,6 +135,33 @@ namespace Anseong.Pilot
                 Debug.LogWarning("[CockpitSeat] 좌석 전환 액션이 연결되지 않았습니다.", this);
             }
 #endif
+        }
+
+        void Start()
+        {
+            if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
+            if (calibration != null) calibration.Completed += OnCalibrated;
+        }
+
+        void OnDestroy()
+        {
+            if (calibration != null) calibration.Completed -= OnCalibrated;
+        }
+
+        void OnCalibrated()
+        {
+            aligned = false;
+            if (alignToCalibration && calibration.TryGetHeadPosition(out var head))
+            {
+                var arm = calibration.Get(side);
+                if (arm == null || !arm.IsComplete) arm = calibration.Get(side == PilotSide.Left ? PilotSide.Right : PilotSide.Left);
+                if (arm != null && arm.IsComplete)
+                {
+                    (alignedPosition, alignedRotation) = CockpitSeatMath.AlignedOrigin(CockpitSeatMath.SideOffset(side, seatSpacing), arm.BodyYawDegrees, head);
+                    aligned = true;
+                }
+            }
+            PlaceOrigin();
         }
 
         void OnDisable()
@@ -173,6 +211,7 @@ namespace Anseong.Pilot
             const string g = "조종석 흔들림";
             list.Describe(g, "할 것: 펀치·훅 치며 붙이는 방식 완전 고정 → 좌우 회전만 비교\n볼 것: 몸통은 조종석에 고정, 팔만 들어옴, 멀미 없음");
             list.AddChoice(g, "seat.attach", "로봇 몸에 붙이는 방식", () => (int)attach, v => attach = (CockpitAttach)v, new[] { "완전 고정", "좌우 회전만", "위치만(처음)" });
+            list.AddToggle(g, "seat.align", "보정 때 정면·가운데 맞춤", () => alignToCalibration, v => { alignToCalibration = v; PlaceOrigin(); });
             list.AddFloat(g, "seat.followWeight", "위치만: 따라가는 비율", () => followWeight, v => followWeight = v, 0f, 1f, 0.1f, 1);
         }
 
@@ -180,7 +219,8 @@ namespace Anseong.Pilot
         public void PlaceOrigin()
         {
             if (xrOrigin == null) return;
-            xrOrigin.transform.SetLocalPositionAndRotation(CockpitSeatMath.SideOffset(side, seatSpacing), Quaternion.identity);
+            if (aligned && alignToCalibration) xrOrigin.transform.SetLocalPositionAndRotation(alignedPosition, alignedRotation);
+            else xrOrigin.transform.SetLocalPositionAndRotation(CockpitSeatMath.SideOffset(side, seatSpacing), Quaternion.identity);
         }
 
         public void SetActiveSeat(int index)

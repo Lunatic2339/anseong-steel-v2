@@ -68,6 +68,16 @@ namespace Anseong.Pilot
         public static Quaternion LocalRotation(Quaternion robotRotation, Quaternion boneRotation) =>
             Quaternion.Inverse(YawOnly(robotRotation)) * boneRotation;
 
+        /// <summary>
+        /// 보정이 끝났을 때 XR Origin 로컬 자세(조종석 기준). 보정한 몸 정면(트래킹 공간 yaw)이 조종석 정면이 되고,
+        /// 그때 머리 위치(트래킹 공간, 높이는 빼고)가 좌석 중심에 오게 한다(선우 10/28: 헤드셋을 바꾸니 보정 뒤 팔이 오른쪽으로 쏠림).
+        /// </summary>
+        public static (Vector3 position, Quaternion rotation) AlignedOrigin(Vector3 seatOffset, float bodyYawDegrees, Vector3 headTracking)
+        {
+            var rotation = Quaternion.Euler(0f, -bodyYawDegrees, 0f);
+            return (seatOffset - rotation * new Vector3(headTracking.x, 0f, headTracking.z), rotation);
+        }
+
         /// <summary>조종석 중심에서 각 조종사 좌석까지의 로컬 오프셋. 두 좌석 간격 = spacing.</summary>
         public static Vector3 SideOffset(PilotSide side, float spacing)
         {

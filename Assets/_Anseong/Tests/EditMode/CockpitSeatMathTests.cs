@@ -115,6 +115,19 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void AlignedOrigin_BodyForwardBecomesSeatForward_HeadAtSeatCenter()
+        {
+            // 트래킹 공간에서 몸 정면이 오른쪽 20°, 머리가 (0.3, 1.7, -0.2)에 있었다.
+            var seat = new Vector3(-1.05f, 0f, 0f);
+            var head = new Vector3(0.3f, 1.7f, -0.2f);
+            var (position, rotation) = CockpitSeatMath.AlignedOrigin(seat, 20f, head);
+            var bodyForward = rotation * (Quaternion.Euler(0f, 20f, 0f) * Vector3.forward);
+            AssertVector(Vector3.forward, bodyForward);
+            var headInSeat = position + rotation * head;
+            AssertVector(new Vector3(seat.x, 1.7f, seat.z), headInSeat);
+        }
+
+        [Test]
         public void AttachedPose_AtReferencePose_EqualsRigPose()
         {
             var root = new Vector3(3f, 0f, 1f);
