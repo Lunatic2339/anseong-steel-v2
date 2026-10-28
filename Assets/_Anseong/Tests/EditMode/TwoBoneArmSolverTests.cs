@@ -165,6 +165,8 @@ namespace Anseong.Tests
                 new Vector3(2f, -6f, 14f), new Vector3(-2f, 22f, 6f), new Vector3(-4f, 10f, -18f),
                 new Vector3(-6f, -10f, -14f), new Vector3(20f, 2f, 8f), new Vector3(2f, -6f, 14f),
             };
+            // 전완 롤은 rollSpeed까지 돌 수 있다(선우 10/28: 회전은 빠르게). 그 위로 튀면 실패.
+            var lowerLimit = new ArmSolverSettings().rollSpeed * Dt + 4f;
             var previous = Solve(solver, Shoulder + path[0], frames: 30);
             for (var segment = 0; segment + 1 < path.Length; segment++)
             {
@@ -173,7 +175,7 @@ namespace Anseong.Tests
                     var target = Shoulder + Vector3.Lerp(path[segment], path[segment + 1], i / 180f);
                     var pose = Solve(solver, target);
                     Assert.Less(Quaternion.Angle(previous.Upper, pose.Upper), 6f, $"위팔이 한 프레임에 크게 돌지 않음 (구간 {segment}, {i})");
-                    Assert.Less(Quaternion.Angle(previous.Lower, pose.Lower), 8f, $"아래팔이 한 프레임에 크게 돌지 않음 (구간 {segment}, {i})");
+                    Assert.Less(Quaternion.Angle(previous.Lower, pose.Lower), lowerLimit, $"아래팔이 한 프레임에 크게 돌지 않음 (구간 {segment}, {i})");
                     Assert.Less(Vector3.Distance(previous.Elbow, pose.Elbow), total * 0.05f, $"팔꿈치가 튀지 않음 (구간 {segment}, {i})");
                     Assert.LessOrEqual(Mathf.Abs(pose.Swivel), new ArmSolverSettings().maxSwivelDegrees + 1e-3f, "swivel 한계");
                     AssertLengths(pose);
