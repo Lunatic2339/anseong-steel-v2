@@ -359,6 +359,17 @@ namespace Anseong.Combat
             list.Describe(c, "할 것: 잽(한 팔) → 잽(다른 팔) → 훅(처음 팔), 훅 명중 직후 트리거로 부스트\n볼 것: 타이밍이 빡빡하면 아래 시간을 늘림");
             list.AddFloat(c, "combo.comboSeconds", "다음 명중 제한(초)", () => combo.comboSeconds, v => combo.comboSeconds = v, 0.5f, 5f, 0.1f, 1);
             list.AddFloat(c, "boost.windowSeconds", "부스트 입력창(초)", () => boost.windowSeconds, v => boost.windowSeconds = v, 0.1f, 2f, 0.05f);
+            // 값이 아니라 버튼처럼 쓴다: 켜는 순간 채우고 늘 "끔"으로 보인다(저장값도 끔).
+            list.AddToggle(c, "boss.refill", "보스 HP 다시 채우기(켜면 바로)", () => false, v => { if (v) ResetBoss(); });
+        }
+
+        /// <summary>테스트용: 보스 HP·연계·부스트를 처음 상태로(선우 10/28). 조절 메뉴와 Inspector 오른쪽 클릭 메뉴에서 부른다.</summary>
+        [ContextMenu("Reset Boss HP")]
+        public void ResetBoss()
+        {
+            if (resolver == null) return;
+            resolver.Reset();
+            Debug.Log("[CombatDirector] 보스 HP 다시 채움", this);
         }
     }
 }
