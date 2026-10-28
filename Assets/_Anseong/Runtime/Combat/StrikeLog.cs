@@ -11,11 +11,15 @@ namespace Anseong.Combat
 {
     /// <summary>
     /// 펀치 동작 기록(개발용). 동작마다 CSV 한 줄. 쓰기는 모았다가 백그라운드에서 하므로 메인 스레드를 막지 않는다.
-    /// 명중 열: 1 = 명중, 0 = 공격이었지만 빗나감, 빈칸 = 공격 아님(M1-05).
+    /// 명중 열: 1 = 명중, 0 = 공격이었지만 빗나감, 빈칸 = 공격 아님(M1-05). hit_how = Contact·Assisted,
+    /// near_gap_m = 판정만 보정에서 로봇 주먹이 보스에 가장 가까웠던 거리(m), robot_reach = 끝날 때 로봇 주먹 뻗음(팔 길이 배수).
     /// </summary>
     public sealed class StrikeLog : IDisposable
     {
-        public const string Header = "time_s,arm,kind,reason,side_ratio,straightness,outset_m,inward_sweep_m,arc_ratio,turn_deg,rise_m,head_forward_m,grip,tracked,strike_id,hit";
+        public const string Header = "time_s,arm,kind,reason,side_ratio,straightness,outset_m,inward_sweep_m,arc_ratio,turn_deg,rise_m,head_forward_m,grip,tracked,strike_id,hit,hit_how,near_gap_m,robot_reach";
+
+        /// <summary>명중 칸 4개가 다 빈 값.</summary>
+        public const string EmptyHit = ",,,";
 
         readonly ConcurrentQueue<string> pending = new ConcurrentQueue<string>();
         readonly string path;
@@ -56,7 +60,7 @@ namespace Anseong.Combat
                 r.GripHeld ? "1" : "0",
                 r.Tracked ? "1" : "0",
                 r.StrikeId.ToString(c),
-                hit ?? string.Empty);
+                string.IsNullOrEmpty(hit) ? EmptyHit : hit);
         }
 
         static string Number(float value)

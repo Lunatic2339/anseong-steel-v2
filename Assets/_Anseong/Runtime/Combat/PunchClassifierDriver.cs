@@ -42,7 +42,7 @@ namespace Anseong.Combat
         RobotArmDriver[] robotArms = new RobotArmDriver[2];
 
         [Header("개발용 (에디터·개발 빌드에서만)")]
-        [SerializeField, Tooltip("동작마다 persistentDataPath/logs/strikes_<날짜시각>.csv에 한 줄 남긴다.")]
+        [SerializeField, Tooltip("동작마다 logs/strikes_<날짜시각>.csv에 한 줄 남긴다. 에디터는 프로젝트 Logs/Anseong/logs, 빌드는 persistentDataPath/logs. Play마다 Console 기록도 session_<날짜시각>.txt로 남긴다.")]
         bool writeCsv = true;
 
         [SerializeField, Tooltip("동작마다 Console에 한 줄 남긴다.")]
@@ -72,6 +72,7 @@ namespace Anseong.Combat
         MaterialPropertyBlock block;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         StrikeLog log;
+        SessionLog session;
 #endif
 
         /// <summary>동작 하나가 끝났다(잽·훅이 아니어도). 공격인지는 <see cref="PunchResult.IsAttack"/>.</summary>
@@ -102,6 +103,13 @@ namespace Anseong.Combat
 
         void Start()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (writeCsv && session == null)
+            {
+                session = new SessionLog(LogFolder.Root, DateTime.Now);
+                Debug.Log($"[PunchClassifierDriver] 세션 기록: {session.Path}", this);
+            }
+#endif
             if (input == null) input = FindAnyObjectByType<PilotHandInput>();
             if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
             if (input == null || calibration == null)
@@ -127,6 +135,8 @@ namespace Anseong.Combat
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             log?.Dispose();
             log = null;
+            session?.Dispose();
+            session = null;
 #endif
         }
 
@@ -242,7 +252,7 @@ namespace Anseong.Combat
             {
                 if (log == null)
                 {
-                    log = new StrikeLog(StrikeLog.DefaultPath(Application.persistentDataPath, DateTime.Now));
+                    log = new StrikeLog(StrikeLog.DefaultPath(LogFolder.Root, DateTime.Now));
                     Debug.Log($"[PunchClassifierDriver] 펀치 기록: {log.Path}", this);
                 }
                 log.Add(side, r, HitColumn != null ? HitColumn(side, r) : string.Empty);
