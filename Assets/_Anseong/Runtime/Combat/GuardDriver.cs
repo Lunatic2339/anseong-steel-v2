@@ -25,7 +25,7 @@ namespace Anseong.Combat
         [SerializeField] GuardSettings settings = new GuardSettings();
 
         [Header("개발용")]
-        [SerializeField, Tooltip("가드 판정을 CSV로 남긴다(에디터·개발 빌드, persistentDataPath/logs/guard_<날짜시각>.csv).")]
+        [SerializeField, Tooltip("가드 판정을 CSV로 남긴다(에디터·개발 빌드, logs/guard_<날짜시각>.csv: 에디터는 프로젝트 Logs/Anseong, 빌드는 persistentDataPath).")]
         bool writeCsv = true;
         [SerializeField, Min(0.02f), Tooltip("CSV 기록 간격(초). 0.1 = 10Hz.")]
         float logInterval = 0.1f;
@@ -121,7 +121,7 @@ namespace Anseong.Combat
             nextLog = now + logInterval;
             if (log == null)
             {
-                log = new GuardLog(GuardLog.DefaultPath(Application.persistentDataPath, DateTime.Now));
+                log = new GuardLog(GuardLog.DefaultPath(LogFolder.Root, DateTime.Now));
                 Debug.Log($"[GuardDriver] 가드 기록: {log.Path}", this);
             }
             for (var i = 0; i < 2; i++)
