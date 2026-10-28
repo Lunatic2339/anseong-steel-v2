@@ -127,8 +127,8 @@ namespace Anseong.Pilot
         [Tooltip("굽힘면 기준 방향 변화 속도(도/초).")]
         public float poleTurnSpeed = 90f;
 
-        [Tooltip("아래팔 비틀림 변화 속도(도/초).")]
-        public float rollSpeed = 180f;
+        [Tooltip("아래팔 비틀림 변화 속도(도/초). 180이면 팔 움직임에 비해 전완이 늦게 돌아 어색했다(선우 10/28) → 720.")]
+        public float rollSpeed = 720f;
 
         [Tooltip("아래팔 비틀림 한계(도).")]
         [Range(90f, 179f)]
