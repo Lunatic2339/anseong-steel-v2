@@ -59,10 +59,14 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("followBone의 기준 위치(m). 루트 원점, 로봇 정면 기준. 이 위치에서 벗어난 만큼만 따라간다. 메뉴가 대기 클립 평균 자세로 채운다.")]
         Vector3 followReferenceLocal;
 
-        [SerializeField, Range(0f, 1f), Tooltip("본 흔들림을 따라가는 비율. 0 = 루트에 고정, 1 = 본과 똑같이(기본, M1-01 헤드셋 확인). 위치만 따라가고 회전은 따라가지 않는다.")]
+        [SerializeField, Tooltip("Rigid = 조종석을 로봇 몸(followBone)에 완전히 붙인다: 위치·회전을 그대로 따라가 몸통은 조종석에 고정되고 팔만 들어온다(기본, 선우 10/25: 펀치 때 몸 모델이 조종석을 뚫고 움직였다). " +
+            "FollowYaw = 위치 + 좌우 회전만(기울기·끄덕임은 안 따라가 멀미가 덜함). PositionOnly = 위치 흔들림만(처음 방식, 아래 비율·최대 거리).")]
+        CockpitAttach attach = CockpitAttach.Rigid;
+
+        [SerializeField, Range(0f, 1f), Tooltip("PositionOnly: 본 흔들림을 따라가는 비율. 0 = 루트에 고정, 1 = 본과 똑같이(기본, M1-01 헤드셋 확인). 위치만 따라가고 회전은 따라가지 않는다.")]
         float followWeight = 1f;
 
-        [SerializeField, Tooltip("본을 따라 움직이는 최대 거리(m). 큰 동작 클립에서 카메라가 크게 튀지 않게 한다.")]
+        [SerializeField, Tooltip("PositionOnly: 본을 따라 움직이는 최대 거리(m). 큰 동작 클립에서 카메라가 크게 튀지 않게 한다.")]
         float maxFollowOffset = 1f;
 
         [SerializeField, Tooltip("이 조종석 안에 둘 XR Origin. 이 Transform의 자식이어야 한다.")]
@@ -74,6 +78,13 @@ namespace Anseong.Pilot
         [SerializeField, Tooltip("두 조종사 좌석 중심 사이 거리(m). 실제 바닥 테이프 간격과 같게.")]
         float seatSpacing = 2.1f;
 
+        [SerializeField, Tooltip("켜면 보정이 끝날 때 조종사가 보정한 몸 정면을 조종석 정면으로, 그때 머리를 좌석 가운데로 맞춘다(기본, 선우 10/28). " +
+            "끄면 헤드셋 트래킹 원점 그대로(헤드셋마다 방향이 달라 팔이 한쪽으로 쏠려 보일 수 있다).")]
+        bool alignToCalibration = true;
+
+        [SerializeField, Tooltip("개인 보정. 비어 있으면 시작할 때 씬에서 한 번 찾는다.")]
+        PilotCalibrationFlow calibration;
+
         // 직렬화 레이아웃을 빌드 종류와 무관하게 맞추려고 #if 밖에 둔다. 사용은 개발 빌드에서만.
 #pragma warning disable 0414
         [SerializeField, Tooltip("다음 좌석으로 전환하는 버튼 액션(에디터·개발 빌드 전용).")]
@@ -83,6 +94,13 @@ namespace Anseong.Pilot
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         bool enabledSwitchSeat;
 #endif
+        // Rigid·FollowYaw의 본 기준 회전. 애니메이션이 한 번 돈 뒤(첫 LateUpdate) 잡는다(허리 회전은 보정 전이라 0).
+        Quaternion referenceRotation = Quaternion.identity;
+        bool hasReferenceRotation;
+        // 보정 때 맞춘 XR Origin 자세(좌석 오프셋 포함). 보정 전이면 없음.
+        Vector3 alignedPosition;
+        Quaternion alignedRotation = Quaternion.identity;
+        bool aligned;
 
         public int ActiveSeat => activeSeat;
         public int SeatCount => seats != null ? seats.Length : 0;
@@ -119,6 +137,33 @@ namespace Anseong.Pilot
 #endif
         }
 
+        void Start()
+        {
+            if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
+            if (calibration != null) calibration.Completed += OnCalibrated;
+        }
+
+        void OnDestroy()
+        {
+            if (calibration != null) calibration.Completed -= OnCalibrated;
+        }
+
+        void OnCalibrated()
+        {
+            aligned = false;
+            if (alignToCalibration && calibration.TryGetHeadPosition(out var head))
+            {
+                var arm = calibration.Get(side);
+                if (arm == null || !arm.IsComplete) arm = calibration.Get(side == PilotSide.Left ? PilotSide.Right : PilotSide.Left);
+                if (arm != null && arm.IsComplete)
+                {
+                    (alignedPosition, alignedRotation) = CockpitSeatMath.AlignedOrigin(CockpitSeatMath.SideOffset(side, seatSpacing), arm.BodyYawDegrees, head);
+                    aligned = true;
+                }
+            }
+            PlaceOrigin();
+        }
+
         void OnDisable()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -133,6 +178,11 @@ namespace Anseong.Pilot
 
         void LateUpdate()
         {
+            if (!hasReferenceRotation && followBone != null && robotRoot != null)
+            {
+                referenceRotation = CockpitSeatMath.LocalRotation(robotRoot.rotation, followBone.rotation);
+                hasReferenceRotation = true;
+            }
             ApplySeatPose();
         }
 
@@ -140,6 +190,14 @@ namespace Anseong.Pilot
         public void ApplySeatPose()
         {
             if (!IsValidSeat(activeSeat) || robotRoot == null) return;
+            if (attach != CockpitAttach.PositionOnly && followBone != null && hasReferenceRotation)
+            {
+                var (attachedPosition, attachedRotation) = CockpitSeatMath.AttachedPose(robotRoot.position, robotRoot.rotation,
+                    seats[activeSeat].offsetMeters + additionalOffset, followBone.position, followBone.rotation,
+                    followReferenceLocal, referenceRotation, attach == CockpitAttach.FollowYaw);
+                transform.SetPositionAndRotation(attachedPosition, attachedRotation);
+                return;
+            }
             var follow = followBone != null
                 ? CockpitSeatMath.FollowOffset(robotRoot.position, robotRoot.rotation, followBone.position, followReferenceLocal, followWeight, maxFollowOffset)
                 : Vector3.zero;
@@ -147,21 +205,22 @@ namespace Anseong.Pilot
             transform.SetPositionAndRotation(position, rotation);
         }
 
-        /// <summary>인게임 조절 메뉴: 조종석이 로봇 머리 흔들림을 따라가는 정도(선우 10/17, 계속 시험할 항목).</summary>
+        /// <summary>인게임 조절 메뉴: 조종석을 로봇 몸에 붙이는 방식(선우 10/25)과 흔들림.</summary>
         public void AddTuning(TuningList list)
         {
             const string g = "조종석 흔들림";
-            list.Describe(g, "할 것: 펀치 치며 시점 흔들림 보기\n       따라가는 비율 1 → 0.5 → 0 비교\n볼 것: 거대 로봇에 탄 느낌, 멀미 없음");
-            list.AddCheck(g, "seat.sway", "흔들림이 로봇에 탄 느낌");
-            list.AddCheck(g, "seat.sick", "멀미 없음");
-            list.AddFloat(g, "seat.followWeight", "머리 흔들림 따라가는 비율", () => followWeight, v => followWeight = v, 0f, 1f, 0.1f, 1);
+            list.Describe(g, "할 것: 펀치·훅 치며 붙이는 방식 완전 고정 → 좌우 회전만 비교\n볼 것: 몸통은 조종석에 고정, 팔만 들어옴, 멀미 없음");
+            list.AddChoice(g, "seat.attach", "로봇 몸에 붙이는 방식", () => (int)attach, v => attach = (CockpitAttach)v, new[] { "완전 고정", "좌우 회전만", "위치만(처음)" });
+            list.AddToggle(g, "seat.align", "보정 때 정면·가운데 맞춤", () => alignToCalibration, v => { alignToCalibration = v; PlaceOrigin(); });
+            list.AddFloat(g, "seat.followWeight", "위치만: 따라가는 비율", () => followWeight, v => followWeight = v, 0f, 1f, 0.1f, 1);
         }
 
         /// <summary>XR Origin을 조종석 안 자기 좌석(좌/우)에 둔다.</summary>
         public void PlaceOrigin()
         {
             if (xrOrigin == null) return;
-            xrOrigin.transform.SetLocalPositionAndRotation(CockpitSeatMath.SideOffset(side, seatSpacing), Quaternion.identity);
+            if (aligned && alignToCalibration) xrOrigin.transform.SetLocalPositionAndRotation(alignedPosition, alignedRotation);
+            else xrOrigin.transform.SetLocalPositionAndRotation(CockpitSeatMath.SideOffset(side, seatSpacing), Quaternion.identity);
         }
 
         public void SetActiveSeat(int index)

@@ -1,3 +1,4 @@
+using System;
 using System.Diagnostics;
 using Anseong.Core;
 using UnityEngine;
@@ -69,11 +70,21 @@ namespace Anseong.Pilot
         bool useElbowHint = true;
 
         [Header("팔 반응")]
-        [SerializeField, Min(0f), Tooltip("주먹 목표가 손을 따라가는 시간(초). 0 = 즉시. 키우면 묵직하게 늦게 따라온다. 카메라와는 무관. 기본 0.2(선우 10/25 헤드셋 조절값).")]
+        [SerializeField, Tooltip("PathAccelerate = 손이 지나간 경로를 따라 처음엔 느리게 출발해 가속(기본, 선우 10/28: 묵직하게 시작해 끝에 타격감). " +
+            "Smooth = 목표 쪽으로 부드럽게 늦게(팔 반응 시간·최대 속도, 10/25까지 방식).")]
+        ArmResponseMode responseMode = ArmResponseMode.PathAccelerate;
+
+        [SerializeField, Tooltip("PathAccelerate 수치(로봇 팔 길이 배수).")]
+        ArmPathSettings path = new ArmPathSettings();
+
+        [SerializeField, Min(0f), Tooltip("Smooth: 주먹 목표가 손을 따라가는 시간(초). 0 = 즉시. 키우면 묵직하게 늦게 따라온다. 카메라와는 무관. 기본 0.2(선우 10/25 헤드셋 조절값).")]
         float responseSeconds = 0.2f;
 
         [SerializeField, Min(0f), Tooltip("주먹 목표 최대 속도(m/s, 로봇 크기). 0 = 제한 없음(기본).")]
         float maxTargetSpeed;
+
+        [SerializeField, Tooltip("손 떨림 거르기(작은 움직임 무시).")]
+        HandDeadzoneSettings deadzone = new HandDeadzoneSettings();
 
         [SerializeField, Tooltip("GripHeld = 그립을 쥔 동안 손목을 아래팔과 일직선으로 고정하고, 놓으면 컨트롤러 각도를 다시 따라간다(기본, 선우 10/18). " +
             "Always = 그립과 상관없이 늘 고정. 주먹 비틀림은 두 경우 모두 아래팔이 돌아서 따라간다.")]
@@ -84,6 +95,8 @@ namespace Anseong.Pilot
 
         TwoBoneArmSolver solver;
         readonly ElbowLiftHint elbowHint = new ElbowLiftHint();
+        readonly HandDeadzone handDeadzone = new HandDeadzone();
+        readonly ArmPathFollower pathFollower = new ArmPathFollower();
         Vector3 filteredLocal, filteredVelocity;
         bool active;
 
@@ -106,6 +119,21 @@ namespace Anseong.Pilot
 
         /// <summary>마지막 주먹 목표(월드, 반응 지연 적용 뒤).</summary>
         public Vector3 LastTarget { get; private set; }
+
+        /// <summary>위팔 뼈 위치(월드, 로봇 어깨).</summary>
+        public Vector3 ShoulderPosition => upperArm != null ? upperArm.position : transform.position;
+
+        /// <summary>로봇 팔 길이(m, 위팔 + 아래팔).</summary>
+        public float ArmLength => solver != null ? solver.Bind.Total : 0f;
+
+        /// <summary>로봇 정면 회전.</summary>
+        public Quaternion BodyRotation => robotRoot != null ? robotRoot.rotation : transform.rotation;
+
+        /// <summary>
+        /// 주먹 목표를 마지막에 한 번 더 옮기는 함수(M1-05 공격 보정이 보스 쪽으로 끌어당길 때). 비어 있으면 손 그대로.
+        /// 받는 값·돌려주는 값은 월드 좌표 주먹 목표.
+        /// </summary>
+        public Func<Vector3, Vector3> TargetModifier { get; set; }
 
         public ArmMappingMode MappingMode
         {
@@ -167,13 +195,15 @@ namespace Anseong.Pilot
                 solver.Reset();
                 elbowHint.Reset();
                 filteredVelocity = Vector3.zero;
+                handDeadzone.Reset();
                 LogStart(arm);
             }
 
             // 추적이 끊기면 샘플이 끊기기 직전 자세를 유지하므로 팔도 그 자리에 멈춘다.
             var sample = input.Get(side);
             // 플레이어가 걸어 옮긴 만큼은 빼고 잰다(가드 자세로 걸으면 팔이 그대로).
-            var handPosition = calibration.CompensateHand(sample.Position);
+            // 작은 손 떨림은 거른다(로봇 팔 모습만, 펀치 인식은 원래 손으로 한다).
+            var (handPosition, handRotation) = handDeadzone.Filter(calibration.CompensateHand(sample.Position), sample.Rotation, deadzone);
             var dt = Time.deltaTime;
             var body = robotRoot.rotation;
             var length = solver.Bind.Total;
@@ -189,18 +219,32 @@ namespace Anseong.Pilot
                 return;
             }
 
-            if (!active || responseSeconds <= 0f && maxTargetSpeed <= 0f)
+            if (!active)
             {
                 filteredLocal = local;
                 filteredVelocity = Vector3.zero;
+                pathFollower.Reset(local);
+            }
+            else if (responseMode == ArmResponseMode.PathAccelerate)
+            {
+                filteredLocal = pathFollower.Step(local, length, dt, path);
+                filteredVelocity = Vector3.zero;
+            }
+            else if (responseSeconds <= 0f && maxTargetSpeed <= 0f)
+            {
+                filteredLocal = local;
+                filteredVelocity = Vector3.zero;
+                pathFollower.Reset(local);
             }
             else if (responseSeconds > 0f)
             {
+                pathFollower.Reset(local);
                 filteredLocal = Vector3.SmoothDamp(filteredLocal, local, ref filteredVelocity, responseSeconds,
                     maxTargetSpeed > 0f ? maxTargetSpeed : Mathf.Infinity, dt);
             }
             else
             {
+                pathFollower.Reset(local);
                 filteredLocal = Vector3.MoveTowards(filteredLocal, local, maxTargetSpeed * dt);
             }
 
@@ -211,7 +255,8 @@ namespace Anseong.Pilot
             // 목표는 로봇 정면 기준으로 저장하므로 로봇이 돌거나 움직여도 손이 따로 움직인 것으로 보지 않는다.
             var shoulder = upperArm.position;
             LastTarget = shoulder + body * filteredLocal;
-            var fist = body * ArmMapping.FistLocal(arm, sample.Rotation);
+            if (TargetModifier != null) LastTarget = TargetModifier(LastTarget);
+            var fist = body * ArmMapping.FistLocal(arm, handRotation);
             var lift = useElbowHint ? elbowHint.Update(ArmMapping.GuardDelta(arm, handPosition), dt) : 0f;
             var pose = solver.Solve(shoulder, LastTarget, fist, body, wristLockMode == WristLockMode.Always || sample.GripHeld ? 1f : 0f, lift, dt);
 
@@ -221,7 +266,48 @@ namespace Anseong.Pilot
             LastPose = pose;
             active = true;
             ApplyFingers();
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            Trace(arm, handPosition, sample.GripHeld);
+#endif
         }
+
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        // 팔 궤적 기록(선우 10/28: "오른손 잽이 왼쪽으로 꺾임"을 기록으로 보려고). 초당 30줄.
+        // hand = 사람 손(몸 기준, 사람 어깨 원점, m), target·fist = 로봇 목표·주먹(로봇 정면 기준, 로봇 팔 길이 배수),
+        // head_yaw = 몸 정면 대비 고개 yaw(°), body = 몸 이동 보정량(m).
+        const string TraceHeader = "time_s,arm,grip,hand_x,hand_y,hand_z,target_x,target_y,target_z,fist_x,fist_y,fist_z,head_yaw,body_dx,body_dy,body_dz";
+        const double TraceInterval = 1.0 / 30.0;
+        CsvLog trace;
+        double nextTrace;
+
+        void Trace(ArmCalibration arm, Vector3 handPosition, bool grip)
+        {
+            var now = Time.timeAsDouble;
+            if (now < nextTrace) return;
+            nextTrace = now + TraceInterval;
+            if (trace == null) trace = new CsvLog(CsvLog.DefaultPath(LogFolder.Root, "arm_" + side, DateTime.Now), TraceHeader);
+            var h = arm.ToBody(handPosition);
+            var headYaw = float.NaN;
+            if (calibration.TryGetHeadRotation(out var headRotation))
+            {
+                var forward = headRotation * Vector3.forward;
+                headYaw = Mathf.DeltaAngle(arm.BodyYawDegrees, Mathf.Atan2(forward.x, forward.z) * Mathf.Rad2Deg);
+            }
+            var b = calibration.BodyOffset;
+            trace.Add(string.Join(",", CsvLog.Number((float)now), side.ToString(), grip ? "1" : "0",
+                CsvLog.Number(h.x), CsvLog.Number(h.y), CsvLog.Number(h.z),
+                CsvLog.Number(TargetRatio.x), CsvLog.Number(TargetRatio.y), CsvLog.Number(TargetRatio.z),
+                CsvLog.Number(FistRatio.x), CsvLog.Number(FistRatio.y), CsvLog.Number(FistRatio.z),
+                CsvLog.Number(headYaw, "F1"), CsvLog.Number(b.x), CsvLog.Number(b.y), CsvLog.Number(b.z)));
+            trace.Pump();
+        }
+
+        void OnDestroy()
+        {
+            trace?.Dispose();
+            trace = null;
+        }
+#endif
 
         Vector3 RobotGuardLocal(float length)
         {
@@ -259,24 +345,16 @@ namespace Anseong.Pilot
         /// <summary>인게임 조절 메뉴. 왼팔·오른팔이 같은 키로 등록해 한 번에 같이 바뀐다.</summary>
         public void AddTuning(TuningList list)
         {
-            list.Describe("묵직함", "할 것: 팔 반응 시간 0 → 0.15 → 0.3마다 잽·훅 10번\n       그다음 주먹 최대 속도 30 → 20\n볼 것: 손보다 묵직하게 늦되 답답하지 않게, 시점은 그대로");
-            list.AddCheck("묵직함", "arm.heavy", "육중한 로봇 느낌 값 정함");
-            list.AddCheck("묵직함", "arm.camera", "시점은 안 늦음(멀미 없음)");
-            list.AddCheck("묵직함", "arm.still", "가만히 있으면 로봇 팔도 가만히");
-            list.AddCheck("묵직함", "arm.hitTiming", "판정이 로봇 주먹이 도착할 때 남");
-            list.AddFloat("묵직함", "arm.responseSeconds", "팔 반응 시간(초, 0 = 즉시)", () => responseSeconds, v => responseSeconds = v, 0f, 0.6f, 0.05f);
-            list.AddFloat("묵직함", "arm.maxTargetSpeed", "주먹 최대 속도(m/s 로봇, 0 = 제한 없음)", () => maxTargetSpeed, v => maxTargetSpeed = v, 0f, 80f, 5f, 0);
-            list.Describe("손목", "할 것: 그립 쥐고·놓고 손목 돌려 보기\n볼 것: 쥐면 일자, 놓으면 컨트롤러 각도, 흐느적 없음");
-            list.AddCheck("손목", "arm.wristGrip", "쥐면 손목 일자");
-            list.AddCheck("손목", "arm.wristFree", "놓으면 컨트롤러 각도로");
-            list.AddChoice("손목", "arm.wristLockMode", "손목 고정", () => (int)wristLockMode, v => wristLockMode = (WristLockMode)v, new[] { "항상", "그립 쥘 때만" });
-            if (solverSettings != null)
-                list.AddFloat("손목", "arm.lockedWristPitch", "고정 손목 위아래 꺾임(도)", () => solverSettings.lockedWristPitchDegrees, v => solverSettings.lockedWristPitchDegrees = v, -30f, 30f, 2f, 0);
-            list.Describe("팔 매핑", "할 것: 가드 자세와 끝까지 뻗기, 매핑 방식 바꿔 비교\n볼 것: 가드가 시야를 안 가리고, 뻗으면 끝까지");
-            list.AddCheck("팔 매핑", "arm.guardPose", "가드 자세가 자연스러움");
-            list.AddCheck("팔 매핑", "arm.reach", "뻗으면 로봇 팔도 끝까지");
-            list.AddChoice("팔 매핑", "arm.mappingMode", "매핑 방식", () => (int)mappingMode, v => mappingMode = (ArmMappingMode)v, new[] { "Linear(기본)", "가드 맞춤" });
-            list.AddFloat("팔 매핑", "arm.shoulderHeightOffset", "어깨 높이 보정(m, +면 주먹 내려감)", () => shoulderHeightOffset, v => shoulderHeightOffset = v, -0.3f, 0.3f, 0.02f);
+            list.Describe("묵직함", "할 것: 따라가는 방식 경로 가속 ↔ 부드럽게 비교, 잽·훅 10번씩\n       경로 가속은 출발 속도·가속도, 부드럽게는 반응 시간\n볼 것: 묵직하게 출발해 끝에 타격감, 가만히 있으면 로봇 팔도 가만히");
+            // 주먹 최대 속도·손목·팔 매핑은 메뉴에서 뺐다(선우 10/25: 메뉴가 너무 많음). Inspector에는 그대로 있다.
+            if (solverSettings != null) list.AddFloat("묵직함", "arm.rollSpeed", "전완 돌아가는 속도(도/초)", () => solverSettings.rollSpeed, v => solverSettings.rollSpeed = v, 90f, 1440f, 90f, 0);
+            if (solverSettings != null) list.AddToggle("묵직함", "arm.holdElbow", "뻗은 팔은 팔꿈치 고정(손목만 돎)", () => solverSettings.holdElbowWhenExtended, v => solverSettings.holdElbowWhenExtended = v);
+            list.AddToggle("묵직함", "arm.deadzone", "작은 손 떨림 무시", () => deadzone.enabled, v => deadzone.enabled = v);
+            list.AddFloat("묵직함", "arm.deadzoneRadius", "무시할 떨림 크기(cm)", () => deadzone.radiusMeters * 100f, v => deadzone.radiusMeters = v / 100f, 0f, 5f, 0.5f, 1);
+            list.AddChoice("묵직함", "arm.responseMode", "따라가는 방식", () => (int)responseMode, v => responseMode = (ArmResponseMode)v, new[] { "경로 가속(느리게→빠르게)", "부드럽게(처음 방식)" });
+            list.AddFloat("묵직함", "arm.pathStart", "경로 가속: 출발 속도(팔 길이/초)", () => path.startSpeed, v => path.startSpeed = v, 0.1f, 3f, 0.1f, 1);
+            list.AddFloat("묵직함", "arm.pathAccel", "경로 가속: 가속도(팔 길이/초²)", () => path.acceleration, v => path.acceleration = v, 0f, 40f, 1f, 0);
+            list.AddFloat("묵직함", "arm.responseSeconds", "부드럽게: 팔 반응 시간(초, 0 = 즉시)", () => responseSeconds, v => responseSeconds = v, 0f, 0.6f, 0.05f);
         }
     }
 }

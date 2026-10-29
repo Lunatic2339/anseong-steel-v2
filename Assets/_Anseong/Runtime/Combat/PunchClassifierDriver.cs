@@ -12,7 +12,7 @@ namespace Anseong.Combat
     /// 동작이 끝날 때마다 <see cref="StrikeCompleted"/>를 낸다. 명중·피해는 M1-05가 이 이벤트를 받아 정한다.
     /// 개발 빌드에서는 동작마다 CSV 한 줄을 남기고, 로봇 주먹 옆 표시 색을 잠깐 바꾼다.
     /// </summary>
-    public class PunchClassifierDriver : MonoBehaviour, ITunable
+    public class PunchClassifierDriver : MonoBehaviour
     {
         [Header("입력")]
         [SerializeField, Tooltip("손 입력. 비어 있으면 시작할 때 씬에서 한 번 찾는다.")]
@@ -42,7 +42,7 @@ namespace Anseong.Combat
         RobotArmDriver[] robotArms = new RobotArmDriver[2];
 
         [Header("개발용 (에디터·개발 빌드에서만)")]
-        [SerializeField, Tooltip("동작마다 persistentDataPath/logs/strikes_<날짜시각>.csv에 한 줄 남긴다.")]
+        [SerializeField, Tooltip("동작마다 logs/strikes_<날짜시각>.csv에 한 줄 남긴다. 에디터는 프로젝트 Logs/Anseong/logs, 빌드는 persistentDataPath/logs. Play마다 Console 기록도 session_<날짜시각>.txt로 남긴다.")]
         bool writeCsv = true;
 
         [SerializeField, Tooltip("동작마다 Console에 한 줄 남긴다.")]
@@ -72,12 +72,24 @@ namespace Anseong.Combat
         MaterialPropertyBlock block;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         StrikeLog log;
+        SessionLog session;
 #endif
 
         /// <summary>동작 하나가 끝났다(잽·훅이 아니어도). 공격인지는 <see cref="PunchResult.IsAttack"/>.</summary>
         public event Action<PilotSide, PunchResult> StrikeCompleted;
 
         public PunchClassifier Classifier(PilotSide side) => classifiers[(int)side];
+
+        /// <summary>끝났지만 로봇 주먹을 기다리며 아직 내지 않은 결과. 그동안에도 명중 판정이 로봇 주먹 접촉을 본다.</summary>
+        public bool TryGetHeld(PilotSide side, out PunchResult result)
+        {
+            var hold = holds[(int)side];
+            result = hold.Result;
+            return hold.Pending;
+        }
+
+        /// <summary>CSV 명중 열 값을 정하는 함수(M1-05 전투 판정이 넣는다). 비어 있으면 빈칸.</summary>
+        public Func<PilotSide, PunchResult, string> HitColumn { get; set; }
 
         void Awake()
         {
@@ -91,6 +103,13 @@ namespace Anseong.Combat
 
         void Start()
         {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            if (writeCsv && session == null)
+            {
+                session = new SessionLog(LogFolder.Root, DateTime.Now);
+                Debug.Log($"[PunchClassifierDriver] 세션 기록: {session.Path}", this);
+            }
+#endif
             if (input == null) input = FindAnyObjectByType<PilotHandInput>();
             if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
             if (input == null || calibration == null)
@@ -105,6 +124,7 @@ namespace Anseong.Combat
                 foreach (var arm in GetComponentsInChildren<RobotArmDriver>())
                     if (robotArms[(int)arm.Side] == null) robotArms[(int)arm.Side] = arm;
             calibration.Completed += ResetNeutrals;
+            calibration.Adjusted += ResetNeutrals;
             if (calibration.IsComplete) ResetNeutrals();
             block = new MaterialPropertyBlock();
             for (var i = 0; i < indicators.Length; i++) SetIndicator(i, idleColor);
@@ -112,10 +132,16 @@ namespace Anseong.Combat
 
         void OnDestroy()
         {
-            if (calibration != null) calibration.Completed -= ResetNeutrals;
+            if (calibration != null)
+            {
+                calibration.Completed -= ResetNeutrals;
+                calibration.Adjusted -= ResetNeutrals;
+            }
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             log?.Dispose();
             log = null;
+            session?.Dispose();
+            session = null;
 #endif
         }
 
@@ -209,8 +235,10 @@ namespace Anseong.Combat
                 : result.Kind == PunchKind.Uppercut ? uppercutColor : noneColor;
             SetIndicator((int)side, color);
             indicatorUntil[(int)side] = Time.time + indicatorSeconds;
-            WriteDebug(side, result);
+            if (result.Kind == PunchKind.Jab) calibration.ReportJab(side, result.PeakPoint);
+            // 명중 판정(M1-05)이 먼저 결과를 받고 나서 기록해야 CSV 명중 열이 맞는다.
             StrikeCompleted?.Invoke(side, result);
+            WriteDebug(side, result);
         }
 
         void SetIndicator(int index, Color color)
@@ -230,10 +258,10 @@ namespace Anseong.Combat
             {
                 if (log == null)
                 {
-                    log = new StrikeLog(StrikeLog.DefaultPath(Application.persistentDataPath, DateTime.Now));
+                    log = new StrikeLog(StrikeLog.DefaultPath(LogFolder.Root, DateTime.Now));
                     Debug.Log($"[PunchClassifierDriver] 펀치 기록: {log.Path}", this);
                 }
-                log.Add(side, r);
+                log.Add(side, r, HitColumn != null ? HitColumn(side, r) : string.Empty);
             }
             if (logToConsole)
             {
@@ -244,24 +272,6 @@ namespace Anseong.Combat
                           $"속도 {m.PeakSpeed:F1}m/s {m.Duration:F2}s", this);
             }
 #endif
-        }
-
-        /// <summary>인게임 조절 메뉴: 펀치 인식 기준(M1-04 검증에서 가장 많이 바꾸는 값).</summary>
-        public void AddTuning(TuningList list)
-        {
-            list.AddToggle("묵직함", "punch.waitForRobotFist", "판정을 로봇 주먹에 맞춤", () => waitForRobotFist, v => waitForRobotFist = v);
-            var s = settings;
-            if (s == null) return;
-            const string g = "펀치 인식";
-            list.Describe(g, "할 것: 그립 쥐고 팔마다 잽 20·훅 20·어퍼컷 10\n       가드 올리기 10, 잽 연타 10\n볼 것: 안내판 종류별 개수·실패 이유(90% 목표)");
-            list.AddCheck(g, "punch.jab", "잽 20번 중 18번 이상");
-            list.AddCheck(g, "punch.hook", "훅 20번 중 18번 이상");
-            list.AddCheck(g, "punch.uppercut", "어퍼컷 10번 중 9번 이상");
-            list.AddCheck(g, "punch.guardRaise", "가드 올리기는 0번");
-            list.AddCheck(g, "punch.combo", "잽 연타가 다 세짐");
-            list.AddCheck(g, "punch.double", "한 번 친 게 두 번 안 세짐");
-            // 인식 기준값은 strikes CSV로 Claude가 맞춘다(선우 10/25: 직접 볼 값만 메뉴에). Inspector에는 그대로 있다.
-            list.AddChoice(g, "punch.rearmMode", "다음 펀치 준비 방식", () => (int)s.rearmMode, v => s.rearmMode = (RearmMode)v, new[] { "거둬들이면", "가드로 돌아오면" });
         }
     }
 }

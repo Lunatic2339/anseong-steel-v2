@@ -180,6 +180,52 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &2044356049721748642
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 5871770685757559532}
+  - component: {fileID: 4831566371034277947}
+  m_Layer: 0
+  m_Name: FistHitProbe_Left
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &5871770685757559532
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2044356049721748642}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: -0.006894307, y: 0.081292324, z: -0.01620825}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 8595561204699556830}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &4831566371034277947
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2044356049721748642}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adea7049ee9fd3f45836a06847922579, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Combat.FistHitProbe
+  side: 0
+  radius: 1.1637664
 --- !u!1 &2975378232021550490
 GameObject:
   m_ObjectHideFlags: 0
@@ -450,6 +496,52 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &3652998397250456824
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 3704262189915447795}
+  - component: {fileID: 5960363298470541557}
+  m_Layer: 0
+  m_Name: FistHitProbe_Right
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!4 &3704262189915447795
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3652998397250456824}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0.006894307, y: 0.081292324, z: -0.01620825}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 6554033917907402765}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &5960363298470541557
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3652998397250456824}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: adea7049ee9fd3f45836a06847922579, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Combat.FistHitProbe
+  side: 1
+  radius: 1.1637664
 --- !u!1 &3698425743474083852
 GameObject:
   m_ObjectHideFlags: 0
@@ -518,11 +610,14 @@ MonoBehaviour:
   additionalOffset: {x: 0, y: 0, z: 0}
   followBone: {fileID: 1308540052482540190}
   followReferenceLocal: {x: 0.06553791, y: 47.486164, z: 1.1727283}
+  attach: 0
   followWeight: 1
   maxFollowOffset: 1
   xrOrigin: {fileID: 0}
   side: 0
   seatSpacing: 2.1
+  alignToCalibration: 1
+  calibration: {fileID: 0}
   switchSeatAction: {fileID: 7401664881759802552, guid: f9bac97bb683d474da3f60f0db4eaaf0, type: 3}
 --- !u!1 &4070106720247521099
 GameObject:
@@ -845,6 +940,8 @@ GameObject:
   - component: {fileID: 5450579354153348288}
   - component: {fileID: 7841369915937888571}
   - component: {fileID: 114430781125800924}
+  - component: {fileID: 4895455216919136929}
+  - component: {fileID: 5450624321635210080}
   m_Layer: 0
   m_Name: Arms
   m_TagString: Untagged
@@ -925,8 +1022,12 @@ MonoBehaviour:
   shoulderHeightOffset: 0
   robotGuardRatio: {x: 0.25, y: 0.1, z: 0.55}
   useElbowHint: 1
-  responseSeconds: 0
+  responseSeconds: 0.2
   maxTargetSpeed: 0
+  deadzone:
+    enabled: 1
+    radiusMeters: 0.015
+    angleDegrees: 3
   wristLockMode: 1
   solverSettings:
     maxBendDegrees: 160
@@ -1001,8 +1102,12 @@ MonoBehaviour:
   shoulderHeightOffset: 0
   robotGuardRatio: {x: 0.25, y: 0.1, z: 0.55}
   useElbowHint: 1
-  responseSeconds: 0
+  responseSeconds: 0.2
   maxTargetSpeed: 0
+  deadzone:
+    enabled: 1
+    radiusMeters: 0.015
+    angleDegrees: 3
   wristLockMode: 1
   solverSettings:
     maxBendDegrees: 160
@@ -1033,6 +1138,8 @@ MonoBehaviour:
   m_EditorClassIdentifier: Anseong.Runtime::Anseong.Pilot.TorsoTwistDriver
   robotRoot: {fileID: 8677032748000622808}
   spine: {fileID: 7168155168197243212}
+  head: {fileID: 1308540052482540190}
+  keepHeadForward: 1
   input: {fileID: 0}
   calibration: {fileID: 0}
   twistEnabled: 1
@@ -1059,14 +1166,18 @@ MonoBehaviour:
   settings:
     maxJabSideRatio: 0.55
     minJabStraightness: 0.8
+    maxDiagonalJabSideRatio: 1
+    minDiagonalJabStraightness: 0.9
     minHookOutset: 0
     minHookSweep: 0.17
-    minHookArcRatio: 1.01
+    minHookArcRatio: 1.1
+    minHookTurnDegrees: 15
     minUppercutRise: 0.18
     minUppercutRiseRatio: 1
     maxUppercutSideRatio: 0.6
     departUpSpeed: 0.5
     minForward: 0.18
+    peekMinForward: 0.12
     maxVerticalRatio: 0.85
     verticalAgainstWidestSpan: 1
     startSpeed: 0.75
@@ -1088,6 +1199,7 @@ MonoBehaviour:
   waitForRobotFist: 1
   catchUpRatio: 0.08
   maxHoldSeconds: 0.8
+  minRobotReach: 0.6
   robotArms:
   - {fileID: 0}
   - {fileID: 0}
@@ -1102,6 +1214,68 @@ MonoBehaviour:
   uppercutColor: {r: 0.75, g: 0.3, b: 1, a: 1}
   noneColor: {r: 0.55, g: 0.55, b: 0.55, a: 1}
   idleColor: {r: 1, g: 1, b: 1, a: 0.35}
+--- !u!114 &4895455216919136929
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6308108874801299636}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 734340ad881353d44b9998d74fa33568, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Combat.CombatDirector
+  input: {fileID: 0}
+  classifier: {fileID: 114430781125800924}
+  arms:
+  - {fileID: 5416871691110932779}
+  - {fileID: 5450579354153348288}
+  fists:
+  - {fileID: 4831566371034277947}
+  - {fileID: 5960363298470541557}
+  boss: {fileID: 0}
+  assist:
+    enabled: 1
+    mode: 0
+    nearMissMeters: 4
+    rangeRatio: 1.4
+    coneDegrees: 40
+    pullSeconds: 0.15
+    releaseSeconds: 0.25
+  combo:
+    comboSeconds: 2.4
+    minComboGap: 0.15
+    uppercutKeepsCombo: 1
+  boost:
+    windowSeconds: 0.45
+  bossHealth:
+    maxHealth: 100
+    jabDamage: 3
+    hookDamage: 5
+    uppercutDamage: 4
+    boostDamage: 6
+  triggerPress: 0.6
+  triggerRelease: 0.4
+  logToConsole: 1
+--- !u!114 &5450624321635210080
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6308108874801299636}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 650d1fe8b591cd84daa88d59c6ea07ec, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Combat.CombatCuePlayer
+  director: {fileID: 4895455216919136929}
+  cues: {fileID: 11400000, guid: dff8800a74f9e114aa97de1ed91fd794, type: 2}
+  voices: 8
+  minDistance: 30
+  maxDistance: 600
+  haptics: 1
 --- !u!1 &6713918228102835399
 GameObject:
   m_ObjectHideFlags: 0
@@ -2468,9 +2642,15 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 303711492795661533, guid: 236a784d2e8dc5a40a4aac51e943c01c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 896301165519182209}
+    - targetCorrespondingSourceObject: {fileID: 303711492795661533, guid: 236a784d2e8dc5a40a4aac51e943c01c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 5871770685757559532}
     - targetCorrespondingSourceObject: {fileID: -6229615462543747314, guid: 236a784d2e8dc5a40a4aac51e943c01c, type: 3}
       insertIndex: -1
       addedObject: {fileID: 2042169239736248809}
+    - targetCorrespondingSourceObject: {fileID: -6229615462543747314, guid: 236a784d2e8dc5a40a4aac51e943c01c, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 3704262189915447795}
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: 236a784d2e8dc5a40a4aac51e943c01c, type: 3}
 --- !u!137 &260308850494420701 stripped

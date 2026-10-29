@@ -47,6 +47,28 @@ M1은 NGO 없이 한 PC에서 돈다. 다만 나중에 다시 쓰지 않도록 *
 - CSV에 명중 여부가 남는다. 테스트 통과.
 
 ## 결과 (작업 후 Claude가 작성)
+- 구조: 판정은 `CombatDirector`(플레이어 Arms) 한 곳에서 하고, 결과는 전투 이벤트(`CombatCue`: 그립 잠금·발사·명중·헛침·연계 단계·연계 끊김·부스트 준비·부스트·부스트 놓침·보스 HP 0)로만 내보낸다. 소리·진동(`CombatCuePlayer` + `Audio/CombatCues.asset`), 보스 휘청(`BossReactionDriver`), HP 막대, 안내판은 이벤트만 듣는다. 외골격·애니메이션·이펙트는 듣는 컴포넌트를 하나 더 붙이면 된다. 지시서의 `CombatAuthority`는 순수 클래스 `CombatResolver`(M3에서 서버가 같은 클래스를 씀) + `CombatDirector.Hit`(M3에서 RPC 자리)로 만들었다.
 - 바뀐 파일:
+  - 순수 규칙 + 테스트: `Runtime/Combat/CombatTypes.cs`, `ComboRules.cs`, `BoostWindow.cs`, `BossHealth.cs`, `AttackAssist.cs`, `CombatResolver.cs`, `FistContact.cs`, `PunchClassifier.cs`(휘두르는 도중 판정 `Peek`), `Tests/EditMode/CombatRulesTests.cs`, `PunchClassifierTests.cs`
+  - 연결: `Runtime/Combat/CombatDirector.cs`, `FistHitProbe.cs`, `CombatCueSet.cs`, `CombatCuePlayer.cs`, `PunchClassifierDriver.cs`·`StrikeLog.cs`(CSV 명중 열), `Runtime/Pilot/RobotArmDriver.cs`(주먹 목표 보정 자리 `TargetModifier`), `Runtime/UI/TestGuidePanel.cs`(보스 HP·연계·부스트·명중 줄)
+  - 보스: `Runtime/Boss/BossTarget.cs`, `BossHurtZone.cs`, `BossReactionDriver.cs`, `BossHealthBar.cs`, `Art/Robot/Animation/Source/Stagger.fbx`(옛 레포 그대로 복사)
+  - 메뉴: `Editor/CombatSetup.cs`(새), `RobotPrefabMenu.cs`, `RobotArmSetup.cs`, `SceneSetupMenu.cs`, `RobotArtSettings.cs`(보스 휘청 클립 칸)
+  - 문서: `01_combat_rules.md`(공격 보정, 어퍼컷 연계 유지, 헛침·CSV 명중 열), `폴더_지도.md`
 - 사람이 확인할 것:
+  - `Anseong → Setup → Rebuild Robot + Pilot Input` → 씬 저장 → 새로 생긴 `.meta`(Stagger.fbx, 새 .cs, `Robot_Boss.controller`, `Audio/CombatCues.asset`, HP 막대 재질)를 커밋. Console에 `error CS`가 없는지.
+  - 위 "사람이 할 일" 항목 + 공격 보정: 보스 쪽으로 대충 쳐도 주먹이 묵직하게 끌려가 맞는지, `CombatDirector → Assist → Enabled`를 끄면 실제로 닿아야만 맞는지.
+  - 보스 휘청이 이상한 자세(뼈가 안 맞음)로 나오지 않는지.
+- 헤드셋 확인(선우, 10/25~10/28): 인식·연계·부스트·HP·빗나감·진동·조종석 시야·펀치 감각 확인. 공격 보정(판정만)·훅 휘청·2단계 보정은 다음 작업 중 틈틈이 확인하기로 하고 PR(선우 10/28).
+- 지시서 밖으로 추가한 것(선우 요청, 10/25~10/28):
+  - 공격 보정 방식 `AssistMode`: 판정만(기본, 로봇 주먹이 보스 가까이 지나가면 명중) / 끌어당기기. 판정은 로봇 주먹 도착 뒤.
+  - 묵직함: 경로 가속 `ArmPathFollower`(손 경로를 저장해 느리게 출발 → 가속), 손 떨림 무시 `HandDeadzone`, 뻗은 팔 팔꿈치 고정, 전완 롤 720°/s.
+  - 조종석: 로봇 몸에 붙이는 방식(완전 고정/좌우 회전만/위치만), 보정 때 정면·가운데 맞춤 `CockpitSeat`, 허리 회전 때 머리 정면 유지, 조종석 안 로봇 몸 숨김 `CockpitClearZone`, 앞 콘솔 0.9 → 0.5 m.
+  - 보정 2단계(정면 뻗기 → 가드), 목 기준 몸 이동 보정, 보정 뒤 정면 잽 확인: `docs/design/09_calibration.md`, 가상 조종사 테스트 `CalibrationSimulationTests`.
+  - 기록: 프로젝트 `Logs/Anseong/`(git 무시)에 strikes·session·arm 궤적 CSV, tuning.txt. 조절 메뉴에 보스 HP 다시 채우기.
+  - 조절 메뉴 정리: `docs/design/08_tuning_menu.md`.
 - 남은 문제 / 제안:
+  - Sandbox 씬 보스 거리는 메뉴가 아슬아슬한 사거리(약 30 m = 팔 19.4 m 기준)로 둔다. 근접 거리는 M2(05)에서 확정.
+  - 훅은 로봇 팔이 0.6~0.7만 뻗어 판정만 보정 허용 거리(훅 8 m)에 기대고 있다. 훅 전용 리치 보정은 선우 답 대기.
+  - `Stagger.fbx`는 옛 레포의 Generic 클립이라 보스 뼈 이름·경로가 다르면 휘청이 안 보인다. 그 경우 A-01 클립으로 Robot Art Settings 칸을 채운다.
+  - 소리 파일이 아직 없어 무음. S-01 파일을 `Audio/`에 `SFX_PunchHit_01.wav`처럼 넣고 메뉴를 다시 돌리면 연결된다.
+  - 컨트롤러 진동은 센 진동 우선만 한다. 01의 "컨트롤러별 최소 간격 0.09초"·피격 우선순위는 피격이 생기는 M2에서.

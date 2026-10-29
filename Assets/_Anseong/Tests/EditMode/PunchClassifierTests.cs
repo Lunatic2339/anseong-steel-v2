@@ -271,6 +271,38 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void Peek_KnowsKindMidSwing_BeforeStrokeEnds()
+        {
+            foreach (var left in new[] { true, false })
+            {
+                // 공격 보정은 휘두르는 도중 종류를 알아야 끌어당길 수 있다.
+                var jab = PeekDuring(left, Jab, true);
+                Assert.AreEqual(PunchKind.Jab, jab.kind, "잽 중간 판정 " + (left ? "L" : "R"));
+                Assert.Less(jab.progress, 0.8f, "끝나기 전에 안다");
+                Assert.AreEqual(1, jab.strikeId);
+
+                var hook = PeekDuring(left, Hook(left), true);
+                Assert.AreEqual(PunchKind.Hook, hook.kind, "훅 중간 판정 " + (left ? "L" : "R"));
+
+                Assert.AreEqual(PunchKind.None, PeekDuring(left, Jab, false).kind, "그립 없으면 미리 보기 없음");
+            }
+        }
+
+        /// <summary>stroke를 따라 휘두르는 동안 처음으로 Peek가 종류를 낸 순간(진행 0~1)과 그 종류.</summary>
+        static (PunchKind kind, float progress, int strikeId) PeekDuring(bool left, Func<float, Vector3> path, bool intent)
+        {
+            var run = new Run(left, 90);
+            run.Hold(Vector3.zero, 0.5f, intent);
+            var n = Mathf.RoundToInt(0.4f * run.Hz);
+            for (var i = 1; i <= n; i++)
+            {
+                run.Sample(path((float)i / n), intent);
+                if (run.Classifier.Peek(out var kind)) return (kind, (float)i / n, run.Classifier.CurrentStrikeId);
+            }
+            return (PunchKind.None, 1f, 0);
+        }
+
+        [Test]
         public void StrikeHold_WaitsForRobotFist()
         {
             var hold = new StrikeHold();
@@ -486,7 +518,7 @@ namespace Anseong.Tests
             var row = StrikeLog.FormatRow(PilotSide.Left, run.Results[0]);
             Assert.AreEqual(StrikeLog.Header.Split(',').Length, row.Split(',').Length);
             StringAssert.Contains(",Left,Jab,Jab,", row);
-            StringAssert.EndsWith(",1,", row, "strike_id 1, 명중 칸은 비움");
+            StringAssert.EndsWith(",1,,,,", row, "strike_id 1, 명중 칸 4개는 비움");
             Assert.AreEqual("strikes_20261017_134500.csv",
                 System.IO.Path.GetFileName(StrikeLog.DefaultPath("root", new DateTime(2026, 10, 17, 13, 45, 0))));
         }

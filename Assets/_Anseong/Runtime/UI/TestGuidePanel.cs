@@ -20,6 +20,9 @@ namespace Anseong.UI
         [SerializeField, Tooltip("펀치 분류. 비어 있으면 시작할 때 씬에서 한 번 찾는다. 없으면 보정 안내만 한다.")]
         PunchClassifierDriver classifier;
 
+        [SerializeField, Tooltip("전투 판정(M1-05). 비어 있으면 시작할 때 씬에서 한 번 찾는다. 없으면 펀치 분류만 보여 준다.")]
+        CombatDirector combat;
+
         [SerializeField, Tooltip("글자를 쓸 TextMesh. 메뉴가 만든다.")]
         TextMesh text;
 
@@ -51,12 +54,15 @@ namespace Anseong.UI
         bool dirty = true;
         float nextOffsetCheck;
         Vector3 shownOffset;
+        string lastCombat = string.Empty;
+        bool boostOpen;
         int readyKey = -1;
 
         void Start()
         {
             if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
             if (classifier == null) classifier = FindAnyObjectByType<PunchClassifierDriver>();
+            if (combat == null) combat = FindAnyObjectByType<CombatDirector>();
             if (tuningMenu == null) tuningMenu = FindAnyObjectByType<TuningMenu>();
             if (text == null || calibration == null)
             {
@@ -69,6 +75,7 @@ namespace Anseong.UI
             calibration.Notice += OnNotice;
             calibration.Completed += ResetCounts;
             if (classifier != null) classifier.StrikeCompleted += OnStrike;
+            if (combat != null) combat.Cue += OnCombat;
         }
 
         void OnDestroy()
@@ -79,6 +86,50 @@ namespace Anseong.UI
                 calibration.Completed -= ResetCounts;
             }
             if (classifier != null) classifier.StrikeCompleted -= OnStrike;
+            if (combat != null) combat.Cue -= OnCombat;
+        }
+
+        void OnCombat(CombatEvent e)
+        {
+            var side = e.Side == PilotSide.Left ? "왼" : "오";
+            switch (e.Cue)
+            {
+                case CombatCue.Hit:
+                    lastCombat = $"<color=#5BE37D>명중</color> {side} {KindName(e.Kind)} -{e.Damage:F0}%" + (e.Quality == HitQuality.Assisted ? " (보정)" : " (접촉)");
+                    break;
+                case CombatCue.Miss:
+                    lastCombat = $"<color=#FF6B6B>헛침</color> {side} {KindName(e.Kind)}";
+                    break;
+                case CombatCue.ComboBroken:
+                    lastCombat += $"  <color=#FFD24D>연계 끊김: {BreakName(e.Break)}</color>";
+                    break;
+                case CombatCue.Boost:
+                    lastCombat = $"<color=#BF4DFF>부스트!</color> -{e.Damage:F0}%";
+                    break;
+                case CombatCue.BossDefeated:
+                    lastCombat = "<color=#5BE37D>보스 HP 0</color>";
+                    break;
+                case CombatCue.BoostReady:
+                case CombatCue.BoostMissed:
+                case CombatCue.ComboStep:
+                    break;
+                default:
+                    return;
+            }
+            boostOpen = combat.Resolver.Boost.IsOpen;
+            dirty = true;
+        }
+
+        static string BreakName(ComboBreak reason)
+        {
+            switch (reason)
+            {
+                case ComboBreak.Miss: return "헛침";
+                case ComboBreak.WrongTurn: return "차례 아님";
+                case ComboBreak.Timeout: return "시간 초과";
+                case ComboBreak.Damaged: return "맞음";
+                default: return reason.ToString();
+            }
         }
 
         void UseOsFont()
@@ -189,7 +240,7 @@ namespace Anseong.UI
         void DrawCalibration()
         {
             builder.Append("<b>보정</b>  (양손 그립을 쥐었다 놓으면 저장)\n\n");
-            builder.Append(PilotCalibrationFlow.Instruction(calibration.Stage)).Append("\n\n");
+            builder.Append(calibration.CurrentInstruction).Append("\n\n");
             if (calibration.Stage != CalibrationStage.NotStarted)
             {
                 Hand("왼손", PilotSide.Left);
@@ -231,6 +282,7 @@ namespace Anseong.UI
                 Row("<color=#BF4DFF>어퍼컷</color>    ", PunchKind.Uppercut);
                 Row("<color=#999999>해당 없음</color> ", PunchKind.None);
                 builder.Append("공격 인정    ").Append(attacks[0]).Append("  /  ").Append(attacks[1]).Append('\n');
+                if (combat != null && combat.Resolver != null) DrawCombat();
                 builder.Append("다음 펀치    ");
                 ReadyText(PilotSide.Left);
                 builder.Append("  /  ");
@@ -240,6 +292,18 @@ namespace Anseong.UI
                 for (var i = 0; i < recentCount; i++) builder.Append(recent[i]).Append('\n');
             }
             builder.Append('\n').Append(recalibrateHint);
+        }
+
+        void DrawCombat()
+        {
+            var r = combat.Resolver;
+            builder.Append("보스 HP ").Append(r.Boss.Current.ToString("F0")).Append("%   연계 ").Append(r.Combo.Step).Append("/3");
+            if (r.Combo.Step > 0)
+                builder.Append(" (다음: ").Append(r.Combo.NextSide == PilotSide.Left ? "왼손 " : "오른손 ").Append(r.Combo.Step == 2 ? "훅" : "잽").Append(')');
+            if (boostOpen) builder.Append("   <color=#BF4DFF>부스트: 트리거!</color>");
+            builder.Append('\n');
+            if (combat.Boss == null) builder.Append("<color=#FF6B6B>보스 없음: 모든 공격이 헛침</color>\n");
+            if (lastCombat.Length > 0) builder.Append(lastCombat).Append('\n');
         }
 
         bool Waiting(PilotSide side)

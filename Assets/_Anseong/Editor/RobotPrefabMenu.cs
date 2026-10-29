@@ -63,9 +63,13 @@ namespace Anseong.EditorTools
                 Debug.Log($"{LogPrefix} 팔 드라이버: {armReport}");
                 Save(player, PlayerPrefabPath);
 
-                var boss = CreateRobot(bossModel, controller, RobotArtSettings.AvatarOf(bossModel), "Robot_Boss", preview);
+                // 보스는 휘청 상태가 있는 자기 컨트롤러를 쓴다(M1-05). 플레이어는 대기만.
+                var stagger = art.BossStaggerClip;
+                var bossController = CombatSetup.BuildBossController(IdleClip(controller), stagger);
+                var boss = CreateRobot(bossModel, bossController, RobotArtSettings.AvatarOf(bossModel), "Robot_Boss", preview);
                 if (boss == null) return false;
                 RobotSandboxUtility.TintBoss(boss);
+                Debug.Log($"{LogPrefix} 보스 전투: {CombatSetup.AddBossCombat(boss, stagger)}");
                 Save(boss, BossPrefabPath);
             }
             finally
@@ -130,6 +134,10 @@ namespace Anseong.EditorTools
             RobotSandboxUtility.ConfigureFollow(seat, RobotSandboxUtility.FindBone(player, RobotSandboxUtility.HeadBone), headReference);
             seat.ApplySeatPose();
             RobotSandboxUtility.CreateCockpitProps(rig.transform);
+            var clearZone = rig.AddComponent<CockpitClearZone>();
+            var clearRenderers = RobotSandboxUtility.FindClearZoneRenderers(player, headRenderers);
+            RobotSandboxUtility.ConfigureClearZone(clearZone, clearRenderers);
+            Debug.Log($"{LogPrefix} 조종석 비움 후보 렌더러 {clearRenderers.Length}개(아래팔·손·머리 제외)");
 
             Debug.Log($"{LogPrefix} {report}. Head 좌석에서 숨길 머리 렌더러 {headRenderers.Length}개");
             if (headRenderers.Length == 0)

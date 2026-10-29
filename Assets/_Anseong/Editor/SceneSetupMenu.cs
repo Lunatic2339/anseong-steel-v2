@@ -136,6 +136,7 @@ namespace Anseong.EditorTools
             serializedFlow.ApplyModifiedProperties();
 
             var drivers = RobotArmSetup.ConnectDrivers(input, flow);
+            var combats = CombatSetup.ConnectScene(input);
             var panel = AddTestGuidePanel(origin);
             var tuning = AddTuningMenu(origin);
 
@@ -145,7 +146,7 @@ namespace Anseong.EditorTools
             if (drivers == 0)
                 Debug.LogWarning("[SceneSetupMenu] 씬에 RobotArmDriver가 없습니다. Robot_Player 프리팹을 다시 만들고(Build Player Robot Prefab) 이 메뉴를 다시 실행하세요.", origin);
             Debug.Log($"[SceneSetupMenu] XR Origin에 PilotHandInput·PilotCalibrationFlow를 연결하고 팔 드라이버 {drivers}개에 입력을 연결했습니다(기본 1인 양팔 모드). " +
-                      $"테스트 안내판: {panel}. 조절 메뉴(오른손 B): {tuning}. 씬을 저장하세요.", origin);
+                      $"전투 판정 {combats}개에 입력·보스 연결. 테스트 안내판: {panel}. 조절 메뉴(오른손 B): {tuning}. 씬을 저장하세요.", origin);
             return true;
         }
 

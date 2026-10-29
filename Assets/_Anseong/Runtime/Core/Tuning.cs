@@ -155,14 +155,14 @@ namespace Anseong.Core
             Selected = 0;
         }
 
-        /// <summary>위아래로 고르기(끝에서 반대쪽으로 넘어간다).</summary>
+        /// <summary>위아래로 고르기. 끝에서 멈춘다(반대쪽으로 넘어가면 헷갈림, 선우 10/25).</summary>
         public void Move(int delta)
         {
             if (items.Count == 0) return;
-            Selected = ((Selected + delta) % items.Count + items.Count) % items.Count;
+            Selected = Mathf.Clamp(Selected + delta, 0, items.Count - 1);
         }
 
-        /// <summary>지금 항목을 steps 칸 바꾼다. 선택지는 돌아가며, 수치는 범위 안에서 칸에 맞춘다. 바뀌었으면 true.</summary>
+        /// <summary>지금 항목을 steps 칸 바꾼다. 선택지·수치 모두 끝에서 멈추고(돌아가지 않음), 수치는 칸에 맞춘다. 바뀌었으면 true.</summary>
         public bool Adjust(int steps)
         {
             var item = Current;
@@ -172,7 +172,7 @@ namespace Anseong.Core
             if (item.IsChoice)
             {
                 var count = item.Choices.Length;
-                next = ((Mathf.RoundToInt(before) + steps) % count + count) % count;
+                next = Mathf.Clamp(Mathf.RoundToInt(before) + steps, 0, count - 1);
             }
             else
             {

@@ -103,5 +103,20 @@ namespace Anseong.Tests
             follow.Update(new Vector3(float.NaN, 0f, 0f), Dt, settings);
             Assert.AreEqual(before, follow.Offset);
         }
+
+        [Test]
+        public void NeckPoint_StaysPutWhenOnlyHeadTurns()
+        {
+            var offset = new Vector3(0f, -0.1f, -0.09f);
+            var neck = new Vector3(0.2f, 1.5f, 0.1f);
+            // 목이 같으면 고개를 돌려도 목 위치는 같다: 눈 = 목 − 회전 × 오프셋.
+            foreach (var yaw in new[] { 0f, 45f, -60f })
+            {
+                var rotation = Quaternion.Euler(20f, yaw, 0f);
+                var eye = neck - rotation * offset;
+                var result = BodyFollow.NeckPoint(eye, rotation, offset);
+                Assert.AreEqual(0f, (result - neck).magnitude, 1e-4f, $"yaw {yaw}");
+            }
+        }
     }
 }

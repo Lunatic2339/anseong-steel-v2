@@ -1,0 +1,143 @@
+using System;
+using UnityEngine;
+
+namespace Anseong.Combat
+{
+    /// <summary>공격 보정 방식. JudgeOnly = 주먹은 그대로, 보스 근처를 지나가면 판정만 명중(기본, 선우 10/28). Pull = 주먹을 보스 쪽으로 끌어당겨 맞힘(10/18 처음 방식).</summary>
+    public enum AssistMode
+    {
+        JudgeOnly,
+        Pull,
+    }
+
+    [Serializable]
+    public class AttackAssistSettings
+    {
+        [Tooltip("켜면 펀치 종류(잽·훅·어퍼컷)만 맞게 인식되면 주먹을 보스 쪽으로 끌어당겨 맞힌다(선우 10/18). " +
+                 "끄면 주먹이 실제로 보스 부위에 닿아야만 명중(01 처음 규칙).")]
+        public bool enabled = true;
+
+        [Tooltip("JudgeOnly = 주먹을 끌지 않고, 로봇 주먹이 보스 부위 근처(아래 허용 거리)를 지나가면 판정만 명중(기본, 선우 10/28: 강제로 맞추는 게 아니라 적당히 빗맞아도 맞은 걸로). " +
+                 "Pull = 주먹을 보스 쪽으로 끌어당겨 맞힌다(처음 방식).")]
+        public AssistMode mode = AssistMode.JudgeOnly;
+
+        [Tooltip("JudgeOnly: 로봇 주먹(명중 구 겉면)이 보스 부위에서 이 거리(m, 로봇 크기) 안을 지나가면 명중. 로봇 배율 약 40이라 4m ≈ 사람 손 10cm.")]
+        [Min(0f)]
+        public float nearMissMeters = 4f;
+
+        [Tooltip("JudgeOnly: 훅만 따로 쓰는 허용 거리(m, 로봇 크기). 훅은 옆으로 휘둘러 리치가 짧아 넓게 준다(선우 10/28: 훅이 잘 안 닿음).")]
+        [Min(0f)]
+        public float hookNearMissMeters = 8f;
+
+        [Tooltip("Pull: 보정 사거리: 로봇 어깨에서 보스 부위까지 거리가 로봇 팔 길이의 이 배수 안이면 끌어당긴다.")]
+        [Min(0.5f)]
+        public float rangeRatio = 1.4f;
+
+        [Tooltip("Pull: 보정 각도(도): 보스 부위가 로봇 정면에서 좌우로 이 안이면 끌어당긴다.")]
+        [Range(5f, 90f)]
+        public float coneDegrees = 40f;
+
+        [Tooltip("주먹이 보스 쪽으로 끌려가는 시간(초). 길수록 묵직하다(육중한 메카, 순간이동처럼 보이지 않게).")]
+        [Min(0.01f)]
+        public float pullSeconds = 0.15f;
+
+        [Tooltip("명중·동작 끝 뒤 주먹이 원래 손 위치로 돌아가는 시간(초).")]
+        [Min(0.01f)]
+        public float releaseSeconds = 0.25f;
+    }
+
+    /// <summary>
+    /// 공격 보정 계산(순수). 보스 부위가 보정 범위 안인지, 주먹 목표를 얼마나 끌어당길지.
+    /// 좌표는 월드, body = 로봇 정면 회전.
+    /// </summary>
+    public sealed class AttackAssist
+    {
+        readonly AttackAssistSettings settings;
+        Vector3 point;
+        Vector3 start;
+
+        // 손이 거의 안 움직였을 때(팔 길이 배수) 진행도를 0으로 둔다.
+        const float MinHandTravel = 0.02f;
+
+        public AttackAssist(AttackAssistSettings settings = null)
+        {
+            this.settings = settings ?? new AttackAssistSettings();
+        }
+
+        /// <summary>0 = 손 그대로, 1 = 보스 부위에 붙음.</summary>
+        public float Weight { get; private set; }
+        public bool Pulling { get; private set; }
+        public Vector3 Point => point;
+
+        /// <summary>
+        /// 로봇 주먹이 사람 손을 얼마나 따라왔는지(0~1, 끌기 시작부터 잰 거리 비율). 끌림은 이만큼만 적용해
+        /// 로봇 팔이 다 뻗기 전에 주먹이 보스에 먼저 붙지 않게 한다(선우 10/25: 다 뻗기 전에 진동이 울림).
+        /// </summary>
+        public float Progress { get; private set; }
+
+        /// <summary>JudgeOnly에서 주먹 겉면과 보스 부위 사이 가장 가까웠던 거리(gap)가 명중으로 칠 만큼 가까운지.</summary>
+        public static bool CountsAsNearMiss(float gap, AttackAssistSettings settings, PunchKind kind = PunchKind.Jab) =>
+            settings != null && settings.enabled && settings.mode == AssistMode.JudgeOnly && gap <= Allowance(settings, kind);
+
+        /// <summary>그 펀치 종류의 판정만 허용 거리(m).</summary>
+        public static float Allowance(AttackAssistSettings settings, PunchKind kind) =>
+            kind == PunchKind.Hook ? settings.hookNearMissMeters : settings.nearMissMeters;
+
+        public static bool InRange(Vector3 shoulder, Quaternion body, Vector3 zonePoint, float armLength, AttackAssistSettings settings)
+        {
+            if (settings == null || !settings.enabled || armLength <= 0f) return false;
+            var offset = zonePoint - shoulder;
+            if (offset.magnitude > armLength * settings.rangeRatio) return false;
+            var local = Quaternion.Inverse(body) * offset;
+            local.y = 0f;
+            if (local.sqrMagnitude < 1e-6f) return true;
+            return Vector3.Angle(Vector3.forward, local) <= settings.coneDegrees;
+        }
+
+        /// <summary>끌어당기기 시작(이미 당기는 중이면 목표만 바꾼다). robotRatio = 지금 로봇 주먹 목표(RobotArmDriver.FistRatio).</summary>
+        public void Begin(Vector3 zonePoint, Vector3 robotRatio)
+        {
+            point = zonePoint;
+            if (Pulling) return;
+            Pulling = true;
+            start = robotRatio;
+            Progress = 0f;
+        }
+
+        /// <summary>
+        /// 끄는 동안 매 프레임. robotRatio = 반응 지연 뒤 로봇 주먹, handRatio = 사람 손 목표(둘 다 RobotArmDriver의 팔 길이 배수).
+        /// 진행도는 줄지 않는다(손을 거둬들여도 이미 뻗은 만큼은 유지).
+        /// </summary>
+        public void Track(Vector3 robotRatio, Vector3 handRatio)
+        {
+            if (!Pulling) return;
+            var hand = (handRatio - start).magnitude;
+            if (hand < MinHandTravel) return;
+            Progress = Mathf.Max(Progress, Mathf.Clamp01((robotRatio - start).magnitude / hand));
+        }
+
+        /// <summary>명중했거나 동작이 끝나 놓는다. 주먹은 releaseSeconds 동안 원래 자리로 돌아간다.</summary>
+        public void Release() => Pulling = false;
+
+        public void Reset()
+        {
+            Pulling = false;
+            Weight = 0f;
+            Progress = 0f;
+        }
+
+        public void Update(float dt)
+        {
+            if (dt <= 0f) return;
+            var seconds = Pulling ? settings.pullSeconds : settings.releaseSeconds;
+            Weight = Mathf.MoveTowards(Weight, Pulling ? 1f : 0f, dt / Mathf.Max(0.01f, seconds));
+        }
+
+        /// <summary>손에서 나온 주먹 목표를 끌림 × 진행도만큼 보스 부위 쪽으로 옮긴다. 부드럽게 시작·끝나게 SmoothStep.</summary>
+        public Vector3 Apply(Vector3 handTarget)
+        {
+            if (Weight <= 0f || Progress <= 0f) return handTarget;
+            return Vector3.Lerp(handTarget, point, Mathf.SmoothStep(0f, 1f, Weight) * Progress);
+        }
+    }
+}
