@@ -247,5 +247,30 @@ namespace Anseong.Tests
             Assert.AreEqual(105f, TwoBoneArmSolver.BoundSwivel(-178f, 100f), 1e-4f);
             Assert.AreEqual(-105f, TwoBoneArmSolver.BoundSwivel(178f, -100f), 1e-4f);
         }
+
+        static readonly Vector3 GuardTarget = Shoulder + new Vector3(5f, 4f, 10f);
+        // 가드에서 사람 손목이 살짝 굽은 컨트롤러: 위·안쪽을 향함.
+        static readonly Quaternion CatPaw = Quaternion.LookRotation(new Vector3(.5f, 1f, .4f), Vector3.back);
+
+        static ArmPose SolveGuard(TwoBoneArmSolver solver)
+        {
+            var pose = default(ArmPose);
+            for (var i = 0; i < 90; i++)
+                pose = solver.Solve(Shoulder, GuardTarget, CatPaw, Quaternion.identity, 0f, 0f, Dt);
+            return pose;
+        }
+
+        [Test]
+        public void ElbowSpread_MovesBentElbowOutward_KeepsWristFree()
+        {
+            var bind = LeftBind();
+            var before = SolveGuard(new TwoBoneArmSolver(bind, new ArmSolverSettings { elbowSpreadDegrees = 0f }));
+            var spread = SolveGuard(new TwoBoneArmSolver(bind, new ArmSolverSettings { elbowSpreadDegrees = 20f }));
+            AssertLengths(spread);
+            Assert.Less(Vector3.Distance(GuardTarget, spread.Wrist), 1e-2f, "주먹 위치는 그대로");
+            Assert.Less(spread.Elbow.x, before.Elbow.x, "왼팔 팔꿈치가 더 바깥(−X)");
+            Assert.Greater(Vector3.Angle(spread.Hand * bind.FistForwardLocal, spread.Wrist - spread.Elbow), 10f, "손목은 고정하지 않고 컨트롤러를 따라감");
+        }
+
     }
 }

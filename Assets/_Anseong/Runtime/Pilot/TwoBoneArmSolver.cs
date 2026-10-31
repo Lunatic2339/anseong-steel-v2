@@ -149,6 +149,11 @@ namespace Anseong.Pilot
                  "고정했는데도 손목이 안쪽으로 꺾여 보이면(손등이 아래팔과 평행하지 않으면) +로 올려 맞춘다. 0 = 손목→손가락 뿌리 선을 아래팔과 일직선(이전 동작).")]
         [Range(-30f, 30f)]
         public float lockedWristPitchDegrees = 0f;
+
+        [Tooltip("굽힌 팔(가드 등)의 팔꿈치를 바깥으로 더 돌리는 각도(도, 선우 10/31: 가드에서 팔꿈치가 너무 모임). " +
+                 "주먹 방향으로 정한 팔꿈치 위치에서 이만큼만 바깥으로 돌리고 손목·주먹은 그대로 따라간다(크게 고정했더니 팔이 너무 누웠다). 0 = 이전. 뻗거나 훅으로 들면 줄어든다.")]
+        [Range(0f, 60f)]
+        public float elbowSpreadDegrees = 15f;
     }
 
     /// <summary>
@@ -257,6 +262,9 @@ namespace Anseong.Pilot
             // 범위가 정해진 스칼라라서 한 바퀴씩 쌓이거나 반대편 팔꿈치로 튀지 않는다.
             swivel = solved ? Mathf.MoveTowards(swivel, targetSwivel, settings.swivelSpeed * dt) : targetSwivel;
             var pole = Quaternion.AngleAxis(swivel, axis) * positionPole;
+            var outward = Vector3.ProjectOnPlane(body * new Vector3(bind.SideSign, 0f, 0f), axis);
+            if (settings.elbowSpreadDegrees > 0f && outward.sqrMagnitude > .01f)
+                pole = Vector3.RotateTowards(pole, outward.normalized, settings.elbowSpreadDegrees * (1f - raised) * Mathf.Deg2Rad, 0f).normalized;
             var elbow = shoulder + axis * along + pole * height;
             var plane = Vector3.Cross(pole, axis).normalized;
             var upperDirection = (elbow - shoulder).normalized;

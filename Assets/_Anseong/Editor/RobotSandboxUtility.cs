@@ -43,6 +43,8 @@ namespace Anseong.EditorTools
         static readonly Vector3 SeatMarkSize = new Vector3(0.6f, 0.005f, 0.6f);
         static readonly Vector3 ConsoleSize = new Vector3(3.6f, 0.5f, 0.3f);   // 선우 10/28: 앞 벽(콘솔) 낮춤 0.9 → 0.5
         const float ConsoleZ = 1.15f;
+        /// <summary>기본 조종석 콘솔 윗면의 앞쪽 가운데(조종석 로컬). 조종석 모델(RobotArtSettings)을 쓰면 표시등 위치는 Inspector에서 옮긴다.</summary>
+        public static Vector3 ConsoleTopFront => new Vector3(0f, ConsoleSize.y, ConsoleZ - ConsoleSize.z * 0.25f);
         const float WindowZ = 1.25f;
         const float WindowTop = 2.4f;
         const float WindowHalfWidth = 1.85f;

@@ -2,6 +2,7 @@ using System.Linq;
 using Anseong.Boss;
 using Anseong.Combat;
 using Anseong.Pilot;
+using Anseong.UI;
 using UnityEditor;
 using UnityEditor.Animations;
 using UnityEngine;
@@ -23,6 +24,10 @@ namespace Anseong.EditorTools
         const string DebugFolder = "Assets/_Anseong/Art/Debug";
         const string BarBackPath = DebugFolder + "/BossHealthBar_Back.mat";
         const string BarFillPath = DebugFolder + "/BossHealthBar_Fill.mat";
+        const string GuardLightPath = DebugFolder + "/GuardLight.mat";
+        // 가드 표시등(조종석 로컬 m): 콘솔 윗면 앞쪽 가운데, 좌우로 하나씩.
+        static readonly Vector3 GuardLightSize = new Vector3(0.22f, 0.02f, 0.12f);
+        const float GuardLightSpacing = 0.3f;
         const string IdleState = "Idle";
         const string StaggerState = "Stagger";
         const string BodyBone = "mixamorig:Spine2";
@@ -83,12 +88,60 @@ namespace Anseong.EditorTools
             serializedPlayer.FindProperty("director").objectReferenceValue = director;
             serializedPlayer.FindProperty("cues").objectReferenceValue = GetOrCreateCueSet(out var filled);
             serializedPlayer.ApplyModifiedPropertiesWithoutUndo();
-            return $"전투 판정 + 주먹 명중 구 {fists.Count(f => f != null)}개 + 소리 표(채운 소리 {filled}개)";
+            return $"전투 판정 + 주먹 명중 구 {fists.Count(f => f != null)}개 + 소리 표(채운 소리 {filled}개) + {AddPlayerGuard(arms, drivers)}";
+        }
+
+        /// <summary>가드 판정(M1-06)을 Arms에, 표시등 두 개를 조종석 콘솔 위에 붙인다.</summary>
+        static string AddPlayerGuard(GameObject arms, RobotArmDriver[] drivers)
+        {
+            var guard = arms.AddComponent<GuardDriver>();
+            var serialized = new SerializedObject(guard);
+            SetArray(serialized.FindProperty("arms"), drivers.Cast<Object>().ToArray());
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var seat = arms.transform.root.GetComponentInChildren<CockpitSeat>(true);
+            if (seat == null)
+            {
+                Debug.LogWarning($"{LogPrefix} 조종석(CockpitSeat)을 찾지 못해 가드 표시등을 만들지 않습니다.");
+                return "가드 판정(표시등 없음)";
+            }
+            var root = new GameObject("GuardIndicator");
+            root.transform.SetParent(seat.transform, false);
+            root.transform.localPosition = RobotSandboxUtility.ConsoleTopFront + Vector3.up * (GuardLightSize.y * 0.5f);
+            var material = GetOrCreateUnlit(GuardLightPath, Color.white);
+            var lights = new Object[2];
+            for (var h = 0; h < 2; h++)
+            {
+                var light = GameObject.CreatePrimitive(PrimitiveType.Cube);
+                light.name = h == 0 ? "Light_Left" : "Light_Right";
+                Object.DestroyImmediate(light.GetComponent<Collider>());
+                light.transform.SetParent(root.transform, false);
+                light.transform.localScale = GuardLightSize;
+                light.transform.localPosition = Vector3.right * GuardLightSpacing * (h == 0 ? -0.5f : 0.5f);
+                var renderer = light.GetComponent<MeshRenderer>();
+                renderer.sharedMaterial = material;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                lights[h] = renderer;
+            }
+            var indicator = root.AddComponent<GuardIndicator>();
+            var serializedIndicator = new SerializedObject(indicator);
+            serializedIndicator.FindProperty("guard").objectReferenceValue = guard;
+            SetArray(serializedIndicator.FindProperty("lights"), lights);
+            serializedIndicator.ApplyModifiedPropertiesWithoutUndo();
+            return "가드 판정 + 표시등 2개";
         }
 
         /// <summary>씬의 전투 판정에 입력과 보스를 연결한다(Add Pilot Input). 연결한 개수.</summary>
-        public static int ConnectScene(PilotHandInput input)
+        public static int ConnectScene(PilotHandInput input, PilotCalibrationFlow flow)
         {
+            foreach (var guard in Object.FindObjectsByType<GuardDriver>(FindObjectsInactive.Include, FindObjectsSortMode.None))
+            {
+                var serializedGuard = new SerializedObject(guard);
+                serializedGuard.FindProperty("input").objectReferenceValue = input;
+                serializedGuard.FindProperty("calibration").objectReferenceValue = flow;
+                serializedGuard.ApplyModifiedProperties();
+            }
             var boss = Object.FindAnyObjectByType<BossTarget>(FindObjectsInactive.Include);
             var directors = Object.FindObjectsByType<CombatDirector>(FindObjectsInactive.Include, FindObjectsSortMode.None);
             foreach (var director in directors)

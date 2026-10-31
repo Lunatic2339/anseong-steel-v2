@@ -129,6 +129,9 @@ namespace Anseong.Pilot
         /// <summary>로봇 정면 회전.</summary>
         public Quaternion BodyRotation => robotRoot != null ? robotRoot.rotation : transform.rotation;
 
+        /// <summary>화면에 보이는 로봇 전완 방향(팔꿈치 → 손목, 월드, 정규화). 뼈가 없으면 0.</summary>
+        public Vector3 ForearmDirection => foreArm != null && hand != null ? (hand.position - foreArm.position).normalized : Vector3.zero;
+
         /// <summary>
         /// 주먹 목표를 마지막에 한 번 더 옮기는 함수(M1-05 공격 보정이 보스 쪽으로 끌어당길 때). 비어 있으면 손 그대로.
         /// 받는 값·돌려주는 값은 월드 좌표 주먹 목표.
@@ -349,6 +352,11 @@ namespace Anseong.Pilot
             // 주먹 최대 속도·손목·팔 매핑은 메뉴에서 뺐다(선우 10/25: 메뉴가 너무 많음). Inspector에는 그대로 있다.
             if (solverSettings != null) list.AddFloat("묵직함", "arm.rollSpeed", "전완 돌아가는 속도(도/초)", () => solverSettings.rollSpeed, v => solverSettings.rollSpeed = v, 90f, 1440f, 90f, 0);
             if (solverSettings != null) list.AddToggle("묵직함", "arm.holdElbow", "뻗은 팔은 팔꿈치 고정(손목만 돎)", () => solverSettings.holdElbowWhenExtended, v => solverSettings.holdElbowWhenExtended = v);
+            if (solverSettings != null)
+            {
+                list.Describe("가드 자세", "할 것: 가드 올렸다 내리기, 가드에서 잽·훅\n볼 것: 팔꿈치가 너무 모이지도, 팔이 눕지도 않음");
+                list.AddFloat("가드 자세", "arm.elbowSpread", "팔꿈치 바깥으로(도, 0 = 이전)", () => solverSettings.elbowSpreadDegrees, v => solverSettings.elbowSpreadDegrees = v, 0f, 60f, 5f, 0);
+            }
             list.AddToggle("묵직함", "arm.deadzone", "작은 손 떨림 무시", () => deadzone.enabled, v => deadzone.enabled = v);
             list.AddFloat("묵직함", "arm.deadzoneRadius", "무시할 떨림 크기(cm)", () => deadzone.radiusMeters * 100f, v => deadzone.radiusMeters = v / 100f, 0f, 5f, 0.5f, 1);
             list.AddChoice("묵직함", "arm.responseMode", "따라가는 방식", () => (int)responseMode, v => responseMode = (ArmResponseMode)v, new[] { "경로 가속(느리게→빠르게)", "부드럽게(처음 방식)" });

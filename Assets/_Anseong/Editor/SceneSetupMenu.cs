@@ -136,7 +136,7 @@ namespace Anseong.EditorTools
             serializedFlow.ApplyModifiedProperties();
 
             var drivers = RobotArmSetup.ConnectDrivers(input, flow);
-            var combats = CombatSetup.ConnectScene(input);
+            var combats = CombatSetup.ConnectScene(input, flow);
             var panel = AddTestGuidePanel(origin);
             var tuning = AddTuningMenu(origin);
 
