@@ -158,7 +158,7 @@ namespace Anseong.EditorTools
         }
 
         /// <summary>
-        /// Sandbox 씬에서만: 보스를 근접 거리에 둔다(M1에는 접근 이동이 없음, M2에서 걸어서 다가감).
+        /// Sandbox 씬과 Main(M1-07)에서: 보스를 근접 거리에 둔다(M1에는 접근 이동이 없음, M2에서 걸어서 다가감).
         /// 근접 거리는 공격 보정 허용 거리 기준이라, 허용 거리를 바꾸고 메뉴를 다시 돌리면 보스도 따라 옮겨진다.
         /// </summary>
         static void PullBossToMelee(BossTarget boss, CombatDirector director)
@@ -167,7 +167,8 @@ namespace Anseong.EditorTools
             var meleeDistance = RobotArmLength * FullReachRatio + RobotArmLength * FistRadiusRatio
                 + (allowance != null ? allowance.floatValue : 0f) * NearMissFraction + BossBodyRadius;
             var scene = boss.gameObject.scene;
-            if (!scene.path.Replace('\\', '/').Contains("/Scenes/Sandbox/")) return;
+            var path = scene.path.Replace('\\', '/');
+            if (!path.Contains("/Scenes/Sandbox/") && !path.EndsWith("/Scenes/Main.unity")) return;
             var player = director.transform.root;
             var offset = boss.transform.position - player.position;
             offset.y = 0f;
@@ -175,7 +176,7 @@ namespace Anseong.EditorTools
             Undo.RecordObject(boss.transform, "Pull Boss To Melee");
             var from = offset.magnitude;
             boss.transform.position = player.position + offset.normalized * meleeDistance + Vector3.up * (boss.transform.position.y - player.position.y);
-            Debug.Log($"{LogPrefix} Sandbox 보스를 근접 거리로 옮겼습니다: {from:F1} m → {meleeDistance:F1} m(끝까지 뻗어야 닿는 거리, 공격 보정 허용 거리 기준).", boss);
+            Debug.Log($"{LogPrefix} 보스를 근접 거리로 옮겼습니다: {from:F1} m → {meleeDistance:F1} m(끝까지 뻗어야 닿는 거리, 공격 보정 허용 거리 기준).", boss);
         }
 
         /// <summary>소리 표 에셋. 없으면 S-01 기본 줄로 만들고, 비어 있는 소리 칸은 Audio 폴더에서 같은 이름으로 시작하는 파일로 채운다.</summary>

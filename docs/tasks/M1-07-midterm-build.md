@@ -32,6 +32,22 @@
 - 중간발표 영상이 있다.
 
 ## 결과 (작업 후 Claude가 작성)
+- 바뀐 범위(선우 10/31): 중간발표가 지나 영상은 뺐다. 브랜치 `feat/m1-07-main-integration`. 맵은 윤주 `Sandbox_ReferenceLayout`을 넣는다(선우 10/31 "맵넣어봐"). 소리(S-01)는 아직 레포에 없어 무음.
 - 바뀐 파일:
+  - `Editor/MainSceneMenu.cs`(새): Anseong → Setup → **Build M1 Main**. 여러 번 돌려도 된다(있는 것은 두고 연결만 다시).
+  - `Runtime/Flow/EnvironmentLoader.cs`(새): Play 때 맵 씬을 additive로 불러오고, 맵의 카메라 3개·오디오 리스너를 끄고, 맵 스크립트(부서지는 건물 조각 약 4700개가 매 프레임 돎)를 멈추고, 맵에 해가 있으면 Main 해를 끈다. 모두 토글.
+  - `Runtime/Flow/SessionRestart.cs`(새): 키보드 R → 보스 HP·연계·부스트 초기화 + 보정 처음부터.
+  - `Editor/EyeHeightSandboxMenu.cs`: Attach XR Origin을 Main 메뉴에서도 부를 수 있게. `Editor/CombatSetup.cs`: 보스 근접 거리 당기기를 Main에서도.
+  - `Art/Environment/**`, `Scenes/Sandbox/Sandbox_ReferenceLayout.unity`: `yunju` 브랜치(10/28 c5ce880)에서 맵 씬이 참조하는 파일만 679개(약 59MB). 뺀 것: `Mobile_RPAsset` 설정 변경, 데모 스크립트(FactoryDemo·SmokestackDemo·RobotFallDemo), 에셋별 빌더·샌드박스 씬, 로봇 원본 FBX(develop에 이미 같은 GUID로 있음).
 - 사람이 확인할 것:
+  - [ ] `git pull` → Unity 컴파일 오류 없음(새 `.cs`의 `.meta`, `Runtime/Flow` 폴더 `.meta`는 Unity가 만듦 → 선우가 커밋).
+  - [ ] **Anseong → Setup → Build M1 Main** → Ctrl+S. Console 마지막 줄에 맵·재시작·씬 목록이 나옴.
+  - [ ] Play: 맵이 보이고 화면이 맵 카메라로 바뀌지 않음, Console `[EnvironmentLoader] … 불러옴`.
+  - [ ] 헤드셋 프레임이 버팀(맵 건물 2279개 인스턴스). 무거우면 알려 주기.
+  - [ ] 보정 → 팔 흔들기 → 가드 표시등 → 잽·훅 → 잽–잽–훅–부스트 → R → 다시 보정부터. 3번 연속.
+- 시연 순서(1분 30초 안팎): 보정(정면 뻗기 → 가드) → 팔 흔들기 → 가드 올려 표시등 → 잽·훅 → 잽–잽–훅–부스트로 HP 깎기 → R 재시작.
 - 남은 문제 / 제안:
+  - 맵 스크립트는 네임스페이스가 `CoastalFactory`(규칙 `Anseong.<폴더>` 아님)이고 asmdef가 따로 있다. 부서짐(M5)에서 쓸 때 정리.
+  - 맵 조각의 충돌 콜백은 스크립트를 꺼도 온다. 로봇이 맵 건물(150 m 밖)에 닿을 일이 M1에는 없지만 M2 이동 때 확인.
+  - 맵을 고치면 윤주 브랜치 → 같은 방식으로 다시 가져온다. 맵 씬 이름이 바뀌면 `MainSceneMenu.EnvironmentScenePath` 한 줄.
+  - Windows 빌드 설정(PC Standalone, OpenXR)은 레포 ProjectSettings 기준으로 확인 필요(선우).
