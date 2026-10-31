@@ -260,10 +260,8 @@ namespace Anseong.Pilot
             LastTarget = shoulder + body * filteredLocal;
             if (TargetModifier != null) LastTarget = TargetModifier(LastTarget);
             var fist = body * ArmMapping.FistLocal(arm, handRotation);
-            var guardDelta = ArmMapping.GuardDelta(arm, handPosition);
-            var lift = useElbowHint ? elbowHint.Update(guardDelta, dt) : 0f;
-            var guardShape = arm.IsComplete ? TwoBoneArmSolver.GuardShapeWeight(guardDelta.magnitude, solverSettings) : 0f;
-            var pose = solver.Solve(shoulder, LastTarget, fist, body, wristLockMode == WristLockMode.Always || sample.GripHeld ? 1f : 0f, lift, dt, guardShape);
+            var lift = useElbowHint ? elbowHint.Update(ArmMapping.GuardDelta(arm, handPosition), dt) : 0f;
+            var pose = solver.Solve(shoulder, LastTarget, fist, body, wristLockMode == WristLockMode.Always || sample.GripHeld ? 1f : 0f, lift, dt);
 
             upperArm.rotation = pose.Upper;
             foreArm.rotation = pose.Lower;
@@ -356,9 +354,8 @@ namespace Anseong.Pilot
             if (solverSettings != null) list.AddToggle("묵직함", "arm.holdElbow", "뻗은 팔은 팔꿈치 고정(손목만 돎)", () => solverSettings.holdElbowWhenExtended, v => solverSettings.holdElbowWhenExtended = v);
             if (solverSettings != null)
             {
-                list.Describe("가드 자세", "할 것: 가드 올렸다 내리기, 가드에서 잽·훅\n볼 것: 로봇 주먹이 아래팔과 일직선(고양이 손 아님), 팔꿈치가 너무 모이지 않음");
-                list.AddToggle("가드 자세", "arm.guardShape", "가드 자세 다듬기(주먹 일자·팔꿈치 벌림)", () => solverSettings.guardShape, v => solverSettings.guardShape = v);
-                list.AddFloat("가드 자세", "arm.guardElbowSpread", "팔꿈치 벌림(0 = 이전)", () => solverSettings.guardElbowSpread, v => solverSettings.guardElbowSpread = v, 0f, 3f, 0.2f, 1);
+                list.Describe("가드 자세", "할 것: 가드 올렸다 내리기, 가드에서 잽·훅\n볼 것: 팔꿈치가 너무 모이지도, 팔이 눕지도 않음");
+                list.AddFloat("가드 자세", "arm.elbowSpread", "팔꿈치 바깥으로(도, 0 = 이전)", () => solverSettings.elbowSpreadDegrees, v => solverSettings.elbowSpreadDegrees = v, 0f, 60f, 5f, 0);
             }
             list.AddToggle("묵직함", "arm.deadzone", "작은 손 떨림 무시", () => deadzone.enabled, v => deadzone.enabled = v);
             list.AddFloat("묵직함", "arm.deadzoneRadius", "무시할 떨림 크기(cm)", () => deadzone.radiusMeters * 100f, v => deadzone.radiusMeters = v / 100f, 0f, 5f, 0.5f, 1);
