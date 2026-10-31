@@ -62,6 +62,7 @@ namespace Anseong.UI
         float nextOffsetCheck;
         Vector3 shownOffset;
         string lastCombat = string.Empty;
+        string lastCommander = string.Empty;
         bool boostOpen;
         int guardKey = -1;
         int readyKey = -1;
@@ -143,6 +144,18 @@ namespace Anseong.UI
                     break;
                 case CombatCue.PilotDefeated:
                     lastCombat = "<color=#FF6B6B>기체 HP 0 (R로 재시작)</color>";
+                    break;
+                case CombatCue.PhaseChanged:
+                    lastCombat = $"<color=#FFD24D>{e.Code}페이즈 시작 (포효 중 무적)</color>";
+                    break;
+                case CombatCue.BossKneel:
+                    lastCombat = "<color=#5BE37D>보스 무릎: 필살기 차례</color>";
+                    break;
+                case CombatCue.BossKnockback:
+                    lastCombat = $"<color=#BF4DFF>보스 밀려남 {e.Amount:F0}m</color>";
+                    break;
+                case CombatCue.CommanderLine:
+                    lastCommander = CommanderLines.Text(e.Code);
                     break;
                 case CombatCue.BossOpening:
                     lastCombat = $"<color=#5BE37D>보스 빈틈 {e.Amount:F1}초: 지금 치기</color>";
@@ -403,6 +416,7 @@ namespace Anseong.UI
         {
             var r = combat.State;
             if (!combat.Connected) builder.Append("<color=#FF6B6B>전투 서버 연결 안 됨: 명중이 들어가지 않음</color>\n");
+            builder.Append(r.BossPhase >= 4 ? "무릎   " : r.BossPhase + "페이즈   ");
             builder.Append("기체 HP ").Append(r.PilotHealth.ToString("F0")).Append("%   ");
             builder.Append("보스 HP ").Append(r.BossHealth.ToString("F0")).Append("%   연계 ").Append(r.ComboStep).Append("/3");
             if (r.ComboStep > 0)
@@ -411,6 +425,7 @@ namespace Anseong.UI
             builder.Append('\n');
             if (combat.Boss == null) builder.Append("<color=#FF6B6B>보스 없음: 모든 공격이 헛침</color>\n");
             if (lastCombat.Length > 0) builder.Append(lastCombat).Append('\n');
+            if (lastCommander.Length > 0) builder.Append("<color=#7FD4FF>사령관: ").Append(lastCommander).Append("</color>\n");
         }
 
         bool Waiting(PilotSide side)

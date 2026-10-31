@@ -127,6 +127,9 @@ namespace Anseong.Net
             Debug.Log("[CombatServer] 서버 초기화: 보스 HP·연계·부스트", this);
         }
 
+        /// <summary>서버에서: 보내기 직전의 모든 사건(보스 두뇌가 부스트 → 밀려남 같은 반응을 붙인다).</summary>
+        public event System.Action<CombatEvent> ServerCue;
+
         /// <summary>서버에서: 재시작 때 같이 초기화할 서버 쪽 규칙(보스 공격·페이즈 등)이 듣는다.</summary>
         public event System.Action ServerReset;
 
@@ -136,15 +139,18 @@ namespace Anseong.Net
         public void Flush()
         {
             if (!IsServer || authority == null) return;
-            var snapshot = new NetCombatSnapshot(authority.Snapshot);
-            if (events.Count > 0)
+            // 서버 쪽 규칙이 사건을 듣고 새 사건을 더하면(부스트 → 밀려남 등) 그것까지 이어서 보낸다.
+            for (var round = 0; round < 4 && events.Count > 0; round++)
             {
                 // 보내는 중에 듣는 쪽이 다시 보고하면(호스트는 바로 돌아옴) 목록이 바뀌므로 복사해서 보낸다.
                 var batch = events.ToArray();
                 events.Clear();
+                foreach (var e in batch) ServerCue?.Invoke(e);
+                var snapshot = new NetCombatSnapshot(authority.Snapshot);
                 foreach (var e in batch) CueRpc(new NetCombatEvent(e), snapshot);
             }
-            if (!state.Value.Equals(snapshot)) state.Value = snapshot;
+            var current = new NetCombatSnapshot(authority.Snapshot);
+            if (!state.Value.Equals(current)) state.Value = current;
         }
 
         /// <summary>서버에서: 서버 규칙이 사건을 더할 목록. 더한 뒤 <see cref="Flush"/>.</summary>

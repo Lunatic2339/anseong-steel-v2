@@ -105,7 +105,22 @@ namespace Anseong.Combat
             New(CombatCue.Dodge, KindFilter.Any, "SFX_DodgeBurst", pitch: 1f),
             New(CombatCue.PilotHit, KindFilter.Any, "SFX_RobotHit", haptic: 1f, seconds: 0.3f),
             New(CombatCue.PilotDefeated, KindFilter.Any, "SFX_AlarmLowHP", pitch: 1f),
+            // M2-04 페이즈·밀려남·사령관 대사(파일이 없으면 무음)
+            New(CombatCue.PhaseChanged, KindFilter.Any, "SFX_BossRoar", atHitPoint: true),
+            New(CombatCue.BossKnockback, KindFilter.Any, "SFX_BossKnockback", atHitPoint: true),
+            Voice(CommanderLines.IncomingAttack), Voice(CommanderLines.CounterNow), Voice(CommanderLines.KneelFinisher),
+            Voice(CommanderLines.Victory), Voice(CommanderLines.FirstSlam), Voice(CommanderLines.FirstCombo),
+            Voice(CommanderLines.FirstCharge), Voice(CommanderLines.Phase2), Voice(CommanderLines.Phase3), Voice(CommanderLines.FinisherHint),
         };
+
+        static Entry Voice(int line)
+        {
+            var entry = New(CombatCue.CommanderLine, KindFilter.Any, CommanderLines.SoundName(line), pitch: 1f);
+            entry.pitchJitter = 0f;
+            entry.matchCode = true;
+            entry.code = line;
+            return entry;
+        }
 
         static Entry WithAmount(Entry entry, int value)
         {

@@ -36,6 +36,20 @@
 - 1인 양팔로 1페이즈부터 무릎까지 끊김 없이 간다(헤드셋 확인). 테스트 통과.
 
 ## 결과 (작업 후 Claude가 작성)
+- **이어서 확인**: M2-03 위에 쌓았다(01 → 02 → 03 → 이 브랜치). 01~03을 먼저 확인한다.
 - 바뀐 파일:
-- 사람이 확인할 것:
+  - 새로: `Runtime/Boss/BossPatternPicker.cs`, `BossPhaseRules.cs`, `BossPhaseTable.cs`, `BossFightStats.cs`, `BossBrain.cs`, `Runtime/Combat/CommanderLines.cs`, `Tests/EditMode/BossPhaseTests.cs`
+  - 고침: `BossHealth.cs`(HP 바닥 `Floor`: 넘친 피해 버림), `BossAttackTypes.cs`·`BossAttackStateMachine.cs`(걷기·포효·밀려남·무릎 상태와 `Hold`), `BossAnimationDriver.cs`(그 상태 재생), `CombatServer.cs`(서버 쪽 사건 듣기 `ServerCue`, 사건이 사건을 낳으면 이어서 보냄), `CombatAuthority.cs`·`CombatSnapshot.cs`(보스 페이즈 복제), `CombatTypes.cs`(사건 `PhaseChanged`·`BossKneel`·`CommanderLine`·`BossKnockback` 끝에 추가), `CombatCueSet.cs`(포효·밀려남 소리, 사령관 대사 `VO_Commander_07~16` 줄), `TestGuidePanel.cs`(페이즈, 사령관 글자), `RobotArtSettings.cs`(걷기·포효·밀려남·무릎 클립 칸), `BossAttackMenu.cs`·`CombatSetup.cs`(페이즈 표 에셋, NetworkTransform, BossBrain, 컨트롤러 상태)
+- 근접 거리: **30 m**(플레이어 루트 → 보스 루트). 근거: 로봇 팔 19.4 m × 다 뻗음 0.97 + 주먹 구 반지름 약 1.2 m + 판정만 허용 4 m의 절반 + 보스 몸통 반지름 7.8 m ≈ 29.8 m(M1-05·`CombatSetup.PullBossToMelee`와 같은 식). 34 m(30 + 여유 4)보다 멀어지면 걸어온다.
+- 정한 것:
+  - 무릎 중에도 펀치는 맞지만 HP는 10%에서 멈춘다(필살기만 끝냄, M2-05가 바닥을 푼다).
+  - 포효 중 펀치는 `Blocked`. 페이즈 전환은 공격·경직이 끝나면 바로(빈틈 중이면 빈틈을 끊는다).
+  - 밀려남은 부스트 성공 때마다(05 "처음 성공 때 사일로 부숨"은 파괴 기능 M5). 10 m, 1.5초.
+  - 사령관 대사: 첫 공격 7, 첫 빈틈 8, 무릎 9, 첫 내려찍기 11, 첫 연타 12, 첫 돌진 13, 2페이즈 14, 3페이즈 15(문구는 `CommanderLines.cs`, 11/05 전 회의에서 확정).
+  - 비율: 연속 금지 규칙 때문에 실제 비율이 표와 조금 다르다(3페이즈 단발 펀치 약 43%, 돌진·내려찍기 약 15%). 테스트에 그 범위를 적었다.
+- 기록: `Logs/Anseong/logs/bossfight_<날짜시각>.csv` 판마다 한 줄(결과, 전체·페이즈별 초, 페이즈별 받은 피해, 가드·회피 성공률, 공격 수). 재시작·종료 때도 남는다.
+- 사람이 할 일(Unity): Rebuild Robot + Pilot Input, Build M1 Main → 저장 → `Data/Boss/BossPhaseTable.asset`, 새 `.meta`, 프리팹·컨트롤러·`CombatCues.asset` 커밋.
+- 사람이 확인할 것(헤드셋): 지시서 위 4개. 조절 메뉴 "보스" 묶음에서 스스로 공격을 끄면 M2-02처럼 숫자 키로 시험할 수 있다.
 - 남은 문제 / 제안:
+  - 보스 걷기는 루트를 직접 옮기고 Walk 클립을 튼다. 발이 미끄러져 보이면 걷는 속도(조절 메뉴 "보스")를 클립 보폭에 맞춘다.
+  - 플레이어 로봇은 아직 움직이지 않으므로(협동 이동 M3) 걸어오기는 밀려난 뒤·회피 미끄러짐 뒤에만 보인다.

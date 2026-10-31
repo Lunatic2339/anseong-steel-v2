@@ -28,6 +28,18 @@ namespace Anseong.Boss
         [SerializeField, Tooltip("쓰러짐 상태 이름(Death 클립, 없으면 대기 자세로 멈춤).")]
         string deathState = "Death";
 
+        [SerializeField, Tooltip("걷기 상태 이름(M2-04).")]
+        string walkState = "Walk";
+
+        [SerializeField, Tooltip("포효 상태 이름(M2-04, 클립이 없으면 대기).")]
+        string roarState = "Roar";
+
+        [SerializeField, Tooltip("밀려남 상태 이름(M2-04, Boss_Knockback, 없으면 Stagger 전체).")]
+        string knockbackState = "Knockback";
+
+        [SerializeField, Tooltip("무릎 상태 이름(M2-04, Boss_Kneel, 없으면 대기 정지).")]
+        string kneelState = "Kneel";
+
         const string LayerPrefix = "Base Layer.";
         BossAction shown;
         bool hasShown;
@@ -91,6 +103,14 @@ namespace Anseong.Boss
                     return staggerState;
                 case BossState.Defeated:
                     return deathState;
+                case BossState.Walk:
+                    return walkState;
+                case BossState.Roar:
+                    return roarState;
+                case BossState.KnockedBack:
+                    return knockbackState;
+                case BossState.Kneel:
+                    return kneelState;
                 default:
                     return idleState;
             }

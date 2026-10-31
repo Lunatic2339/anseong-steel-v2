@@ -20,6 +20,8 @@ namespace Anseong.Combat
         /// <summary>조종사 로봇 HP(M2-03).</summary>
         public float PilotHealth;
         public float PilotMax;
+        /// <summary>보스 페이즈 1·2·3, 무릎이면 4(M2-04).</summary>
+        public int BossPhase;
 
         public float BossFraction => BossMax > 0f ? BossHealth / BossMax : 0f;
         public bool BossDefeated => BossHealth <= 0f;
@@ -27,10 +29,10 @@ namespace Anseong.Combat
 
         public static CombatSnapshot Full(float bossMax, float pilotMax = 100f) => new CombatSnapshot
         {
-            BossHealth = bossMax, BossMax = bossMax, PilotHealth = pilotMax, PilotMax = pilotMax,
+            BossHealth = bossMax, BossMax = bossMax, PilotHealth = pilotMax, PilotMax = pilotMax, BossPhase = 1,
         };
 
-        public static CombatSnapshot Of(CombatResolver resolver, PilotHealth pilot = null) => new CombatSnapshot
+        public static CombatSnapshot Of(CombatResolver resolver, PilotHealth pilot = null, int bossPhase = 1) => new CombatSnapshot
         {
             BossHealth = resolver.Boss.Current,
             BossMax = resolver.Boss.Max,
@@ -40,6 +42,7 @@ namespace Anseong.Combat
             BoostSide = resolver.Boost.Side,
             PilotHealth = pilot != null ? pilot.Current : 100f,
             PilotMax = pilot != null ? pilot.Max : 100f,
+            BossPhase = bossPhase,
         };
     }
 

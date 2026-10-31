@@ -56,8 +56,8 @@ namespace Anseong.Boss
         public double AttackStart { get; private set; }
         public BossAttackSpec Attack => attack;
         public bool HasAttack => attack != null;
-        /// <summary>빈틈·경직: 이때만 피해가 들어간다.</summary>
-        public bool CanBeDamaged => State == BossState.Opening || State == BossState.Staggered;
+        /// <summary>빈틈·경직·무릎: 이때만 피해가 들어간다(무릎은 HP 바닥에 막혀 필살기만 끝낸다).</summary>
+        public bool CanBeDamaged => State == BossState.Opening || State == BossState.Staggered || State == BossState.Kneel;
         public bool IsResting => State == BossState.Rest;
         /// <summary>공격 중(예고·명중·회복).</summary>
         public bool IsAttacking => State == BossState.Telegraph || State == BossState.Strike || State == BossState.Recovery;
@@ -138,10 +138,38 @@ namespace Anseong.Boss
                     attack = null;
                     Add(events, new BossEvent { Type = BossEventType.OpeningEnded, Time = now });
                     return true;
+                case BossState.Walk:
+                case BossState.Roar:
+                case BossState.KnockedBack:
+                case BossState.Kneel:
+                    if (now < stateEnd) return false;
+                    Enter(BossState.Rest, stateEnd);
+                    return true;
                 default:
                     return false;
             }
         }
+
+        /// <summary>
+        /// 공격 밖 동작(걷기·포효·밀려남·무릎, M2-04)으로 바꾼다. 공격·빈틈 중이면 끊는다. seconds가 지나면 쉬는 중으로(무한이면 <see cref="Release"/>까지).
+        /// </summary>
+        public void Hold(BossState state, double now, double seconds = double.PositiveInfinity)
+        {
+            if (State == BossState.Defeated) return;
+            attack = null;
+            Enter(state, now);
+            stateEnd = now + seconds;
+        }
+
+        /// <summary>공격 밖 동작을 끝내고 쉬는 중으로.</summary>
+        public void Release(double now)
+        {
+            if (!IsHolding) return;
+            Enter(BossState.Rest, now);
+        }
+
+        /// <summary>걷기·포효·밀려남·무릎 중.</summary>
+        public bool IsHolding => State == BossState.Walk || State == BossState.Roar || State == BossState.KnockedBack || State == BossState.Kneel;
 
         /// <summary>바깥에서 경직을 건다(예: 부스트로 밀려남, M2-04). 끝나면 빈틈 openingAfter초.</summary>
         public void Stagger(float seconds, float openingAfter, double now, List<BossEvent> events)
