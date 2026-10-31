@@ -260,8 +260,10 @@ namespace Anseong.Pilot
             LastTarget = shoulder + body * filteredLocal;
             if (TargetModifier != null) LastTarget = TargetModifier(LastTarget);
             var fist = body * ArmMapping.FistLocal(arm, handRotation);
-            var lift = useElbowHint ? elbowHint.Update(ArmMapping.GuardDelta(arm, handPosition), dt) : 0f;
-            var pose = solver.Solve(shoulder, LastTarget, fist, body, wristLockMode == WristLockMode.Always || sample.GripHeld ? 1f : 0f, lift, dt);
+            var guardDelta = ArmMapping.GuardDelta(arm, handPosition);
+            var lift = useElbowHint ? elbowHint.Update(guardDelta, dt) : 0f;
+            var guardShape = arm.IsComplete ? TwoBoneArmSolver.GuardShapeWeight(guardDelta.magnitude, solverSettings) : 0f;
+            var pose = solver.Solve(shoulder, LastTarget, fist, body, wristLockMode == WristLockMode.Always || sample.GripHeld ? 1f : 0f, lift, dt, guardShape);
 
             upperArm.rotation = pose.Upper;
             foreArm.rotation = pose.Lower;
@@ -352,6 +354,12 @@ namespace Anseong.Pilot
             // 주먹 최대 속도·손목·팔 매핑은 메뉴에서 뺐다(선우 10/25: 메뉴가 너무 많음). Inspector에는 그대로 있다.
             if (solverSettings != null) list.AddFloat("묵직함", "arm.rollSpeed", "전완 돌아가는 속도(도/초)", () => solverSettings.rollSpeed, v => solverSettings.rollSpeed = v, 90f, 1440f, 90f, 0);
             if (solverSettings != null) list.AddToggle("묵직함", "arm.holdElbow", "뻗은 팔은 팔꿈치 고정(손목만 돎)", () => solverSettings.holdElbowWhenExtended, v => solverSettings.holdElbowWhenExtended = v);
+            if (solverSettings != null)
+            {
+                list.Describe("가드 자세", "할 것: 가드 올렸다 내리기, 가드에서 잽·훅\n볼 것: 로봇 주먹이 아래팔과 일직선(고양이 손 아님), 팔꿈치가 너무 모이지 않음");
+                list.AddToggle("가드 자세", "arm.guardShape", "가드 자세 다듬기(주먹 일자·팔꿈치 벌림)", () => solverSettings.guardShape, v => solverSettings.guardShape = v);
+                list.AddFloat("가드 자세", "arm.guardElbowSpread", "팔꿈치 벌림(0 = 이전)", () => solverSettings.guardElbowSpread, v => solverSettings.guardElbowSpread = v, 0f, 3f, 0.2f, 1);
+            }
             list.AddToggle("묵직함", "arm.deadzone", "작은 손 떨림 무시", () => deadzone.enabled, v => deadzone.enabled = v);
             list.AddFloat("묵직함", "arm.deadzoneRadius", "무시할 떨림 크기(cm)", () => deadzone.radiusMeters * 100f, v => deadzone.radiusMeters = v / 100f, 0f, 5f, 0.5f, 1);
             list.AddChoice("묵직함", "arm.responseMode", "따라가는 방식", () => (int)responseMode, v => responseMode = (ArmResponseMode)v, new[] { "경로 가속(느리게→빠르게)", "부드럽게(처음 방식)" });

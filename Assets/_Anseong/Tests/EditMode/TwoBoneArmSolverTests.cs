@@ -247,5 +247,59 @@ namespace Anseong.Tests
             Assert.AreEqual(105f, TwoBoneArmSolver.BoundSwivel(-178f, 100f), 1e-4f);
             Assert.AreEqual(-105f, TwoBoneArmSolver.BoundSwivel(178f, -100f), 1e-4f);
         }
+
+        static readonly Vector3 GuardTarget = Shoulder + new Vector3(5f, 4f, 10f);
+        // 가드에서 사람 손목이 고양이 손처럼 굽은 컨트롤러: 위·안쪽을 향함.
+        static readonly Quaternion CatPaw = Quaternion.LookRotation(new Vector3(.5f, 1f, .4f), Vector3.back);
+
+        static ArmPose SolveGuard(TwoBoneArmSolver solver, float guard)
+        {
+            var pose = default(ArmPose);
+            for (var i = 0; i < 90; i++)
+                pose = solver.Solve(Shoulder, GuardTarget, CatPaw, Quaternion.identity, 0f, 0f, Dt, guard);
+            return pose;
+        }
+
+        [Test]
+        public void GuardShape_FistStaysInLineWithForearm_WithoutGrip()
+        {
+            var bind = LeftBind();
+            var pose = SolveGuard(new TwoBoneArmSolver(bind), 1f);
+            AssertLengths(pose);
+            Assert.Less(Vector3.Angle(pose.Hand * bind.FistForwardLocal, pose.Wrist - pose.Elbow), 1f, "가드에선 그립 없이도 주먹 일자");
+            var free = SolveGuard(new TwoBoneArmSolver(bind), 0f);
+            Assert.Greater(Vector3.Angle(free.Hand * bind.FistForwardLocal, free.Wrist - free.Elbow), 10f, "가드 밖(0)에선 예전처럼 손목이 꺾임");
+        }
+
+        [Test]
+        public void GuardShape_SpreadsElbowOutward()
+        {
+            var plain = SolveGuard(NewSolver(), 0f);
+            var shaped = SolveGuard(NewSolver(), 1f);
+            Assert.Less(Vector3.Distance(GuardTarget, shaped.Wrist), 1e-2f, "주먹 위치는 그대로");
+            Assert.Less(shaped.Elbow.x, plain.Elbow.x - 0.5f, "왼팔 팔꿈치가 더 바깥(−X)");
+            var wider = SolveGuard(new TwoBoneArmSolver(LeftBind(), new ArmSolverSettings { guardElbowSpread = 2f }), 1f);
+            Assert.Less(wider.Elbow.x, shaped.Elbow.x, "벌림을 키우면 더 바깥");
+        }
+
+        [Test]
+        public void GuardShape_Off_IgnoresGuardWeight()
+        {
+            var settings = new ArmSolverSettings { guardShape = false };
+            var off = SolveGuard(new TwoBoneArmSolver(LeftBind(), settings), 1f);
+            var plain = SolveGuard(NewSolver(), 0f);
+            Assert.Less(Vector3.Distance(off.Elbow, plain.Elbow), 1e-4f);
+            Assert.AreEqual(0f, TwoBoneArmSolver.GuardShapeWeight(0f, settings));
+        }
+
+        [Test]
+        public void GuardShapeWeight_FullNearGuard_ZeroWhenAway()
+        {
+            var settings = new ArmSolverSettings();
+            Assert.AreEqual(1f, TwoBoneArmSolver.GuardShapeWeight(0.05f, settings), 1e-4f);
+            Assert.AreEqual(0f, TwoBoneArmSolver.GuardShapeWeight(0.3f, settings), 1e-4f);
+            var middle = TwoBoneArmSolver.GuardShapeWeight((settings.guardShapeNear + settings.guardShapeFar) * 0.5f, settings);
+            Assert.AreEqual(0.5f, middle, 0.05f);
+        }
     }
 }

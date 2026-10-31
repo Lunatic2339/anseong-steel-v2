@@ -149,6 +149,22 @@ namespace Anseong.Pilot
                  "고정했는데도 손목이 안쪽으로 꺾여 보이면(손등이 아래팔과 평행하지 않으면) +로 올려 맞춘다. 0 = 손목→손가락 뿌리 선을 아래팔과 일직선(이전 동작).")]
         [Range(-30f, 30f)]
         public float lockedWristPitchDegrees = 0f;
+
+        [Tooltip("가드 자세 다듬기(선우 10/31: 가드에서 로봇 손목이 고양이 손처럼 굽고 팔꿈치가 너무 모임). 손이 보정한 가드 근처면 " +
+                 "그립을 안 쥐어도 주먹을 아래팔과 일직선(펀치 때처럼)으로 두고, 주먹 방향이 팔꿈치를 안쪽으로 돌리지 않게 하며, 팔꿈치를 바깥으로 벌린다.")]
+        public bool guardShape = true;
+
+        [Tooltip("guardShape: 가드에서 팔꿈치를 바깥으로 벌리는 정도. 0 = 아래로(이전 기본 방향), 1이면 아래·바깥 반반쯤, 2면 거의 옆.")]
+        [Range(0f, 3f)]
+        public float guardElbowSpread = 0.8f;
+
+        [Tooltip("guardShape: 사람 손이 보정한 가드에서 이만큼(m) 안이면 가드 자세를 다 적용한다.")]
+        [Min(0f)]
+        public float guardShapeNear = 0.12f;
+
+        [Tooltip("guardShape: 이만큼(m) 벗어나면 가드 자세를 적용하지 않는다(펀치·훅은 원래대로).")]
+        [Min(0.01f)]
+        public float guardShapeFar = 0.25f;
     }
 
     /// <summary>
@@ -198,10 +214,13 @@ namespace Anseong.Pilot
         /// shoulder: 위팔 뼈 위치. target: 손목 목표. fist: 원하는 주먹 회전(정면 = +Z, 손등 = +Y).
         /// body: 로봇 정면 회전. wristLock: 1 = 손목을 아래팔에 고정(그립 중), 0 = 제한된 꺾임 허용.
         /// elbowLift: 0 = 팔꿈치를 옆구리에 붙임, 1 = 들어 올림(훅). dt: 초.
+        /// guard: 0~1, 가드 자세에 가까운 정도(<see cref="GuardShapeWeight"/>). settings.guardShape가 꺼져 있으면 무시.
         /// </summary>
         public ArmPose Solve(Vector3 shoulder, Vector3 target, Quaternion fist, Quaternion body,
-            float wristLock, float elbowLift, float dt)
+            float wristLock, float elbowLift, float dt, float guard = 0f)
         {
+            guard = settings.guardShape ? Mathf.Clamp01(guard) : 0f;
+            wristLock = Mathf.Max(wristLock, guard);
             dt = Mathf.Max(0f, dt);
             float total = bind.Total;
             var up = body * Vector3.up;
@@ -230,7 +249,8 @@ namespace Anseong.Pilot
             // 팔꿈치 기본 방향: 바깥 아래. 뻗거나 들어 올리면 옆으로.
             float extension = Mathf.InverseLerp(.65f, .98f, distance / total);
             float raised = Mathf.Max(extension, Mathf.Clamp01(elbowLift));
-            var preferred = body * new Vector3(bind.SideSign, Mathf.Lerp(-.65f, 0f, raised), Mathf.Lerp(-.1f, 0f, raised));
+            float spread = 1f + settings.guardElbowSpread * guard * (1f - raised);
+            var preferred = body * new Vector3(bind.SideSign * spread, Mathf.Lerp(-.65f, 0f, raised), Mathf.Lerp(-.1f, 0f, raised));
             var transported = solved ? Transport(lastAxis, axis, body * positionPoleLocal) : preferred;
             transported = Perpendicular(axis, transported, up);
             var positionPole = Vector3.ProjectOnPlane(preferred, axis);
@@ -250,6 +270,7 @@ namespace Anseong.Pilot
                 * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(minimum, minimum + total * .12f, distance));
             if (settings.holdElbowWhenExtended)
                 gripWeight *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(settings.elbowHoldStart, Mathf.Max(settings.elbowHoldStart + 1e-3f, settings.elbowHoldFull), distance / total));
+            gripWeight *= 1f - guard;
             float targetSwivel = orientationPole.sqrMagnitude > .0001f
                 ? BoundSwivel(Vector3.SignedAngle(positionPole, orientationPole.normalized, axis), swivel,
                     settings.maxSwivelDegrees, settings.swivelHysteresisDegrees) * gripWeight
@@ -327,6 +348,14 @@ namespace Anseong.Pilot
                 InsideMinimum = inside,
                 Swivel = swivel,
             };
+        }
+
+        /// <summary>사람 손이 보정한 가드에서 벗어난 거리(m) → 가드 자세 비중(near 안 1, far 밖 0).</summary>
+        public static float GuardShapeWeight(float distanceFromGuard, ArmSolverSettings settings)
+        {
+            if (settings == null || !settings.guardShape) return 0f;
+            float far = Mathf.Max(settings.guardShapeNear + 1e-3f, settings.guardShapeFar);
+            return 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(settings.guardShapeNear, far, distanceFromGuard));
         }
 
         /// <summary>axis에 수직인 preferred 성분. 0이면 fallback, 그다음 고정 축 순서로 대신한다.</summary>
