@@ -60,6 +60,8 @@ namespace Anseong.Net
             s.SerializeValue(ref Value.BossHealth);
             s.SerializeValue(ref Value.Point);
             s.SerializeValue(ref Value.Time);
+            s.SerializeValue(ref Value.Code);
+            s.SerializeValue(ref Value.Amount);
             if (!s.IsReader) return;
             Value.Cue = (CombatCue)cue;
             Value.Side = (PilotSide)side;

@@ -192,6 +192,18 @@ namespace Anseong.EditorTools
                 AssetDatabase.CreateAsset(set, CueSetPath);
                 Debug.Log($"{LogPrefix} 소리 표 생성: {CueSetPath}. 소리 파일을 {AudioFolder}에 넣고 메뉴를 다시 돌리면 이름으로 채운다.", set);
             }
+            else
+            {
+                // 새 사건(M2 보스 공격 등)의 기본 줄을 기존 표 끝에 더한다. 이미 있는 줄·채운 소리는 건드리지 않는다.
+                var missing = set.MissingDefaults();
+                if (missing.Length > 0)
+                {
+                    set.SetEntries(set.Entries.Concat(missing).ToArray());
+                    EditorUtility.SetDirty(set);
+                    AssetDatabase.SaveAssets();
+                    Debug.Log($"{LogPrefix} 소리 표에 새 줄 {missing.Length}개 추가: {string.Join(", ", missing.Select(m => m.soundName))}", set);
+                }
+            }
             var clips = AssetDatabase.FindAssets("t:AudioClip", new[] { AudioFolder })
                 .Select(AssetDatabase.GUIDToAssetPath)
                 .Select(AssetDatabase.LoadAssetAtPath<AudioClip>)
@@ -222,7 +234,8 @@ namespace Anseong.EditorTools
         // ── 보스 ──
 
         /// <summary>보스 컨트롤러(Idle + Stagger). 매번 새로 만든다(상태는 코드가 고른다, 전환 없음). 휘청 클립이 없으면 Idle만.</summary>
-        public static AnimatorController BuildBossController(AnimationClip idleClip, AnimationClip staggerClip)
+        public static AnimatorController BuildBossController(AnimationClip idleClip, AnimationClip staggerClip,
+            System.Collections.Generic.IEnumerable<(string name, AnimationClip clip, float speed)> extraStates = null)
         {
             if (AssetDatabase.LoadAssetAtPath<AnimatorController>(BossControllerPath) != null) AssetDatabase.DeleteAsset(BossControllerPath);
             var controller = AnimatorController.CreateAnimatorControllerAtPath(BossControllerPath);
@@ -236,12 +249,23 @@ namespace Anseong.EditorTools
                 stagger.motion = staggerClip;
             }
             else Debug.LogWarning($"{LogPrefix} 휘청 클립이 없어 보스가 맞아도 휘청하지 않습니다. Robot Art Settings의 보스 휘청 클립이나 {RobotArtSettings.DefaultStaggerPath}를 확인하세요.");
+            // M2: 보스 기술·이동·쓰러짐 상태(이름은 BossAnimationDriver가 고른다). 클립이 없는 상태는 만들지 않는다(대기 자세로 대신).
+            if (extraStates != null)
+            {
+                foreach (var (name, clip, speed) in extraStates)
+                {
+                    if (clip == null || string.IsNullOrEmpty(name)) continue;
+                    var state = machine.AddState(name);
+                    state.motion = clip;
+                    state.speed = speed > 0f ? speed : 1f;
+                }
+            }
             AssetDatabase.SaveAssets();
             return controller;
         }
 
         /// <summary>보스 루트에 맞는 부위(몸통·머리), 맞았을 때 반응, HP 막대를 붙인다.</summary>
-        public static string AddBossCombat(Transform boss, AnimationClip staggerClip)
+        public static string AddBossCombat(Transform boss, AnimationClip staggerClip, BossAttackDefinition[] attacks = null)
         {
             var height = RobotSandboxUtility.RobotHeight;
             var target = boss.gameObject.AddComponent<BossTarget>();
@@ -282,7 +306,23 @@ namespace Anseong.EditorTools
             serializedReaction.ApplyModifiedPropertiesWithoutUndo();
 
             AddHealthBar(boss, head, height);
-            return $"보스 맞는 부위 {zones.Count}개(몸통·머리) + 휘청 {(staggerClip != null ? staggerClip.length.ToString("F1") + "초" : "없음")} + HP 막대";
+            var brain = AddBossBrain(boss, attacks);
+            return $"{brain} + 보스 맞는 부위 {zones.Count}개(몸통·머리) + 휘청 {(staggerClip != null ? staggerClip.length.ToString("F1") + "초" : "없음")} + HP 막대";
+        }
+
+        /// <summary>M2-02: 보스 루트에 NetworkObject + 두뇌(서버) + 동작 재생 + 예고 발광.</summary>
+        static string AddBossBrain(Transform boss, BossAttackDefinition[] attacks)
+        {
+            var go = boss.gameObject;
+            if (go.GetComponent<Unity.Netcode.NetworkObject>() == null) go.AddComponent<Unity.Netcode.NetworkObject>();
+            var server = go.GetComponent<BossServer>();
+            if (server == null) server = go.AddComponent<BossServer>();
+            var serialized = new SerializedObject(server);
+            SetArray(serialized.FindProperty("attacks"), (attacks ?? new BossAttackDefinition[0]).Cast<Object>().ToArray());
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+            if (go.GetComponent<BossAnimationDriver>() == null) go.AddComponent<BossAnimationDriver>();
+            if (go.GetComponent<BossTelegraphTint>() == null) go.AddComponent<BossTelegraphTint>();
+            return $"보스 두뇌(기술 {attacks?.Length ?? 0}개, 숫자 1~5 시험) + 동작 복제 + 예고 발광";
         }
 
         static GameObject ZoneObject(string name, Transform bone)

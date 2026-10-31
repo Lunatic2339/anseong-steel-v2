@@ -48,9 +48,19 @@ namespace Anseong.Combat
             [Tooltip("컨트롤러 진동 길이(초).")]
             [Range(0f, 1f)] public float hapticSeconds;
 
+            [Tooltip("켜면 사건 번호(Code: 보스 기술 등)가 아래 값일 때만.")]
+            public bool matchCode;
+            public int code;
+
+            [Tooltip("켜면 사건 수치(Amount: 예고 등급 0 일반·1 강·2 가드 불가 등)를 반올림한 값이 아래 값일 때만.")]
+            public bool matchAmount;
+            public int amount;
+
             public bool Matches(CombatEvent e)
             {
                 if (e.Cue != cue) return false;
+                if (matchCode && e.Code != code) return false;
+                if (matchAmount && Mathf.RoundToInt(e.Amount) != amount) return false;
                 switch (kind)
                 {
                     case KindFilter.Jab: return e.Kind == PunchKind.Jab;
@@ -82,7 +92,35 @@ namespace Anseong.Combat
             New(CombatCue.BoostReady, KindFilter.Any, "SFX_BoostReady", pitch: 1f),
             New(CombatCue.Boost, KindFilter.Any, "SFX_Boost", haptic: 1f, seconds: 0.25f),
             New(CombatCue.Boost, KindFilter.Any, "SFX_BoostHit", atHitPoint: true),
+            // M2-02 보스 공격
+            New(CombatCue.Blocked, KindFilter.Any, "SFX_Guard", atHitPoint: true, haptic: 0.3f, seconds: 0.05f),
+            WithAmount(New(CombatCue.BossTelegraph, KindFilter.Any, "SFX_WarnNormal", pitch: 1f), 0),
+            WithAmount(New(CombatCue.BossTelegraph, KindFilter.Any, "SFX_WarnHeavy", pitch: 1f), 1),
+            WithAmount(New(CombatCue.BossTelegraph, KindFilter.Any, "SFX_Siren", pitch: 1f), 2),
+            New(CombatCue.BossStrike, KindFilter.Any, "SFX_BossSwing", atHitPoint: true),
         };
+
+        static Entry WithAmount(Entry entry, int value)
+        {
+            entry.matchAmount = true;
+            entry.amount = value;
+            return entry;
+        }
+
+        /// <summary>기본 줄 중 이 표에 없는 것(같은 사건·소리 이름이 없음). 메뉴가 기존 표에 새 줄을 더할 때 쓴다.</summary>
+        public Entry[] MissingDefaults()
+        {
+            var have = Entries;
+            var missing = new System.Collections.Generic.List<Entry>();
+            foreach (var d in DefaultEntries())
+            {
+                var found = false;
+                foreach (var e in have)
+                    if (e != null && e.cue == d.cue && e.soundName == d.soundName && e.kind == d.kind) { found = true; break; }
+                if (!found) missing.Add(d);
+            }
+            return missing.ToArray();
+        }
 
         static Entry New(CombatCue cue, KindFilter kind, string sound, bool atHitPoint = false, float haptic = 0f, float seconds = 0f,
             float pitch = 0.75f, float perStep = 0f)

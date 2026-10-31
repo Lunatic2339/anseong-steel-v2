@@ -54,6 +54,20 @@
 - 서버 상태기계로 기술 5개가 클립과 함께 돈다. 빈틈에만 피해. 테스트 통과.
 
 ## 결과 (작업 후 Claude가 작성)
+- **이어서 확인**: M2-01 위에 쌓았다(브랜치 `feat/m2-01-host-server-path` → 이 브랜치). M2-01을 먼저 확인·병합한 뒤 이것을 본다.
 - 바뀐 파일:
-- 사람이 확인할 것:
+  - 새로: `Runtime/Boss/BossAttackTypes.cs`(기술·대응·예고 등급·상태 enum, `BossAttackSpec` 05 제안값), `BossAttackDefinition.cs`(ScriptableObject), `BossAttackStateMachine.cs`(순수), `BossServer.cs`(서버 두뇌, 동작 복제, 1~5 시험 키), `BossAnimationDriver.cs`(각 PC 재생), `BossTelegraphTint.cs`(예고 임시 발광), `Editor/BossAttackMenu.cs`, `Tests/EditMode/BossAttackStateMachineTests.cs`
+  - 고침: `CombatTypes.cs`(사건 `Blocked`·`BossTelegraph`·`BossStrike`·`BossOpening`을 **끝에** 추가, `Code`·`Amount` 칸), `CombatResolver.cs`(`BossVulnerable`: 빈틈·경직 아니면 `Blocked`, 연계 그대로), `CombatCueSet.cs`(Code·Amount 거르기, 새 기본 줄: 막힘 `SFX_Guard`, 예고 `SFX_WarnNormal`·`SFX_WarnHeavy`·`SFX_Siren`, 명중 순간 `SFX_BossSwing`), `CombatSetup.cs`(기존 소리 표에 빠진 줄 추가, 보스 컨트롤러에 기술·쓰러짐 상태, 보스에 NetworkObject·두뇌·재생·발광), `RobotPrefabMenu.cs`, `RobotArtSettings.cs`(보스 쓰러짐 클립 칸), `BossReactionDriver.cs`(공격 중엔 휘청 안 함), `TestGuidePanel.cs`(막힘·예고·빈틈 줄), `NetCombatTypes.cs`
+- 정한 것:
+  - 시간 기준: "예고" = 공격 시작 → 첫 명중 순간. 연타는 그 뒤 0.7초마다. "회복" = 마지막 명중 → 빈틈 시작(기본 1.0초, 강·돌진 1.2초, 클립 보고 조정).
+  - 연타 첫 타는 오른쪽(05에 없음, 제안).
+  - 대응 판정(M2-03)이 없으면 모든 타를 실패로 쳐서 빈틈 1.5초. 피해는 아직 없다.
+  - **쉬는 중에도 맞는 설정(`BossServer` Rest Is Opening) 기본 켬**: 기술을 스스로 고르는 M2-04 전까지는 보스가 늘 쉬는 중이라, 끄면 아무 펀치도 안 들어간다. M2-04에서 끈다. 05대로 막힘을 보려면 Inspector에서 끄고 1~5로 기술을 쓴 뒤 빈틈에 친다.
+  - 클립: v2에는 `Punch`·`Walk`·`Idle`·`Stagger`만 있어 임시로 펀치·연타·내려찍기 = `Punch`, 돌진 = `Walk`. 옛 레포 `AlternatingCombo`·`GroundCast`·`Death`는 클라우드에서 가져올 수 없다(옛 레포 접근 범위 밖). 선우 PC 옛 레포 `AS/_BossPrototype/Animation/CombatSource/`에서 `Art/Robot/Animation/Source/`로 복사해 커밋하면 기술 에셋 클립 칸·Robot Art Settings 쓰러짐 칸에 넣는다. Generic 모델이라 Mirror가 안 될 수 있어 왼손 펀치도 지금은 오른손 `Punch`.
+- 사람이 할 일(Unity):
+  1. Rebuild Robot + Pilot Input(Sandbox_Pilot), Build M1 Main → 저장. `Data/Boss/` 에셋 5개와 새 .cs·폴더의 `.meta`, 바뀐 `Robot_Boss.controller`·프리팹·`CombatCues.asset`을 커밋.
+  2. **Anseong → Boss → Measure Strike Moments** 결과(기술별 손 최고 속도 시각)를 총괄 채팅에 올려 주면 예고·회복 값을 맞춘다.
+- 사람이 확인할 것(헤드셋): 지시서 위 3개 그대로. 막힘 확인은 위 설정을 끄고.
 - 남은 문제 / 제안:
+  - 예고 발광은 몸 전체(팔만 따로는 M5). URP Lit 색만 덮는다.
+  - 맞았을 때 반응(훅 = 휘청 앞 0.6초, 부스트 = 휘청 전체)은 지금처럼 전투 이벤트로 각 PC가 튼다(이벤트가 모든 PC에 같이 가므로 시작 틱 복제는 생략). 밀려남(뒤로 10m)은 M2-04.

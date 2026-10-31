@@ -120,6 +120,15 @@ namespace Anseong.UI
                 case CombatCue.Boost:
                     lastCombat = $"<color=#BF4DFF>부스트!</color> -{e.Damage:F0}%";
                     break;
+                case CombatCue.Blocked:
+                    lastCombat = $"<color=#999999>막힘</color> {side} {KindName(e.Kind)} (보스 빈틈 아님, 연계 그대로)";
+                    break;
+                case CombatCue.BossTelegraph:
+                    lastCombat = $"<color=#FFD24D>보스 예고</color> {BossAttackName(e.Code)}";
+                    break;
+                case CombatCue.BossOpening:
+                    lastCombat = $"<color=#5BE37D>보스 빈틈 {e.Amount:F1}초: 지금 치기</color>";
+                    break;
                 case CombatCue.BossDefeated:
                     lastCombat = "<color=#5BE37D>보스 HP 0</color>";
                     break;
@@ -132,6 +141,19 @@ namespace Anseong.UI
             }
             boostOpen = combat.State.BoostOpen;
             dirty = true;
+        }
+
+        static string BossAttackName(int code)
+        {
+            switch ((Anseong.Boss.BossAttackKind)code)
+            {
+                case Anseong.Boss.BossAttackKind.PunchLeft: return "왼손 펀치 → 왼팔 가드";
+                case Anseong.Boss.BossAttackKind.PunchRight: return "오른손 펀치 → 오른팔 가드";
+                case Anseong.Boss.BossAttackKind.AlternatingCombo: return "좌우 연타 → 번갈아 가드";
+                case Anseong.Boss.BossAttackKind.SlamBoth: return "두 손 내려찍기 → 양팔 가드";
+                case Anseong.Boss.BossAttackKind.Charge: return "돌진 → 같은 방향 회피";
+                default: return code.ToString();
+            }
         }
 
         static string BreakName(ComboBreak reason)

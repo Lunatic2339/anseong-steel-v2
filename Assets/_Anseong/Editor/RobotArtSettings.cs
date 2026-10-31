@@ -38,6 +38,9 @@ namespace Anseong.EditorTools
         [SerializeField, Tooltip("보스가 맞았을 때 휘청 클립(M1-05). 비우면 Art/Robot/Animation/Source/Stagger.fbx. 같은 Mixamo 뼈 이름이어야 한다.")]
         AnimationClip bossStaggerClip;
 
+        [SerializeField, Tooltip("보스 쓰러짐 클립(M2, 옛 레포 CombatSource/Death). 비우면 쓰러질 때 대기 자세로 멈춘다.")]
+        AnimationClip bossDeathClip;
+
         [SerializeField, Tooltip("플레이어 재질 슬롯. 맞는 이름의 재질만 바꾸고 나머지는 모델 재질 그대로 둔다. 비우면 모델 재질 그대로.")]
         SlotMaterial[] playerSlotMaterials = new SlotMaterial[0];
 
@@ -47,6 +50,7 @@ namespace Anseong.EditorTools
         public GameObject PlayerModel => playerModel != null ? playerModel : AssetDatabase.LoadAssetAtPath<GameObject>(DefaultModelPath);
         public GameObject BossModel => bossModel != null ? bossModel : PlayerModel;
         public GameObject CockpitPrefab => cockpitPrefab;
+        public AnimationClip BossDeathClip => bossDeathClip;
         public AnimationClip BossStaggerClip => bossStaggerClip != null ? bossStaggerClip : ClipIn(DefaultStaggerPath);
 
         /// <summary>FBX 안의 첫 애니메이션 클립(미리보기 클립 제외).</summary>

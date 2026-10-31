@@ -35,6 +35,9 @@ namespace Anseong.Boss
         [SerializeField, Min(0f), Tooltip("부스트 명중: 휘청 전체 길이(초). 메뉴가 클립 길이를 넣는다.")]
         float boostStaggerSeconds = 2f;
 
+        [SerializeField, Tooltip("보스 동작 재생(M2-02). 있으면 공격 중에는 휘청하지 않고, 끝나면 그 동작의 기본 자세로 돌아간다. 비어 있으면 같은 오브젝트에서 찾는다.")]
+        BossAnimationDriver actions;
+
         [SerializeField, Tooltip("잽도 짧게 휘청(기본 끔: 잽은 효과만).")]
         bool staggerOnJab;
 
@@ -46,6 +49,7 @@ namespace Anseong.Boss
         {
             if (director == null) director = FindAnyObjectByType<CombatDirector>();
             if (animator == null) animator = GetComponentInChildren<Animator>();
+            if (actions == null) actions = GetComponent<BossAnimationDriver>();
             if (director == null || animator == null)
             {
                 enabled = false;
@@ -81,6 +85,7 @@ namespace Anseong.Boss
         void Stagger(float seconds)
         {
             if (!animator.HasState(0, staggerHash)) return;
+            if (actions != null && !actions.AllowsReaction) return;
             animator.CrossFadeInFixedTime(staggerHash, fadeInSeconds, 0, 0f);
             returnAt = Time.time + seconds;
         }
@@ -89,6 +94,11 @@ namespace Anseong.Boss
         {
             if (returnAt < 0f || Time.time < returnAt) return;
             returnAt = -1f;
+            if (actions != null && actions.isActiveAndEnabled)
+            {
+                actions.ReturnToLoop(fadeOutSeconds);
+                return;
+            }
             if (animator.HasState(0, idleHash)) animator.CrossFadeInFixedTime(idleHash, fadeOutSeconds, 0);
         }
     }
