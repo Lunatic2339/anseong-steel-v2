@@ -62,5 +62,7 @@ namespace Anseong.Combat
         void SubmitGuard(PilotSide side, bool guarding);
         /// <summary>그 조종사의 회피 스틱(M2-03, 바뀐 때만, -1~1).</summary>
         void SubmitStick(PilotSide side, UnityEngine.Vector2 stick);
+        /// <summary>그 팔이 필살기 준비 자세인지(M2-05, 바뀐 때만).</summary>
+        void SubmitFinisherReady(PilotSide side, bool ready);
     }
 }

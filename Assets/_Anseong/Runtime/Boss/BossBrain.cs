@@ -47,6 +47,12 @@ namespace Anseong.Boss
         [SerializeField, Min(0f), Tooltip("판 시작(또는 재시작) 뒤 첫 공격까지(초).")]
         float firstAttackDelay = 4f;
 
+        [Header("필살기·쓰러짐 (05 \"끝\")")]
+        [SerializeField, Min(5f), Tooltip("무릎 뒤 이만큼(초) 필살기를 못 하면 다시 안내(05: 20).")]
+        float finisherHintSeconds = 20f;
+        [SerializeField, Min(0f), Tooltip("쓰러짐 뒤 승리 알림까지(초, Death 클립 길이에 맞춘다).")]
+        float victoryDelay = 3f;
+
         [Header("개발용")]
         [SerializeField, Tooltip("판마다 페이즈 시간·피해·가드 성공률 CSV(logs/bossfight_<날짜시각>.csv, 에디터·개발 빌드).")]
         bool writeCsv = true;
@@ -56,7 +62,7 @@ namespace Anseong.Boss
         readonly BossFightStats stats = new BossFightStats();
         readonly HashSet<BossAttackKind> seen = new HashSet<BossAttackKind>();
         bool bound, sawOpening, finishedLog;
-        double nextAttackAt;
+        double nextAttackAt, fightStart, lastHint, wonAt = -1;
         Vector3 startPosition, knockFrom, knockTo;
         Quaternion startRotation;
         double knockStart = -1;
@@ -118,6 +124,8 @@ namespace Anseong.Boss
             seen.Clear();
             sawOpening = finishedLog = false;
             knockStart = -1;
+            wonAt = -1;
+            fightStart = now;
             stats.Begin(now);
         }
 
@@ -130,7 +138,14 @@ namespace Anseong.Boss
             server.RestIsOpening = !autoAttack;
             if (machine.State == BossState.Defeated)
             {
-                WriteLog("won");
+                if (wonAt >= 0 && now >= wonAt)
+                {
+                    wonAt = -1;
+                    Emit(CombatCue.EncounterWon, 0, now, (float)(now - fightStart));
+                    Emit(CombatCue.CommanderLine, CommanderLines.Victory, now);
+                    WriteLog("won");
+                    server.Combat.Flush();
+                }
                 return;
             }
 
@@ -156,8 +171,11 @@ namespace Anseong.Boss
                     Emit(CombatCue.BossKneel, 0, now);
                     Emit(CombatCue.CommanderLine, CommanderLines.KneelFinisher, now);
                     stats.EnterPhase(4, now);
+                    authority.Finisher.Enabled = true;
+                    lastHint = now;
                     break;
             }
+            if (phases.Kneeling) Finisher(now, authority);
 
             Move(now, machine);
 
@@ -171,6 +189,44 @@ namespace Anseong.Boss
                 }
             }
             server.Combat.Flush();
+        }
+
+        /// <summary>무릎 뒤: 필살기 충전·발사·쓰러짐(M2-05). 20초마다 못 하면 다시 안내.</summary>
+        void Finisher(double now, CombatAuthority authority)
+        {
+            var finisher = authority.Finisher;
+            switch (finisher.Update(now))
+            {
+                case FinisherStep.ChargeStarted:
+                    Emit(CombatCue.FinisherCharge, 0, now, finisher.Settings.chargeSeconds);
+                    break;
+                case FinisherStep.ChargeReset:
+                    Emit(CombatCue.FinisherReset, 0, now);
+                    break;
+                case FinisherStep.Fired:
+                    Emit(CombatCue.FinisherFire, 0, now, finisher.Settings.beamSeconds);
+                    break;
+                case FinisherStep.Finished:
+                    // 바닥을 풀고 남은 HP를 모두 깎는다 → 쓰러짐.
+                    phases.ReleaseFloor();
+                    var boss = authority.Resolver.Boss;
+                    boss.Floor = 0f;
+                    var damage = boss.Apply(100f);
+                    server.Combat.Events.Add(new CombatEvent
+                    {
+                        Cue = CombatCue.BossDefeated, Kind = PunchKind.None, Time = now, Damage = damage, BossHealth = boss.Current, Point = transform.position,
+                    });
+                    server.Machine.Defeat(now, null);
+                    stats.EnterPhase(4, now);
+                    wonAt = now + victoryDelay;
+                    return;
+            }
+            if (finisher.Charging || finisher.Firing) lastHint = now;
+            else if (now - lastHint >= finisherHintSeconds)
+            {
+                lastHint = now;
+                Emit(CombatCue.CommanderLine, CommanderLines.FinisherHint, now);
+            }
         }
 
         void Move(double now, BossAttackStateMachine machine)

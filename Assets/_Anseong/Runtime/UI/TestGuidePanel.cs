@@ -149,7 +149,7 @@ namespace Anseong.UI
                     lastCombat = $"<color=#FFD24D>{e.Code}페이즈 시작 (포효 중 무적)</color>";
                     break;
                 case CombatCue.BossKneel:
-                    lastCombat = "<color=#5BE37D>보스 무릎: 필살기 차례</color>";
+                    lastCombat = "<color=#5BE37D>보스 무릎: 필살기 차례</color> 두 팔 정면으로 쭉 + 그립·트리거·A·B(X·Y) 모두 누르고 버티기 (키보드 F)";
                     break;
                 case CombatCue.BossKnockback:
                     lastCombat = $"<color=#BF4DFF>보스 밀려남 {e.Amount:F0}m</color>";
@@ -162,6 +162,19 @@ namespace Anseong.UI
                     break;
                 case CombatCue.BossDefeated:
                     lastCombat = "<color=#5BE37D>보스 HP 0</color>";
+                    break;
+                case CombatCue.FinisherCharge:
+                    lastCombat = $"<color=#4DD2FF>필살기 충전 중 {e.Amount:F1}초: 그대로 버티기</color>";
+                    break;
+                case CombatCue.FinisherReset:
+                    lastCombat = "<color=#FF6B6B>충전 풀림: 두 팔을 다시 함께 뻗기</color>";
+                    break;
+                case CombatCue.FinisherFire:
+                    lastCombat = "<color=#4DD2FF>필살기 발사!</color>";
+                    break;
+                case CombatCue.EncounterWon:
+                    var seconds = Mathf.Max(0, Mathf.RoundToInt(e.Amount));
+                    lastCombat = $"<color=#5BE37D>승리! 걸린 시간 {seconds / 60}:{seconds % 60:00} (R로 재시작)</color>";
                     break;
                 case CombatCue.BoostReady:
                 case CombatCue.BoostMissed:

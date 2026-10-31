@@ -89,7 +89,37 @@ namespace Anseong.EditorTools
             serializedPlayer.FindProperty("cues").objectReferenceValue = GetOrCreateCueSet(out var filled);
             serializedPlayer.ApplyModifiedPropertiesWithoutUndo();
             var guardReport = AddPlayerGuard(arms, drivers);
-            return $"전투 판정 + 주먹 명중 구 {fists.Count(f => f != null)}개 + 소리 표(채운 소리 {filled}개) + {guardReport} + {AddPlayerDefense(arms)}";
+            return $"전투 판정 + 주먹 명중 구 {fists.Count(f => f != null)}개 + 소리 표(채운 소리 {filled}개) + {guardReport} + {AddPlayerDefense(arms)} + {AddFinisher(arms, drivers)}";
+        }
+
+        const string FinisherBeamPath = DebugFolder + "/FinisherBeam.mat";
+
+        /// <summary>M2-05: 필살기 준비 보고(Arms), 충전 발광·광선(로봇 루트).</summary>
+        static string AddFinisher(GameObject arms, RobotArmDriver[] drivers)
+        {
+            var reporter = arms.AddComponent<FinisherReporter>();
+            var serialized = new SerializedObject(reporter);
+            serialized.FindProperty("director").objectReferenceValue = arms.GetComponent<CombatDirector>();
+            SetArray(serialized.FindProperty("arms"), drivers.Where(d => d != null).Cast<Object>().ToArray());
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var root = arms.transform.root;
+            var beamObject = new GameObject("FinisherBeam");
+            beamObject.transform.SetParent(root, false);
+            var line = beamObject.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.positionCount = 2;
+            line.sharedMaterial = GetOrCreateUnlit(FinisherBeamPath, new Color(0.4f, 0.9f, 1f));
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            line.enabled = false;
+
+            var visual = root.gameObject.AddComponent<FinisherVisual>();
+            var serializedVisual = new SerializedObject(visual);
+            serializedVisual.FindProperty("director").objectReferenceValue = arms.GetComponent<CombatDirector>();
+            serializedVisual.FindProperty("beam").objectReferenceValue = line;
+            serializedVisual.ApplyModifiedPropertiesWithoutUndo();
+            return "필살기 보고 + 충전 발광·광선";
         }
 
         /// <summary>M2-03: 가드·회피 보고(Arms), 회피 미끄러짐·피격 흔들림(로봇 루트), 조종사 HP 막대(콘솔 위).</summary>

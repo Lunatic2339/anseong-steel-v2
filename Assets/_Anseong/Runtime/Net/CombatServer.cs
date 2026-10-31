@@ -76,6 +76,13 @@ namespace Anseong.Net
         public void SubmitArmInput(PilotSide side, bool gripHeld, bool triggerPressed) => ArmInputRpc((byte)side, gripHeld, triggerPressed);
         public void RequestReset() => ResetRpc();
         public void SubmitGuard(PilotSide side, bool guarding) => GuardRpc((byte)side, guarding);
+        public void SubmitFinisherReady(PilotSide side, bool ready) => FinisherReadyRpc((byte)side, ready);
+
+        [Rpc(SendTo.Server)]
+        void FinisherReadyRpc(byte side, bool ready, RpcParams rpc = default)
+        {
+            authority?.SetFinisherReady((PilotSide)side, ready, Now);
+        }
         public void SubmitStick(PilotSide side, Vector2 stick) => StickRpc((byte)side, Quantize(stick.x), Quantize(stick.y));
 
         static sbyte Quantize(float v) => (sbyte)Mathf.RoundToInt(Mathf.Clamp(v, -1f, 1f) * 127f);

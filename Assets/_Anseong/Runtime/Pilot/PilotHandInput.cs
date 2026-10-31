@@ -126,7 +126,26 @@ namespace Anseong.Pilot
         {
             var now = Time.timeAsDouble;
             for (var h = 0; h < hands.Length; h++)
+            {
                 samples[h] = Read((PilotSide)h, hands[h], samples[h], gates[h], now);
+                handBusy[h] = samples[h].GripHeld || samples[h].Trigger >= BusyTrigger;
+            }
+        }
+
+        const float BusyTrigger = 0.5f;
+        static readonly bool[] handBusy = new bool[2];
+
+        /// <summary>
+        /// 그 손이 그립이나 트리거를 쥐고 있다(M2-05). 필살기는 A/B·X/Y를 그립·트리거와 함께 누르므로,
+        /// 같은 버튼에 걸린 개발용 기능(다시 보정·좌석 전환·조절 메뉴)은 이때 컨트롤러 버튼을 무시한다. 키보드는 그대로.
+        /// </summary>
+        public static bool HandBusy(PilotSide hand) => handBusy[(int)hand];
+
+        /// <summary>이 입력이 그 손 컨트롤러 버튼에서 왔고, 그 손이 바쁘다(위 설명).</summary>
+        public static bool IgnoreDevButton(InputControl control, PilotSide hand)
+        {
+            if (control == null || control.device is Keyboard) return false;
+            return HandBusy(hand);
         }
 
         PilotHandSample Read(PilotSide side, HandActions actions, PilotHandSample previous, AttackIntentGate gate, double now)
