@@ -39,4 +39,5 @@
 - 사람이 확인할 것: Rebuild Robot + Pilot Input → 새 `.meta`와 `Art/Debug/GuardLight.mat` 커밋. 위 "사람이 할 일" 4개. 표시등이 안 켜지면 안내판의 이유를 보고, "팔뚝이 누움"이 계속 나오면 Forearm Source를 Robot이나 Either로 바꿔 비교. CSV는 Console의 `[GuardDriver] 가드 기록:` 경로.
 - 로봇 가드 자세(선우 10/31: 로봇 팔꿈치가 너무 모임): `ArmSolverSettings.elbowSpreadDegrees`(15°). 굽힌 팔의 팔꿈치를 주먹 방향으로 정한 자리에서 이만큼만 바깥으로 돌린다. 뻗거나 훅으로 들면 줄어든다. 손목·주먹 방향은 예전처럼 컨트롤러를 따라간다(가드 근처 손목 고정·팔꿈치 고정은 팔이 너무 누워서 뺐다). 조절 메뉴 "가드 자세". 테스트 1개.
 - 훅 주먹 방향(선우 10/31: 주먹 방향이 달라도 훅으로 인정됨, 유하게 말이 안 되는 것만): `PunchClassifierSettings.checkHookFistDirection`. 길이 훅인 동작의 뒤쪽 절반(맞는 쪽)에서 손등이 뒤집힘(손등-위 140° 넘음) → `HookPalmUp`, 손등으로 침(손등-진행 40° 미만) → `HookBackhand`, 너클이 반대쪽(너클-진행 120° 넘음) → `HookFistDirection`이면 훅이 아니다. 눕힌 주먹·세운 주먹·너클 정면은 인정. 잽·어퍼컷은 안 봄. strikes CSV 끝에 `hook_fist_deg,hook_back_lead_deg,hook_back_up_deg`. 테스트 3개.
+- 선우 헤드셋(10/31): 가드 판정 잘 됨, 팔꿈치 바깥으로 15° 좋음. 훅 주먹 방향 거르기는 아직 확인 안 함(정상 훅이 걸러지면 strikes CSV 끝 3칸으로 기준 조정).
 - 남은 문제 / 제안: 표시등은 기본 조종석 상자의 콘솔 위에 만든다. Robot Art Settings에 조종석 모델을 넣으면 위치가 안 맞을 수 있어 `Cockpit → GuardIndicator`를 Inspector에서 옮긴다. 양팔 가드(`BothGuarding`)는 값만 있고 표시는 M2 강공격 때.
