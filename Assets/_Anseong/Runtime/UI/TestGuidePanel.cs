@@ -1,5 +1,6 @@
 using System.Text;
 using Anseong.Combat;
+using Anseong.Net;
 using Anseong.Pilot;
 using UnityEngine;
 
@@ -25,6 +26,9 @@ namespace Anseong.UI
 
         [SerializeField, Tooltip("가드 판정(M1-06). 비어 있으면 시작할 때 씬에서 한 번 찾는다. 없으면 가드 줄을 쓰지 않는다.")]
         GuardDriver guard;
+
+        [SerializeField, Tooltip("네트워크 세션(M2-01). 시작에 실패하면 이유를 맨 위에 띄운다. 비어 있으면 시작할 때 한 번 찾는다.")]
+        SessionBootstrap session;
 
         [SerializeField, Tooltip("글자를 쓸 TextMesh. 메뉴가 만든다.")]
         TextMesh text;
@@ -68,6 +72,7 @@ namespace Anseong.UI
             if (classifier == null) classifier = FindAnyObjectByType<PunchClassifierDriver>();
             if (combat == null) combat = FindAnyObjectByType<CombatDirector>();
             if (guard == null) guard = FindAnyObjectByType<GuardDriver>();
+            if (session == null) session = FindAnyObjectByType<SessionBootstrap>();
             if (tuningMenu == null) tuningMenu = FindAnyObjectByType<TuningMenu>();
             if (text == null || calibration == null)
             {
@@ -81,7 +86,10 @@ namespace Anseong.UI
             calibration.Completed += ResetCounts;
             if (classifier != null) classifier.StrikeCompleted += OnStrike;
             if (combat != null) combat.Cue += OnCombat;
+            if (session != null) session.ProblemChanged += OnSessionProblem;
         }
+
+        void OnSessionProblem(string problem) => dirty = true;
 
         void OnDestroy()
         {
@@ -92,6 +100,7 @@ namespace Anseong.UI
             }
             if (classifier != null) classifier.StrikeCompleted -= OnStrike;
             if (combat != null) combat.Cue -= OnCombat;
+            if (session != null) session.ProblemChanged -= OnSessionProblem;
         }
 
         void OnCombat(CombatEvent e)
@@ -121,7 +130,7 @@ namespace Anseong.UI
                 default:
                     return;
             }
-            boostOpen = combat.Resolver.Boost.IsOpen;
+            boostOpen = combat.State.BoostOpen;
             dirty = true;
         }
 
@@ -247,6 +256,7 @@ namespace Anseong.UI
         void Redraw()
         {
             builder.Length = 0;
+            if (session != null && session.Problem.Length > 0) builder.Append("<color=#FF6B6B>").Append(session.Problem).Append("</color>\n");
             if (!calibration.IsComplete) DrawCalibration();
             else DrawPunches();
             text.text = builder.ToString();
@@ -297,7 +307,7 @@ namespace Anseong.UI
                 Row("<color=#BF4DFF>어퍼컷</color>    ", PunchKind.Uppercut);
                 Row("<color=#999999>해당 없음</color> ", PunchKind.None);
                 builder.Append("공격 인정    ").Append(attacks[0]).Append("  /  ").Append(attacks[1]).Append('\n');
-                if (combat != null && combat.Resolver != null) DrawCombat();
+                if (combat != null) DrawCombat();
                 if (guard != null) DrawGuard();
                 builder.Append("다음 펀치    ");
                 ReadyText(PilotSide.Left);
@@ -344,10 +354,11 @@ namespace Anseong.UI
 
         void DrawCombat()
         {
-            var r = combat.Resolver;
-            builder.Append("보스 HP ").Append(r.Boss.Current.ToString("F0")).Append("%   연계 ").Append(r.Combo.Step).Append("/3");
-            if (r.Combo.Step > 0)
-                builder.Append(" (다음: ").Append(r.Combo.NextSide == PilotSide.Left ? "왼손 " : "오른손 ").Append(r.Combo.Step == 2 ? "훅" : "잽").Append(')');
+            var r = combat.State;
+            if (!combat.Connected) builder.Append("<color=#FF6B6B>전투 서버 연결 안 됨: 명중이 들어가지 않음</color>\n");
+            builder.Append("보스 HP ").Append(r.BossHealth.ToString("F0")).Append("%   연계 ").Append(r.ComboStep).Append("/3");
+            if (r.ComboStep > 0)
+                builder.Append(" (다음: ").Append(r.ComboNextSide == PilotSide.Left ? "왼손 " : "오른손 ").Append(r.ComboStep == 2 ? "훅" : "잽").Append(')');
             if (boostOpen) builder.Append("   <color=#BF4DFF>부스트: 트리거!</color>");
             builder.Append('\n');
             if (combat.Boss == null) builder.Append("<color=#FF6B6B>보스 없음: 모든 공격이 헛침</color>\n");

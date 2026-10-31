@@ -48,11 +48,12 @@ namespace Anseong.EditorTools
 
             var environment = AddEnvironmentLoader(scene);
             var restart = AddSessionRestart(scene);
+            var network = NetworkSessionMenu.AddToScene(scene);
             var buildList = EnsureBuildScenes();
 
             EditorSceneManager.MarkSceneDirty(scene);
             Debug.Log($"{LogPrefix} Main 구성 완료: 로봇·보스({BossDistance} m)·조종석 XR·입력·전투. 맵: {environment}. 재시작: {restart}. " +
-                      $"Build Profiles 씬 목록: {buildList}. Ctrl+S로 Main을 저장하세요.", origin);
+                      $"네트워크: {network}. Build Profiles 씬 목록: {buildList}. Ctrl+S로 Main을 저장하세요.", origin);
         }
 
         /// <summary>프리팹 인스턴스가 씬에 없을 때만 만든다. 있으면 그대로 둔다.</summary>
