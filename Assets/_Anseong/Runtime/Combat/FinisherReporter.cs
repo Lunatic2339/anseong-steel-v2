@@ -1,6 +1,8 @@
 using Anseong.Pilot;
 using UnityEngine;
-using UnityEngine.XR;
+using XRUsages = UnityEngine.XR.CommonUsages;
+using XRDevices = UnityEngine.XR.InputDevices;
+using XRNode = UnityEngine.XR.XRNode;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
 using UnityEngine.InputSystem;
 #endif
@@ -92,10 +94,10 @@ namespace Anseong.Combat
 
         static bool FaceButtons(PilotSide hand)
         {
-            var device = InputDevices.GetDeviceAtXRNode(hand == PilotSide.Left ? XRNode.LeftHand : XRNode.RightHand);
+            var device = XRDevices.GetDeviceAtXRNode(hand == PilotSide.Left ? XRNode.LeftHand : XRNode.RightHand);
             if (!device.isValid) return false;
-            return device.TryGetFeatureValue(CommonUsages.primaryButton, out var primary) && primary
-                && device.TryGetFeatureValue(CommonUsages.secondaryButton, out var secondary) && secondary;
+            return device.TryGetFeatureValue(XRUsages.primaryButton, out var primary) && primary
+                && device.TryGetFeatureValue(XRUsages.secondaryButton, out var secondary) && secondary;
         }
     }
 }
