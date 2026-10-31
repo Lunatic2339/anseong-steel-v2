@@ -16,7 +16,7 @@ namespace Anseong.Combat
     /// </summary>
     public sealed class StrikeLog : IDisposable
     {
-        public const string Header = "time_s,arm,kind,reason,side_ratio,straightness,outset_m,inward_sweep_m,arc_ratio,turn_deg,rise_m,head_forward_m,grip,tracked,strike_id,hit,hit_how,near_gap_m,robot_reach";
+        public const string Header = "time_s,arm,kind,reason,side_ratio,straightness,outset_m,inward_sweep_m,arc_ratio,turn_deg,rise_m,head_forward_m,grip,tracked,strike_id,hit,hit_how,near_gap_m,robot_reach,hook_fist_deg,hook_back_lead_deg,hook_back_up_deg";
 
         /// <summary>명중 칸 4개가 다 빈 값.</summary>
         public const string EmptyHit = ",,,";
@@ -60,7 +60,10 @@ namespace Anseong.Combat
                 r.GripHeld ? "1" : "0",
                 r.Tracked ? "1" : "0",
                 r.StrikeId.ToString(c),
-                string.IsNullOrEmpty(hit) ? EmptyHit : hit);
+                string.IsNullOrEmpty(hit) ? EmptyHit : hit,
+                Number(m.HookFistDegrees),
+                Number(m.HookBackLeadDegrees),
+                Number(m.HookBackUpDegrees));
         }
 
         static string Number(float value)

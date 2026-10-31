@@ -427,6 +427,9 @@ namespace Anseong.UI
                 case PunchReason.TooLong: return "너무 김";
                 case PunchReason.CapacityExceeded: return "샘플 초과";
                 case PunchReason.RobotLagged: return "로봇 팔이 덜 뻗음";
+                case PunchReason.HookFistDirection: return "훅인데 주먹 끝이 반대쪽";
+                case PunchReason.HookBackhand: return "훅인데 손등으로 침";
+                case PunchReason.HookPalmUp: return "훅인데 손등이 뒤집힘";
                 default: return reason.ToString();
             }
         }

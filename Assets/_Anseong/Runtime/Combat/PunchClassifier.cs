@@ -26,6 +26,12 @@ namespace Anseong.Combat
         CapacityExceeded,
         /// <summary>로봇 주먹이 따라오기 전에 손을 빼서 로봇 팔이 거의 안 뻗었다(묵직함, 10/25).</summary>
         RobotLagged,
+        /// <summary>길은 훅인데 주먹 끝(너클)이 휘두르는 반대쪽을 봤다(선우 10/31).</summary>
+        HookFistDirection,
+        /// <summary>길은 훅인데 손등으로 쳤다(손등이 진행 방향 앞, 선우 10/31).</summary>
+        HookBackhand,
+        /// <summary>길은 훅인데 손등이 뒤집혔다(손바닥이 위, 선우 10/31).</summary>
+        HookPalmUp,
     }
 
     public enum PunchPhase { WaitingForNeutral, Ready, Moving, Recovering, TrackingLost }
@@ -63,6 +69,23 @@ namespace Anseong.Combat
 
         [Tooltip("훅: 앞부분과 뒷부분 진행 방향이 꺾인 각도 최소값(도, 위에서 본 평면). 곧게 대각선으로 친 펀치를 훅으로 보지 않게(10/25 헤드셋).")]
         public float minHookTurnDegrees = 15f;
+
+        [Tooltip("훅: 주먹 방향도 본다(선우 10/31: 유하게, 말이 안 되는 것만 거름). 너클이 반대쪽, 손등으로 치기, 손등 뒤집힘만 훅이 아니다. " +
+                 "주먹 방향은 정면 뻗기 보정 때 주먹(손등 위) = 기준.")]
+        public bool checkHookFistDirection = true;
+
+        [Tooltip("훅: 손등과 진행 방향 사이 평균 각도가 이보다 작으면 손등으로 친 것(도). 보통 훅은 90° 가까이(손등이 위나 바깥).")]
+        [Range(0f, 90f)]
+        public float minHookBackLeadDegrees = 40f;
+
+        [Tooltip("훅: 손등과 위쪽 사이 평균 각도가 이보다 크면 손등이 뒤집힌 것(도). 눕힌 주먹 0°, 세운 주먹 90°, 손바닥이 위 180°.")]
+        [Range(90f, 180f)]
+        public float maxHookBackUpDegrees = 140f;
+
+        [Tooltip("훅: 주먹 끝 방향과 진행 방향 사이 평균 각도 최대값(도, 위에서 본 평면). 유하게(선우 10/31: 말이 안 되는 반대 방향만 거른다). " +
+                 "너클이 진행 방향 = 0°, 정면을 본 채 옆으로 쓸기 ≈ 90°(인정), 너클이 바깥(휘두르는 반대쪽) ≈ 180°(거름).")]
+        [Range(30f, 175f)]
+        public float maxHookFistDegrees = 120f;
 
         [Tooltip("어퍼컷: 가장 낮은 지점에서 올려친 높이 최소값(m).")]
         public float minUppercutRise = 0.18f;
@@ -155,6 +178,12 @@ namespace Anseong.Combat
         public float ArcRatio;
         /// <summary>앞부분 진행 방향과 뒷부분 진행 방향 사이 각도(도, 위에서 본 평면). 곧은 대각선은 0 가까이, 훅은 크다.</summary>
         public float TurnDegrees;
+        /// <summary>안쪽 스윕 동안 주먹 끝(손목 → 너클) 방향과 진행 방향 사이 평균 각도(도, 위에서 본 평면). 주먹 방향을 모르면 NaN.</summary>
+        public float HookFistDegrees;
+        /// <summary>안쪽 스윕 동안 손등 방향과 진행 방향 사이 평균 각도(도). 작으면 손등으로 친 것. 모르면 NaN.</summary>
+        public float HookBackLeadDegrees;
+        /// <summary>안쪽 스윕 동안 손등 방향과 위쪽 사이 평균 각도(도). 크면 손등이 뒤집힌 것. 모르면 NaN.</summary>
+        public float HookBackUpDegrees;
         /// <summary>가장 낮은 지점 뒤로 올라간 높이(어퍼컷 판정).</summary>
         public float Rise;
         public float Forward;
@@ -199,6 +228,11 @@ namespace Anseong.Combat
         readonly PunchClassifierSettings settings;
         readonly float inwardSign;
         readonly Vector3[] points = new Vector3[Capacity];
+        // 점마다 주먹 회전(몸 기준, 보정한 펀치 자세 = identity). 모르면 hasFist false.
+        readonly Quaternion[] fists = new Quaternion[Capacity];
+        readonly bool[] hasFist = new bool[Capacity];
+        Quaternion fistNow;
+        bool fistKnown;
         Vector3 neutral, previous;
         // origin = 궤적을 재는 기준(Retract: 이 펀치를 시작한 자리, GuardReturn: 가드). anchor = 준비 중 마지막으로 멈춘 자리.
         // peak·strokeDirection = 끝난 펀치의 가장 먼 점과 친 방향(거둬들임 판정).
@@ -255,6 +289,21 @@ namespace Anseong.Combat
         /// tracked = 이 손 추적이 유효함, intent = 공격 의도(그립 + 추적, AttackIntentGate).
         /// </summary>
         public bool Sample(Vector3 position, bool tracked, bool intent, double time, out PunchResult result)
+        {
+            fistKnown = false;
+            return SampleCore(position, tracked, intent, time, out result);
+        }
+
+        /// <summary>주먹 회전(몸 기준, 보정한 펀치 자세 = identity: 정면 = 너클, 위 = 손등)도 함께 넣는다. 훅의 주먹 방향 확인에 쓴다.</summary>
+        public bool Sample(Vector3 position, Quaternion fist, bool tracked, bool intent, double time, out PunchResult result)
+        {
+            var norm = Mathf.Sqrt(fist.x * fist.x + fist.y * fist.y + fist.z * fist.z + fist.w * fist.w);
+            fistKnown = norm > 0.5f && !float.IsNaN(norm) && !float.IsInfinity(norm);
+            fistNow = fistKnown ? new Quaternion(fist.x / norm, fist.y / norm, fist.z / norm, fist.w / norm) : Quaternion.identity;
+            return SampleCore(position, tracked, intent, time, out result);
+        }
+
+        bool SampleCore(Vector3 position, bool tracked, bool intent, double time, out PunchResult result)
         {
             result = default(PunchResult);
             if (!tracked || !Finite(position) || double.IsNaN(time) || double.IsInfinity(time))
@@ -321,8 +370,8 @@ namespace Anseong.Combat
                     if (velocity.magnitude >= settings.startSpeed && offset.magnitude > DepartMinOffset && departure)
                     {
                         count = 0;
-                        points[count++] = previous;
-                        points[count++] = position;
+                        Push(previous);
+                        Push(position);
                         began = previousTime;
                         origin = retractMode ? anchor : neutral;
                         offset = position - origin;
@@ -345,7 +394,7 @@ namespace Anseong.Combat
                         completed = true;
                         break;
                     }
-                    points[count++] = position;
+                    Push(position);
                     if (offset.z >= maxForward)
                     {
                         maxForward = offset.z;
@@ -507,6 +556,7 @@ namespace Anseong.Combat
             var chord = Vector3.Distance(points[outer], points[inner]);
             m.ArcRatio = chord > 0.01f ? arc / chord : 1f;
             m.TurnDegrees = Turn(last);
+            FistAngles(outer, inner, ref m);
             m.Straightness = path > 0.01f ? Vector3.Distance(points[0], points[jabEnd]) / path : 0f;
             m.SideRatio = m.Forward > 1e-4f ? (maxX - minX) / m.Forward : float.PositiveInfinity;
             result.Measure = m;
@@ -530,6 +580,18 @@ namespace Anseong.Combat
                 && m.TurnDegrees >= settings.minHookTurnDegrees;
             var jab = m.SideRatio <= settings.maxJabSideRatio && m.Straightness >= settings.minJabStraightness
                 || m.SideRatio <= settings.maxDiagonalJabSideRatio && m.Straightness >= settings.minDiagonalJabStraightness;
+            if (hook && settings.checkHookFistDirection && !float.IsNaN(m.HookFistDegrees))
+            {
+                PunchReason? wrong = m.HookBackUpDegrees > settings.maxHookBackUpDegrees ? PunchReason.HookPalmUp
+                    : m.HookBackLeadDegrees < settings.minHookBackLeadDegrees ? PunchReason.HookBackhand
+                    : m.HookFistDegrees > settings.maxHookFistDegrees ? PunchReason.HookFistDirection
+                    : (PunchReason?)null;
+                if (wrong.HasValue)
+                {
+                    result.Reason = wrong.Value;
+                    return result;
+                }
+            }
             if (hook)
             {
                 result.Kind = PunchKind.Hook;
@@ -542,6 +604,41 @@ namespace Anseong.Combat
             }
             else result.Reason = PunchReason.Ambiguous;
             return result;
+        }
+
+        void Push(Vector3 position)
+        {
+            fists[count] = fistNow;
+            hasFist[count] = fistKnown;
+            points[count++] = position;
+        }
+
+        /// <summary>
+        /// outer → inner 구간의 뒤쪽 절반(맞는 쪽, 진행 방향이 안쪽으로 꺾인 뒤)에서 이동 거리로 가중 평균한 주먹 각도:
+        /// 너클 ↔ 진행(위에서 본 평면), 손등 ↔ 진행, 손등 ↔ 위. 주먹 회전을 모르면 NaN.
+        /// </summary>
+        void FistAngles(int outer, int inner, ref PunchMeasure m)
+        {
+            float knuckle = 0f, lead = 0f, up = 0f, weight = 0f;
+            for (var i = (outer + inner) / 2 + 1; i <= inner; i++)
+            {
+                if (!hasFist[i]) continue;
+                var step = points[i] - points[i - 1];
+                var flatStep = Flat(step);
+                var length = flatStep.magnitude;
+                if (length < 1e-4f) continue;
+                var forward = fists[i] * Vector3.forward;
+                var back = fists[i] * Vector3.up;
+                var flatForward = Flat(forward);
+                knuckle += (flatForward.magnitude > 0.1f ? Vector2.Angle(flatForward, flatStep) : 90f) * length;
+                lead += Vector3.Angle(back, step) * length;
+                up += Vector3.Angle(back, Vector3.up) * length;
+                weight += length;
+            }
+            var known = weight > 1e-3f;
+            m.HookFistDegrees = known ? knuckle / weight : float.NaN;
+            m.HookBackLeadDegrees = known ? lead / weight : float.NaN;
+            m.HookBackUpDegrees = known ? up / weight : float.NaN;
         }
 
         /// <summary>위에서 본 평면(x, z)에서 궤적 앞 35%와 뒤 35%의 진행 방향 사이 각도(도). 길이로 나눈다(샘플 간격과 무관).</summary>

@@ -27,10 +27,16 @@ namespace Anseong.Tests
                 Hz = hz;
             }
 
+            /// <summary>정하면 샘플마다 주먹 끝 방향(몸 기준)도 넣는다.</summary>
+            public Quaternion? Fist;
+
             public void Sample(Vector3 offset, bool intent = true, bool tracked = true)
             {
                 PunchResult r;
-                if (Classifier.Sample(Neutral + offset, tracked, intent, Time, out r)) Results.Add(r);
+                var done = Fist.HasValue
+                    ? Classifier.Sample(Neutral + offset, Fist.Value, tracked, intent, Time, out r)
+                    : Classifier.Sample(Neutral + offset, tracked, intent, Time, out r);
+                if (done) Results.Add(r);
                 Time += 1.0 / Hz;
             }
 
@@ -208,6 +214,56 @@ namespace Anseong.Tests
                 run.Stroke(Hook(left));
                 AssertSingle(run, PunchKind.Hook, $"훅 {hz}Hz {(left ? "L" : "R")}");
             }
+        }
+
+        [Test]
+        public void HookFistDirection_LenientExceptNonsense()
+        {
+            // 선우 10/31: 유하게, 손등이 뒤집혔거나 손등으로 치거나 너클이 반대쪽인 것만 거른다. 왼팔 훅은 안쪽(+X)으로 휘어 들어온다.
+            foreach (var left in new[] { true, false })
+            {
+                var inward = left ? Vector3.right : Vector3.left;
+                var cases = new (Quaternion fist, PunchReason reason, string label)[]
+                {
+                    (Quaternion.LookRotation((inward + Vector3.forward).normalized, Vector3.up), PunchReason.Hook, "눕힌 주먹, 너클이 휘두르는 쪽"),
+                    (Quaternion.identity, PunchReason.Hook, "보정 펀치 자세 그대로(너클 정면)"),
+                    (Quaternion.LookRotation(inward, Vector3.forward), PunchReason.Hook, "세운 주먹"),
+                    (Quaternion.LookRotation((inward + Vector3.forward).normalized, Vector3.down), PunchReason.HookPalmUp, "손등 뒤집힘"),
+                    (Quaternion.LookRotation(Vector3.forward, inward), PunchReason.HookBackhand, "손등으로 침"),
+                    (Quaternion.LookRotation(-inward, Vector3.up), PunchReason.HookFistDirection, "너클이 바깥(반대)"),
+                };
+                foreach (var c in cases)
+                {
+                    var run = new Run(left, 90f) { Fist = c.fist };
+                    run.Stroke(Hook(left));
+                    Assert.AreEqual(1, run.Results.Count, c.label);
+                    var r = run.Results[0];
+                    Assert.AreEqual(c.reason, r.Reason, $"{(left ? "L" : "R")} {c.label}: 너클 {r.Measure.HookFistDegrees:F0}°, " +
+                                                        $"손등-진행 {r.Measure.HookBackLeadDegrees:F0}°, 손등-위 {r.Measure.HookBackUpDegrees:F0}°");
+                    Assert.AreEqual(c.reason == PunchReason.Hook ? PunchKind.Hook : PunchKind.None, r.Kind, c.label);
+                }
+            }
+        }
+
+        [Test]
+        public void HookFistDirection_UnknownOrOff_KeepsOldBehaviour()
+        {
+            var run = new Run(true, 90f);
+            run.Stroke(Hook(true));
+            Assert.AreEqual(PunchKind.Hook, run.Results[0].Kind, "주먹 방향 모름");
+            Assert.IsTrue(float.IsNaN(run.Results[0].Measure.HookFistDegrees));
+            var off = new Run(true, 90f, new PunchClassifierSettings { checkHookFistDirection = false })
+                { Fist = Quaternion.LookRotation(Vector3.forward, Vector3.down) };
+            off.Stroke(Hook(true));
+            Assert.AreEqual(PunchKind.Hook, off.Results[0].Kind, "끄면 손등이 뒤집혀도 훅");
+        }
+
+        [Test]
+        public void Jab_IgnoresFistDirection()
+        {
+            var run = new Run(true, 90f) { Fist = Quaternion.LookRotation(Vector3.forward, Vector3.down) };
+            run.Stroke(Jab);
+            Assert.AreEqual(PunchKind.Jab, run.Results[0].Kind, "주먹 방향 확인은 훅만");
         }
 
         [Test]
@@ -518,7 +574,7 @@ namespace Anseong.Tests
             var row = StrikeLog.FormatRow(PilotSide.Left, run.Results[0]);
             Assert.AreEqual(StrikeLog.Header.Split(',').Length, row.Split(',').Length);
             StringAssert.Contains(",Left,Jab,Jab,", row);
-            StringAssert.EndsWith(",1,,,,", row, "strike_id 1, 명중 칸 4개는 비움");
+            StringAssert.EndsWith(",1,,,,,,,", row, "strike_id 1, 명중 칸 4개·훅 주먹 칸 3개(주먹 방향 모름)는 비움");
             Assert.AreEqual("strikes_20261017_134500.csv",
                 System.IO.Path.GetFileName(StrikeLog.DefaultPath("root", new DateTime(2026, 10, 17, 13, 45, 0))));
         }
