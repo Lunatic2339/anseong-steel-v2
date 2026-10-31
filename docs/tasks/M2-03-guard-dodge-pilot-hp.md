@@ -38,6 +38,19 @@
 - 5개 기술 모두 막기·피하기·맞기가 판정되고 조종사 HP에 반영된다(헤드셋 확인). 테스트 통과.
 
 ## 결과 (작업 후 Claude가 작성)
+- **이어서 확인**: M2-02 위에 쌓았다(`feat/m2-01-host-server-path` → `feat/m2-02-boss-attack-state-machine` → 이 브랜치). 01·02를 먼저 확인한다. 이 작업만 따로 볼 수 없다(보스 공격이 있어야 막기를 시험할 수 있음).
 - 바뀐 파일:
-- 사람이 확인할 것:
+  - 새로: `Runtime/Combat/PilotHealth.cs`, `DodgeRules.cs`, `DefenseReporter.cs`, `PlayerHitFeedback.cs`, `Runtime/Boss/DefenseRules.cs`, `Runtime/UI/PilotHealthBar.cs`, `Tests/EditMode/DefenseTests.cs`
+  - 고침: `CombatAuthority.cs`(가드·스틱 보고, `ResolveBossStrike`, 조종사 HP), `CombatSnapshot.cs`(조종사 HP 복제, 보고 통로에 가드·스틱), `CombatServer.cs`(가드·스틱 RPC, 스틱은 sbyte로), `BossServer.cs`(명중 순간 → 판정 → 빈틈 길이), `CombatTypes.cs`(사건 `GuardBlock`·`GuardFail`·`DodgeStart`·`Dodge`·`PilotHit`·`PilotDefeated` 끝에 추가), `CombatCuePlayer.cs`(진동 우선순위: 피격 > 부스트 > 연계 > 명중 > 가드, 같은 손 최소 간격 0.09초, 피격은 두 손), `CombatCueSet.cs`(새 기본 줄: `SFX_Guard`·`SFX_GuardStrain`·`SFX_DodgeSlide`·`SFX_DodgeBurst`·`SFX_RobotHit`·`SFX_AlarmLowHP`), `CombatDirector.cs`(조종사 HP·회피 설정, 조절 메뉴 "위기 피해 감소" 토글), `TestGuidePanel.cs`(막음/맞음/피함 + 이유, 기체 HP), `CombatSetup.cs`(보고·미끄러짐·HP 막대 붙이기)
+- 정한 것:
+  - 회피는 "두 스틱이 같은 좌/우로 **새로** 맞은 순간"을 기록하고, 그 순간이 명중 0.6초 전~명중 사이면 인정. 계속 밀고 있던 것은 새 시작이 아니라 인정 안 됨.
+  - 회피 스틱: 1인 양팔은 각 손 스틱(왼손 = 왼쪽 조종사), 2인은 그 조종사의 이동 손.
+  - 회피 미끄러짐은 회피 동작 시작(`DodgeStart`) 때 옆으로 10m·0.4초(임시, 성공 여부와 무관). 각 PC가 같은 이벤트로 움직인다(로봇 위치 복제는 M3).
+  - 조종사 HP 0이면 보스가 새 공격을 시작하지 않는다. 패배 연출·재기동은 M4. `R`로 재시작.
+  - 외골격 자리: 예고 시작 `P` = `BossTelegraph`, 가드 접촉 `R` = `GuardBlock` 이벤트를 듣는 컴포넌트를 붙이면 된다(M3-04).
+- 사람이 할 일(Unity): Rebuild Robot + Pilot Input, Build M1 Main → 저장 → 새 `.meta`·`PilotHealthBar_Fill.mat`·프리팹·`CombatCues.asset` 커밋.
+- 사람이 확인할 것(헤드셋): 지시서 위 5개. 숫자 1~5로 기술을 부른다(02). 돌진(5)은 두 스틱을 같은 쪽으로 명중 직전에 민다.
 - 남은 문제 / 제안:
+  - 진동 우선순위는 손마다. 피격이 두 손으로 울리는 동안 가드 진동은 끼어들지 않는다.
+  - 조종석 흔들림은 1.5cm(멀미 때문에 작게). 헤드셋에서 크기 확인 필요(`PlayerHitFeedback` Shake Meters).
+  - 가드 보고는 바뀔 때만 보내므로 M3 지연이 크면 명중 순간 판정이 화면과 다를 수 있다. 그 경우 "화면에서는 막은 것 같은데 맞음"을 적어 주면 명중 순간을 지연만큼 늦게 판정하는 방법을 넣는다.

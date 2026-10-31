@@ -37,7 +37,7 @@ namespace Anseong.Net
             if (director == null) director = FindAnyObjectByType<CombatDirector>();
             if (IsServer)
             {
-                authority = new CombatAuthority(director != null ? director.CreateResolver() : new CombatResolver());
+                authority = director != null ? director.CreateAuthority() : new CombatAuthority(new CombatResolver());
                 state.Value = new NetCombatSnapshot(authority.Snapshot);
             }
             state.OnValueChanged += OnState;
@@ -75,6 +75,24 @@ namespace Anseong.Net
         public void SubmitMiss(PilotSide side, PunchKind kind, int strikeId) => MissRpc((byte)side, (byte)kind, strikeId);
         public void SubmitArmInput(PilotSide side, bool gripHeld, bool triggerPressed) => ArmInputRpc((byte)side, gripHeld, triggerPressed);
         public void RequestReset() => ResetRpc();
+        public void SubmitGuard(PilotSide side, bool guarding) => GuardRpc((byte)side, guarding);
+        public void SubmitStick(PilotSide side, Vector2 stick) => StickRpc((byte)side, Quantize(stick.x), Quantize(stick.y));
+
+        static sbyte Quantize(float v) => (sbyte)Mathf.RoundToInt(Mathf.Clamp(v, -1f, 1f) * 127f);
+
+        [Rpc(SendTo.Server)]
+        void GuardRpc(byte side, bool guarding, RpcParams rpc = default)
+        {
+            authority?.SetGuard((PilotSide)side, guarding);
+        }
+
+        [Rpc(SendTo.Server)]
+        void StickRpc(byte side, sbyte x, sbyte y, RpcParams rpc = default)
+        {
+            if (authority == null) return;
+            authority.SetStick((PilotSide)side, new Vector2(x / 127f, y / 127f), Now, events);
+            Flush();
+        }
 
         // M3: 보낸 PC가 그 팔의 주인인지(rpc.Receive.SenderClientId == pilotClient[side]) 검사를 여기에 넣는다.
         [Rpc(SendTo.Server)]

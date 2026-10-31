@@ -17,13 +17,20 @@ namespace Anseong.Combat
         public PilotSide ComboNextSide;
         public bool BoostOpen;
         public PilotSide BoostSide;
+        /// <summary>조종사 로봇 HP(M2-03).</summary>
+        public float PilotHealth;
+        public float PilotMax;
 
         public float BossFraction => BossMax > 0f ? BossHealth / BossMax : 0f;
         public bool BossDefeated => BossHealth <= 0f;
+        public float PilotFraction => PilotMax > 0f ? PilotHealth / PilotMax : 0f;
 
-        public static CombatSnapshot Full(float bossMax) => new CombatSnapshot { BossHealth = bossMax, BossMax = bossMax };
+        public static CombatSnapshot Full(float bossMax, float pilotMax = 100f) => new CombatSnapshot
+        {
+            BossHealth = bossMax, BossMax = bossMax, PilotHealth = pilotMax, PilotMax = pilotMax,
+        };
 
-        public static CombatSnapshot Of(CombatResolver resolver) => new CombatSnapshot
+        public static CombatSnapshot Of(CombatResolver resolver, PilotHealth pilot = null) => new CombatSnapshot
         {
             BossHealth = resolver.Boss.Current,
             BossMax = resolver.Boss.Max,
@@ -31,6 +38,8 @@ namespace Anseong.Combat
             ComboNextSide = resolver.Combo.NextSide,
             BoostOpen = resolver.Boost.IsOpen,
             BoostSide = resolver.Boost.Side,
+            PilotHealth = pilot != null ? pilot.Current : 100f,
+            PilotMax = pilot != null ? pilot.Max : 100f,
         };
     }
 
@@ -46,5 +55,9 @@ namespace Anseong.Combat
         void SubmitArmInput(PilotSide side, bool gripHeld, bool triggerPressed);
         /// <summary>운영자 재시작·조절 메뉴 "보스 HP 다시 채우기".</summary>
         void RequestReset();
+        /// <summary>그 팔의 가드가 켜지거나 꺼짐(M2-03, 바뀐 때만).</summary>
+        void SubmitGuard(PilotSide side, bool guarding);
+        /// <summary>그 조종사의 회피 스틱(M2-03, 바뀐 때만, -1~1).</summary>
+        void SubmitStick(PilotSide side, UnityEngine.Vector2 stick);
     }
 }

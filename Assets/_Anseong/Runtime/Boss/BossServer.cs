@@ -99,7 +99,7 @@ namespace Anseong.Boss
         /// <summary>서버: 기술 하나 시작(쉬는 중일 때만).</summary>
         public bool TryBegin(BossAttackKind kind)
         {
-            if (!IsServer || !bound) return false;
+            if (!IsServer || !bound || combat.Authority.Pilot.IsDefeated) return false;
             if (!machine.Begin(SpecOf(kind), Now, bossEvents)) return false;
             Publish();
             return true;
@@ -133,7 +133,22 @@ namespace Anseong.Boss
             return true;
         }
 
-        void OnImmediate(BossEvent e) => ServerEvent?.Invoke(e);
+        void OnImmediate(BossEvent e)
+        {
+            if (e.Type == BossEventType.Impact && combat != null && combat.Authority != null)
+            {
+                // 명중 순간: 먼저 "명중 순간" 사건, 이어서 가드·회피 판정 결과(M2-03). 결과는 빈틈 길이를 정한다.
+                combat.Events.Add(new CombatEvent
+                {
+                    Cue = CombatCue.BossStrike, Side = e.Side, Kind = PunchKind.None, Time = e.Time, Code = (int)e.Attack, Amount = e.Hit,
+                    BossHealth = combat.Authority.Resolver.Boss.Current, Point = transform.position,
+                });
+                var spec = machine.Attack ?? SpecOf(e.Attack);
+                var result = combat.Authority.ResolveBossStrike(spec.counter, e.Side, spec.failDamage, (int)e.Attack, e.Time, combat.Events);
+                machine.ReportOutcome(DefenseRules.IsSuccess(result));
+            }
+            ServerEvent?.Invoke(e);
+        }
 
         void OnReset()
         {
@@ -156,10 +171,6 @@ namespace Anseong.Boss
                     case BossEventType.AttackStarted:
                         cue.Cue = CombatCue.BossTelegraph;
                         cue.Amount = (int)SpecOf(e.Attack).level;
-                        break;
-                    case BossEventType.Impact:
-                        cue.Cue = CombatCue.BossStrike;
-                        cue.Amount = e.Hit;
                         break;
                     case BossEventType.OpeningStarted:
                         cue.Cue = CombatCue.BossOpening;

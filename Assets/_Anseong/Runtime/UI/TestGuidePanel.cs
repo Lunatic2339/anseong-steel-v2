@@ -126,6 +126,24 @@ namespace Anseong.UI
                 case CombatCue.BossTelegraph:
                     lastCombat = $"<color=#FFD24D>보스 예고</color> {BossAttackName(e.Code)}";
                     break;
+                case CombatCue.GuardBlock:
+                    lastCombat = $"<color=#5BE37D>막음</color> {side}팔 가드 ({BossAttackName(e.Code)})";
+                    break;
+                case CombatCue.GuardFail:
+                    lastCombat = $"<color=#FF6B6B>가드 모자람</color> {GuardFailReason(e)}";
+                    break;
+                case CombatCue.DodgeStart:
+                    lastCombat = $"회피 {(e.Amount < 0f ? "왼쪽" : "오른쪽")}";
+                    break;
+                case CombatCue.Dodge:
+                    lastCombat = "<color=#5BE37D>피함</color> 돌진 회피 성공";
+                    break;
+                case CombatCue.PilotHit:
+                    lastCombat += $"  <color=#FF6B6B>맞음 -{e.Damage:F0}% (남은 {e.Amount:F0}%)</color>";
+                    break;
+                case CombatCue.PilotDefeated:
+                    lastCombat = "<color=#FF6B6B>기체 HP 0 (R로 재시작)</color>";
+                    break;
                 case CombatCue.BossOpening:
                     lastCombat = $"<color=#5BE37D>보스 빈틈 {e.Amount:F1}초: 지금 치기</color>";
                     break;
@@ -141,6 +159,13 @@ namespace Anseong.UI
             }
             boostOpen = combat.State.BoostOpen;
             dirty = true;
+        }
+
+        static string GuardFailReason(CombatEvent e)
+        {
+            var kind = (Anseong.Boss.BossAttackKind)e.Code;
+            if (kind == Anseong.Boss.BossAttackKind.SlamBoth) return "내려찍기는 양팔 가드";
+            return $"{(e.Side == PilotSide.Left ? "왼" : "오른")}쪽에서 옴: {(e.Side == PilotSide.Left ? "왼" : "오른")}팔로 막기";
         }
 
         static string BossAttackName(int code)
@@ -378,6 +403,7 @@ namespace Anseong.UI
         {
             var r = combat.State;
             if (!combat.Connected) builder.Append("<color=#FF6B6B>전투 서버 연결 안 됨: 명중이 들어가지 않음</color>\n");
+            builder.Append("기체 HP ").Append(r.PilotHealth.ToString("F0")).Append("%   ");
             builder.Append("보스 HP ").Append(r.BossHealth.ToString("F0")).Append("%   연계 ").Append(r.ComboStep).Append("/3");
             if (r.ComboStep > 0)
                 builder.Append(" (다음: ").Append(r.ComboNextSide == PilotSide.Left ? "왼손 " : "오른손 ").Append(r.ComboStep == 2 ? "훅" : "잽").Append(')');

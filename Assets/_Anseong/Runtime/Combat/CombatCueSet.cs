@@ -98,6 +98,13 @@ namespace Anseong.Combat
             WithAmount(New(CombatCue.BossTelegraph, KindFilter.Any, "SFX_WarnHeavy", pitch: 1f), 1),
             WithAmount(New(CombatCue.BossTelegraph, KindFilter.Any, "SFX_Siren", pitch: 1f), 2),
             New(CombatCue.BossStrike, KindFilter.Any, "SFX_BossSwing", atHitPoint: true),
+            // M2-03 막기·피하기·피격
+            New(CombatCue.GuardBlock, KindFilter.Any, "SFX_Guard", haptic: 0.6f, seconds: 0.2f),
+            New(CombatCue.GuardFail, KindFilter.Any, "SFX_GuardStrain"),
+            New(CombatCue.DodgeStart, KindFilter.Any, "SFX_DodgeSlide"),
+            New(CombatCue.Dodge, KindFilter.Any, "SFX_DodgeBurst", pitch: 1f),
+            New(CombatCue.PilotHit, KindFilter.Any, "SFX_RobotHit", haptic: 1f, seconds: 0.3f),
+            New(CombatCue.PilotDefeated, KindFilter.Any, "SFX_AlarmLowHP", pitch: 1f),
         };
 
         static Entry WithAmount(Entry entry, int value)
