@@ -54,3 +54,6 @@
 
 - UnifiedSmoothRoads: 기존 자체 제작 도로를 기하 연산으로 합친 메시와 재생성 차선. Shapely는 외부 에셋이 아닌 오프라인 계산 도구로만 사용, Unity 런타임 의존성 없음.
 
+
+- CentrelineRoads: 직접 정의한 중심선과 일정 폭에서 생성한 도로/차선 메시. Shapely 오프라인 계산, 외부 에셋 미사용.
+
