@@ -29,15 +29,15 @@ Material:
         m_Offset: {x: 0, y: 0}
     m_Ints: []
     m_Floats:
-    - _Brightness: 1.13
-    - _Contrast: 0.95
-    - _DustStrength: 0.018
+    - _Brightness: 1.25
+    - _Contrast: 0.27
+    - _DustStrength: 0.008
     - _JointStrength: 0
     - _Pattern: 1
     - _Saturation: 0.12
     - _SlabSize: 6
     - _TileSize: 0.7
     m_Colors:
-    - _BaseColor: {r: 0.34, g: 0.39, b: 0.43, a: 1}
+    - _BaseColor: {r: 0.91, g: 0.91455, b: 0.9009, a: 1}
   m_BuildTextureStacks: []
   m_AllowLocking: 1
