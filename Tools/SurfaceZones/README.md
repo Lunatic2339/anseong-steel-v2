@@ -1,0 +1,2 @@
+# Functional ground zoning source
+Generated mesh/materials are in Assets/_Anseong/Art/Environment/SurfaceZones. Python script requires Shapely2.1+; input is current scene zone footprints and centre-line road geometry. Run on a backup scene using Anseong/Art/Export Surface Zones, build_surface_zones.py, then Apply Surface Zones. Duplicate application is guarded. Existing applied scene uses shared compressed texture and six independently editable material variants.

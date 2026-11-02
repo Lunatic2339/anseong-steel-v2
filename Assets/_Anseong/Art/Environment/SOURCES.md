@@ -60,3 +60,6 @@
 
 - GroundSurface/IndustrialConcrete_Albedo.png: built-in Imagegen으로 생성한 반복 콘크리트 바닥 이미지. 자체 작성 경량 셰이더 및 공용 머티리얼. 생성 프롬프트는 GroundSurface/README.md에 기록. 외부 사이트 사진 미사용.
 
+
+- SurfaceZones: 기존 생성형콘크리트 텍스처를 공유하는 자체 재질6종과 용도별 바닥면, 기존ScreeningTrees24주 재사용. 외부 에셋 없음.
+
