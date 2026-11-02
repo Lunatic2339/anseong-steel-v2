@@ -1,0 +1,2 @@
+# Factory paving regeneration
+Requires Python with Shapely2.1+. Run Unity menu Anseong/Art/Export Factory Paving, run build_factory_paving.py here, then apply through Apply Factory Paving on a scene without Factory_FivePavingZones. Uses existing Tools/SurfaceZones/surface_zone_plan.json and Tools/CentrelineRoads/road_union_result.json. Back up the scene before applying. Five independent material slots share the existing quay shader and compressed ground texture; no new image maps.
