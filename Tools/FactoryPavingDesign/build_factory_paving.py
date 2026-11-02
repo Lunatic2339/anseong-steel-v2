@@ -2,13 +2,14 @@ from pathlib import Path
 import sys,json
 root=Path(__file__).parent
 sys.path.insert(0,str(root/'road_geometry_lib'))
-from shapely import Polygon,union_all,constrained_delaunay_triangles
+from shapely import Polygon,box,union_all,constrained_delaunay_triangles
 from shapely.geometry.polygon import orient
 local=(root/'factory_paving_plan.json').exists()
 plan_path=root/'factory_paving_plan.json' if local else root/'TruckBuildProject/Tools/FactoryPavingDesign/factory_paving_plan.json'
 plan=json.loads(plan_path.read_text())
 old=json.loads((root.parent/'SurfaceZones/surface_zone_plan.json' if local else root/'surface_zone_plan.json').read_text())
 boundary=Polygon(list(zip(old['areas'][0]['xy'][::2],old['areas'][0]['xy'][1::2])))
+boundary=union_all([boundary,box(-215,-280,-151,445),box(-151,269,180,445)])
 r=json.loads((root.parent/'CentrelineRoads/road_union_result.json' if local else root/'road_union_result.json').read_text())
 xy=next(a['xy'] for a in r['layers'] if a['channel']==0)
 road=union_all([Polygon([(xy[i],xy[i+1]),(xy[i+2],xy[i+3]),(xy[i+4],xy[i+5])]) for i in range(0,len(xy),6)]).buffer(.12)
