@@ -51,3 +51,6 @@
 
 - RearVisibilityTrim: 기존 자체 도로 메시의 경계 절단, 씬 배치 정리 기록. 외부 에셋 없음.
 
+
+- UnifiedSmoothRoads: 기존 자체 제작 도로를 기하 연산으로 합친 메시와 재생성 차선. Shapely는 외부 에셋이 아닌 오프라인 계산 도구로만 사용, Unity 런타임 의존성 없음.
+
