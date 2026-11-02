@@ -86979,6 +86979,14 @@ PrefabInstance:
       propertyPath: m_Name
       value: CoastalLand
       objectReference: {fileID: 0}
+    - target: {fileID: 3619870069249520929, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 9db72932e30644842a6dfe64c5cdc23b, type: 2}
+    - target: {fileID: 7412144194837045264, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: 9db72932e30644842a6dfe64c5cdc23b, type: 2}
     - target: {fileID: 8403543517942035933, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
       propertyPath: m_IsActive
       value: 0

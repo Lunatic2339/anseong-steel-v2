@@ -57,3 +57,6 @@
 
 - CentrelineRoads: 직접 정의한 중심선과 일정 폭에서 생성한 도로/차선 메시. Shapely 오프라인 계산, 외부 에셋 미사용.
 
+
+- GroundSurface/IndustrialConcrete_Albedo.png: built-in Imagegen으로 생성한 반복 콘크리트 바닥 이미지. 자체 작성 경량 셰이더 및 공용 머티리얼. 생성 프롬프트는 GroundSurface/README.md에 기록. 외부 사이트 사진 미사용.
+
