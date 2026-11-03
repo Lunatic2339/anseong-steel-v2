@@ -102,6 +102,8 @@ namespace Anseong.Combat
             if (link == null) return;
             for (var h = 0; h < 2; h++)
             {
+                // 이 PC가 맡은 팔만(M3-01: 남의 팔 보고는 서버가 버린다).
+                if (input != null && !input.IsArmHand((PilotSide)h)) continue;
                 link.SubmitArmInput((PilotSide)h, state[h].GripDown, false);
                 state[h].GripSent = state[h].GripDown;
             }

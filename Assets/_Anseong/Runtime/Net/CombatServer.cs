@@ -21,9 +21,14 @@ namespace Anseong.Net
 
         readonly NetworkVariable<NetCombatSnapshot> state = new NetworkVariable<NetCombatSnapshot>();
         readonly List<CombatEvent> events = new List<CombatEvent>(16);
-        // 좌/우 조종사 PC. 1인 양팔(호스트)은 둘 다 서버 자신. M3 접속에서 채운다.
-        readonly ulong[] pilotClient = { Unity.Netcode.NetworkManager.ServerClientId, Unity.Netcode.NetworkManager.ServerClientId };
+        // 좌/우 팔 주인 PC(M3-01). 1인 양팔은 둘 다 서버 자신, 호스트 모드는 왼팔 = 호스트, 오른팔 = 접속한 PC-B.
+        ulong[] pilotClient = { Unity.Netcode.NetworkManager.ServerClientId, Unity.Netcode.NetworkManager.ServerClientId };
+        readonly bool[] warnedNotOwner = new bool[2];
         CombatAuthority authority;
+        bool watchingClients;
+
+        /// <summary>서버에서: 그 팔의 주인 PC(<see cref="SessionRules.NoOwner"/> = 아직 없음).</summary>
+        public ulong PilotClient(PilotSide side) => pilotClient[(int)side];
 
         /// <summary>서버에서만 있다. 보스 공격·페이즈(M2-02~)도 이것을 통해 같은 규칙에 닿는다.</summary>
         public CombatAuthority Authority => authority;
@@ -39,6 +44,12 @@ namespace Anseong.Net
             {
                 authority = new CombatAuthority(director != null ? director.CreateResolver() : new CombatResolver());
                 state.Value = new NetCombatSnapshot(authority.Snapshot);
+                var session = FindAnyObjectByType<SessionBootstrap>();
+                pilotClient = SessionRules.InitialOwners(session != null ? session.Mode : SessionMode.SoloBothArms, Unity.Netcode.NetworkManager.ServerClientId);
+                warnedNotOwner[0] = warnedNotOwner[1] = false;
+                NetworkManager.OnClientConnectedCallback += OnClientConnected;
+                NetworkManager.OnClientDisconnectCallback += OnClientDisconnected;
+                watchingClients = true;
             }
             state.OnValueChanged += OnState;
             if (director == null)
@@ -52,6 +63,12 @@ namespace Anseong.Net
 
         public override void OnNetworkDespawn()
         {
+            if (watchingClients && NetworkManager != null)
+            {
+                NetworkManager.OnClientConnectedCallback -= OnClientConnected;
+                NetworkManager.OnClientDisconnectCallback -= OnClientDisconnected;
+            }
+            watchingClients = false;
             state.OnValueChanged -= OnState;
             if (director != null) director.Disconnect(this);
             authority = null;
@@ -76,11 +93,40 @@ namespace Anseong.Net
         public void SubmitArmInput(PilotSide side, bool gripHeld, bool triggerPressed) => ArmInputRpc((byte)side, gripHeld, triggerPressed);
         public void RequestReset() => ResetRpc();
 
-        // M3: 보낸 PC가 그 팔의 주인인지(rpc.Receive.SenderClientId == pilotClient[side]) 검사를 여기에 넣는다.
+        // ── 팔 주인 (M3-01) ──
+
+        void OnClientConnected(ulong clientId)
+        {
+            if (clientId == Unity.Netcode.NetworkManager.ServerClientId) return;
+            if (SessionRules.AssignJoiner(pilotClient, clientId))
+            {
+                warnedNotOwner[(int)PilotSide.Right] = false;
+                Debug.Log($"[CombatServer] 오른팔 주인 = 클라이언트 {clientId}", this);
+            }
+        }
+
+        void OnClientDisconnected(ulong clientId)
+        {
+            if (SessionRules.ReleaseLeaver(pilotClient, clientId))
+                Debug.LogWarning($"[CombatServer] 클라이언트 {clientId}가 나가 그 팔의 보고를 받지 않습니다(다시 접속하면 돌아옴).", this);
+        }
+
+        /// <summary>보낸 PC가 그 팔 주인인지. 아니면 버리고 팔마다 한 번만 경고.</summary>
+        bool FromOwner(PilotSide side, in RpcParams rpc)
+        {
+            if (SessionRules.IsOwner(pilotClient, side, rpc.Receive.SenderClientId)) return true;
+            if (!warnedNotOwner[(int)side])
+            {
+                warnedNotOwner[(int)side] = true;
+                Debug.LogWarning($"[CombatServer] {side} 팔 주인이 아닌 PC(클라이언트 {rpc.Receive.SenderClientId})의 보고를 버립니다.", this);
+            }
+            return false;
+        }
+
         [Rpc(SendTo.Server)]
         void HitRpc(NetHitReport report, RpcParams rpc = default)
         {
-            if (authority == null) return;
+            if (authority == null || !FromOwner(report.Value.Side, rpc)) return;
             authority.SubmitHit(report.Value, Now, events);
             Flush();
         }
@@ -88,7 +134,7 @@ namespace Anseong.Net
         [Rpc(SendTo.Server)]
         void MissRpc(byte side, byte kind, int strikeId, RpcParams rpc = default)
         {
-            if (authority == null) return;
+            if (authority == null || !FromOwner((PilotSide)side, rpc)) return;
             authority.SubmitMiss((PilotSide)side, (PunchKind)kind, strikeId, Now, events);
             Flush();
         }
@@ -96,7 +142,8 @@ namespace Anseong.Net
         [Rpc(SendTo.Server)]
         void ArmInputRpc(byte side, bool gripHeld, bool triggerPressed, RpcParams rpc = default)
         {
-            authority?.SetArmInput((PilotSide)side, gripHeld, triggerPressed);
+            if (authority == null || !FromOwner((PilotSide)side, rpc)) return;
+            authority.SetArmInput((PilotSide)side, gripHeld, triggerPressed);
         }
 
         [Rpc(SendTo.Server)]
@@ -135,7 +182,7 @@ namespace Anseong.Net
         /// <summary>서버에서: 한 조종사 PC에만 보내는 사건(교차 예고처럼 좌우가 다른 정보를 받을 때).</summary>
         public void SendToPilot(PilotSide side, CombatEvent e)
         {
-            if (!IsServer || authority == null) return;
+            if (!IsServer || authority == null || pilotClient[(int)side] == SessionRules.NoOwner) return;
             PilotCueRpc(new NetCombatEvent(e), new NetCombatSnapshot(authority.Snapshot),
                 RpcTarget.Single(pilotClient[(int)side], RpcTargetUse.Temp));
         }

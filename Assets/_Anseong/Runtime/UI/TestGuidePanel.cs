@@ -87,9 +87,12 @@ namespace Anseong.UI
             if (classifier != null) classifier.StrikeCompleted += OnStrike;
             if (combat != null) combat.Cue += OnCombat;
             if (session != null) session.ProblemChanged += OnSessionProblem;
+            if (session != null) session.StateChanged += OnSessionState;
         }
 
         void OnSessionProblem(string problem) => dirty = true;
+
+        void OnSessionState() => dirty = true;
 
         void OnDestroy()
         {
@@ -101,6 +104,7 @@ namespace Anseong.UI
             if (classifier != null) classifier.StrikeCompleted -= OnStrike;
             if (combat != null) combat.Cue -= OnCombat;
             if (session != null) session.ProblemChanged -= OnSessionProblem;
+            if (session != null) session.StateChanged -= OnSessionState;
         }
 
         void OnCombat(CombatEvent e)
@@ -257,6 +261,7 @@ namespace Anseong.UI
         {
             builder.Length = 0;
             if (session != null && session.Problem.Length > 0) builder.Append("<color=#FF6B6B>").Append(session.Problem).Append("</color>\n");
+            if (session != null && session.WaitingForOperator) builder.Append("<color=#FFD166>PC 화면에서 운영자가 시작하기를 기다리는 중</color>\n");
             if (!calibration.IsComplete) DrawCalibration();
             else DrawPunches();
             text.text = builder.ToString();
