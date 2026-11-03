@@ -15,7 +15,7 @@ PC-A는 "호스트(왼팔)", PC-B는 "클라이언트(오른팔)"로 시작해 �
 
 ## Claude가 할 일
 1. 순수 `Net/SessionRules`: 접속 승인(호스트 자신 OK, 1인 양팔은 남 거절, 약속 번호 다르면 거절, 호스트 포함 2명), 팔 주인(시작·들어옴·나감·검사), IPv4 읽기, 실행 인자 `-mode`·`-ip`.
-2. `SessionBootstrap`: 호스트는 0.0.0.0:7777에서 기다림, 클라이언트는 IP로 접속(5초 안에 못 찾으면 실패), 접속 승인 콜백. 모드에 맞게 맡은 손을 바꾸고 보정을 처음부터. 마지막 모드·IP는 PlayerPrefs. 끊기면 이유를 띄우고 시작 화면으로. 에디터는 기본으로 시작 화면을 건너뛰고 Inspector Mode로 바로 시작(지금과 같음).
+2. `SessionBootstrap`: 호스트는 0.0.0.0:7777에서 기다림, 클라이언트는 IP로 접속(5초 안에 못 찾으면 실패), 접속 승인 콜백. 모드에 맞게 맡은 손·좌석(클라이언트 = 오른쪽)을 바꾸고 보정을 처음부터. 마지막 모드·IP는 PlayerPrefs. 끊기면 이유를 띄우고 시작 화면으로. 에디터는 기본으로 시작 화면을 건너뛰고 Inspector Mode로 바로 시작(지금과 같음).
 3. `CombatServer`: 팔 주인 채우기(1인 양팔 = 둘 다 호스트, 호스트 모드 = 왼팔 호스트·오른팔 접속한 PC), 명중·헛침·그립 보고를 주인 아니면 버림. `CombatDirector.Connect`는 맡은 팔만 보낸다.
 4. `UI/OperatorStartScreen`: PC 모니터 화면(Screen Space Overlay). 모드 3개, 호스트는 이 PC IP 표시, 클라이언트는 IP 칸, 시작(Enter), 문제 빨간 줄. 시작 뒤에는 왼쪽 위 상태 줄(모드·조종사 수) + "다시 고르기". 헤드셋 안내판에는 "운영자가 시작하기를 기다리는 중".
 5. 메뉴 **Add Network Session**이 시작 화면도 붙인다.
@@ -27,7 +27,7 @@ PC-A는 "호스트(왼팔)", PC-B는 "클라이언트(오른팔)"로 시작해 �
 - [ ] 에디터 Play(1인 양팔): 지금처럼 바로 시작, Console `[Session] Host started (1인 양팔…)`, M1·M2-01 기능 그대로.
 - [ ] `SessionBootstrap` Skip Start Screen In Editor를 끄고 Play: 모니터에 시작 화면, 헤드셋은 안 보임(안내판에 노란 줄). 1인 양팔 시작 → 위와 같음. 다시 고르기 → 화면 다시.
 - [ ] 빌드 2대(성재와): PC-A 호스트 → 화면에 나온 IP를 PC-B 클라이언트 칸에 → 시작. 두 PC 상태 줄 "조종사 2/2". Windows 방화벽 창이 뜨면 "개인 네트워크 허용".
-- [ ] PC-A는 왼손만, PC-B는 오른손만 보정·펀치를 받는다. PC-B 오른손 명중 → 보스 HP가 두 PC에서 같이 준다.
+- [ ] PC-A는 왼쪽 좌석·왼손만, PC-B는 오른쪽 좌석(2.1m 옆)·오른손만 보정·펀치를 받는다. PC-B 오른손 명중 → 보스 HP가 두 PC에서 같이 준다.
 - [ ] 3번째 PC(또는 같은 PC의 빌드 하나 더) 접속 → "이미 조종사 2명" 거절.
 - [ ] PC-B 끄기 → PC-A 상태 줄 1/2, 다시 켜서 접속 → 2/2. PC-A 끄기 → PC-B에 "호스트와 연결이 끊겼습니다" + 시작 화면.
 - [ ] 다음 실행에서 마지막 모드·IP가 미리 골라져 있다.
@@ -41,7 +41,7 @@ PC-A는 "호스트(왼팔)", PC-B는 "클라이언트(오른팔)"로 시작해 �
 ## 결과 (작업 후 Claude가 작성)
 - 바뀐 파일:
   - 새로: `Runtime/Net/SessionRules.cs`, `Runtime/UI/OperatorStartScreen.cs`, `Tests/EditMode/SessionRulesTests.cs`
-  - 고침: `Net/SessionBootstrap.cs`(호스트·클라이언트·승인·역할·기억·끊김), `Net/CombatServer.cs`(팔 주인 채우기·검사), `Combat/CombatDirector.cs`(Connect 때 맡은 팔만 2줄), `UI/TestGuidePanel.cs`(대기 노란 줄), `Editor/NetworkSessionMenu.cs`(시작 화면 붙임), `Anseong.Runtime.asmdef`(`UnityEngine.UI` 참조), `docs/폴더_지도.md`
+  - 고침: `Net/SessionBootstrap.cs`(호스트·클라이언트·승인·역할·기억·끊김), `Net/CombatServer.cs`(팔 주인 채우기·검사), `Combat/CombatDirector.cs`(Connect 때 맡은 팔만 2줄), `Pilot/CockpitSeat.cs`(`Side` 바꾸기: 클라이언트는 오른쪽 좌석), `UI/TestGuidePanel.cs`(대기 노란 줄), `Editor/NetworkSessionMenu.cs`(시작 화면 붙임), `Anseong.Runtime.asmdef`(`UnityEngine.UI` 참조), `docs/폴더_지도.md`
 - 사람이 할 일(Unity):
   1. 코드 받고 `error CS` 없는지 확인(클라우드에서는 컴파일 못 돌림).
   2. `Sandbox_Pilot`에서 **Anseong → Setup → Add Network Session**(또는 Rebuild Robot + Pilot Input) → Ctrl+S. `Main`은 Build M1 Main → Ctrl+S. `Network Session` 오브젝트에 `OperatorStartScreen`이 붙는다.

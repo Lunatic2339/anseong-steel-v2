@@ -55,6 +55,9 @@ namespace Anseong.Net
         [SerializeField, Tooltip("보정 흐름. 맡은 팔이 바뀌면 보정을 처음부터. 비어 있으면 한 번 찾는다.")]
         PilotCalibrationFlow calibration;
 
+        [SerializeField, Tooltip("조종석 좌석. 클라이언트(오른팔)는 오른쪽 좌석에 선다. 비어 있으면 한 번 찾는다.")]
+        CockpitSeat seat;
+
         readonly HashSet<ulong> remotePilots = new HashSet<ulong>();
         bool subscribed;
         bool clientConnected;
@@ -189,9 +192,11 @@ namespace Anseong.Net
         {
             if (input == null) input = FindAnyObjectByType<PilotHandInput>();
             if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
-            if (input == null) return;
+            if (seat == null) seat = FindAnyObjectByType<CockpitSeat>();
             var both = mode == SessionMode.SoloBothArms;
             var side = SessionRules.ArmSide(mode);
+            if (seat != null) seat.Side = side;
+            if (input == null) return;
             if (input.ControlsBothArms == both && input.ArmSide == side) return;
             input.ControlsBothArms = both;
             input.ArmSide = side;
