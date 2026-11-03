@@ -143,7 +143,7 @@ namespace Anseong.UI
                     lastCombat += $"  <color=#FF6B6B>맞음 -{e.Damage:F0}% (남은 {e.Amount:F0}%)</color>";
                     break;
                 case CombatCue.PilotDefeated:
-                    lastCombat = "<color=#FF6B6B>기체 HP 0 (R로 재시작)</color>";
+                    lastCombat = "<color=#FF6B6B>기체 HP 0 (두 스틱 함께 1초 눌러 재시작)</color>";
                     break;
                 case CombatCue.PhaseChanged:
                     lastCombat = $"<color=#FFD24D>{e.Code}페이즈 시작 (포효 중 무적)</color>";
