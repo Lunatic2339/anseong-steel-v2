@@ -24,6 +24,10 @@ MonoBehaviour:
     atHitPoint: 0
     hapticAmplitude: 0.15
     hapticSeconds: 0.03
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 1
     kind: 0
     soundName: SFX_GripRelease
@@ -35,6 +39,10 @@ MonoBehaviour:
     atHitPoint: 0
     hapticAmplitude: 0
     hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 2
     kind: 1
     soundName: SFX_JabLaunch
@@ -46,6 +54,10 @@ MonoBehaviour:
     atHitPoint: 0
     hapticAmplitude: 0
     hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 2
     kind: 2
     soundName: SFX_HookSwing
@@ -57,6 +69,10 @@ MonoBehaviour:
     atHitPoint: 0
     hapticAmplitude: 0
     hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 2
     kind: 3
     soundName: SFX_HookSwing
@@ -68,6 +84,10 @@ MonoBehaviour:
     atHitPoint: 0
     hapticAmplitude: 0
     hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 3
     kind: 1
     soundName: SFX_PunchHit
@@ -79,6 +99,10 @@ MonoBehaviour:
     atHitPoint: 1
     hapticAmplitude: 0.5
     hapticSeconds: 0.08
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 3
     kind: 2
     soundName: SFX_HookHit
@@ -90,6 +114,10 @@ MonoBehaviour:
     atHitPoint: 1
     hapticAmplitude: 0.8
     hapticSeconds: 0.15
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 3
     kind: 3
     soundName: SFX_HookHit
@@ -101,6 +129,10 @@ MonoBehaviour:
     atHitPoint: 1
     hapticAmplitude: 0.7
     hapticSeconds: 0.12
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 3
     kind: 2
     soundName: SFX_BossStagger
@@ -112,6 +144,10 @@ MonoBehaviour:
     atHitPoint: 1
     hapticAmplitude: 0
     hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 4
     kind: 0
     soundName: SFX_PunchWhoosh
@@ -123,6 +159,10 @@ MonoBehaviour:
     atHitPoint: 0
     hapticAmplitude: 0
     hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 5
     kind: 0
     soundName: SFX_ComboStep
@@ -134,6 +174,10 @@ MonoBehaviour:
     atHitPoint: 0
     hapticAmplitude: 0
     hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 7
     kind: 0
     soundName: SFX_BoostReady
@@ -145,6 +189,10 @@ MonoBehaviour:
     atHitPoint: 0
     hapticAmplitude: 0
     hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 8
     kind: 0
     soundName: SFX_Boost
@@ -156,6 +204,10 @@ MonoBehaviour:
     atHitPoint: 0
     hapticAmplitude: 1
     hapticSeconds: 0.25
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
   - cue: 8
     kind: 0
     soundName: SFX_BoostHit
@@ -167,3 +219,82 @@ MonoBehaviour:
     atHitPoint: 1
     hapticAmplitude: 0
     hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 11
+    kind: 0
+    soundName: SFX_Guard
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0.3
+    hapticSeconds: 0.05
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 12
+    kind: 0
+    soundName: SFX_WarnNormal
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 1
+    amount: 0
+  - cue: 12
+    kind: 0
+    soundName: SFX_WarnHeavy
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 1
+    amount: 1
+  - cue: 12
+    kind: 0
+    soundName: SFX_Siren
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 1
+    amount: 2
+  - cue: 13
+    kind: 0
+    soundName: SFX_BossSwing
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0

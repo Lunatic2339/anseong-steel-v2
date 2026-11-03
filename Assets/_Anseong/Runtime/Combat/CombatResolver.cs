@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using Anseong.Pilot;
 
@@ -15,6 +16,12 @@ namespace Anseong.Combat
         readonly BossHealth boss;
         // 팔마다 이미 명중한 마지막 동작 번호. 동작 번호는 팔마다 1부터 오른다.
         readonly int[] lastHitStrike = { 0, 0 };
+
+        /// <summary>
+        /// 보스가 지금 피해를 받는지(빈틈·경직, M2-02). 비어 있으면 항상 받는다(M1과 같음).
+        /// 거짓이면 명중은 <see cref="CombatCue.Blocked"/>(피해 0, 연계 차례 그대로)가 된다.
+        /// </summary>
+        public Func<bool> BossVulnerable;
 
         public CombatResolver(ComboSettings comboSettings = null, BoostSettings boostSettings = null, BossHealthSettings bossSettings = null)
         {
@@ -44,6 +51,17 @@ namespace Anseong.Combat
             var h = (int)report.Side;
             if (boss.IsDefeated || report.Kind == PunchKind.None || report.StrikeId <= 0 || report.StrikeId <= lastHitStrike[h]) return false;
             lastHitStrike[h] = report.StrikeId;
+
+            if (BossVulnerable != null && !BossVulnerable())
+            {
+                // 보스가 막음: 피해 0, 연계는 끊지도 올리지도 않는다(05 "보스 한 번의 공격 흐름").
+                var blocked = Make(CombatCue.Blocked, report.Side, report.Kind, time);
+                blocked.Quality = report.Quality;
+                blocked.Zone = report.Zone;
+                blocked.Point = report.Point;
+                Add(events, blocked);
+                return true;
+            }
 
             // 다른 공격이 들어오면 열려 있던 부스트 창은 닫힌다.
             if (boost.IsOpen) Add(events, Make(CombatCue.BoostMissed, boost.Side, PunchKind.Hook, time));
@@ -107,6 +125,11 @@ namespace Anseong.Combat
                 return;
             }
             if (result != BoostWindow.Result.Boosted) return;
+            if (BossVulnerable != null && !BossVulnerable())
+            {
+                Add(events, Make(CombatCue.Blocked, side, PunchKind.Hook, time));
+                return;
+            }
             var e = Make(CombatCue.Boost, side, PunchKind.Hook, time);
             e.Damage = boss.Apply(boss.BoostDamage);
             e.ComboStep = 3;

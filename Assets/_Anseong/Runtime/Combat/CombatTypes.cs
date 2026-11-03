@@ -64,6 +64,17 @@ namespace Anseong.Combat
         BoostMissed,
         /// <summary>보스 HP 0.</summary>
         BossDefeated,
+
+        // ── M2 (enum 값이 소리 표 에셋에 숫자로 저장되므로 항상 끝에만 더한다) ──
+
+        /// <summary>보스가 빈틈·경직이 아닐 때 친 명중: 피해 0, 연계 차례 그대로(M2-02).</summary>
+        Blocked,
+        /// <summary>보스 공격 예고 시작. Code = 기술(BossAttackKind), Amount = 예고 등급(0 일반, 1 강, 2 가드 불가), Side = 들어오는 쪽.</summary>
+        BossTelegraph,
+        /// <summary>보스 공격 명중 순간(연타는 타마다). Code = 기술, Amount = 몇 번째 타(0부터), Side = 들어오는 쪽.</summary>
+        BossStrike,
+        /// <summary>보스 빈틈 시작(반격 기회). Amount = 빈틈 길이(초).</summary>
+        BossOpening,
     }
 
     /// <summary>연계가 끊긴 이유.</summary>
@@ -92,5 +103,9 @@ namespace Anseong.Combat
         public BossZone Zone;
         public Vector3 Point;
         public double Time;
+        /// <summary>사건별 번호(보스 기술, 페이즈 번호 등). 뜻은 <see cref="CombatCue"/> 설명에.</summary>
+        public int Code;
+        /// <summary>사건별 수치(예고 등급, 빈틈 길이, 충전 비율 등). 뜻은 <see cref="CombatCue"/> 설명에.</summary>
+        public float Amount;
     }
 }
