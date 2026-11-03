@@ -379,6 +379,10 @@ GameObject:
   - component: {fileID: 3663830534316776482}
   - component: {fileID: 6961442614316172662}
   - component: {fileID: 7818838624670453558}
+  - component: {fileID: 847870879259611745}
+  - component: {fileID: 302664523350849653}
+  - component: {fileID: 7092672190005167153}
+  - component: {fileID: 2819167299529934398}
   m_Layer: 0
   m_Name: Robot_Boss
   m_TagString: Untagged
@@ -438,7 +442,97 @@ MonoBehaviour:
   fadeOutSeconds: 0.35
   hitStaggerSeconds: 0.6
   boostStaggerSeconds: 1.2500001
+  actions: {fileID: 0}
   staggerOnJab: 0
+--- !u!114 &847870879259611745
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7321617317968409065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d5a57f767e5e46a458fc5d3c628d0cbb, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Unity.Netcode.Runtime::Unity.Netcode.NetworkObject
+  GlobalObjectIdHash: 0
+  InScenePlacedSourceGlobalObjectIdHash: 0
+  m_InScenePlacedDisabledByDefault: 0
+  DeferredDespawnTick: 0
+  Ownership: 1
+  AlwaysReplicateAsRoot: 0
+  SynchronizeTransform: 1
+  m_InScenePlaced: 0
+  ActiveSceneSynchronization: 0
+  SceneMigrationSynchronization: 1
+  SpawnWithObservers: 1
+  DontDestroyWithOwner: 0
+  AutoObjectParentSync: 1
+  SyncOwnerTransformWhenParented: 1
+  AllowOwnerToParent: 0
+--- !u!114 &302664523350849653
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7321617317968409065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 47441f93702a7bf4fa79b664f07989d5, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Boss.BossServer
+  ShowTopMostFoldoutHeaderGroup: 1
+  combat: {fileID: 0}
+  attacks:
+  - {fileID: 11400000, guid: 1cf97b57406c3b44485204772116a812, type: 2}
+  - {fileID: 11400000, guid: 36e16fb300343f348b8005851fa37df7, type: 2}
+  - {fileID: 11400000, guid: 5f2c74da54dcd5249a332a9dccf15aff, type: 2}
+  - {fileID: 11400000, guid: fe2906581af18c24084aea995194d0a2, type: 2}
+  - {fileID: 11400000, guid: 8974955ddd5574c428cbd4727f0018f7, type: 2}
+  restIsOpening: 1
+  comboHoldSeconds: 2.4
+  testAttack: 1
+  testRestSeconds: 3
+  debugKeys: 1
+--- !u!114 &7092672190005167153
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7321617317968409065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7717b650f72ed614cabdf2c97c870218, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Boss.BossAnimationDriver
+  server: {fileID: 0}
+  animator: {fileID: 0}
+  fadeSeconds: 0.25
+  idleState: Idle
+  staggerState: Stagger
+  deathState: Death
+--- !u!114 &2819167299529934398
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 7321617317968409065}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c76cb1e0d44c8a74a870b6c022fe756d, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Boss.BossTelegraphTint
+  director: {fileID: 0}
+  renderers: []
+  normal: {r: 1, g: 0.85, b: 0.2, a: 1}
+  heavy: {r: 1, g: 0.45, b: 0.1, a: 1}
+  unblockable: {r: 1, g: 0.05, b: 0.05, a: 1}
+  pulsesPerSecond: 3
+  strength: 0.7
 --- !u!1001 &3367648653975221506
 PrefabInstance:
   m_ObjectHideFlags: 0
