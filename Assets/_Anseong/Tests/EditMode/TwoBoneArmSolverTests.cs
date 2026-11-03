@@ -165,6 +165,8 @@ namespace Anseong.Tests
                 new Vector3(2f, -6f, 14f), new Vector3(-2f, 22f, 6f), new Vector3(-4f, 10f, -18f),
                 new Vector3(-6f, -10f, -14f), new Vector3(20f, 2f, 8f), new Vector3(2f, -6f, 14f),
             };
+            // 전완 롤은 rollSpeed까지 돌 수 있다(선우 10/28: 회전은 빠르게). 그 위로 튀면 실패.
+            var lowerLimit = new ArmSolverSettings().rollSpeed * Dt + 4f;
             var previous = Solve(solver, Shoulder + path[0], frames: 30);
             for (var segment = 0; segment + 1 < path.Length; segment++)
             {
@@ -173,7 +175,7 @@ namespace Anseong.Tests
                     var target = Shoulder + Vector3.Lerp(path[segment], path[segment + 1], i / 180f);
                     var pose = Solve(solver, target);
                     Assert.Less(Quaternion.Angle(previous.Upper, pose.Upper), 6f, $"위팔이 한 프레임에 크게 돌지 않음 (구간 {segment}, {i})");
-                    Assert.Less(Quaternion.Angle(previous.Lower, pose.Lower), 8f, $"아래팔이 한 프레임에 크게 돌지 않음 (구간 {segment}, {i})");
+                    Assert.Less(Quaternion.Angle(previous.Lower, pose.Lower), lowerLimit, $"아래팔이 한 프레임에 크게 돌지 않음 (구간 {segment}, {i})");
                     Assert.Less(Vector3.Distance(previous.Elbow, pose.Elbow), total * 0.05f, $"팔꿈치가 튀지 않음 (구간 {segment}, {i})");
                     Assert.LessOrEqual(Mathf.Abs(pose.Swivel), new ArmSolverSettings().maxSwivelDegrees + 1e-3f, "swivel 한계");
                     AssertLengths(pose);
@@ -222,6 +224,20 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void ExtendedArm_TurningFist_DoesNotSwingElbow()
+        {
+            // 거의 다 뻗은 팔(92%)에서 주먹을 위·옆으로 40° 돌려도 팔꿈치는 거의 그대로(선우 10/28).
+            var target = Shoulder + new Vector3(0f, -2f, (Upper + Lower) * 0.92f);
+            var straight = Solve(NewSolver(), target, frames: 90);
+            var turned = Solve(NewSolver(), target, Quaternion.Euler(-40f, 40f, 0f) * FistToward(target), frames: 90);
+            Assert.Less(Vector3.Distance(straight.Elbow, turned.Elbow), 0.3f, "팔꿈치가 원을 그리지 않음");
+
+            var settings = new ArmSolverSettings { holdElbowWhenExtended = false };
+            var old = Solve(new TwoBoneArmSolver(LeftBind(), settings), target, Quaternion.Euler(-40f, 40f, 0f) * FistToward(target), frames: 90);
+            Assert.Greater(Vector3.Distance(straight.Elbow, old.Elbow), 0.3f, "끄면 예전처럼 주먹 방향이 팔꿈치를 돌림");
+        }
+
+        [Test]
         public void BoundSwivel_HoldsSideNearOppositeLimits()
         {
             Assert.AreEqual(50f, TwoBoneArmSolver.BoundSwivel(50f, 0f), 1e-4f);
@@ -231,5 +247,30 @@ namespace Anseong.Tests
             Assert.AreEqual(105f, TwoBoneArmSolver.BoundSwivel(-178f, 100f), 1e-4f);
             Assert.AreEqual(-105f, TwoBoneArmSolver.BoundSwivel(178f, -100f), 1e-4f);
         }
+
+        static readonly Vector3 GuardTarget = Shoulder + new Vector3(5f, 4f, 10f);
+        // 가드에서 사람 손목이 살짝 굽은 컨트롤러: 위·안쪽을 향함.
+        static readonly Quaternion CatPaw = Quaternion.LookRotation(new Vector3(.5f, 1f, .4f), Vector3.back);
+
+        static ArmPose SolveGuard(TwoBoneArmSolver solver)
+        {
+            var pose = default(ArmPose);
+            for (var i = 0; i < 90; i++)
+                pose = solver.Solve(Shoulder, GuardTarget, CatPaw, Quaternion.identity, 0f, 0f, Dt);
+            return pose;
+        }
+
+        [Test]
+        public void ElbowSpread_MovesBentElbowOutward_KeepsWristFree()
+        {
+            var bind = LeftBind();
+            var before = SolveGuard(new TwoBoneArmSolver(bind, new ArmSolverSettings { elbowSpreadDegrees = 0f }));
+            var spread = SolveGuard(new TwoBoneArmSolver(bind, new ArmSolverSettings { elbowSpreadDegrees = 20f }));
+            AssertLengths(spread);
+            Assert.Less(Vector3.Distance(GuardTarget, spread.Wrist), 1e-2f, "주먹 위치는 그대로");
+            Assert.Less(spread.Elbow.x, before.Elbow.x, "왼팔 팔꿈치가 더 바깥(−X)");
+            Assert.Greater(Vector3.Angle(spread.Hand * bind.FistForwardLocal, spread.Wrist - spread.Elbow), 10f, "손목은 고정하지 않고 컨트롤러를 따라감");
+        }
+
     }
 }

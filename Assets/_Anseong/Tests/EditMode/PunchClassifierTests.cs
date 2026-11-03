@@ -27,10 +27,16 @@ namespace Anseong.Tests
                 Hz = hz;
             }
 
+            /// <summary>정하면 샘플마다 주먹 끝 방향(몸 기준)도 넣는다.</summary>
+            public Quaternion? Fist;
+
             public void Sample(Vector3 offset, bool intent = true, bool tracked = true)
             {
                 PunchResult r;
-                if (Classifier.Sample(Neutral + offset, tracked, intent, Time, out r)) Results.Add(r);
+                var done = Fist.HasValue
+                    ? Classifier.Sample(Neutral + offset, Fist.Value, tracked, intent, Time, out r)
+                    : Classifier.Sample(Neutral + offset, tracked, intent, Time, out r);
+                if (done) Results.Add(r);
                 Time += 1.0 / Hz;
             }
 
@@ -211,6 +217,56 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void HookFistDirection_LenientExceptNonsense()
+        {
+            // 선우 10/31: 유하게, 손등이 뒤집혔거나 손등으로 치거나 너클이 반대쪽인 것만 거른다. 왼팔 훅은 안쪽(+X)으로 휘어 들어온다.
+            foreach (var left in new[] { true, false })
+            {
+                var inward = left ? Vector3.right : Vector3.left;
+                var cases = new (Quaternion fist, PunchReason reason, string label)[]
+                {
+                    (Quaternion.LookRotation((inward + Vector3.forward).normalized, Vector3.up), PunchReason.Hook, "눕힌 주먹, 너클이 휘두르는 쪽"),
+                    (Quaternion.identity, PunchReason.Hook, "보정 펀치 자세 그대로(너클 정면)"),
+                    (Quaternion.LookRotation(inward, Vector3.forward), PunchReason.Hook, "세운 주먹"),
+                    (Quaternion.LookRotation((inward + Vector3.forward).normalized, Vector3.down), PunchReason.HookPalmUp, "손등 뒤집힘"),
+                    (Quaternion.LookRotation(Vector3.forward, inward), PunchReason.HookBackhand, "손등으로 침"),
+                    (Quaternion.LookRotation(-inward, Vector3.up), PunchReason.HookFistDirection, "너클이 바깥(반대)"),
+                };
+                foreach (var c in cases)
+                {
+                    var run = new Run(left, 90f) { Fist = c.fist };
+                    run.Stroke(Hook(left));
+                    Assert.AreEqual(1, run.Results.Count, c.label);
+                    var r = run.Results[0];
+                    Assert.AreEqual(c.reason, r.Reason, $"{(left ? "L" : "R")} {c.label}: 너클 {r.Measure.HookFistDegrees:F0}°, " +
+                                                        $"손등-진행 {r.Measure.HookBackLeadDegrees:F0}°, 손등-위 {r.Measure.HookBackUpDegrees:F0}°");
+                    Assert.AreEqual(c.reason == PunchReason.Hook ? PunchKind.Hook : PunchKind.None, r.Kind, c.label);
+                }
+            }
+        }
+
+        [Test]
+        public void HookFistDirection_UnknownOrOff_KeepsOldBehaviour()
+        {
+            var run = new Run(true, 90f);
+            run.Stroke(Hook(true));
+            Assert.AreEqual(PunchKind.Hook, run.Results[0].Kind, "주먹 방향 모름");
+            Assert.IsTrue(float.IsNaN(run.Results[0].Measure.HookFistDegrees));
+            var off = new Run(true, 90f, new PunchClassifierSettings { checkHookFistDirection = false })
+                { Fist = Quaternion.LookRotation(Vector3.forward, Vector3.down) };
+            off.Stroke(Hook(true));
+            Assert.AreEqual(PunchKind.Hook, off.Results[0].Kind, "끄면 손등이 뒤집혀도 훅");
+        }
+
+        [Test]
+        public void Jab_IgnoresFistDirection()
+        {
+            var run = new Run(true, 90f) { Fist = Quaternion.LookRotation(Vector3.forward, Vector3.down) };
+            run.Stroke(Jab);
+            Assert.AreEqual(PunchKind.Jab, run.Results[0].Kind, "주먹 방향 확인은 훅만");
+        }
+
+        [Test]
         public void HookWithWrongDirection_IsNotHook()
         {
             // 오른팔 궤적을 왼팔로: 안쪽 → 바깥은 훅이 아니다.
@@ -268,6 +324,38 @@ namespace Anseong.Tests
             for (var i = 0; i < 18; i++) sample(loop(1f));
             Assert.AreEqual(1, results.Count);
             Assert.AreEqual(PunchReason.VerticalMotion, results[0].Reason, "끄면 이전처럼 위아래 움직임");
+        }
+
+        [Test]
+        public void Peek_KnowsKindMidSwing_BeforeStrokeEnds()
+        {
+            foreach (var left in new[] { true, false })
+            {
+                // 공격 보정은 휘두르는 도중 종류를 알아야 끌어당길 수 있다.
+                var jab = PeekDuring(left, Jab, true);
+                Assert.AreEqual(PunchKind.Jab, jab.kind, "잽 중간 판정 " + (left ? "L" : "R"));
+                Assert.Less(jab.progress, 0.8f, "끝나기 전에 안다");
+                Assert.AreEqual(1, jab.strikeId);
+
+                var hook = PeekDuring(left, Hook(left), true);
+                Assert.AreEqual(PunchKind.Hook, hook.kind, "훅 중간 판정 " + (left ? "L" : "R"));
+
+                Assert.AreEqual(PunchKind.None, PeekDuring(left, Jab, false).kind, "그립 없으면 미리 보기 없음");
+            }
+        }
+
+        /// <summary>stroke를 따라 휘두르는 동안 처음으로 Peek가 종류를 낸 순간(진행 0~1)과 그 종류.</summary>
+        static (PunchKind kind, float progress, int strikeId) PeekDuring(bool left, Func<float, Vector3> path, bool intent)
+        {
+            var run = new Run(left, 90);
+            run.Hold(Vector3.zero, 0.5f, intent);
+            var n = Mathf.RoundToInt(0.4f * run.Hz);
+            for (var i = 1; i <= n; i++)
+            {
+                run.Sample(path((float)i / n), intent);
+                if (run.Classifier.Peek(out var kind)) return (kind, (float)i / n, run.Classifier.CurrentStrikeId);
+            }
+            return (PunchKind.None, 1f, 0);
         }
 
         [Test]
@@ -486,7 +574,7 @@ namespace Anseong.Tests
             var row = StrikeLog.FormatRow(PilotSide.Left, run.Results[0]);
             Assert.AreEqual(StrikeLog.Header.Split(',').Length, row.Split(',').Length);
             StringAssert.Contains(",Left,Jab,Jab,", row);
-            StringAssert.EndsWith(",1,", row, "strike_id 1, 명중 칸은 비움");
+            StringAssert.EndsWith(",1,,,,,,,", row, "strike_id 1, 명중 칸 4개·훅 주먹 칸 3개(주먹 방향 모름)는 비움");
             Assert.AreEqual("strikes_20261017_134500.csv",
                 System.IO.Path.GetFileName(StrikeLog.DefaultPath("root", new DateTime(2026, 10, 17, 13, 45, 0))));
         }

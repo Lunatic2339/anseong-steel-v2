@@ -118,3 +118,6 @@ ignore.conf
 *.log
 [Rr]ecordings/
 *_Backup_*/
+
+# 테스트 영상(커밋 금지, 50MB 넘음)
+docs/test_vid/

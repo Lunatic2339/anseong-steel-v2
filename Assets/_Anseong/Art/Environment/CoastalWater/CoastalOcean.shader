@@ -1,0 +1,9 @@
+Shader "Anseong/CoastalOcean" { Properties { _Deep("Deep",Color)=(.025,.17,.25,1) _Shallow("Shallow",Color)=(.09,.35,.39,1) } SubShader { Tags {"RenderType"="Opaque" "Queue"="Geometry" "RenderPipeline"="UniversalPipeline"} Pass { HLSLPROGRAM
+#pragma vertex vert
+#pragma fragment frag
+#pragma multi_compile_instancing
+#include "Packages/com.unity.render-pipelines.universal/ShaderLibrary/Core.hlsl"
+struct A {float4 p:POSITION;float2 uv:TEXCOORD0;UNITY_VERTEX_INPUT_INSTANCE_ID};struct V {float4 p:SV_POSITION;float3 world:TEXCOORD0;float2 uv:TEXCOORD1;UNITY_VERTEX_OUTPUT_STEREO};CBUFFER_START(UnityPerMaterial) float4 _Deep,_Shallow; CBUFFER_END
+V vert(A a){V o;UNITY_SETUP_INSTANCE_ID(a);UNITY_INITIALIZE_VERTEX_OUTPUT_STEREO(o);float3 w=TransformObjectToWorld(a.p.xyz);float t=_Time.y;w.y+=(sin(w.x*.065+w.z*.042+t*.65)*.09+sin(w.z*.11-w.x*.026+t*.9)*.045)*saturate(a.uv.x/8);o.world=w;o.uv=a.uv;o.p=TransformWorldToHClip(w);return o;}
+half4 frag(V i):SV_Target{UNITY_SETUP_STEREO_EYE_INDEX_POST_VERTEX(i);float t=_Time.y;float2 p=i.world.xz;float dx=cos(p.x*.065+p.y*.042+t*.65)*.006+cos(p.y*.11-p.x*.026+t*.9)*-.0012;float dz=cos(p.x*.065+p.y*.042+t*.65)*.004+cos(p.y*.11-p.x*.026+t*.9)*.005;dx+=sin(p.x*1.3+p.y*.7+t)*.055+sin(p.y*2.2-p.x*.4+t*1.2)*.025;dz+=cos(p.y*1.5+p.x*.5+t*.8)*.05;float filtering=exp(-max(length(ddx(p)),length(ddy(p)))*1.4);dx*=filtering;dz*=filtering;float3 n=normalize(float3(-dx,1,-dz));float3 v=normalize(GetCameraPositionWS()-i.world);float fres=pow(1-saturate(dot(n,v)),4);float3 color=lerp(_Shallow.rgb,_Deep.rgb,saturate(i.uv.x/65));float3 sky=lerp(float3(.55,.71,.78),float3(.25,.48,.67),saturate(reflect(-v,n).y));color=lerp(color,sky,fres*.8);float3 light=normalize(float3(-.4,.7,-.45));float spec=pow(saturate(dot(n,normalize(v+light))),180);color+=spec*.7;float foam=(1-smoothstep(.3,2.3,i.uv.x))*(.55+.45*sin(p.y*1.7+t*1.4));color=lerp(color,float3(.76,.87,.86),foam*.65);return half4(color,1);}
+ENDHLSL } } }

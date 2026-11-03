@@ -10,6 +10,17 @@ namespace Anseong.Pilot
     }
 
     /// <summary>
+    /// 조종석을 로봇 몸(따라갈 본)에 붙이는 방식. Rigid = 본의 위치·회전을 그대로(몸통이 조종석에 고정, 팔만 들어온다. 선우 10/25),
+    /// FollowYaw = 위치 + 좌우 회전만(기울기는 안 따름), PositionOnly = 위치 흔들림만(처음 방식, 따라가는 비율·최대 거리 적용).
+    /// </summary>
+    public enum CockpitAttach
+    {
+        Rigid,
+        FollowYaw,
+        PositionOnly,
+    }
+
+    /// <summary>
     /// 로봇 루트에서 조종석 자세를 계산한다. 결과는 사람 크기(배율 1) 월드 좌표.
     /// </summary>
     public static class CockpitSeatMath
@@ -35,6 +46,36 @@ namespace Anseong.Pilot
             if (weight <= 0f || maxOffset <= 0f) return Vector3.zero;
             var local = Quaternion.Inverse(YawOnly(robotRotation)) * (bonePosition - rootPosition);
             return Vector3.ClampMagnitude((local - referenceLocal) * weight, maxOffset);
+        }
+
+        /// <summary>
+        /// 본에 붙인 조종석 자세. 본이 기준 자세(referenceLocal·referenceRotation, 루트 원점·로봇 정면 yaw 기준)일 때 = RigPose와 같고,
+        /// 본이 움직이거나 돌면 좌석이 본과 함께 옮겨 가고 돈다(본을 축으로). followYawOnly면 본 회전 중 좌우만 쓴다.
+        /// </summary>
+        public static (Vector3 position, Quaternion rotation) AttachedPose(Vector3 rootPosition, Quaternion robotRotation, Vector3 offsetMeters,
+            Vector3 bonePosition, Quaternion boneRotation, Vector3 referenceLocal, Quaternion referenceRotation, bool followYawOnly)
+        {
+            var yaw = YawOnly(robotRotation);
+            var inverse = Quaternion.Inverse(yaw);
+            var boneLocal = inverse * (bonePosition - rootPosition);
+            var delta = inverse * boneRotation * Quaternion.Inverse(referenceRotation);
+            if (followYawOnly) delta = YawOnly(delta);
+            var local = boneLocal + delta * (offsetMeters - referenceLocal);
+            return (rootPosition + yaw * local, yaw * delta);
+        }
+
+        /// <summary>본 회전을 루트 원점·로봇 정면 yaw 기준으로(AttachedPose의 referenceRotation).</summary>
+        public static Quaternion LocalRotation(Quaternion robotRotation, Quaternion boneRotation) =>
+            Quaternion.Inverse(YawOnly(robotRotation)) * boneRotation;
+
+        /// <summary>
+        /// 보정이 끝났을 때 XR Origin 로컬 자세(조종석 기준). 보정한 몸 정면(트래킹 공간 yaw)이 조종석 정면이 되고,
+        /// 그때 머리 위치(트래킹 공간, 높이는 빼고)가 좌석 중심에 오게 한다(선우 10/28: 헤드셋을 바꾸니 보정 뒤 팔이 오른쪽으로 쏠림).
+        /// </summary>
+        public static (Vector3 position, Quaternion rotation) AlignedOrigin(Vector3 seatOffset, float bodyYawDegrees, Vector3 headTracking)
+        {
+            var rotation = Quaternion.Euler(0f, -bodyYawDegrees, 0f);
+            return (seatOffset - rotation * new Vector3(headTracking.x, 0f, headTracking.z), rotation);
         }
 
         /// <summary>조종석 중심에서 각 조종사 좌석까지의 로컬 오프셋. 두 좌석 간격 = spacing.</summary>

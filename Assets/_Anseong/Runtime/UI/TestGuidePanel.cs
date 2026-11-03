@@ -1,5 +1,6 @@
 using System.Text;
 using Anseong.Combat;
+using Anseong.Net;
 using Anseong.Pilot;
 using UnityEngine;
 
@@ -19,6 +20,15 @@ namespace Anseong.UI
 
         [SerializeField, Tooltip("펀치 분류. 비어 있으면 시작할 때 씬에서 한 번 찾는다. 없으면 보정 안내만 한다.")]
         PunchClassifierDriver classifier;
+
+        [SerializeField, Tooltip("전투 판정(M1-05). 비어 있으면 시작할 때 씬에서 한 번 찾는다. 없으면 펀치 분류만 보여 준다.")]
+        CombatDirector combat;
+
+        [SerializeField, Tooltip("가드 판정(M1-06). 비어 있으면 시작할 때 씬에서 한 번 찾는다. 없으면 가드 줄을 쓰지 않는다.")]
+        GuardDriver guard;
+
+        [SerializeField, Tooltip("네트워크 세션(M2-01). 시작에 실패하면 이유를 맨 위에 띄운다. 비어 있으면 시작할 때 한 번 찾는다.")]
+        SessionBootstrap session;
 
         [SerializeField, Tooltip("글자를 쓸 TextMesh. 메뉴가 만든다.")]
         TextMesh text;
@@ -51,12 +61,18 @@ namespace Anseong.UI
         bool dirty = true;
         float nextOffsetCheck;
         Vector3 shownOffset;
+        string lastCombat = string.Empty;
+        bool boostOpen;
+        int guardKey = -1;
         int readyKey = -1;
 
         void Start()
         {
             if (calibration == null) calibration = FindAnyObjectByType<PilotCalibrationFlow>();
             if (classifier == null) classifier = FindAnyObjectByType<PunchClassifierDriver>();
+            if (combat == null) combat = FindAnyObjectByType<CombatDirector>();
+            if (guard == null) guard = FindAnyObjectByType<GuardDriver>();
+            if (session == null) session = FindAnyObjectByType<SessionBootstrap>();
             if (tuningMenu == null) tuningMenu = FindAnyObjectByType<TuningMenu>();
             if (text == null || calibration == null)
             {
@@ -69,7 +85,11 @@ namespace Anseong.UI
             calibration.Notice += OnNotice;
             calibration.Completed += ResetCounts;
             if (classifier != null) classifier.StrikeCompleted += OnStrike;
+            if (combat != null) combat.Cue += OnCombat;
+            if (session != null) session.ProblemChanged += OnSessionProblem;
         }
+
+        void OnSessionProblem(string problem) => dirty = true;
 
         void OnDestroy()
         {
@@ -79,6 +99,98 @@ namespace Anseong.UI
                 calibration.Completed -= ResetCounts;
             }
             if (classifier != null) classifier.StrikeCompleted -= OnStrike;
+            if (combat != null) combat.Cue -= OnCombat;
+            if (session != null) session.ProblemChanged -= OnSessionProblem;
+        }
+
+        void OnCombat(CombatEvent e)
+        {
+            var side = e.Side == PilotSide.Left ? "왼" : "오";
+            switch (e.Cue)
+            {
+                case CombatCue.Hit:
+                    lastCombat = $"<color=#5BE37D>명중</color> {side} {KindName(e.Kind)} -{e.Damage:F0}%" + (e.Quality == HitQuality.Assisted ? " (보정)" : " (접촉)");
+                    break;
+                case CombatCue.Miss:
+                    lastCombat = $"<color=#FF6B6B>헛침</color> {side} {KindName(e.Kind)}";
+                    break;
+                case CombatCue.ComboBroken:
+                    lastCombat += $"  <color=#FFD24D>연계 끊김: {BreakName(e.Break)}</color>";
+                    break;
+                case CombatCue.Boost:
+                    lastCombat = $"<color=#BF4DFF>부스트!</color> -{e.Damage:F0}%";
+                    break;
+                case CombatCue.Blocked:
+                    lastCombat = $"<color=#999999>막힘</color> {side} {KindName(e.Kind)} (보스 빈틈 아님, 연계 그대로)";
+                    break;
+                case CombatCue.BossTelegraph:
+                    lastCombat = $"<color=#FFD24D>보스 예고</color> {BossAttackName(e.Code)}";
+                    break;
+                case CombatCue.GuardBlock:
+                    lastCombat = $"<color=#5BE37D>막음</color> {side}팔 가드 ({BossAttackName(e.Code)})";
+                    break;
+                case CombatCue.GuardFail:
+                    lastCombat = $"<color=#FF6B6B>가드 모자람</color> {GuardFailReason(e)}";
+                    break;
+                case CombatCue.DodgeStart:
+                    lastCombat = $"회피 {(e.Amount < 0f ? "왼쪽" : "오른쪽")}";
+                    break;
+                case CombatCue.Dodge:
+                    lastCombat = "<color=#5BE37D>피함</color> 돌진 회피 성공";
+                    break;
+                case CombatCue.PilotHit:
+                    lastCombat += $"  <color=#FF6B6B>맞음 -{e.Damage:F0}% (남은 {e.Amount:F0}%)</color>";
+                    break;
+                case CombatCue.PilotDefeated:
+                    lastCombat = "<color=#FF6B6B>기체 HP 0 (두 스틱 함께 1초 눌러 재시작)</color>";
+                    break;
+                case CombatCue.BossOpening:
+                    lastCombat = $"<color=#5BE37D>보스 빈틈 {e.Amount:F1}초: 지금 치기</color>";
+                    break;
+                case CombatCue.BossDefeated:
+                    lastCombat = "<color=#5BE37D>보스 HP 0</color>";
+                    break;
+                case CombatCue.BoostReady:
+                case CombatCue.BoostMissed:
+                case CombatCue.ComboStep:
+                    break;
+                default:
+                    return;
+            }
+            boostOpen = combat.State.BoostOpen;
+            dirty = true;
+        }
+
+        static string GuardFailReason(CombatEvent e)
+        {
+            var kind = (Anseong.Boss.BossAttackKind)e.Code;
+            if (kind == Anseong.Boss.BossAttackKind.SlamBoth) return "내려찍기는 양팔 가드";
+            return $"{(e.Side == PilotSide.Left ? "왼" : "오른")}쪽에서 옴: {(e.Side == PilotSide.Left ? "왼" : "오른")}팔로 막기";
+        }
+
+        static string BossAttackName(int code)
+        {
+            switch ((Anseong.Boss.BossAttackKind)code)
+            {
+                case Anseong.Boss.BossAttackKind.PunchLeft: return "왼손 펀치 → 왼팔 가드";
+                case Anseong.Boss.BossAttackKind.PunchRight: return "오른손 펀치 → 오른팔 가드";
+                case Anseong.Boss.BossAttackKind.AlternatingCombo: return "좌우 연타 → 번갈아 가드";
+                case Anseong.Boss.BossAttackKind.SlamBoth: return "두 손 내려찍기 → 양팔 가드";
+                case Anseong.Boss.BossAttackKind.Charge: return "돌진 → 같은 방향 회피";
+                default: return code.ToString();
+            }
+        }
+
+        static string BreakName(ComboBreak reason)
+        {
+            switch (reason)
+            {
+                case ComboBreak.Miss: return "헛침";
+                case ComboBreak.WrongTurn: return "차례 아님";
+                case ComboBreak.Timeout: return "시간 초과";
+                case ComboBreak.Damaged: return "맞음";
+                default: return reason.ToString();
+            }
         }
 
         void UseOsFont()
@@ -117,6 +229,16 @@ namespace Anseong.UI
             {
                 nextOffsetCheck = Time.unscaledTime + 0.25f;
                 if ((calibration.BodyOffset - shownOffset).sqrMagnitude > 0.0001f) dirty = true;
+                // 가드 판정 이유가 바뀌었을 때만(같은 0.25초 간격).
+                if (guard != null)
+                {
+                    var g = (int)guard.State(PilotSide.Left).Reason * 16 + (int)guard.State(PilotSide.Right).Reason;
+                    if (g != guardKey)
+                    {
+                        guardKey = g;
+                        dirty = true;
+                    }
+                }
                 // 손별 "다음 펀치 준비" 상태가 바뀌었을 때(10/25: 펀치가 처음 몇 번 뒤 안 세지는 원인을 헤드셋 안에서 보게).
                 if (classifier != null)
                 {
@@ -181,6 +303,7 @@ namespace Anseong.UI
         void Redraw()
         {
             builder.Length = 0;
+            if (session != null && session.Problem.Length > 0) builder.Append("<color=#FF6B6B>").Append(session.Problem).Append("</color>\n");
             if (!calibration.IsComplete) DrawCalibration();
             else DrawPunches();
             text.text = builder.ToString();
@@ -189,7 +312,7 @@ namespace Anseong.UI
         void DrawCalibration()
         {
             builder.Append("<b>보정</b>  (양손 그립을 쥐었다 놓으면 저장)\n\n");
-            builder.Append(PilotCalibrationFlow.Instruction(calibration.Stage)).Append("\n\n");
+            builder.Append(calibration.CurrentInstruction).Append("\n\n");
             if (calibration.Stage != CalibrationStage.NotStarted)
             {
                 Hand("왼손", PilotSide.Left);
@@ -231,6 +354,8 @@ namespace Anseong.UI
                 Row("<color=#BF4DFF>어퍼컷</color>    ", PunchKind.Uppercut);
                 Row("<color=#999999>해당 없음</color> ", PunchKind.None);
                 builder.Append("공격 인정    ").Append(attacks[0]).Append("  /  ").Append(attacks[1]).Append('\n');
+                if (combat != null) DrawCombat();
+                if (guard != null) DrawGuard();
                 builder.Append("다음 펀치    ");
                 ReadyText(PilotSide.Left);
                 builder.Append("  /  ");
@@ -240,6 +365,52 @@ namespace Anseong.UI
                 for (var i = 0; i < recentCount; i++) builder.Append(recent[i]).Append('\n');
             }
             builder.Append('\n').Append(recalibrateHint);
+        }
+
+        void DrawGuard()
+        {
+            builder.Append("가드  ");
+            for (var h = 0; h < 2; h++)
+            {
+                var side = (PilotSide)h;
+                builder.Append(h == 0 ? "왼 " : "  /  오 ");
+                if (!guard.UsesHand(side))
+                {
+                    builder.Append('-');
+                    continue;
+                }
+                var state = guard.State(side);
+                if (state.IsGuarding) builder.Append("<color=#5BE37D>가드</color>");
+                else builder.Append("<color=#999999>").Append(GuardReasonName(state.Reason)).Append("</color>");
+            }
+            builder.Append('\n');
+        }
+
+        static string GuardReasonName(GuardReason reason)
+        {
+            switch (reason)
+            {
+                case GuardReason.NotCalibrated: return "보정 전";
+                case GuardReason.Untracked: return "추적 끊김";
+                case GuardReason.OutOfZone: return "가드 자리 밖";
+                case GuardReason.BehindFace: return "얼굴보다 뒤";
+                case GuardReason.ForearmTilted: return "팔뚝이 누움";
+                default: return reason.ToString();
+            }
+        }
+
+        void DrawCombat()
+        {
+            var r = combat.State;
+            if (!combat.Connected) builder.Append("<color=#FF6B6B>전투 서버 연결 안 됨: 명중이 들어가지 않음</color>\n");
+            builder.Append("기체 HP ").Append(r.PilotHealth.ToString("F0")).Append("%   ");
+            builder.Append("보스 HP ").Append(r.BossHealth.ToString("F0")).Append("%   연계 ").Append(r.ComboStep).Append("/3");
+            if (r.ComboStep > 0)
+                builder.Append(" (다음: ").Append(r.ComboNextSide == PilotSide.Left ? "왼손 " : "오른손 ").Append(r.ComboStep == 2 ? "훅" : "잽").Append(')');
+            if (boostOpen) builder.Append("   <color=#BF4DFF>부스트: 트리거!</color>");
+            builder.Append('\n');
+            if (combat.Boss == null) builder.Append("<color=#FF6B6B>보스 없음: 모든 공격이 헛침</color>\n");
+            if (lastCombat.Length > 0) builder.Append(lastCombat).Append('\n');
         }
 
         bool Waiting(PilotSide side)
@@ -315,6 +486,9 @@ namespace Anseong.UI
                 case PunchReason.TooLong: return "너무 김";
                 case PunchReason.CapacityExceeded: return "샘플 초과";
                 case PunchReason.RobotLagged: return "로봇 팔이 덜 뻗음";
+                case PunchReason.HookFistDirection: return "훅인데 주먹 끝이 반대쪽";
+                case PunchReason.HookBackhand: return "훅인데 손등으로 침";
+                case PunchReason.HookPalmUp: return "훅인데 손등이 뒤집힘";
                 default: return reason.ToString();
             }
         }

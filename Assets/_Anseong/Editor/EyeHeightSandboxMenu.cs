@@ -78,21 +78,23 @@ namespace Anseong.EditorTools
         }
 
         [MenuItem("Anseong/Sandbox/Attach XR Origin To Cockpit")]
-        static void AttachXROrigin()
+        static void AttachXROriginMenu() => AttachXROrigin(SceneManager.GetActiveScene());
+
+        /// <summary>씬의 첫 XR Origin을 조종석(CockpitSeat)에 붙인다. 없으면 안내 창을 띄우고 false. Build M1 Main도 쓴다.</summary>
+        internal static bool AttachXROrigin(Scene scene)
         {
-            var scene = SceneManager.GetActiveScene();
             var seat = FindInScene<CockpitSeat>(scene).FirstOrDefault();
             if (seat == null)
             {
                 EditorUtility.DisplayDialog("Attach XR Origin", "씬에 CockpitSeat가 없습니다. 먼저 'Build Eye Height Test'를 실행하세요.", "확인");
-                return;
+                return false;
             }
             var origins = FindInScene<XROrigin>(scene).ToArray();
             if (origins.Length == 0)
             {
                 EditorUtility.DisplayDialog("Attach XR Origin",
                     $"'{scene.name}' 씬에 XR Origin이 없습니다.\nHierarchy 우클릭 → XR → XR Origin (VR)을 먼저 추가하세요.", "확인");
-                return;
+                return false;
             }
             if (origins.Length > 1)
                 Debug.LogWarning($"{LogPrefix} XR Origin이 {origins.Length}개입니다. 첫 번째({origins[0].name})만 붙입니다.", origins[0]);
@@ -119,6 +121,7 @@ namespace Anseong.EditorTools
 
             EditorSceneManager.MarkSceneDirty(scene);
             Debug.Log($"{LogPrefix} XR Origin을 조종석에 붙였습니다(Floor 모드, far {CameraFarClip}m). 손 큐브가 필요하면 'Anseong → Setup → Add Tracking Probes'도 실행하세요.", origin);
+            return true;
         }
 
         [MenuItem("Anseong/Sandbox/Apply Guard Pose To Selection")]

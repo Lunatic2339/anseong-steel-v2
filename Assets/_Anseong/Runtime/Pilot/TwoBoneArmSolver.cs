@@ -109,14 +109,26 @@ namespace Anseong.Pilot
         [Tooltip("어깨→손 방향이 1초에 돌 수 있는 최대 각도(도/초). 어깨 근처를 지날 때 휙 뒤집힘을 막는다.")]
         public float axisTurnSpeed = 720f;
 
+        [Tooltip("켜면 팔을 뻗을수록 주먹 방향이 팔꿈치를 돌리지 않는다(선우 10/28: 뻗은 채 손목을 돌리면 팔꿈치가 원을 그리고 어깨가 들썩였다). " +
+                 "뻗은 팔은 어깨-팔꿈치가 그대로이고 아래팔만 돈다.")]
+        public bool holdElbowWhenExtended = true;
+
+        [Tooltip("holdElbowWhenExtended: 팔 길이 대비 이만큼 뻗으면 주먹 방향이 팔꿈치를 돌리는 힘이 줄기 시작한다.")]
+        [Range(0.3f, 1f)]
+        public float elbowHoldStart = 0.7f;
+
+        [Tooltip("holdElbowWhenExtended: 이만큼 뻗으면 주먹 방향이 팔꿈치를 전혀 돌리지 않는다.")]
+        [Range(0.3f, 1f)]
+        public float elbowHoldFull = 0.88f;
+
         [Tooltip("팔꿈치 swivel 변화 속도(도/초).")]
         public float swivelSpeed = 180f;
 
         [Tooltip("굽힘면 기준 방향 변화 속도(도/초).")]
         public float poleTurnSpeed = 90f;
 
-        [Tooltip("아래팔 비틀림 변화 속도(도/초).")]
-        public float rollSpeed = 180f;
+        [Tooltip("아래팔 비틀림 변화 속도(도/초). 180이면 팔 움직임에 비해 전완이 늦게 돌아 어색했다(선우 10/28) → 720.")]
+        public float rollSpeed = 720f;
 
         [Tooltip("아래팔 비틀림 한계(도).")]
         [Range(90f, 179f)]
@@ -137,6 +149,11 @@ namespace Anseong.Pilot
                  "고정했는데도 손목이 안쪽으로 꺾여 보이면(손등이 아래팔과 평행하지 않으면) +로 올려 맞춘다. 0 = 손목→손가락 뿌리 선을 아래팔과 일직선(이전 동작).")]
         [Range(-30f, 30f)]
         public float lockedWristPitchDegrees = 0f;
+
+        [Tooltip("굽힌 팔(가드 등)의 팔꿈치를 바깥으로 더 돌리는 각도(도, 선우 10/31: 가드에서 팔꿈치가 너무 모임). " +
+                 "주먹 방향으로 정한 팔꿈치 위치에서 이만큼만 바깥으로 돌리고 손목·주먹은 그대로 따라간다(크게 고정했더니 팔이 너무 누웠다). 0 = 이전. 뻗거나 훅으로 들면 줄어든다.")]
+        [Range(0f, 60f)]
+        public float elbowSpreadDegrees = 15f;
     }
 
     /// <summary>
@@ -236,6 +253,8 @@ namespace Anseong.Pilot
             float gripWeight = Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.05f, .3f, orientationPole.magnitude))
                 * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(.015f, .10f, height / total))
                 * Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(minimum, minimum + total * .12f, distance));
+            if (settings.holdElbowWhenExtended)
+                gripWeight *= 1f - Mathf.SmoothStep(0f, 1f, Mathf.InverseLerp(settings.elbowHoldStart, Mathf.Max(settings.elbowHoldStart + 1e-3f, settings.elbowHoldFull), distance / total));
             float targetSwivel = orientationPole.sqrMagnitude > .0001f
                 ? BoundSwivel(Vector3.SignedAngle(positionPole, orientationPole.normalized, axis), swivel,
                     settings.maxSwivelDegrees, settings.swivelHysteresisDegrees) * gripWeight
@@ -243,6 +262,9 @@ namespace Anseong.Pilot
             // 범위가 정해진 스칼라라서 한 바퀴씩 쌓이거나 반대편 팔꿈치로 튀지 않는다.
             swivel = solved ? Mathf.MoveTowards(swivel, targetSwivel, settings.swivelSpeed * dt) : targetSwivel;
             var pole = Quaternion.AngleAxis(swivel, axis) * positionPole;
+            var outward = Vector3.ProjectOnPlane(body * new Vector3(bind.SideSign, 0f, 0f), axis);
+            if (settings.elbowSpreadDegrees > 0f && outward.sqrMagnitude > .01f)
+                pole = Vector3.RotateTowards(pole, outward.normalized, settings.elbowSpreadDegrees * (1f - raised) * Mathf.Deg2Rad, 0f).normalized;
             var elbow = shoulder + axis * along + pole * height;
             var plane = Vector3.Cross(pole, axis).normalized;
             var upperDirection = (elbow - shoulder).normalized;

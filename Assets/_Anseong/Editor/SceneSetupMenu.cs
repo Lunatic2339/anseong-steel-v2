@@ -78,7 +78,7 @@ namespace Anseong.EditorTools
         static void AddPilotInput() => AddPilotInputToActiveScene();
 
         /// <summary>
-        /// 코드를 받은 뒤 한 번에: Build Player Robot Prefab → Add Pilot Input(지금 열린 씬). 둘 중 하나가 실패하면 거기서 멈춘다.
+        /// 코드를 받은 뒤 한 번에: Build Player Robot Prefab → Add Pilot Input → Add Network Session(지금 열린 씬). 둘 중 하나가 실패하면 거기서 멈춘다.
         /// 열린 씬은 Sandbox 씬이어야 한다(Main은 선우만).
         /// </summary>
         [MenuItem("Anseong/Setup/Rebuild Robot + Pilot Input", priority = 0)]
@@ -86,7 +86,8 @@ namespace Anseong.EditorTools
         {
             if (!RobotPrefabMenu.Build()) return;
             if (!AddPilotInputToActiveScene()) return;
-            Debug.Log("[SceneSetupMenu] 프리팹 다시 만들기 + Add Pilot Input 완료. 씬을 저장하세요.");
+            var network = NetworkSessionMenu.AddToScene(SceneManager.GetActiveScene());
+            Debug.Log($"[SceneSetupMenu] 프리팹 다시 만들기 + Add Pilot Input + {network} 완료. 씬을 저장하세요.");
         }
 
         internal static bool AddPilotInputToActiveScene()
@@ -136,6 +137,7 @@ namespace Anseong.EditorTools
             serializedFlow.ApplyModifiedProperties();
 
             var drivers = RobotArmSetup.ConnectDrivers(input, flow);
+            var combats = CombatSetup.ConnectScene(input, flow);
             var panel = AddTestGuidePanel(origin);
             var tuning = AddTuningMenu(origin);
 
@@ -145,7 +147,7 @@ namespace Anseong.EditorTools
             if (drivers == 0)
                 Debug.LogWarning("[SceneSetupMenu] 씬에 RobotArmDriver가 없습니다. Robot_Player 프리팹을 다시 만들고(Build Player Robot Prefab) 이 메뉴를 다시 실행하세요.", origin);
             Debug.Log($"[SceneSetupMenu] XR Origin에 PilotHandInput·PilotCalibrationFlow를 연결하고 팔 드라이버 {drivers}개에 입력을 연결했습니다(기본 1인 양팔 모드). " +
-                      $"테스트 안내판: {panel}. 조절 메뉴(오른손 B): {tuning}. 씬을 저장하세요.", origin);
+                      $"전투 판정 {combats}개에 입력·보스 연결. 테스트 안내판: {panel}. 조절 메뉴(오른손 B): {tuning}. 씬을 저장하세요.", origin);
             return true;
         }
 

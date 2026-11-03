@@ -223,5 +223,68 @@ namespace Anseong.Tests
             var modelGuard = new Vector3(1f, 2f, 3f);
             AssertVector(modelGuard, c.Map(Vector3.one, Vector3.zero, modelGuard, 18f));
         }
+            [Test]
+        public void SymmetricShoulders_CenterOnHead_KeepSpacingAndHeight()
+        {
+            // 왼손이 바깥으로 6cm 더 처져서 두 어깨가 머리 왼쪽으로 3cm 치우침. 몸 정면 0°.
+            var left = new Vector3(-0.24f, 1.40f, 0.02f);
+            var right = new Vector3(0.12f, 1.38f, -0.01f);
+            var head = new Vector3(0f, 1.62f, 0f);
+            var (l, r) = ArmCalibration.SymmetricShoulders(left, right, head, 0f);
+            Assert.AreEqual(-0.18f, l.x, 1e-4f);
+            Assert.AreEqual(0.18f, r.x, 1e-4f);
+            Assert.AreEqual(0f, l.z, 1e-4f);
+            Assert.AreEqual(1.40f, l.y, 1e-4f);
+            Assert.AreEqual(1.38f, r.y, 1e-4f);
+        }
+
+        [Test]
+        public void SymmetricShoulders_FollowBodyYaw()
+        {
+            var yaw = 90f; // 몸 정면 = +X, 오른쪽 = −Z
+            var (l, r) = ArmCalibration.SymmetricShoulders(new Vector3(0f, 1.4f, 0.3f), new Vector3(0f, 1.4f, -0.1f), new Vector3(1f, 1.6f, 0f), yaw);
+            Assert.AreEqual(1f, l.x, 1e-4f);
+            Assert.AreEqual(0.2f, l.z, 1e-4f);
+            Assert.AreEqual(-0.2f, r.z, 1e-4f);
+        }
+
+        [Test]
+        public void ShoulderFromReach_PutsShoulderStraightBehindReachHand()
+        {
+            // 목 (0, 1.5, 0), 몸 정면 0°. 오른손을 x 0.17에 뻗음 → 어깨 x 0.17, 앞뒤는 목, 높이는 주어진 값.
+            var s = ArmCalibration.ShoulderFromReach(new Vector3(0f, 1.5f, 0f), 1.38f, new Vector3(0.17f, 1.35f, 0.5f), 0f, true);
+            Assert.AreEqual(0.17f, s.x, 1e-4f);
+            Assert.AreEqual(1.38f, s.y, 1e-4f);
+            Assert.AreEqual(0f, s.z, 1e-4f);
+            // 그래서 그 손 방향은 몸 정면 그대로.
+            var flat = new Vector3(0.17f - s.x, 0f, 0.5f - s.z);
+            Assert.AreEqual(0f, Mathf.Atan2(flat.x, flat.z) * Mathf.Rad2Deg, 1e-3f);
+        }
+
+        [Test]
+        public void ShoulderFromReach_ClampsWidthAndKeepsSide()
+        {
+            var neck = new Vector3(0f, 1.5f, 0f);
+            // 오른손을 몸 가운데를 넘어 왼쪽으로 뻗어도 어깨는 오른쪽 최소 폭.
+            Assert.AreEqual(0.1f, ArmCalibration.ShoulderFromReach(neck, 1.4f, new Vector3(-0.05f, 1.4f, 0.5f), 0f, true).x, 1e-4f);
+            // 왼손을 너무 벌리면 최대 폭.
+            Assert.AreEqual(-0.3f, ArmCalibration.ShoulderFromReach(neck, 1.4f, new Vector3(-0.6f, 1.4f, 0.5f), 0f, false).x, 1e-4f);
+        }
+
+        [Test]
+        public void ShoulderFromReach_UsesBodyYaw()
+        {
+            // 몸 정면 90°(월드 +X가 앞) → 몸 오른쪽은 월드 −Z.
+            var s = ArmCalibration.ShoulderFromReach(Vector3.zero, 1.4f, new Vector3(0.5f, 1.4f, -0.2f), 90f, true);
+            Assert.AreEqual(0f, s.x, 1e-4f);
+            Assert.AreEqual(-0.2f, s.z, 1e-4f);
+        }
+
+        [Test]
+        public void MeanYaw_WrapsAround()
+        {
+            Assert.AreEqual(0f, ArmCalibration.MeanYaw(350f, 10f), 1e-3f);
+            Assert.AreEqual(-3f, ArmCalibration.MeanYaw(-1f, -5f), 1e-3f);
+        }
     }
 }
