@@ -4,6 +4,8 @@ root=Path(__file__).parent
 sys.path.insert(0,str(root/'road_geometry_lib'))
 from shapely import Polygon,box,union_all,constrained_delaunay_triangles
 from shapely.geometry.polygon import orient
+from shapely.geometry import LineString
+from shapely.ops import nearest_points
 local=(root/'obstacles.json').exists()
 work=root if local else root/'TruckBuildProject/Tools/ContinuousPlantGround'
 sources=root.parent if local else root
@@ -27,6 +29,20 @@ walk=road.buffer(2.8,quad_segs=6).difference(road.buffer(.25,quad_segs=6)).inter
 left=box(-900,-300,-151,1040)
 extra_walk=road.buffer(5.2,quad_segs=6).difference(road.buffer(.25,quad_segs=6)).intersection(left).intersection(factory).difference(obstacles)
 walk=union_all([walk,extra_walk])
+links=[]
+footprints=[Polygon(list(zip(a['xy'][::2],a['xy'][1::2]))) for a in ob['areas']]
+for padded in footprints:
+    if padded.area<200 or padded.centroid.x>-151:continue
+    building=padded.buffer(-3)
+    if building.is_empty:continue
+    a,b=nearest_points(building,walk)
+    if not .1<a.distance(b)<45:continue
+    path=LineString([a,b]).buffer(1.5,cap_style='flat').intersection(plant_clear).difference(building)
+    others=union_all([q for q in footprints if q is not padded and q.intersects(path)])
+    if path.intersection(others).area>.05:continue
+    if path.area<a.distance(b)*2.7:continue
+    links.append(path)
+walk=union_all([walk,*links])
 grass=grass.difference(walk)
 curb=grass.buffer(.22,quad_segs=3).difference(grass).intersection(plant_clear).difference(obstacles)
 walk=union_all([walk,curb]).difference(grass).intersection(plant_clear)
@@ -50,6 +66,7 @@ for i in range(3):clean[i]=clean[i].difference(service)
 clean[3]=service
 layers=[];report='# Continuous road-based ground design\n\n'
 report+=f'Left sidewalks extend up to 5.2m from road edges; added {extra_walk.area:.1f} square metres of left-side sidewalk coverage including existing strips.\n\n'
+report+=f'Building-to-sidewalk links: {len(links)}.\n\n'
 report+=f'Factory parcels from existing curved roads: {parcel_count}; building-based material rectangles:0.\n\n'
 for i,g in enumerate(clean):
     assert g.is_valid
@@ -69,4 +86,5 @@ assert grass.intersection(box(-151,-269,151,269)).area<.001
 report+='\nChecks passed: road exclusion, building clearance for green strips, empty combat core, no material-zone overlap, full factory coverage, exact triangulation area.\n'
 (work/'ground_design.json').write_text(json.dumps(dict(layers=layers,report=report)))
 print(report)
+
 
