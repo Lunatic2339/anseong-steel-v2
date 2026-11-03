@@ -24,6 +24,10 @@ green_space=road.buffer(11,quad_segs=6).difference(road.buffer(3.4,quad_segs=6))
 green_space=green_space.buffer(-.8,quad_segs=4).buffer(.8,quad_segs=4).intersection(green_space)
 grass=union_all([p.simplify(.12,preserve_topology=True) for p in parts(green_space) if p.area>50 and p.length>35]).difference(obstacles).intersection(plant_clear)
 walk=road.buffer(2.8,quad_segs=6).difference(road.buffer(.25,quad_segs=6)).intersection(factory).difference(obstacles)
+left=box(-900,-300,-151,1040)
+extra_walk=road.buffer(5.2,quad_segs=6).difference(road.buffer(.25,quad_segs=6)).intersection(left).intersection(factory).difference(obstacles)
+walk=union_all([walk,extra_walk])
+grass=grass.difference(walk)
 curb=grass.buffer(.22,quad_segs=3).difference(grass).intersection(plant_clear).difference(obstacles)
 walk=union_all([walk,curb]).difference(grass).intersection(plant_clear)
 remaining=plant_clear.difference(union_all([grass,walk]))
@@ -45,6 +49,7 @@ clean=[union_all(x) for x in zones]
 for i in range(3):clean[i]=clean[i].difference(service)
 clean[3]=service
 layers=[];report='# Continuous road-based ground design\n\n'
+report+=f'Left sidewalks extend up to 5.2m from road edges; added {extra_walk.area:.1f} square metres of left-side sidewalk coverage including existing strips.\n\n'
 report+=f'Factory parcels from existing curved roads: {parcel_count}; building-based material rectangles:0.\n\n'
 for i,g in enumerate(clean):
     assert g.is_valid
@@ -64,3 +69,4 @@ assert grass.intersection(box(-151,-269,151,269)).area<.001
 report+='\nChecks passed: road exclusion, building clearance for green strips, empty combat core, no material-zone overlap, full factory coverage, exact triangulation area.\n'
 (work/'ground_design.json').write_text(json.dumps(dict(layers=layers,report=report)))
 print(report)
+
