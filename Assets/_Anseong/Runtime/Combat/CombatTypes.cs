@@ -75,6 +75,18 @@ namespace Anseong.Combat
         BossStrike,
         /// <summary>보스 빈틈 시작(반격 기회). Amount = 빈틈 길이(초).</summary>
         BossOpening,
+        /// <summary>보스 공격을 가드로 막음(M2-03). Side = 들어온 쪽, Code = 기술. 외골격 R(강한 저항 300ms) 자리.</summary>
+        GuardBlock,
+        /// <summary>가드가 모자람(반대 팔·한 팔만). Side = 들어온 쪽, Code = 기술. 이어서 PilotHit이 온다.</summary>
+        GuardFail,
+        /// <summary>두 스틱이 같은 좌/우로 새로 밀림(회피 동작 시작). Amount = 방향(-1 왼쪽, +1 오른쪽).</summary>
+        DodgeStart,
+        /// <summary>돌진 회피 성공. Code = 기술.</summary>
+        Dodge,
+        /// <summary>조종사 로봇이 맞음. Damage = 깎인 HP(%), Amount = 깎인 뒤 HP(%), Side = 들어온 쪽, Code = 기술.</summary>
+        PilotHit,
+        /// <summary>조종사 로봇 HP 0(패배 연출은 M4).</summary>
+        PilotDefeated,
     }
 
     /// <summary>연계가 끊긴 이유.</summary>

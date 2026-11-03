@@ -29,10 +29,15 @@ namespace Anseong.Combat
         [SerializeField, Tooltip("컨트롤러 진동을 쓴다.")]
         bool haptics = true;
 
+        [SerializeField, Range(0f, 0.3f), Tooltip("같은 손 진동 사이 최소 간격(초, 01: 0.09). 이보다 빨리 오면 더 중요한 진동만 끼어든다.")]
+        float minHapticGap = 0.09f;
+
         AudioSource[] sources;
         int nextVoice;
         readonly float[] hapticUntil = new float[2];
         readonly float[] hapticAmplitude = new float[2];
+        readonly float[] hapticStart = { -1f, -1f };
+        readonly int[] hapticPriority = new int[2];
         readonly int[] clipCursor = new int[64];
 
         void Start()
@@ -72,7 +77,15 @@ namespace Anseong.Combat
                 var entry = entries[i];
                 if (entry == null || !entry.Matches(e)) continue;
                 PlaySound(i, entry, e);
-                if (haptics && entry.hapticAmplitude > 0f && entry.hapticSeconds > 0f) Rumble(e.Side, entry.hapticAmplitude, entry.hapticSeconds);
+                if (!haptics || entry.hapticAmplitude <= 0f || entry.hapticSeconds <= 0f) continue;
+                var priority = Priority(e.Cue);
+                // 피격은 몸 전체로 느끼게 두 손 모두.
+                if (e.Cue == CombatCue.PilotHit)
+                {
+                    Rumble(PilotSide.Left, entry.hapticAmplitude, entry.hapticSeconds, priority);
+                    Rumble(PilotSide.Right, entry.hapticAmplitude, entry.hapticSeconds, priority);
+                }
+                else Rumble(e.Side, entry.hapticAmplitude, entry.hapticSeconds, priority);
             }
         }
 
@@ -91,16 +104,37 @@ namespace Anseong.Combat
             source.PlayOneShot(clip, entry.volume);
         }
 
-        /// <summary>더 센 진동이 울리는 중이면 약한 것은 건너뛴다(우선순위).</summary>
-        void Rumble(PilotSide side, float amplitude, float seconds)
+        /// <summary>진동 우선순위(01: 피격 &gt; 부스트 &gt; 연계 성공 &gt; 명중 &gt; 가드).</summary>
+        static int Priority(CombatCue cue)
+        {
+            switch (cue)
+            {
+                case CombatCue.PilotHit: return 5;
+                case CombatCue.Boost: return 4;
+                case CombatCue.ComboStep: return 3;
+                case CombatCue.Hit: return 2;
+                case CombatCue.GuardBlock: return 1;
+                default: return 0;
+            }
+        }
+
+        /// <summary>
+        /// 더 중요한 진동이 울리는 중이면 덜 중요한 것은 건너뛴다. 최소 간격 안에 온 것은 더 중요할 때만 끼어든다.
+        /// 우선순위가 같으면 센 쪽이 이긴다.
+        /// </summary>
+        void Rumble(PilotSide side, float amplitude, float seconds, int priority)
         {
             var h = (int)side;
             var now = Time.unscaledTime;
-            if (now < hapticUntil[h] && amplitude < hapticAmplitude[h]) return;
+            var playing = now < hapticUntil[h];
+            if (playing && (priority < hapticPriority[h] || (priority == hapticPriority[h] && amplitude < hapticAmplitude[h]))) return;
+            if (now - hapticStart[h] < minHapticGap && priority <= hapticPriority[h]) return;
             var device = InputDevices.GetDeviceAtXRNode(side == PilotSide.Left ? XRNode.LeftHand : XRNode.RightHand);
             if (!device.isValid || !device.SendHapticImpulse(0u, amplitude, seconds)) return;
             hapticUntil[h] = now + seconds;
             hapticAmplitude[h] = amplitude;
+            hapticStart[h] = now;
+            hapticPriority[h] = priority;
         }
     }
 }

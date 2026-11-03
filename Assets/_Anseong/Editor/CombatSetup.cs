@@ -88,7 +88,59 @@ namespace Anseong.EditorTools
             serializedPlayer.FindProperty("director").objectReferenceValue = director;
             serializedPlayer.FindProperty("cues").objectReferenceValue = GetOrCreateCueSet(out var filled);
             serializedPlayer.ApplyModifiedPropertiesWithoutUndo();
-            return $"전투 판정 + 주먹 명중 구 {fists.Count(f => f != null)}개 + 소리 표(채운 소리 {filled}개) + {AddPlayerGuard(arms, drivers)}";
+            var guardReport = AddPlayerGuard(arms, drivers);
+            return $"전투 판정 + 주먹 명중 구 {fists.Count(f => f != null)}개 + 소리 표(채운 소리 {filled}개) + {guardReport} + {AddPlayerDefense(arms)}";
+        }
+
+        /// <summary>M2-03: 가드·회피 보고(Arms), 회피 미끄러짐·피격 흔들림(로봇 루트), 조종사 HP 막대(콘솔 위).</summary>
+        static string AddPlayerDefense(GameObject arms)
+        {
+            var reporter = arms.AddComponent<DefenseReporter>();
+            var serialized = new SerializedObject(reporter);
+            serialized.FindProperty("director").objectReferenceValue = arms.GetComponent<CombatDirector>();
+            serialized.FindProperty("guard").objectReferenceValue = arms.GetComponent<GuardDriver>();
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var root = arms.transform.root;
+            var feedback = root.gameObject.AddComponent<PlayerHitFeedback>();
+            var seat = root.GetComponentInChildren<CockpitSeat>(true);
+            var serializedFeedback = new SerializedObject(feedback);
+            serializedFeedback.FindProperty("seat").objectReferenceValue = seat;
+            serializedFeedback.ApplyModifiedPropertiesWithoutUndo();
+            if (seat == null) return "가드·회피 보고 + 회피 미끄러짐(조종석 없음: 흔들림·HP 막대 없음)";
+
+            var bar = new GameObject("PilotHealthBar");
+            bar.transform.SetParent(seat.transform, false);
+            bar.transform.localPosition = RobotSandboxUtility.ConsoleTopFront + new Vector3(0f, PilotBarSize.y * 0.5f + 0.01f, PilotBarBack);
+            var back = BarQuad("Back", bar.transform, GetOrCreateUnlit(BarBackPath, new Color(0.08f, 0.08f, 0.08f)), PilotBarSize, 0f);
+            var fill = BarQuad("Fill", bar.transform, GetOrCreateUnlit(PilotBarFillPath, Color.white), PilotBarSize * 0.94f, -0.002f);
+            var component = bar.AddComponent<PilotHealthBar>();
+            var serializedBar = new SerializedObject(component);
+            serializedBar.FindProperty("fill").objectReferenceValue = fill.transform;
+            serializedBar.FindProperty("fillRenderer").objectReferenceValue = fill.GetComponent<Renderer>();
+            serializedBar.ApplyModifiedPropertiesWithoutUndo();
+            return "가드·회피 보고 + 회피 미끄러짐·피격 흔들림 + 조종사 HP 막대";
+        }
+
+        // 조종사 HP 막대(조종석 로컬 m): 콘솔 위 가드 표시등 뒤쪽, 위로 세움.
+        static readonly Vector2 PilotBarSize = new Vector2(0.8f, 0.05f);
+        const float PilotBarBack = 0.08f;
+        const string PilotBarFillPath = DebugFolder + "/PilotHealthBar_Fill.mat";
+
+        static GameObject BarQuad(string name, Transform parent, Material material, Vector2 size, float z)
+        {
+            var quad = GameObject.CreatePrimitive(PrimitiveType.Quad);
+            quad.name = name;
+            Object.DestroyImmediate(quad.GetComponent<Collider>());
+            quad.transform.SetParent(parent, false);
+            quad.transform.localPosition = new Vector3(0f, 0f, z);
+            // 조종사가 뒤(-Z)에서 앞을 보므로 앞면이 조종사 쪽(-Z)을 보게 그대로 둔다(Quad 앞면 = -Z).
+            quad.transform.localScale = new Vector3(size.x, size.y, 1f);
+            var renderer = quad.GetComponent<MeshRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            return quad;
         }
 
         /// <summary>가드 판정(M1-06)을 Arms에, 표시등 두 개를 조종석 콘솔 위에 붙인다.</summary>
