@@ -298,3 +298,93 @@ MonoBehaviour:
     code: 0
     matchAmount: 0
     amount: 0
+  - cue: 15
+    kind: 0
+    soundName: SFX_Guard
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0.6
+    hapticSeconds: 0.2
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 16
+    kind: 0
+    soundName: SFX_GuardStrain
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 17
+    kind: 0
+    soundName: SFX_DodgeSlide
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 18
+    kind: 0
+    soundName: SFX_DodgeBurst
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 19
+    kind: 0
+    soundName: SFX_RobotHit
+    clips: []
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 1
+    hapticSeconds: 0.3
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 20
+    kind: 0
+    soundName: SFX_AlarmLowHP
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
