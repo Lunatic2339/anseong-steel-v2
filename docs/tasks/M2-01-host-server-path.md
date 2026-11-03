@@ -37,5 +37,16 @@
 
 ## 결과 (작업 후 Claude가 작성)
 - 바뀐 파일:
-- 사람이 확인할 것:
+  - 새로: `Runtime/Combat/CombatAuthority.cs`(서버 규칙 묶음, 서버 시각), `Runtime/Combat/CombatSnapshot.cs`(복제 상태 + `ICombatLink` 보고 통로), `Runtime/Net/SessionBootstrap.cs`, `Runtime/Net/CombatServer.cs`, `Runtime/Net/NetCombatTypes.cs`, `Editor/NetworkSessionMenu.cs`, `Tests/EditMode/CombatAuthorityTests.cs`
+  - 고침: `CombatDirector.cs`(규칙 실행 뺌 → 보고만. 명중·헛침·그립/트리거 바뀜·재시작 요청을 서버로, 결과는 서버 이벤트로 받아 `Cue`로 냄. 그립 잠금·발사는 지금처럼 바로), `BossHealthBar.cs`·`TestGuidePanel.cs`(`Resolver` 대신 `State` 읽기, 세션 실패·서버 미연결 빨간 줄), `SceneSetupMenu.cs`·`MainSceneMenu.cs`(Add Network Session 같이 부름), asmdef 2개(`Unity.Networking.Transport` 참조)
+  - `SessionRestart`(R)는 그대로: `director.ResetBoss()` → 서버 초기화 RPC.
+- 사람이 할 일(Unity):
+  1. Unity에서 코드 받고 `error CS` 없는지 확인(클라우드에서는 컴파일을 못 돌림).
+  2. `Sandbox_Pilot` 열고 **Anseong → Setup → Rebuild Robot + Pilot Input** → Ctrl+S. `Main`은 **Build M1 Main** → Ctrl+S. 새로 생긴 `Network Session`·`Combat Server` 오브젝트가 씬에 들어간다.
+  3. Unity가 새 .cs의 `.meta`를 만든다. 그 `.meta`들과 저장한 씬을 커밋해 준다(클라우드는 .meta를 만들 수 없음).
+- 사람이 확인할 것(헤드셋): 지시서 위 4개 그대로. 추가로 Console에 `[Session] Host started` 한 줄, 안내판에 빨간 "전투 서버 연결 안 됨"이 없는지.
 - 남은 문제 / 제안:
+  - 조절 메뉴의 연계·부스트 시간은 호스트 PC의 `CombatDirector` 설정을 서버가 같이 쓴다. M3에서 PC-B가 바꾼 값은 서버에 안 간다(서버 PC에서만 조절).
+  - 명중 CSV(`strikes_*.csv`)의 "명중" 칸은 이제 "서버에 명중으로 보고함"이다. 보스 HP 0 뒤의 보고처럼 서버가 버린 것도 1로 남는다.
+  - 팔 소유 검사(보낸 PC = 그 팔 주인)는 `CombatServer`의 RPC 자리에 주석으로 남김(M3-01).
+  - 조종사 한 명에게만 보내기: `CombatServer.SendToPilot(side, e)`. 1인 양팔은 두 쪽 다 이 PC로 간다.

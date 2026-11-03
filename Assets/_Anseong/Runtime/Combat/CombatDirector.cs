@@ -8,10 +8,11 @@ using UnityEngine;
 namespace Anseong.Combat
 {
     /// <summary>
-    /// 전투 판정 연결(M1-05). 펀치 분류(사람 손) → 공격 보정(로봇 주먹 끌어당기기) → 주먹 접촉 → <see cref="HitReport"/>
-    /// → <see cref="CombatResolver"/>(연계·부스트·보스 HP) → <see cref="Cue"/> 이벤트.
+    /// 전투 판정 연결(M1-05, M2-01에서 서버 경로로). 펀치 분류(사람 손) → 공격 보정(로봇 주먹 끌어당기기) → 주먹 접촉 → <see cref="HitReport"/>
+    /// → <see cref="ICombatLink"/>(전투 서버) → 서버가 보낸 결과 → <see cref="Cue"/> 이벤트.
+    /// 이 PC에서는 판정 규칙(연계·부스트·보스 HP)을 돌리지 않는다. 규칙은 서버(<see cref="CombatAuthority"/>)만 돌리고,
+    /// 지금 상태는 <see cref="State"/>(서버가 복제)로 읽는다. 그립 잠금·발사 소리처럼 서버를 기다리면 늦는 것만 여기서 바로 낸다.
     /// 소리·진동·보스 애니메이션·HP 막대·안내판은 모두 <see cref="Cue"/>만 듣는다. 새 연출은 듣는 컴포넌트를 하나 더 붙이면 된다.
-    /// M1은 한 PC에서 바로 판정하고, M3에서 명중 보고를 서버 RPC로 보낸다(규칙 클래스는 그대로).
     /// 실행 순서: 펀치 분류(Update) 뒤, 팔 IK(LateUpdate 100) 뒤에 접촉을 본다.
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
@@ -45,11 +46,22 @@ namespace Anseong.Combat
         [SerializeField, Tooltip("전투 이벤트마다 Console에 한 줄(에디터·개발 빌드).")]
         bool logToConsole = true;
 
-        CombatResolver resolver;
-        readonly List<CombatEvent> events = new List<CombatEvent>(16);
+        ICombatLink link;
+        CombatSnapshot snapshot;
+        bool warnedOffline, dispatching;
+        // 팔마다 서버에 명중으로 보고한 마지막 동작 번호(같은 동작을 두 번 보내지 않게). 동작 번호는 팔마다 오르기만 한다.
+        readonly int[] reported = { 0, 0 };
+        readonly List<Pending> events = new List<Pending>(16);
         readonly ArmState[] state = { new ArmState(), new ArmState() };
         readonly RobotArmDriver[] armBySide = new RobotArmDriver[2];
         readonly FistHitProbe[] fistBySide = new FistHitProbe[2];
+
+        struct Pending
+        {
+            public CombatEvent Event;
+            public bool HasState;
+            public CombatSnapshot State;
+        }
 
         sealed class ArmState
         {
@@ -64,21 +76,58 @@ namespace Anseong.Combat
             public Vector3 NearPoint;
             public BossZone TouchedZone;
             public Vector3 TouchedPoint, PreviousFist;
-            public bool HasPreviousFist, GripDown, TriggerDown;
+            public bool HasPreviousFist, GripDown, GripSent, TriggerDown;
         }
 
         /// <summary>전투에서 일어난 일. 소리·애니메이션·안내판은 이것만 듣는다.</summary>
         public event Action<CombatEvent> Cue;
 
-        public CombatResolver Resolver => resolver;
+        /// <summary>서버가 복제한 지금 전투 상태(보스 HP·연계·부스트 창).</summary>
+        public CombatSnapshot State => snapshot;
+        /// <summary>전투 서버와 연결됨. 아니면 명중을 보내지 못한다(호스트 시작 실패 등).</summary>
+        public bool Connected => link != null;
         public BossTarget Boss => boss;
+
+        /// <summary>서버가 쓸 규칙 객체를 이 컴포넌트의 규칙 수치(01 초기값, 조절 메뉴)로 만든다. 같은 설정 객체를 나눠 써서 조절 메뉴 값이 바로 반영된다.</summary>
+        public CombatResolver CreateResolver() => new CombatResolver(combo, boost, bossHealth);
+
+        /// <summary>그 팔의 그 동작을 이미 명중으로 보고했는지.</summary>
+        public bool AlreadyHit(PilotSide side, int strikeId) => strikeId > 0 && strikeId <= reported[(int)side];
+
+        /// <summary>전투 서버가 연결될 때(호스트 시작 뒤). 지금 그립 상태를 한 번 보낸다.</summary>
+        public void Connect(ICombatLink value)
+        {
+            link = value;
+            warnedOffline = false;
+            if (link == null) return;
+            for (var h = 0; h < 2; h++)
+            {
+                link.SubmitArmInput((PilotSide)h, state[h].GripDown, false);
+                state[h].GripSent = state[h].GripDown;
+            }
+        }
+
+        public void Disconnect(ICombatLink value)
+        {
+            if (link == value) link = null;
+        }
+
+        /// <summary>서버가 보낸 결과 이벤트. 상태를 먼저 바꾸고 듣는 쪽에 낸다.</summary>
+        public void ReceiveServer(CombatEvent e, CombatSnapshot value)
+        {
+            events.Add(new Pending { Event = e, HasState = true, State = value });
+            Dispatch();
+        }
+
+        /// <summary>서버 상태만 바뀜(재시작 등, 이벤트 없음).</summary>
+        public void ReceiveState(CombatSnapshot value) => snapshot = value;
 
         /// <summary>공격 보정이 지금 그 팔을 끌어당기는 중.</summary>
         public bool IsAssisting(PilotSide side) => state[(int)side].Assist != null && state[(int)side].Assist.Pulling;
 
         void Awake()
         {
-            resolver = new CombatResolver(combo, boost, bossHealth);
+            snapshot = CombatSnapshot.Full(bossHealth.maxHealth);
             for (var h = 0; h < 2; h++)
             {
                 var s = state[h];
@@ -142,7 +191,13 @@ namespace Anseong.Combat
                 var pressed = false;
                 if (!s.TriggerDown && sample.Trigger >= triggerPress) s.TriggerDown = pressed = true;
                 else if (s.TriggerDown && sample.Trigger <= triggerRelease) s.TriggerDown = false;
-                resolver.UpdateInput(side, sample.GripHeld, pressed, now, events);
+                var gripChanged = sample.GripHeld != s.GripSent;
+                if ((gripChanged || pressed) && link != null)
+                {
+                    // 부스트 입력은 서버가 판정한다. 바뀐 때만 보낸다(M3에서 RPC 수를 줄이려고).
+                    link.SubmitArmInput(side, sample.GripHeld, pressed);
+                    s.GripSent = sample.GripHeld;
+                }
 
                 var punch = classifier.Classifier(side);
                 if (punch != null && punch.Peek(out var kind))
@@ -154,15 +209,14 @@ namespace Anseong.Combat
                         s.Launched = strike;
                         Emit(CombatCue.StrikeLaunch, side, kind, now);
                     }
-                    if (!resolver.AlreadyHit(side, strike)) TryBeginAssist(h);
+                    if (!AlreadyHit(side, strike)) TryBeginAssist(h);
                 }
                 // 동작은 끝났지만 로봇 주먹을 기다리는 중이면 그 종류로 계속 접촉·보정을 본다.
-                else if (classifier.TryGetHeld(side, out var held) && held.IsAttack && !resolver.AlreadyHit(side, held.StrikeId)) s.PeekKind = held.Kind;
+                else if (classifier.TryGetHeld(side, out var held) && held.IsAttack && !AlreadyHit(side, held.StrikeId)) s.PeekKind = held.Kind;
                 else s.PeekKind = PunchKind.None;
                 if (armBySide[h] != null) s.Assist.Track(armBySide[h].FistRatio, armBySide[h].TargetRatio);
                 s.Assist.Update(Time.deltaTime);
             }
-            resolver.Tick(now, events);
             Dispatch();
         }
 
@@ -196,7 +250,7 @@ namespace Anseong.Combat
                 var punch = classifier.Classifier(side);
                 var strike = punch != null ? punch.CurrentStrikeId : 0;
                 if (strike == 0 && classifier.TryGetHeld(side, out var held) && held.IsAttack) strike = held.StrikeId;
-                if (strike > 0 && !resolver.AlreadyHit(side, strike) && input.IsArmHand(side))
+                if (strike > 0 && !AlreadyHit(side, strike) && input.IsArmHand(side))
                 {
                     TrackNearMiss(s, strike, current, fist.Radius);
                     if (TryContact(s.PreviousFist, current, fist.Radius, out var zone, out var point))
@@ -259,7 +313,7 @@ namespace Anseong.Combat
             var assisted = s.Assist.Pulling;
             s.Assist.Release();
             s.PeekKind = PunchKind.None;
-            if (!result.IsAttack || resolver.AlreadyHit(side, result.StrikeId)) return;
+            if (!result.IsAttack || AlreadyHit(side, result.StrikeId)) return;
             if (s.Touched == result.StrikeId)
                 Hit(side, result.Kind, result.StrikeId, HitQuality.Contact, s.TouchedZone, s.TouchedPoint, now);
             else if (assisted)
@@ -272,7 +326,7 @@ namespace Anseong.Combat
             else
             {
                 LogNearMiss(s, result.StrikeId, result.Kind);
-                resolver.ReportMiss(side, result.Kind, result.StrikeId, now, events);
+                if (Online()) link.SubmitMiss(side, result.Kind, result.StrikeId);
             }
             Dispatch();
         }
@@ -280,8 +334,9 @@ namespace Anseong.Combat
         void Hit(PilotSide side, PunchKind kind, int strike, HitQuality quality, BossZone zone, Vector3 point, double now)
         {
             var report = new HitReport { Side = side, Kind = kind, StrikeId = strike, Quality = quality, Zone = zone, Point = point, ClientTime = now };
-            // M3: 여기서 서버 RPC로 보낸다. 지금은 같은 PC에서 바로 판정.
-            resolver.Resolve(report, now, events);
+            // 서버로 보고(호스트는 같은 PC 안 호출, M3 PC-B는 ServerRpc). 결과는 서버가 이벤트로 돌려준다.
+            reported[(int)side] = strike;
+            if (Online()) link.SubmitHit(report);
             var s = state[(int)side];
             s.Assist.Release();
             s.HitStrike = strike;
@@ -293,7 +348,7 @@ namespace Anseong.Combat
             if (!result.IsAttack) return string.Empty;
             var s = state[(int)side];
             var c = System.Globalization.CultureInfo.InvariantCulture;
-            var hit = resolver.AlreadyHit(side, result.StrikeId);
+            var hit = AlreadyHit(side, result.StrikeId);
             var how = hit && s.HitStrike == result.StrikeId ? s.HitHow.ToString() : string.Empty;
             var gap = s.NearStrike == result.StrikeId && !float.IsInfinity(s.NearGap) ? s.NearGap.ToString("F2", c) : string.Empty;
             var arm = armBySide[(int)side];
@@ -303,26 +358,49 @@ namespace Anseong.Combat
 
         void Emit(CombatCue cue, PilotSide side, PunchKind kind, double now)
         {
-            events.Add(new CombatEvent
+            events.Add(new Pending
             {
-                Cue = cue, Side = side, Kind = kind, Time = now,
-                ComboStep = resolver.Combo.Step, BossHealth = resolver.Boss.Current,
-                Point = fistBySide[(int)side] != null ? fistBySide[(int)side].Position : Vector3.zero,
+                Event = new CombatEvent
+                {
+                    Cue = cue, Side = side, Kind = kind, Time = now,
+                    ComboStep = snapshot.ComboStep, BossHealth = snapshot.BossHealth,
+                    Point = fistBySide[(int)side] != null ? fistBySide[(int)side].Position : Vector3.zero,
+                },
             });
+        }
+
+        bool Online()
+        {
+            if (link != null) return true;
+            if (!warnedOffline)
+            {
+                warnedOffline = true;
+                Debug.LogWarning("[CombatDirector] 전투 서버가 연결되지 않아 명중을 보내지 못합니다. 호스트가 시작됐는지 안내판·Console을 보세요 " +
+                                 "('Anseong → Setup → Add Network Session').", this);
+            }
+            return false;
         }
 
         void Dispatch()
         {
-            if (events.Count == 0) return;
-            // 듣는 쪽이 이벤트 안에서 판정을 다시 불러 새 이벤트가 생기면 다음 Dispatch에서 낸다.
-            var count = events.Count;
-            for (var i = 0; i < count; i++)
+            // 듣는 쪽이 이벤트 안에서 다시 보고해 새 이벤트가 생기면(호스트는 바로 돌아옴) 같은 반복에서 이어서 낸다.
+            if (dispatching || events.Count == 0) return;
+            dispatching = true;
+            try
             {
-                var e = events[i];
-                Log(e);
-                Cue?.Invoke(e);
+                for (var i = 0; i < events.Count; i++)
+                {
+                    var p = events[i];
+                    if (p.HasState) snapshot = p.State;
+                    Log(p.Event);
+                    Cue?.Invoke(p.Event);
+                }
             }
-            events.RemoveRange(0, count);
+            finally
+            {
+                events.Clear();
+                dispatching = false;
+            }
         }
 
         // 헛침일 때 보스까지 얼마나 모자랐는지(허용 거리를 정할 때 본다).
@@ -367,8 +445,8 @@ namespace Anseong.Combat
         [ContextMenu("Reset Boss HP")]
         public void ResetBoss()
         {
-            if (resolver == null) return;
-            resolver.Reset();
+            if (!Online()) return;
+            link.RequestReset();
             Debug.Log("[CombatDirector] 보스 HP 다시 채움", this);
         }
     }
