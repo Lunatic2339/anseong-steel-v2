@@ -24,7 +24,7 @@ namespace Anseong.Boss
         [SerializeField, Tooltip("조종사 로봇 루트(다가갈 목표). 비어 있으면 시작할 때 조종석에서 찾는다.")]
         Transform player;
 
-        [SerializeField, Tooltip("스스로 공격한다. 끄면 M2-02처럼 숫자 키로만 공격(쉬는 중에도 맞음).")]
+        [SerializeField, Tooltip("스스로 공격한다(패턴·페이즈). 끄면 M2-02 시험 공격(조절 메뉴 \"보스 시험\")으로 돌아간다.")]
         bool autoAttack = true;
 
         [Header("거리 (05 \"거리\")")]
@@ -106,6 +106,7 @@ namespace Anseong.Boss
             server.ServerEvent += OnBossEvent;
             server.ServerReset += OnReset;
             server.RestIsOpening = !autoAttack;
+            server.TestAttacksBlocked = autoAttack;
             bound = true;
             BeginRun();
             return true;
@@ -128,6 +129,7 @@ namespace Anseong.Boss
             var machine = server.Machine;
             var authority = server.Combat.Authority;
             server.RestIsOpening = !autoAttack;
+            server.TestAttacksBlocked = autoAttack;
             if (machine.State == BossState.Defeated)
             {
                 WriteLog("won");
@@ -314,12 +316,12 @@ namespace Anseong.Boss
 #endif
         }
 
-        /// <summary>인게임 조절 메뉴: 보스 스스로 공격 켜고 끄기(끄면 숫자 키 시험).</summary>
+        /// <summary>인게임 조절 메뉴: 보스 스스로 공격 켜고 끄기(끄면 M2-02 시험 공격).</summary>
         public void AddTuning(TuningList list)
         {
             const string g = "보스";
             list.Describe(g, "할 것: 1페이즈부터 무릎까지 혼자 진행\n볼 것: 페이즈마다 새 기술이 먼저, 밀려난 뒤 다시 걸어옴");
-            list.AddToggle(g, "boss.auto", "보스 스스로 공격(끄면 숫자 키 1~5)", () => autoAttack, v => autoAttack = v);
+            list.AddToggle(g, "boss.auto", "보스 스스로 공격(끄면 \"보스 시험\" 공격)", () => autoAttack, v => autoAttack = v);
             list.AddFloat(g, "boss.walkSpeed", "걷는 속도(m/s)", () => walkSpeed, v => walkSpeed = v, 1f, 20f, 0.5f, 1);
         }
     }
