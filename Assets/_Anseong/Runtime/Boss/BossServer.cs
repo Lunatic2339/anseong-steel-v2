@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using Anseong.Combat;
+using Anseong.Core;
 using Anseong.Net;
 using Unity.Netcode;
 using UnityEngine;
@@ -30,10 +31,10 @@ namespace Anseong.Boss
     /// <summary>
     /// 보스 두뇌(M2-02, 서버만). 공격 상태기계를 서버 시각으로 돌리고, 사건을 전투 이벤트(예고·명중 순간·빈틈)로 보내고,
     /// 동작(<see cref="BossAction"/>)을 복제한다. 보스가 빈틈·경직일 때만 피해가 들어가게 전투 규칙에 물려 준다.
-    /// 시험용: 숫자 1~5로 기술 하나(에디터·개발 빌드). 기술 고르기·페이즈는 M2-04.
+    /// 시험용(헤드셋을 쓴 채, 키보드 없이): 쉬는 시간마다 기술을 돌아가며 또는 하나만 쓴다(조절 메뉴 "보스 시험"). 기술 고르기·페이즈는 M2-04.
     /// 보스 프리팹 루트(NetworkObject와 함께)에 메뉴가 붙인다.
     /// </summary>
-    public class BossServer : NetworkBehaviour
+    public class BossServer : NetworkBehaviour, ITunable
     {
         [SerializeField, Tooltip("전투 서버. 비어 있으면 시작할 때 한 번 찾는다.")]
         CombatServer combat;
@@ -41,13 +42,19 @@ namespace Anseong.Boss
         [SerializeField, Tooltip("기술 에셋(05 기술표). 메뉴가 Data/Boss의 5개를 넣는다.")]
         BossAttackDefinition[] attacks = new BossAttackDefinition[0];
 
-        [SerializeField, Tooltip("쉬는 중에도 피해를 받는다. 기술을 스스로 고르기 전(M2-02·03)에는 켜 두고, 패턴(M2-04)이 들어오면 끈다(05: 빈틈에만 피해).")]
+        [SerializeField, Tooltip("쉬는 중에도 피해를 받는다(시험 공격을 끈 때만). 패턴(M2-04)이 들어오면 끈다(05: 빈틈에만 피해).")]
         bool restIsOpening = true;
 
         [SerializeField, Min(0f), Tooltip("빈틈이 끝나도 연계가 이어지는 중이면 다음 공격을 이만큼까지 미룬다(05: 2.4초).")]
         float comboHoldSeconds = 2.4f;
 
-        [SerializeField, Tooltip("시험용 숫자 키 1~5로 기술 하나(왼손 펀치, 오른손 펀치, 좌우 연타, 내려찍기, 돌진). 에디터·개발 빌드만.")]
+        [Header("시험 공격 (헤드셋, 키보드 없이)")]
+        [SerializeField, Tooltip("쉬는 시간이 지나면 스스로 기술을 쓴다. 0 = 끔, 1 = 다섯 기술 돌아가며, 2~6 = 그 기술만(왼손 펀치, 오른손 펀치, 좌우 연타, 내려찍기, 돌진). 조절 메뉴 \"보스 시험\". 패턴(M2-04)이 켜지면 쓰지 않는다.")]
+        int testAttack = 1;
+        [SerializeField, Min(0.5f), Tooltip("시험 공격: 공격이 끝나고(빈틈 포함) 다음 공격까지 쉬는 시간(초).")]
+        float testRestSeconds = 3f;
+
+        [SerializeField, Tooltip("예비: 에디터에서 숫자 키 1~5로 기술 하나. 헤드셋 시험에는 쓰지 않는다.")]
         bool debugKeys = true;
 
         readonly NetworkVariable<BossAction> action = new NetworkVariable<BossAction>(new BossAction { Attack = BossAction.NoAttack });
@@ -62,6 +69,12 @@ namespace Anseong.Boss
         public CombatServer Combat => combat;
         public double Now => NetworkManager != null ? NetworkManager.ServerTime.Time : Time.timeAsDouble;
         public bool RestIsOpening { get => restIsOpening; set => restIsOpening = value; }
+        /// <summary>시험 공격을 막는다(보스가 스스로 싸우는 패턴이 켜졌을 때, M2-04).</summary>
+        public bool TestAttacksBlocked { get; set; }
+
+        static readonly string[] TestAttackNames = { "끔", "다섯 기술 돌아가며", "왼손 펀치만", "오른손 펀치만", "좌우 연타만", "내려찍기만", "돌진만" };
+        int testCursor;
+        double restSince = -1;
 
         /// <summary>서버: 보스 사건이 생기는 즉시(명중 순간 대응 판정 M2-03, 페이즈 M2-04가 듣는다).</summary>
         public event Action<BossEvent> ServerEvent;
@@ -106,7 +119,10 @@ namespace Anseong.Boss
         }
 
         /// <summary>서버: 지금 피해를 받는지.</summary>
-        public bool Vulnerable() => machine.CanBeDamaged || (restIsOpening && machine.IsResting);
+        public bool Vulnerable() => machine.CanBeDamaged || (restIsOpening && machine.IsResting && !TestAttacking);
+
+        /// <summary>시험 공격이 돌고 있다: 쉬는 중은 막힘(05대로 빈틈에만 피해).</summary>
+        bool TestAttacking => testAttack > 0 && !TestAttacksBlocked;
 
         void Update()
         {
@@ -121,7 +137,37 @@ namespace Anseong.Boss
             var snapshot = authority.Snapshot;
             machine.ComboHoldSeconds = comboHoldSeconds;
             machine.Update(now, snapshot.ComboStep > 0 || snapshot.BoostOpen, bossEvents);
+            TestAttack(now);
             Publish();
+        }
+
+        /// <summary>시험 공격: 쉬는 중이 testRestSeconds 이어지면 다음 기술.</summary>
+        void TestAttack(double now)
+        {
+            if (!machine.IsResting || !TestAttacking)
+            {
+                restSince = -1;
+                return;
+            }
+            if (restSince < 0) restSince = now;
+            if (now - restSince < testRestSeconds) return;
+            BossAttackKind kind;
+            if (testAttack == 1)
+            {
+                kind = (BossAttackKind)(testCursor % 5);
+                testCursor++;
+            }
+            else kind = (BossAttackKind)Mathf.Clamp(testAttack - 2, 0, 4);
+            restSince = -1;
+            TryBegin(kind);
+        }
+
+        public void AddTuning(TuningList list)
+        {
+            const string g = "보스 시험";
+            list.Describe(g, "보스가 쉬는 시간마다 기술을 쓴다(키보드 필요 없음)\n할 것: 예고(깜빡임) 때 막기, 빈틈 안내가 뜨면 치기\n볼 것: 예고 중 펀치는 막힘, 빈틈에만 HP가 줄어듦");
+            list.AddChoice(g, "boss.testAttack", "시험 공격", () => testAttack, v => { testAttack = v; restSince = -1; }, TestAttackNames);
+            list.AddFloat(g, "boss.testRest", "공격 사이 쉬는 시간(초)", () => testRestSeconds, v => testRestSeconds = v, 0.5f, 10f, 0.5f, 1);
         }
 
         bool TryBind()
@@ -138,6 +184,8 @@ namespace Anseong.Boss
         void OnReset()
         {
             machine.Reset();
+            testCursor = 0;
+            restSince = -1;
             bossEvents.Clear();
             ServerReset?.Invoke();
             Publish();
