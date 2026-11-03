@@ -6,6 +6,7 @@ namespace Anseong.Combat
     /// 필살기 임시 연출(M2-05): 충전 동안 플레이어 로봇 몸이 점점 밝아지고, 발사하면 두 주먹 가운데에서 보스까지 광선(LineRenderer)을 3초 쏜다.
     /// 전투 이벤트만 듣는다(모든 PC가 같은 이벤트를 받는다). 진짜 효과(VFX·셰이더)는 M5에서 이 자리를 바꾼다.
     /// 재질은 바꾸지 않고 MaterialPropertyBlock으로 색만 덮는다(URP Lit _BaseColor·_EmissionColor). 플레이어 로봇 루트에 메뉴가 붙인다.
+    /// 파티클(선우 11/03 "기본 파티클로라도"): 충전 중 두 주먹으로 빨려 드는 입자, 발사 중 주먹 → 보스로 쏟아지는 입자, 보스 쪽 폭발. 메뉴가 만든다.
     /// </summary>
     public class FinisherVisual : MonoBehaviour
     {
@@ -17,6 +18,15 @@ namespace Anseong.Combat
         Transform[] beamFrom = new Transform[0];
         [SerializeField, Tooltip("광선. 비어 있으면 광선 없이 발광만.")]
         LineRenderer beam;
+
+        [SerializeField, Tooltip("충전 입자(두 주먹). 메뉴가 만든다.")]
+        ParticleSystem[] chargeFx = new ParticleSystem[0];
+        [SerializeField, Tooltip("광선 입자(주먹 → 보스).")]
+        ParticleSystem beamFx;
+        [SerializeField, Tooltip("보스 쪽 폭발 입자.")]
+        ParticleSystem impactFx;
+        [SerializeField, Min(1f), Tooltip("광선 입자 속도(m/s).")]
+        float beamParticleSpeed = 160f;
 
         [SerializeField, Tooltip("발광 색.")]
         Color glow = new Color(0.3f, 0.8f, 1f);
@@ -66,20 +76,29 @@ namespace Anseong.Combat
                 case CombatCue.FinisherCharge:
                     chargeStart = Time.time;
                     chargeSeconds = Mathf.Max(0.1f, e.Amount);
+                    Play(chargeFx, true);
                     break;
                 case CombatCue.FinisherReset:
                     chargeStart = -1f;
+                    Play(chargeFx, false);
                     Clear();
                     break;
                 case CombatCue.FinisherFire:
                     chargeStart = -1f;
+                    Play(chargeFx, false);
                     target = e.Point + Vector3.up * targetHeight;
                     beamUntil = Time.time + Mathf.Max(0.1f, e.Amount);
                     Tint(1f);
+                    if (impactFx != null)
+                    {
+                        impactFx.transform.position = target;
+                        impactFx.Play(true);
+                    }
+                    if (beamFx != null) beamFx.Play(true);
                     break;
-                case CombatCue.EncounterWon:
                 case CombatCue.BossDefeated:
-                    // 광선 시간이 끝나면 저절로 꺼진다. 재시작은 아래 Update가 정리.
+                    // 마지막 한 번 크게 터진다.
+                    if (impactFx != null) impactFx.Emit(150);
                     break;
             }
         }
@@ -90,7 +109,7 @@ namespace Anseong.Combat
             if ((chargeStart >= 0f || beamUntil >= 0f) && director.State.BossPhase < 4)
             {
                 chargeStart = beamUntil = -1f;
-                if (beam != null) beam.enabled = false;
+                StopAll();
                 Clear();
                 return;
             }
@@ -99,11 +118,10 @@ namespace Anseong.Combat
             if (Time.time >= beamUntil)
             {
                 beamUntil = -1f;
-                if (beam != null) beam.enabled = false;
+                StopAll();
                 Clear();
                 return;
             }
-            if (beam == null) return;
             var from = Vector3.zero;
             var count = 0;
             foreach (var t in beamFrom)
@@ -113,6 +131,15 @@ namespace Anseong.Combat
                 count++;
             }
             from = count > 0 ? from / count : transform.position + Vector3.up * targetHeight;
+            if (beamFx != null)
+            {
+                var path = target - from;
+                beamFx.transform.SetPositionAndRotation(from, Quaternion.LookRotation(path.sqrMagnitude > 1e-4f ? path : transform.forward));
+                var main = beamFx.main;
+                main.startSpeed = beamParticleSpeed;
+                main.startLifetime = path.magnitude / beamParticleSpeed;
+            }
+            if (beam == null) return;
             beam.enabled = true;
             beam.positionCount = 2;
             beam.SetPosition(0, from);
@@ -121,6 +148,25 @@ namespace Anseong.Combat
             var w = beamWidth * (0.85f + 0.15f * Mathf.Sin(Time.time * 40f));
             beam.startWidth = w;
             beam.endWidth = w * 0.6f;
+        }
+
+        static void Play(ParticleSystem[] systems, bool on)
+        {
+            if (systems == null) return;
+            foreach (var p in systems)
+            {
+                if (p == null) continue;
+                if (on) p.Play(true);
+                else p.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            }
+        }
+
+        void StopAll()
+        {
+            if (beam != null) beam.enabled = false;
+            Play(chargeFx, false);
+            if (beamFx != null) beamFx.Stop(true, ParticleSystemStopBehavior.StopEmitting);
+            if (impactFx != null) impactFx.Stop(true, ParticleSystemStopBehavior.StopEmitting);
         }
 
         void Tint(float k)
