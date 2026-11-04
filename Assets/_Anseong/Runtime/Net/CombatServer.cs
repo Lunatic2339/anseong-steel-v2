@@ -42,7 +42,7 @@ namespace Anseong.Net
             if (director == null) director = FindAnyObjectByType<CombatDirector>();
             if (IsServer)
             {
-                authority = new CombatAuthority(director != null ? director.CreateResolver() : new CombatResolver());
+                authority = director != null ? director.CreateAuthority() : new CombatAuthority(new CombatResolver());
                 state.Value = new NetCombatSnapshot(authority.Snapshot);
                 var session = FindAnyObjectByType<SessionBootstrap>();
                 pilotClient = SessionRules.InitialOwners(session != null ? session.Mode : SessionMode.SoloBothArms, Unity.Netcode.NetworkManager.ServerClientId);
@@ -92,6 +92,31 @@ namespace Anseong.Net
         public void SubmitMiss(PilotSide side, PunchKind kind, int strikeId) => MissRpc((byte)side, (byte)kind, strikeId);
         public void SubmitArmInput(PilotSide side, bool gripHeld, bool triggerPressed) => ArmInputRpc((byte)side, gripHeld, triggerPressed);
         public void RequestReset() => ResetRpc();
+        public void SubmitGuard(PilotSide side, bool guarding) => GuardRpc((byte)side, guarding);
+        public void SubmitFinisherReady(PilotSide side, bool ready) => FinisherReadyRpc((byte)side, ready);
+
+        [Rpc(SendTo.Server)]
+        void FinisherReadyRpc(byte side, bool ready, RpcParams rpc = default)
+        {
+            authority?.SetFinisherReady((PilotSide)side, ready, Now);
+        }
+        public void SubmitStick(PilotSide side, Vector2 stick) => StickRpc((byte)side, Quantize(stick.x), Quantize(stick.y));
+
+        static sbyte Quantize(float v) => (sbyte)Mathf.RoundToInt(Mathf.Clamp(v, -1f, 1f) * 127f);
+
+        [Rpc(SendTo.Server)]
+        void GuardRpc(byte side, bool guarding, RpcParams rpc = default)
+        {
+            authority?.SetGuard((PilotSide)side, guarding);
+        }
+
+        [Rpc(SendTo.Server)]
+        void StickRpc(byte side, sbyte x, sbyte y, RpcParams rpc = default)
+        {
+            if (authority == null) return;
+            authority.SetStick((PilotSide)side, new Vector2(x / 127f, y / 127f), Now, events);
+            Flush();
+        }
 
         // ── 팔 주인 (M3-01) ──
 
@@ -156,6 +181,9 @@ namespace Anseong.Net
             Debug.Log("[CombatServer] 서버 초기화: 보스 HP·연계·부스트", this);
         }
 
+        /// <summary>서버에서: 보내기 직전의 모든 사건(보스 두뇌가 부스트 → 밀려남 같은 반응을 붙인다).</summary>
+        public event System.Action<CombatEvent> ServerCue;
+
         /// <summary>서버에서: 재시작 때 같이 초기화할 서버 쪽 규칙(보스 공격·페이즈 등)이 듣는다.</summary>
         public event System.Action ServerReset;
 
@@ -165,15 +193,18 @@ namespace Anseong.Net
         public void Flush()
         {
             if (!IsServer || authority == null) return;
-            var snapshot = new NetCombatSnapshot(authority.Snapshot);
-            if (events.Count > 0)
+            // 서버 쪽 규칙이 사건을 듣고 새 사건을 더하면(부스트 → 밀려남 등) 그것까지 이어서 보낸다.
+            for (var round = 0; round < 4 && events.Count > 0; round++)
             {
                 // 보내는 중에 듣는 쪽이 다시 보고하면(호스트는 바로 돌아옴) 목록이 바뀌므로 복사해서 보낸다.
                 var batch = events.ToArray();
                 events.Clear();
+                foreach (var e in batch) ServerCue?.Invoke(e);
+                var snapshot = new NetCombatSnapshot(authority.Snapshot);
                 foreach (var e in batch) CueRpc(new NetCombatEvent(e), snapshot);
             }
-            if (!state.Value.Equals(snapshot)) state.Value = snapshot;
+            var current = new NetCombatSnapshot(authority.Snapshot);
+            if (!state.Value.Equals(current)) state.Value = current;
         }
 
         /// <summary>서버에서: 서버 규칙이 사건을 더할 목록. 더한 뒤 <see cref="Flush"/>.</summary>

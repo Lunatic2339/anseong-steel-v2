@@ -48,9 +48,19 @@ namespace Anseong.Combat
             [Tooltip("컨트롤러 진동 길이(초).")]
             [Range(0f, 1f)] public float hapticSeconds;
 
+            [Tooltip("켜면 사건 번호(Code: 보스 기술 등)가 아래 값일 때만.")]
+            public bool matchCode;
+            public int code;
+
+            [Tooltip("켜면 사건 수치(Amount: 예고 등급 0 일반·1 강·2 가드 불가 등)를 반올림한 값이 아래 값일 때만.")]
+            public bool matchAmount;
+            public int amount;
+
             public bool Matches(CombatEvent e)
             {
                 if (e.Cue != cue) return false;
+                if (matchCode && e.Code != code) return false;
+                if (matchAmount && Mathf.RoundToInt(e.Amount) != amount) return false;
                 switch (kind)
                 {
                     case KindFilter.Jab: return e.Kind == PunchKind.Jab;
@@ -82,7 +92,62 @@ namespace Anseong.Combat
             New(CombatCue.BoostReady, KindFilter.Any, "SFX_BoostReady", pitch: 1f),
             New(CombatCue.Boost, KindFilter.Any, "SFX_Boost", haptic: 1f, seconds: 0.25f),
             New(CombatCue.Boost, KindFilter.Any, "SFX_BoostHit", atHitPoint: true),
+            // M2-02 보스 공격
+            New(CombatCue.Blocked, KindFilter.Any, "SFX_Guard", atHitPoint: true, haptic: 0.3f, seconds: 0.05f),
+            WithAmount(New(CombatCue.BossTelegraph, KindFilter.Any, "SFX_WarnNormal", pitch: 1f), 0),
+            WithAmount(New(CombatCue.BossTelegraph, KindFilter.Any, "SFX_WarnHeavy", pitch: 1f), 1),
+            WithAmount(New(CombatCue.BossTelegraph, KindFilter.Any, "SFX_Siren", pitch: 1f), 2),
+            New(CombatCue.BossStrike, KindFilter.Any, "SFX_BossSwing", atHitPoint: true),
+            // M2-03 막기·피하기·피격
+            New(CombatCue.GuardBlock, KindFilter.Any, "SFX_Guard", haptic: 0.6f, seconds: 0.2f),
+            New(CombatCue.GuardFail, KindFilter.Any, "SFX_GuardStrain"),
+            New(CombatCue.DodgeStart, KindFilter.Any, "SFX_DodgeSlide"),
+            New(CombatCue.Dodge, KindFilter.Any, "SFX_DodgeBurst", pitch: 1f),
+            New(CombatCue.PilotHit, KindFilter.Any, "SFX_RobotHit", haptic: 1f, seconds: 0.3f),
+            New(CombatCue.PilotDefeated, KindFilter.Any, "SFX_AlarmLowHP", pitch: 1f),
+            // M2-04 페이즈·밀려남·사령관 대사(파일이 없으면 무음)
+            New(CombatCue.PhaseChanged, KindFilter.Any, "SFX_BossRoar", atHitPoint: true),
+            New(CombatCue.BossKnockback, KindFilter.Any, "SFX_BossKnockback", atHitPoint: true),
+            // M2-05 필살기·쓰러짐
+            New(CombatCue.FinisherCharge, KindFilter.Any, "SFX_BeamCharge", pitch: 1f, haptic: 0.4f, seconds: 0.2f),
+            New(CombatCue.FinisherReset, KindFilter.Any, "SFX_GripRelease"),
+            New(CombatCue.FinisherFire, KindFilter.Any, "SFX_BeamFire", pitch: 1f, haptic: 1f, seconds: 0.5f),
+            New(CombatCue.BossDefeated, KindFilter.Any, "SFX_BossDown", atHitPoint: true),
+            Voice(CommanderLines.IncomingAttack), Voice(CommanderLines.CounterNow), Voice(CommanderLines.KneelFinisher),
+            Voice(CommanderLines.Victory), Voice(CommanderLines.FirstSlam), Voice(CommanderLines.FirstCombo),
+            Voice(CommanderLines.FirstCharge), Voice(CommanderLines.Phase2), Voice(CommanderLines.Phase3), Voice(CommanderLines.FinisherHint),
         };
+
+        static Entry Voice(int line)
+        {
+            var entry = New(CombatCue.CommanderLine, KindFilter.Any, CommanderLines.SoundName(line), pitch: 1f);
+            entry.pitchJitter = 0f;
+            entry.matchCode = true;
+            entry.code = line;
+            return entry;
+        }
+
+        static Entry WithAmount(Entry entry, int value)
+        {
+            entry.matchAmount = true;
+            entry.amount = value;
+            return entry;
+        }
+
+        /// <summary>기본 줄 중 이 표에 없는 것(같은 사건·소리 이름이 없음). 메뉴가 기존 표에 새 줄을 더할 때 쓴다.</summary>
+        public Entry[] MissingDefaults()
+        {
+            var have = Entries;
+            var missing = new System.Collections.Generic.List<Entry>();
+            foreach (var d in DefaultEntries())
+            {
+                var found = false;
+                foreach (var e in have)
+                    if (e != null && e.cue == d.cue && e.soundName == d.soundName && e.kind == d.kind) { found = true; break; }
+                if (!found) missing.Add(d);
+            }
+            return missing.ToArray();
+        }
 
         static Entry New(CombatCue cue, KindFilter kind, string sound, bool atHitPoint = false, float haptic = 0f, float seconds = 0f,
             float pitch = 0.75f, float perStep = 0f)
