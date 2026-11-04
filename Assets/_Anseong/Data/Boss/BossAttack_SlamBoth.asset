@@ -13,7 +13,7 @@ MonoBehaviour:
   m_Name: BossAttack_SlamBoth
   m_EditorClassIdentifier: Anseong.Runtime::Anseong.Boss.BossAttackDefinition
   clip: {fileID: 0}
-  clipSpeed: 1
+  clipSpeed: 0.5
   spec:
     kind: 3
     telegraphSeconds: 1.8

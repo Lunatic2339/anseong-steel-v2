@@ -706,6 +706,8 @@ MonoBehaviour:
   firstAttackDelay: 4
   finisherHintSeconds: 20
   victoryDelay: 3
+  finisherDistance: 90
+  finisherRetreatSeconds: 2.5
   writeCsv: 1
 --- !u!1 &8358615496095341539
 GameObject:
