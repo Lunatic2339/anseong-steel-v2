@@ -30,7 +30,7 @@ namespace Anseong.Boss
                 case BossAttackKind.PunchRight: return "오른팔 들어 막기";
                 case BossAttackKind.AlternatingCombo: return $"{Arm(firstSide)}부터 번갈아 막기";
                 case BossAttackKind.SlamBoth: return "두 팔 다 들어 막기";
-                case BossAttackKind.Charge: return "두 스틱을 같은 쪽으로 밀어 피하기";
+                case BossAttackKind.Charge: return "부딪히기 직전에 두 스틱을 같은 쪽으로 밀어 피하기";
                 default: return string.Empty;
             }
         }

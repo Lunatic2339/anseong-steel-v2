@@ -4,7 +4,8 @@ using UnityEngine;
 namespace Anseong.Combat
 {
     /// <summary>
-    /// 조종사 로봇 쪽 임시 반응(M2-03): 회피 시작 때 로봇 루트를 옆으로 미끄러뜨리고(약 0.4초, 협동 이동 전체는 M3),
+    /// 조종사 로봇 쪽 임시 반응(M2-03): 회피 시작 때 로봇 루트를 옆으로 미끄러뜨렸다가 잠시 뒤 제자리로 돌아오고(M2-06, 선우 11/04:
+    /// 옆으로 간 채로 남으면 보스가 정면에서 벗어나 펀치가 안 닿음. 협동 이동 전체는 M3),
     /// 맞았을 때 조종석을 짧게 흔든다(카메라는 거의 안 흔들리게 작게). 전투 이벤트만 듣는다(모든 PC가 같은 이벤트를 받는다).
     /// 플레이어 로봇 루트에 메뉴가 붙인다.
     /// </summary>
@@ -22,8 +23,14 @@ namespace Anseong.Combat
         float slideMeters = 10f;
         [SerializeField, Min(0.05f), Tooltip("미끄러지는 시간(초, 01: 약 0.4).")]
         float slideSeconds = 0.4f;
-        [SerializeField, Min(0f), Tooltip("다음 회피까지 쉬는 시간(초).")]
-        float slideCooldown = 0.8f;
+        [SerializeField, Min(0f), Tooltip("다음 회피까지 쉬는 시간(초, 돌아온 뒤부터).")]
+        float slideCooldown = 0.3f;
+        [SerializeField, Tooltip("회피 뒤 제자리로 돌아온다(끄면 옆에 남음: 보스가 정면에서 벗어나 펀치가 안 닿을 수 있음).")]
+        bool returnAfterSlide = true;
+        [SerializeField, Min(0f), Tooltip("옆에서 머무는 시간(초).")]
+        float slideHoldSeconds = 0.4f;
+        [SerializeField, Min(0.05f), Tooltip("제자리로 돌아오는 시간(초). 묵직하게 천천히.")]
+        float slideReturnSeconds = 0.8f;
 
         [Header("피격 흔들림")]
         [SerializeField, Tooltip("맞으면 조종석을 흔든다.")]
@@ -62,7 +69,7 @@ namespace Anseong.Combat
                     slideFrom = transform.position;
                     slideTo = slideFrom + transform.right * (e.Amount < 0f ? -slideMeters : slideMeters);
                     slideStart = Time.time;
-                    nextSlide = Time.time + slideSeconds + slideCooldown;
+                    nextSlide = Time.time + slideSeconds + (returnAfterSlide ? slideHoldSeconds + slideReturnSeconds : 0f) + slideCooldown;
                     break;
                 case CombatCue.PilotHit:
                     if (!shake) return;
@@ -77,10 +84,21 @@ namespace Anseong.Combat
         {
             if (slideStart >= 0f)
             {
-                var t = Mathf.Clamp01((Time.time - slideStart) / slideSeconds);
-                // 묵직하게: 천천히 출발해 천천히 멈춘다.
-                transform.position = Vector3.Lerp(slideFrom, slideTo, Mathf.SmoothStep(0f, 1f, t));
-                if (t >= 1f) slideStart = -1f;
+                var elapsed = Time.time - slideStart;
+                // 묵직하게: 천천히 출발해 천천히 멈춘다. 옆에서 잠깐 머문 뒤 같은 곡선으로 돌아온다.
+                var back = elapsed - slideSeconds - slideHoldSeconds;
+                if (returnAfterSlide && back > 0f)
+                {
+                    var r = Mathf.Clamp01(back / slideReturnSeconds);
+                    transform.position = Vector3.Lerp(slideTo, slideFrom, Mathf.SmoothStep(0f, 1f, r));
+                    if (r >= 1f) slideStart = -1f;
+                }
+                else
+                {
+                    var t = Mathf.Clamp01(elapsed / slideSeconds);
+                    transform.position = Vector3.Lerp(slideFrom, slideTo, Mathf.SmoothStep(0f, 1f, t));
+                    if (t >= 1f && !returnAfterSlide) slideStart = -1f;
+                }
             }
             if (shakeStart >= 0f && seat != null)
             {
