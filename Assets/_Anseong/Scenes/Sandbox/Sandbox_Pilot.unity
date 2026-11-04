@@ -1628,6 +1628,7 @@ GameObject:
   - component: {fileID: 1906850462}
   - component: {fileID: 1906850461}
   - component: {fileID: 1906850460}
+  - component: {fileID: 1906850464}
   m_Layer: 0
   m_Name: Network Session
   m_TagString: Untagged
@@ -1651,7 +1652,11 @@ MonoBehaviour:
   network: {fileID: 0}
   address: 127.0.0.1
   port: 7777
-  startOnPlay: 1
+  skipStartScreenInEditor: 1
+  connectSeconds: 5
+  input: {fileID: 0}
+  calibration: {fileID: 0}
+  seat: {fileID: 0}
 --- !u!114 &1906850461
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1740,6 +1745,24 @@ Transform:
   m_Children: []
   m_Father: {fileID: 0}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+--- !u!114 &1906850464
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1906850459}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 841e5f4a00fdc8c46a16d86b4a307fbe, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.UI.OperatorStartScreen
+  session: {fileID: 0}
+  osFontNames:
+  - Malgun Gothic
+  - "\uB9D1\uC740 \uACE0\uB515"
+  - Arial
+  referenceResolution: {x: 1920, y: 1080}
 --- !u!1 &2030995052
 GameObject:
   m_ObjectHideFlags: 0
