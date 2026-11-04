@@ -47,6 +47,7 @@
   (소리 표 `Audio/CombatCues.asset`의 `MoveStart` 줄은 Rebuild가 빠진 기본 줄로 채운다. `SFX_MoveConfirm` 파일이 없으면 무음.)
 - 사람이 확인할 것: 위 "사람이 할 일" 6개.
 - 남은 문제 / 제안:
+  - 회피는 옆구르기처럼 옆에 남는다(선우 11/04). M2-06의 임시 "회피 뒤 제자리로"는 `PlayerHitFeedback` 미끄러짐 안에 있어서, 이 작업이 미끄러짐을 끄면(`SlideEnabled = false`) 같이 꺼진다. M2-06과 합칠 때 `PlayerHitFeedback`이 겹치면 `SlideEnabled` 속성을 남기고 OnCue의 `if (!slide …) return;`을 지킨다.
   - 근접 거리 26 m·후퇴 60 m·한 걸음 8 m는 처음 값. 보스는 30 m까지 걸어오므로(M2-04) 접근을 안 해도 싸움이 된다. 한 판 길이를 보고 조절.
   - 다리 마스크는 뼈 이름(`LeftUpLeg`·`LeftLeg`·`LeftFoot`·`LeftToeBase` 등)으로 고른다. 모델이 바뀌면 메뉴를 다시 돌리면 된다.
   - 이동 중에도 보스 공격·펀치 판정은 그대로다(막을지는 헤드셋 확인 뒤).
