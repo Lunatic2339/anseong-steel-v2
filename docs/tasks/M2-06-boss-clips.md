@@ -45,8 +45,12 @@
 ## 결과 (작업 후 Claude가 작성)
 - 바뀐 파일: `Editor/BossClipImport.cs`(새), `Runtime/UI/BossAttackCallout.cs`(새), `Runtime/Boss/BossAttackGuide.cs`(새), `Tests/EditMode/BossAttackGuideTests.cs`(새), `Runtime/Boss/BossServer.cs`·`BossBrain.cs`, `Runtime/Combat/PlayerHitFeedback.cs`·`FinisherRules.cs`·`FinisherReporter.cs`·`CombatAuthority.cs`·`CommanderLines.cs`·`CombatTypes.cs`, `Runtime/UI/TestGuidePanel.cs`, `Editor/SceneSetupMenu.cs`, 테스트(`FinisherTests`·`CombatAuthorityTests`), `docs/design/08_tuning_menu.md`, `Editor/BossAttackMenu.cs`, `Editor/RobotArtSettings.cs`, `Editor/RobotPrefabMenu.cs`, `Editor/RobotSandboxUtility.cs`(Hips 이름), `Runtime/Boss/BossAttackDefinition.cs`(툴팁), `Art/Boss/Animation/Source/*.anim`(유진 원본 7개), `docs/폴더_지도.md`.
 - 클라우드에서 컴파일 못 함 → Editor.log `error CS` 확인 필요.
-- 남은 문제/제안:
+- 프로토타입(선우 11/04): 확인은 "돌아가는지·연결됐는지"만. 아래는 나중에 다듬을 것.
+- 남은 문제/제안(나중에 다듬을 것):
   - 걷기 클립의 골반 앞뒤 이동이 남아 있으면 반복할 때 보스가 툭 뒤로 돌아갈 수 있다. 보이면 걷기만 골반 앞뒤를 지우는 옵션을 붙인다.
   - 펀치 원본이 5.1초로 길어 속도를 올리면 가볍게 보일 수 있다(메카 기준 "묵직하게"). 그러면 속도 대신 기술 에셋 예고 시간을 늘리는 쪽을 제안.
   - 돌진·포효·무릎·밀려남 클립은 유진에게 요청 필요(04_art_spec 표).
   - 조종사 클립 몸 기준 확인 끝나면 M2-05의 임시 좌우 표시 구는 꺼도 된다(BossTelegraphTint "표시 구").
+  - 연타·내려찍기는 클립 주먹이 예고보다 빨라 0.5배 속도로 느리게 보임 → 클립 구간 자르기나 예고 시간 조정.
+  - 유진 V13 손 리깅(손가락)은 V13 몸에 붙어 있음. 우리 클립은 손가락 곡선을 버림. V13 모델 교체(M2-07 후보, 발 한쪽 빠짐 확인 필요) 때 함께.
+  - 안내 글자 크기·위치, 보스 물러나는 거리 90 m, 회피 판정 창 0.6초는 헤드셋에서 다시 맞출 값.
