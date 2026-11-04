@@ -87,6 +87,14 @@ namespace Anseong.Combat
         PilotHit,
         /// <summary>조종사 로봇 HP 0(패배 연출은 M4).</summary>
         PilotDefeated,
+        /// <summary>페이즈가 바뀜(M2-04). Code = 새 페이즈 번호(2·3).</summary>
+        PhaseChanged,
+        /// <summary>보스가 무릎 꿇음(HP 10%, 필살기 대기).</summary>
+        BossKneel,
+        /// <summary>사령관 대사(M2-04). Code = 대사 번호(<c>CommanderLines</c>). 소리 파일이 없으면 무음, 안내판에 글자.</summary>
+        CommanderLine,
+        /// <summary>보스가 크게 밀려남(부스트, M2-04). Amount = 거리(m).</summary>
+        BossKnockback,
     }
 
     /// <summary>연계가 끊긴 이유.</summary>

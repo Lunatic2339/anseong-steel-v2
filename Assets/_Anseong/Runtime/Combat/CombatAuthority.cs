@@ -29,7 +29,10 @@ namespace Anseong.Combat
         public CombatResolver Resolver => resolver;
         public PilotHealth Pilot => pilot;
         public DodgeRules Dodge => dodge;
-        public CombatSnapshot Snapshot => CombatSnapshot.Of(resolver, pilot);
+        public CombatSnapshot Snapshot => CombatSnapshot.Of(resolver, pilot, BossPhase);
+
+        /// <summary>보스 페이즈(1·2·3, 무릎 4). 보스 두뇌가 쓰고 상태로 복제된다(HUD M4).</summary>
+        public int BossPhase { get; set; } = 1;
 
         /// <summary>명중 보고. 같은 동작은 한 번만 받아들인다.</summary>
         public bool SubmitHit(HitReport report, double serverTime, List<CombatEvent> events) => resolver.Resolve(report, serverTime, events);
@@ -107,6 +110,7 @@ namespace Anseong.Combat
         {
             resolver.Reset();
             pilot.Reset();
+            BossPhase = 1;
             dodge.Reset();
             triggerPressed[0] = triggerPressed[1] = false;
         }

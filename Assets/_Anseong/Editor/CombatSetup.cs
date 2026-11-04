@@ -374,7 +374,18 @@ namespace Anseong.EditorTools
             serialized.ApplyModifiedPropertiesWithoutUndo();
             if (go.GetComponent<BossAnimationDriver>() == null) go.AddComponent<BossAnimationDriver>();
             if (go.GetComponent<BossTelegraphTint>() == null) go.AddComponent<BossTelegraphTint>();
-            return $"보스 두뇌(기술 {attacks?.Length ?? 0}개, 숫자 1~5 시험) + 동작 복제 + 예고 발광";
+            // M2-04: 서버가 옮기는 보스 위치·회전 복제 + 스스로 싸우기(페이즈 표).
+            if (go.GetComponent<Unity.Netcode.Components.NetworkTransform>() == null)
+            {
+                var sync = go.AddComponent<Unity.Netcode.Components.NetworkTransform>();
+                sync.SyncScaleX = sync.SyncScaleY = sync.SyncScaleZ = false;
+            }
+            var brain = go.GetComponent<BossBrain>();
+            if (brain == null) brain = go.AddComponent<BossBrain>();
+            var serializedBrain = new SerializedObject(brain);
+            serializedBrain.FindProperty("table").objectReferenceValue = BossAttackMenu.EnsurePhaseTable();
+            serializedBrain.ApplyModifiedPropertiesWithoutUndo();
+            return $"보스 두뇌(기술 {attacks?.Length ?? 0}개, 숫자 1~5 시험) + 동작·위치 복제 + 예고 발광 + 스스로 싸우기(페이즈 표)";
         }
 
         static GameObject ZoneObject(string name, Transform bone)
