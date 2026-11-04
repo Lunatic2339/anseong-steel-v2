@@ -52,8 +52,14 @@ namespace Anseong.EditorTools
         [MenuItem("Anseong/Boss/Import Boss Clips (Yujin)")]
         static void ImportMenu()
         {
-            if (Import(out var report)) Debug.Log($"{LogPrefix} {report}\n이어서 'Anseong → Setup → Rebuild Robot + Pilot Input'을 실행하고 씬을 저장하세요.");
-            else EditorUtility.DisplayDialog("Import Boss Clips", report, "확인");
+            if (!Import(out var report))
+            {
+                EditorUtility.DisplayDialog("Import Boss Clips", report, "확인");
+                return;
+            }
+            // 보스 컨트롤러가 새 클립·속도를 쓰도록 프리팹을 바로 다시 만든다(순서를 바꿔 실행해 옛 클립이 남던 문제, 11/04).
+            var rebuilt = RobotPrefabMenu.Build();
+            Debug.Log($"{LogPrefix} {report}\n보스 컨트롤러·프리팹 다시 만들기: {(rebuilt ? "완료" : "실패(Console 확인)")}. 씬에 안내 글자가 없으면 'Rebuild Robot + Pilot Input'도 실행하고 씬을 저장하세요.");
         }
 
         internal static bool Import(out string report)
