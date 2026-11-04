@@ -35,7 +35,7 @@ namespace Anseong.Net
     /// "언제 어디서 어디로" 한 번을 복제한다. 모든 PC가 같은 서버 시각으로 같은 곡선을 재생하므로 조종석(카메라)이 끊기지 않는다.
     /// 몸 자동 회전(보스가 정면 ±20° 밖이면 초당 30°)은 서버가 계산하고 각도를 복제, 클라이언트는 같은 속도로 따라 돈다.
     /// 이동 중에는 플레이어 로봇 Animator의 "Walking"을 켠다(파라미터가 있을 때만, 다리 층). 1인 양팔도 같은 길(호스트).
-    /// 재시작(R)하면 처음 자리로. 메뉴 'Add Network Session'이 Combat Server 오브젝트에 붙인다.
+    /// 판 재시작하면 처음 자리로. 메뉴 'Add Network Session'이 Combat Server 오브젝트에 붙인다.
     /// </summary>
     [DefaultExecutionOrder(ExecutionOrder)]
     public class RobotMotionSync : NetworkBehaviour, ITunable
@@ -65,8 +65,10 @@ namespace Anseong.Net
         readonly NetworkVariable<float> yaw = new NetworkVariable<float>();
 
         Animator animator;
-        bool hasWalking, bound, turning;
-        double nextAllowed, lastDodgeOnset = double.NegativeInfinity;
+        bool hasWalking, bound, turning, notedMismatch;
+        double nextAllowed, nextDodgeAllowed, lastDodgeOnset = double.NegativeInfinity;
+        int pendingDodge;
+        double pendingDodgeAt;
         Vector3 startPosition;
         float startYaw, shownYaw;
 
@@ -146,24 +148,41 @@ namespace Anseong.Net
             var bossPosition = boss != null ? boss.transform.position : playerRoot.position + playerRoot.forward * 100f;
 
             // 회피: 두 스틱이 같은 좌/우로 "새로" 맞은 순간(M2-03 DodgeRules가 판정, 서버만).
+            // 걸음 도중이면 끊고 바로, 회피 쉼 중이면 잠깐 기억했다가 실행(예전엔 이 때 민 회피가 그냥 사라졌다).
             var dodge = authority.Dodge;
-            var dodgeDirection = 0;
             if (dodge.OnsetTime > lastDodgeOnset)
             {
                 lastDodgeOnset = dodge.OnsetTime;
-                dodgeDirection = dodge.Direction;
+                pendingDodge = dodge.Direction;
+                pendingDodgeAt = now;
             }
-            var held = CoopMoveRules.ForwardBack(dodge.Stick(PilotSide.Left), dodge.Stick(PilotSide.Right), settings);
+            if (pendingDodge != 0 && now - pendingDodgeAt > settings.dodgeBufferSeconds)
+            {
+                Note($"회피 입력 버림(쉬는 중, {nextDodgeAllowed - now:0.00}초 남음)");
+                pendingDodge = 0;
+            }
+
             var current = segment.Value.Value;
+            if (pendingDodge != 0)
+            {
+                var from = current.Kind == MoveKind.None ? current.To : current.Evaluate(now);
+                if (CoopMoveRules.TryPlanDodge(now, pendingDodge, current, from, playerRoot.rotation, settings, ref nextAllowed, ref nextDodgeAllowed, out var dodgeSegment))
+                {
+                    Note(pendingDodge < 0 ? "왼쪽 회피" : "오른쪽 회피");
+                    pendingDodge = 0;
+                    segment.Value = new NetMoveSegment { Value = dodgeSegment };
+                    current = dodgeSegment;
+                }
+            }
+
+            var held = CoopMoveRules.ForwardBack(dodge.Stick(PilotSide.Left), dodge.Stick(PilotSide.Right), settings);
+            NoteMismatch(dodge, held);
             if (!current.IsMoving(now) &&
-                CoopMoveRules.TryPlan(now, held, dodgeDirection, playerRoot.position, playerRoot.rotation, bossPosition, settings, ref nextAllowed, out var next))
+                CoopMoveRules.TryPlan(now, held, playerRoot.position, playerRoot.rotation, bossPosition, settings, ref nextAllowed, out var next))
             {
                 segment.Value = new NetMoveSegment { Value = next };
-                if (next.Kind == MoveKind.Approach || next.Kind == MoveKind.Retreat)
-                {
-                    combat.Events.Add(new CombatEvent { Cue = CombatCue.MoveStart, Amount = (int)next.Kind, Time = now, Point = playerRoot.position });
-                    combat.Flush();
-                }
+                combat.Events.Add(new CombatEvent { Cue = CombatCue.MoveStart, Amount = (int)next.Kind, Time = now, Point = playerRoot.position });
+                combat.Flush();
             }
 
             if (autoTurn)
@@ -193,6 +212,20 @@ namespace Anseong.Net
             SetWalking(walkAnimation && (current.Kind == MoveKind.Approach || current.Kind == MoveKind.Retreat) && current.IsMoving(now));
         }
 
+        /// <summary>두 스틱을 다 세게 밀었는데 방향이 달라 아무 일도 없을 때 한 번 남긴다(왜 안 움직였는지 기록으로 보기).</summary>
+        [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+        void NoteMismatch(DodgeRules dodge, MoveKind held)
+        {
+            Vector2 a = dodge.Stick(PilotSide.Left), b = dodge.Stick(PilotSide.Right);
+            var bothPushed = a.magnitude >= settings.minMagnitude && b.magnitude >= settings.minMagnitude;
+            var mismatch = bothPushed && held == MoveKind.None && !dodge.Agreeing;
+            if (mismatch && !notedMismatch) Note($"두 스틱 방향이 달라 무시: 왼 {a} 오른 {b}, 차이 {Vector2.Angle(a, b):0}°");
+            notedMismatch = mismatch;
+        }
+
+        [System.Diagnostics.Conditional("UNITY_EDITOR"), System.Diagnostics.Conditional("DEVELOPMENT_BUILD")]
+        void Note(string text) => Debug.Log("[Move] " + text, this);
+
         void SetWalking(bool on)
         {
             if (!hasWalking || animator == null) return;
@@ -202,7 +235,8 @@ namespace Anseong.Net
         void OnReset()
         {
             if (!IsServer || playerRoot == null) return;
-            nextAllowed = 0d;
+            nextAllowed = nextDodgeAllowed = 0d;
+            pendingDodge = 0;
             turning = false;
             lastDodgeOnset = combat != null && combat.Authority != null ? combat.Authority.Dodge.OnsetTime : double.NegativeInfinity;
             segment.Value = new NetMoveSegment { Value = new MoveSegment { Kind = MoveKind.None, From = startPosition, To = startPosition, Start = Now } };
@@ -214,6 +248,7 @@ namespace Anseong.Net
             const string g = "협동 이동";
             list.Describe(g, "할 것: 두 스틱 같이 앞·뒤·옆으로, 한쪽만 밀기\n볼 것: 둘이 같이 밀 때만 묵직하게 한 걸음씩, 멀미 없음");
             list.AddFloat(g, "move.stepMeters", "한 걸음 거리(m)", () => settings.stepMeters, v => settings.stepMeters = v, 2f, 20f, 1f, 0);
+            list.AddFloat(g, "move.dodgeCooldown", "회피 뒤 쉼(초)", () => settings.dodgeCooldownSeconds, v => settings.dodgeCooldownSeconds = v, 0f, 1.5f, 0.1f, 1);
             list.AddFloat(g, "move.stepSeconds", "한 걸음 시간(초)", () => settings.stepSeconds, v => settings.stepSeconds = v, 0.2f, 1.5f, 0.1f, 1);
             list.AddToggle(g, "move.autoTurn", "몸 자동 회전", () => autoTurn, v => autoTurn = v);
             list.AddToggle(g, "move.walkClip", "걷기 클립", () => walkAnimation, v => walkAnimation = v);

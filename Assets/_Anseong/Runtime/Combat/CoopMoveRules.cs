@@ -43,8 +43,11 @@ namespace Anseong.Combat
         [Tooltip("회피 거리(m, 로봇 크기). M2-03 임시 미끄러짐과 같은 값.")]
         [Min(0.5f)] public float dodgeMeters = 10f;
 
-        [Tooltip("회피 뒤 다음 이동까지 쉬는 시간(초).")]
+        [Tooltip("회피 뒤 다음 회피까지 쉬는 시간(초). 앞뒤 걸음은 회피가 끝나면 바로(걸음 사이 쉼만).")]
         [Range(0f, 2f)] public float dodgeCooldownSeconds = 0.8f;
+
+        [Tooltip("회피 입력을 이 시간(초) 동안 기억했다가 쉬는 시간이 끝나면 실행한다(걸음·쉼 중에 민 회피가 사라지지 않게).")]
+        [Range(0f, 1f)] public float dodgeBufferSeconds = 0.3f;
 
         [Tooltip("보스가 로봇 정면에서 이 각도(°)를 넘게 벗어나면 몸을 돌린다(01: 20).")]
         [Range(1f, 90f)] public float turnStartDegrees = 20f;
@@ -79,7 +82,7 @@ namespace Anseong.Combat
 
     /// <summary>
     /// 협동 이동 규칙(M3-03, 순수). 01 "이동": 두 보조 스틱이 같은 방향(크기 ≥ 0.5, 차이 25° 이내)일 때만 인정, 한 명이 놓으면 정지.
-    /// 앞 = 근접 거리까지 접근, 뒤 = 사거리 밖까지 후퇴, 좌/우 = 회피(새로 민 순간만, DodgeRules). 자유 이동 없음.
+    /// 앞 = 근접 거리까지 접근, 뒤 = 사거리 밖까지 후퇴, 좌/우 = 회피(새로 민 순간만, DodgeRules, 걸음 도중이면 끊고 회피). 자유 이동 없음.
     /// 몸은 보스가 정면 ±20° 밖이면 초당 30° 이하로 돌린다.
     /// </summary>
     public static class CoopMoveRules
@@ -97,24 +100,32 @@ namespace Anseong.Combat
         }
 
         /// <summary>
-        /// 다음 이동을 정한다. 이동 중이거나 쉬는 중이면 None. <paramref name="dodgeDirection"/> = 이번에 새로 시작한 회피(-1/+1, 없으면 0)는 앞뒤보다 먼저.
-        /// <paramref name="nextAllowed"/>는 다음 이동이 가능한 서버 시각(이 함수가 갱신).
+        /// 회피 한 번을 정한다(앞뒤 걸음보다 먼저). 앞뒤 걸음 도중이면 그 자리(<paramref name="robot"/> = 지금 위치)에서 끊고 옆으로 간다.
+        /// 회피 도중이거나 회피 쉼(<paramref name="nextDodgeAllowed"/>) 중이면 false(부르는 쪽이 잠깐 기억했다가 다시 부른다).
         /// </summary>
-        public static bool TryPlan(double now, MoveKind held, int dodgeDirection, Vector3 robot, Quaternion robotRotation, Vector3 boss,
+        public static bool TryPlanDodge(double now, int direction, MoveSegment current, Vector3 robot, Quaternion robotRotation,
+            CoopMoveSettings s, ref double nextAllowed, ref double nextDodgeAllowed, out MoveSegment segment)
+        {
+            segment = default;
+            if (direction == 0 || now < nextDodgeAllowed) return false;
+            if ((current.Kind == MoveKind.DodgeLeft || current.Kind == MoveKind.DodgeRight) && current.IsMoving(now)) return false;
+            var right = robotRotation * Vector3.right;
+            right.y = 0f;
+            right = right.sqrMagnitude > 1e-6f ? right.normalized : Vector3.right;
+            segment = Make(direction < 0 ? MoveKind.DodgeLeft : MoveKind.DodgeRight, robot, robot + right * (Mathf.Sign(direction) * s.dodgeMeters), now, s.stepSeconds);
+            nextAllowed = now + s.stepSeconds + s.stepGapSeconds;
+            nextDodgeAllowed = now + s.stepSeconds + s.dodgeCooldownSeconds;
+            return true;
+        }
+
+        /// <summary>
+        /// 다음 앞뒤 한 걸음을 정한다. 쉬는 중이면 false. <paramref name="nextAllowed"/>는 다음 이동이 가능한 서버 시각(이 함수가 갱신).
+        /// </summary>
+        public static bool TryPlan(double now, MoveKind held, Vector3 robot, Quaternion robotRotation, Vector3 boss,
             CoopMoveSettings s, ref double nextAllowed, out MoveSegment segment)
         {
             segment = default;
             if (now < nextAllowed) return false;
-
-            if (dodgeDirection != 0)
-            {
-                var right = robotRotation * Vector3.right;
-                right.y = 0f;
-                right = right.sqrMagnitude > 1e-6f ? right.normalized : Vector3.right;
-                segment = Make(dodgeDirection < 0 ? MoveKind.DodgeLeft : MoveKind.DodgeRight, robot, robot + right * (dodgeDirection * s.dodgeMeters), now, s.stepSeconds);
-                nextAllowed = now + s.stepSeconds + s.dodgeCooldownSeconds;
-                return true;
-            }
 
             if (held != MoveKind.Approach && held != MoveKind.Retreat) return false;
             var toBoss = boss - robot;
