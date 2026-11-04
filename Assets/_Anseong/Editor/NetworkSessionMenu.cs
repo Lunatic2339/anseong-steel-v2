@@ -59,6 +59,8 @@ namespace Anseong.EditorTools
                 go.AddComponent<NetworkObject>();
                 server = go.AddComponent<CombatServer>();
             }
+            // M3-03: 협동 이동(서버가 정하고 모든 PC가 같은 곡선으로 재생). 같은 NetworkObject에 붙인다.
+            if (server.GetComponent<RobotMotionSync>() == null) Undo.AddComponent<RobotMotionSync>(server.gameObject);
             var director = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<CombatDirector>(true)).FirstOrDefault();
             var serialized = new SerializedObject(server);
             serialized.FindProperty("director").objectReferenceValue = director;
