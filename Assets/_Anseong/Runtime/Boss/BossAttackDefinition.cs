@@ -9,7 +9,7 @@ namespace Anseong.Boss
     [CreateAssetMenu(menuName = "Anseong/Boss Attack", fileName = "BossAttack")]
     public class BossAttackDefinition : ScriptableObject
     {
-        [Tooltip("이 기술의 보스 클립(A-01). 비우면 임시 클립. 같은 Mixamo 뼈 이름이어야 한다.")]
+        [Tooltip("이 기술의 보스 클립(A-01). 비우면 유진 클립(Art/Boss/Animation/Boss_<기술>), 그것도 없으면 임시 클립. 같은 Mixamo 뼈 이름이어야 한다.")]
         public AnimationClip clip;
 
         [Tooltip("클립 재생 속도(1 = 원래). 임시 클립을 기술 시간에 맞출 때.")]

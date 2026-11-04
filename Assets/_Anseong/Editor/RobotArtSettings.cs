@@ -35,13 +35,13 @@ namespace Anseong.EditorTools
                                  "좌석은 원점에서 좌우 ±1.05 m(SeatSpacing 2.1 m의 절반).")]
         GameObject cockpitPrefab;
 
-        [SerializeField, Tooltip("보스가 맞았을 때 휘청 클립(M1-05). 비우면 Art/Robot/Animation/Source/Stagger.fbx. 같은 Mixamo 뼈 이름이어야 한다.")]
+        [SerializeField, Tooltip("보스가 맞았을 때 휘청 클립(M1-05). 비우면 유진 Boss_Stagger, 그것도 없으면 Art/Robot/Animation/Source/Stagger.fbx. 같은 Mixamo 뼈 이름이어야 한다.")]
         AnimationClip bossStaggerClip;
 
-        [SerializeField, Tooltip("보스 쓰러짐 클립(M2, 옛 레포 CombatSource/Death). 비우면 쓰러질 때 대기 자세로 멈춘다.")]
+        [SerializeField, Tooltip("보스 쓰러짐 클립(M2, 옛 레포 CombatSource/Death). 비우면 유진 Boss_Death, 그것도 없으면 쓰러질 때 대기 자세로 멈춘다.")]
         AnimationClip bossDeathClip;
 
-        [SerializeField, Tooltip("보스 걷기 클립(M2-04). 비우면 Art/Robot/Animation/Source/Walk.fbx.")]
+        [SerializeField, Tooltip("보스 걷기 클립(M2-04). 비우면 유진 Boss_Walk, 그것도 없으면 Art/Robot/Animation/Source/Walk.fbx.")]
         AnimationClip bossWalkClip;
 
         [SerializeField, Tooltip("보스 페이즈 전환 포효 클립(M2-04). 비우면 대기 자세.")]
@@ -62,12 +62,17 @@ namespace Anseong.EditorTools
         public GameObject PlayerModel => playerModel != null ? playerModel : AssetDatabase.LoadAssetAtPath<GameObject>(DefaultModelPath);
         public GameObject BossModel => bossModel != null ? bossModel : PlayerModel;
         public GameObject CockpitPrefab => cockpitPrefab;
-        public AnimationClip BossDeathClip => bossDeathClip;
-        public AnimationClip BossWalkClip => bossWalkClip != null ? bossWalkClip : ClipIn("Assets/_Anseong/Art/Robot/Animation/Source/Walk.fbx");
+        // M2-06: 칸이 비면 유진 클립(Import Boss Clips가 만든 Art/Boss/Animation/Boss_*.anim) → 그것도 없으면 옛 임시 클립.
+        public AnimationClip BossDeathClip => bossDeathClip != null ? bossDeathClip : BossClipImport.Imported("Boss_Death");
+        public AnimationClip BossWalkClip => bossWalkClip != null ? bossWalkClip : Or(BossClipImport.Imported("Boss_Walk"), "Assets/_Anseong/Art/Robot/Animation/Source/Walk.fbx");
+        /// <summary>보스 대기(M2-06). 없으면 null → 플레이어와 같은 대기 클립.</summary>
+        public AnimationClip BossIdleClip => BossClipImport.Imported("Boss_Idle");
         public AnimationClip BossRoarClip => bossRoarClip;
         public AnimationClip BossKnockbackClip => bossKnockbackClip;
         public AnimationClip BossKneelClip => bossKneelClip;
-        public AnimationClip BossStaggerClip => bossStaggerClip != null ? bossStaggerClip : ClipIn(DefaultStaggerPath);
+        public AnimationClip BossStaggerClip => bossStaggerClip != null ? bossStaggerClip : Or(BossClipImport.Imported("Boss_Stagger"), DefaultStaggerPath);
+
+        static AnimationClip Or(AnimationClip clip, string fallbackPath) => clip != null ? clip : ClipIn(fallbackPath);
 
         /// <summary>FBX 안의 첫 애니메이션 클립(미리보기 클립 제외).</summary>
         public static AnimationClip ClipIn(string path)

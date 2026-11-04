@@ -25,6 +25,7 @@ namespace Anseong.EditorTools
         public const string HeadBone = "mixamorig:Head";
         public const string HeadEndBone = "mixamorig:Head_end";
         public const string SpineBone = "mixamorig:Spine";
+        public const string HipsBone = "mixamorig:Hips";
         public const string LeftPrefix = "mixamorig:Left";
         public const string RightPrefix = "mixamorig:Right";
         public const string ArmSuffix = "Arm";

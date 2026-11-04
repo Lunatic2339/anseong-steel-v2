@@ -65,6 +65,9 @@ namespace Anseong.EditorTools
         /// <summary>진짜 클립이 없을 때 쓰는 임시 클립(M2-02 지시서 표). 옛 레포 AlternatingCombo·GroundCast를 가져오면 기술 에셋 칸에 넣는다.</summary>
         public static AnimationClip FallbackClip(BossAttackKind kind)
         {
+            // M2-06: 'Import Boss Clips (Yujin)'가 만든 Boss_<기술>.anim이 있으면 그것(돌진은 없음).
+            var imported = BossClipImport.AttackClip(kind);
+            if (imported != null) return imported;
             switch (kind)
             {
                 case BossAttackKind.Charge: return RobotArtSettings.ClipIn(WalkClipPath);
@@ -93,7 +96,7 @@ namespace Anseong.EditorTools
             if (art.BossDeathClip != null) states.Add(("Death", art.BossDeathClip, 1f));
             else Debug.Log($"{LogPrefix} 쓰러짐(Death) 클립이 없어 보스가 쓰러질 때 대기 자세로 멈춥니다. Robot Art Settings의 보스 쓰러짐 칸에 넣으면 됩니다.");
             // M2-04 이동·전환(클립이 없으면 임시: 걷기 = Walk.fbx, 밀려남 = 휘청 전체, 포효 = 대기, 무릎 = 대기 정지).
-            var idle = RobotArtSettings.ClipIn(ClipFolder + "/Idle.fbx");
+            var idle = art.BossIdleClip != null ? art.BossIdleClip : RobotArtSettings.ClipIn(ClipFolder + "/Idle.fbx");
             if (art.BossWalkClip != null) states.Add(("Walk", art.BossWalkClip, 1f));
             states.Add(("Roar", art.BossRoarClip != null ? art.BossRoarClip : idle, 1f));
             states.Add(("Knockback", art.BossKnockbackClip != null ? art.BossKnockbackClip : art.BossStaggerClip, 1f));
@@ -143,7 +146,7 @@ namespace Anseong.EditorTools
                     var clip = ClipOf(def);
                     if (clip == null) continue;
                     var report = Measure(animator.gameObject, clip, left, right, def.clipSpeed);
-                    Debug.Log($"{LogPrefix} {def.Kind} ({clip.name}{(def.clip == null ? ", 임시" : "")}, 길이 {clip.length / def.clipSpeed:F2}초): {report}. " +
+                    Debug.Log($"{LogPrefix} {def.Kind} ({clip.name}{(def.clip == null && BossClipImport.AttackClip(def.Kind) == null ? ", 임시" : "")}, 길이 {clip.length / def.clipSpeed:F2}초): {report}. " +
                               $"지금 기술 에셋: 예고(=첫 명중 순간) {def.spec.telegraphSeconds:F2}초, 끝 {def.spec.EndTime:F2}초", def);
                 }
             }
