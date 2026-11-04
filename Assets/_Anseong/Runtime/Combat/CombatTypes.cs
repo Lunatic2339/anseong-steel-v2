@@ -69,7 +69,7 @@ namespace Anseong.Combat
 
         /// <summary>보스가 빈틈·경직이 아닐 때 친 명중: 피해 0, 연계 차례 그대로(M2-02).</summary>
         Blocked,
-        /// <summary>보스 공격 예고 시작. Code = 기술(BossAttackKind), Amount = 예고 등급(0 일반, 1 강, 2 가드 불가), Side = 들어오는 쪽.</summary>
+        /// <summary>보스 공격 예고 시작. Code = 기술(BossAttackKind), Amount = 예고 등급(0 일반, 1 강, 2 가드 불가), Side = 첫 타가 들어오는 쪽, ComboStep = 타 수(연타 4).</summary>
         BossTelegraph,
         /// <summary>보스 공격 명중 순간(연타는 타마다). Code = 기술, Amount = 몇 번째 타(0부터), Side = 들어오는 쪽.</summary>
         BossStrike,

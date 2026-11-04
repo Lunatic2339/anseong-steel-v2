@@ -44,10 +44,15 @@ namespace Anseong.Combat
         public int BossPhase { get; set; } = 1;
 
         /// <summary>명중 보고. 같은 동작은 한 번만 받아들인다.</summary>
-        public bool SubmitHit(HitReport report, double serverTime, List<CombatEvent> events) => resolver.Resolve(report, serverTime, events);
+        /// 보스가 무릎 꿇은 동안(필살기 차례)은 펀치를 받지 않는다(M2-06, 선우 11/04: 팔을 뻗는 게 펀치로 잡히지 않게).
+        public bool SubmitHit(HitReport report, double serverTime, List<CombatEvent> events)
+            => !finisher.Enabled && resolver.Resolve(report, serverTime, events);
 
         public void SubmitMiss(PilotSide side, PunchKind kind, int strikeId, double serverTime, List<CombatEvent> events)
-            => resolver.ReportMiss(side, kind, strikeId, serverTime, events);
+        {
+            if (finisher.Enabled) return;
+            resolver.ReportMiss(side, kind, strikeId, serverTime, events);
+        }
 
         /// <summary>팔 입력 보고. 트리거 누름은 다음 <see cref="Tick"/>에서 한 번 쓴다.</summary>
         public void SetArmInput(PilotSide side, bool grip, bool pressed)
@@ -108,7 +113,8 @@ namespace Anseong.Combat
         {
             for (var h = 0; h < 2; h++)
             {
-                resolver.UpdateInput((PilotSide)h, gripHeld[h], triggerPressed[h], serverTime, events);
+                // 필살기 차례엔 부스트 입력도 받지 않는다(트리거를 쥐어도 부스트 소리가 나지 않게).
+                if (!finisher.Enabled) resolver.UpdateInput((PilotSide)h, gripHeld[h], triggerPressed[h], serverTime, events);
                 triggerPressed[h] = false;
             }
             resolver.Tick(serverTime, events);

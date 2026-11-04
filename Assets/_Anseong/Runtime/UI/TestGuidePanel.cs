@@ -149,7 +149,7 @@ namespace Anseong.UI
                     lastCombat = $"<color=#FFD24D>{e.Code}페이즈 시작 (포효 중 무적)</color>";
                     break;
                 case CombatCue.BossKneel:
-                    lastCombat = "<color=#5BE37D>보스 무릎: 필살기 차례</color> 두 팔 정면으로 쭉 + 그립·트리거·A·B(X·Y) 모두 누르고 버티기";
+                    lastCombat = "<color=#5BE37D>보스 무릎: 필살기 차례</color> 두 팔을 정면으로 쭉 뻗고 버티기 (펀치는 안 셈)";
                     break;
                 case CombatCue.BossKnockback:
                     lastCombat = $"<color=#BF4DFF>보스 밀려남 {e.Amount:F0}m</color>";

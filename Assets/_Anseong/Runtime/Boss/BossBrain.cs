@@ -52,6 +52,10 @@ namespace Anseong.Boss
         float finisherHintSeconds = 20f;
         [SerializeField, Min(0f), Tooltip("쓰러짐 뒤 승리 알림까지(초, Death 클립 길이에 맞춘다).")]
         float victoryDelay = 3f;
+        [SerializeField, Min(0f), Tooltip("무릎 꿇으면 보스가 이 거리(m, 플레이어 루트 → 보스 루트)까지 뒤로 물러난다. 광선·폭발이 한눈에 보이게(선우 11/04). 0이면 그 자리.")]
+        float finisherDistance = 90f;
+        [SerializeField, Min(0.1f), Tooltip("물러나는 시간(초).")]
+        float finisherRetreatSeconds = 2.5f;
 
         [Header("개발용")]
         [SerializeField, Tooltip("판마다 페이즈 시간·피해·가드 성공률 CSV(logs/bossfight_<날짜시각>.csv, 에디터·개발 빌드).")]
@@ -66,6 +70,8 @@ namespace Anseong.Boss
         Vector3 startPosition, knockFrom, knockTo;
         Quaternion startRotation;
         double knockStart = -1;
+        double retreatStart = -1;
+        Vector3 retreatFrom, retreatTo;
         int seed;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         CsvLog log;
@@ -125,6 +131,7 @@ namespace Anseong.Boss
             seen.Clear();
             sawOpening = finishedLog = false;
             knockStart = -1;
+            retreatStart = -1;
             wonAt = -1;
             fightStart = now;
             stats.Begin(now);
@@ -175,6 +182,7 @@ namespace Anseong.Boss
                     stats.EnterPhase(4, now);
                     authority.Finisher.Enabled = true;
                     lastHint = now;
+                    BeginRetreat(now);
                     break;
             }
             if (phases.Kneeling) Finisher(now, authority);
@@ -234,6 +242,14 @@ namespace Anseong.Boss
         void Move(double now, BossAttackStateMachine machine)
         {
             var dt = Time.deltaTime;
+            if (retreatStart >= 0)
+            {
+                var r = Mathf.Clamp01((float)((now - retreatStart) / finisherRetreatSeconds));
+                // 처음에 크게, 끝에 묵직하게 멈춘다(밀려남과 같은 곡선).
+                transform.position = Vector3.Lerp(retreatFrom, retreatTo, 1f - (1f - r) * (1f - r));
+                if (r >= 1f) retreatStart = -1;
+                return;
+            }
             if (machine.State == BossState.KnockedBack && knockStart >= 0)
             {
                 var t = Mathf.Clamp01((float)((now - knockStart) / knockbackSeconds));
@@ -337,6 +353,20 @@ namespace Anseong.Boss
             Emit(CombatCue.BossKnockback, 0, now, knockbackMeters);
         }
 
+        /// <summary>무릎: 필살기 광선이 잘 보이게 플레이어에게서 멀어진다(이미 멀면 그대로).</summary>
+        void BeginRetreat(double now)
+        {
+            if (player == null || finisherDistance <= 0f) return;
+            var away = transform.position - player.position;
+            away.y = 0f;
+            if (away.magnitude >= finisherDistance) return;
+            if (away.sqrMagnitude < 1e-4f) away = transform.forward;
+            retreatFrom = transform.position;
+            retreatTo = player.position + away.normalized * finisherDistance;
+            retreatTo.y = retreatFrom.y;
+            retreatStart = now;
+        }
+
         void OnReset()
         {
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -379,6 +409,7 @@ namespace Anseong.Boss
             list.Describe(g, "할 것: 1페이즈부터 무릎까지 혼자 진행\n볼 것: 페이즈마다 새 기술이 먼저, 밀려난 뒤 다시 걸어옴");
             list.AddToggle(g, "boss.auto", "보스 스스로 공격(끄면 \"보스 시험\" 공격)", () => autoAttack, v => autoAttack = v);
             list.AddFloat(g, "boss.walkSpeed", "걷는 속도(m/s)", () => walkSpeed, v => walkSpeed = v, 1f, 20f, 0.5f, 1);
+            list.AddFloat(g, "boss.finisherDistance", "필살기 때 물러나는 거리(m, 0 = 그 자리)", () => finisherDistance, v => finisherDistance = v, 0f, 200f, 10f, 0);
         }
     }
 }

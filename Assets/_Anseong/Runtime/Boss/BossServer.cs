@@ -219,6 +219,8 @@ namespace Anseong.Boss
                     case BossEventType.AttackStarted:
                         cue.Cue = CombatCue.BossTelegraph;
                         cue.Amount = (int)SpecOf(e.Attack).level;
+                        // 안내 글자용 타 수(M2-06, 연타 "4번").
+                        cue.ComboStep = SpecOf(e.Attack).HitCount;
                         break;
                     case BossEventType.OpeningStarted:
                         cue.Cue = CombatCue.BossOpening;

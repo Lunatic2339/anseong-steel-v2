@@ -22,19 +22,26 @@
 3. 칸이 비어 있으면 이 클립을 쓰게 연결: 기술 에셋(`BossAttackMenu.FallbackClip`), 보스 대기·걷기·휘청·쓰러짐(`RobotArtSettings`), 보스 컨트롤러 대기(`RobotPrefabMenu`). 칸에 직접 넣은 클립이 먼저다.
 4. 돌진(Charge)·포효·무릎·크게 밀려남은 맞는 클립이 없어 지금처럼 임시(걷기·대기·휘청)로 둔다.
 
+### 06 확인 중 받은 보완 (선우 11/04)
+5. 필살기 "펀치 판정이 나야 되는 게 아니고 그냥 팔만 뻗으면": 준비 = 정면으로 85% 뻗음 + 추적만(버튼은 `FinisherSettings.needButtons`, 기본 끔). 보스가 무릎 꿇은 동안 서버가 펀치 명중·헛침·부스트를 받지 않는다(`CombatAuthority`).
+6. "이펙트가 제대로 안 보이니 필살기 때는 멀리 떨어져서": 무릎 꿇으면 보스가 2.5초 동안 90 m까지 뒤로 물러난다(`BossBrain` 필살기 거리, 조절 메뉴 "보스").
+7. "보스 공격마다 뭘 봐야 하는지 띄워놔, 색으로만 구분하니 모르겠음": 눈앞 위쪽 큰 글자 `UI/BossAttackCallout`. 예고 때 "좌우 연타 4번 / 오른팔부터 번갈아 막기", 연타 중 "2/4 → 왼팔", 결과 "막음!·맞음 -6%·피함!", 빈틈 "지금 치기!", 무릎 "두 팔을 정면으로 쭉 뻗고 버티기". 글자 색 = 세기(노랑 일반, 주황 강공격, 빨강 막기 불가). 문구는 `Boss/BossAttackGuide`(테스트 있음). 예고 사건에 타 수(ComboStep)를 실어 보낸다.
+
 ## 사람이 할 일
 1. `git pull` → Unity에서 **Anseong → Boss → Import Boss Clips (Yujin)** → Console에 클립 8개와 기술별 속도 줄이 나오는지.
-2. **Anseong → Setup → Rebuild Robot + Pilot Input** → Ctrl+S → Play. (조절 메뉴 "보스 시험" = 다섯 기술 돌아가며)
+2. **Anseong → Setup → Rebuild Robot + Pilot Input** → Ctrl+S → Play. (조절 메뉴 "보스 시험" = 다섯 기술 돌아가며. 안내 글자는 Add Pilot Input이 새로 만듦)
 3. 헤드셋에서 볼 것:
    - [ ] 보스 대기·걷기가 유진 동작으로 보인다(몸이 꼬이거나 땅에 박히지 않음).
    - [ ] 왼손 펀치는 **왼손**, 오른손 펀치는 오른손으로 친다(왼손 펀치 = 대칭으로 구운 것이라 어색하면 알려 주기).
    - [ ] 주먹이 닿는 순간과 막기 판정(가드 표시) 순간이 대략 맞는다.
    - [ ] 연타가 좌우로, 내려찍기가 두 손으로 보인다.
+   - [ ] 공격마다 눈앞 위쪽에 큰 글자로 무슨 공격·어느 팔로 막을지가 뜨고, 연타 중 다음 팔, 막으면 "막음!"이 뜬다.
+   - [ ] 보스가 무릎 꿇으면 뒤로 물러나고, 버튼 없이 두 팔만 정면으로 뻗어도 충전 → 광선이 한눈에 보인다. 뻗는 동안 펀치 명중·헛침이 안 뜬다.
    - [ ] 쓰러짐(필살기 뒤)이 유진 Death 동작.
 4. 만들어진 `.meta`(Source 폴더·클립·Animation 폴더)와 `Boss_*.anim`, 바뀐 `BossAttack_*.asset`(속도)를 커밋·푸시.
 
 ## 결과 (작업 후 Claude가 작성)
-- 바뀐 파일: `Editor/BossClipImport.cs`(새), `Editor/BossAttackMenu.cs`, `Editor/RobotArtSettings.cs`, `Editor/RobotPrefabMenu.cs`, `Editor/RobotSandboxUtility.cs`(Hips 이름), `Runtime/Boss/BossAttackDefinition.cs`(툴팁), `Art/Boss/Animation/Source/*.anim`(유진 원본 7개), `docs/폴더_지도.md`.
+- 바뀐 파일: `Editor/BossClipImport.cs`(새), `Runtime/UI/BossAttackCallout.cs`(새), `Runtime/Boss/BossAttackGuide.cs`(새), `Tests/EditMode/BossAttackGuideTests.cs`(새), `Runtime/Boss/BossServer.cs`·`BossBrain.cs`, `Runtime/Combat/FinisherRules.cs`·`FinisherReporter.cs`·`CombatAuthority.cs`·`CommanderLines.cs`·`CombatTypes.cs`, `Runtime/UI/TestGuidePanel.cs`, `Editor/SceneSetupMenu.cs`, 테스트(`FinisherTests`·`CombatAuthorityTests`), `docs/design/08_tuning_menu.md`, `Editor/BossAttackMenu.cs`, `Editor/RobotArtSettings.cs`, `Editor/RobotPrefabMenu.cs`, `Editor/RobotSandboxUtility.cs`(Hips 이름), `Runtime/Boss/BossAttackDefinition.cs`(툴팁), `Art/Boss/Animation/Source/*.anim`(유진 원본 7개), `docs/폴더_지도.md`.
 - 클라우드에서 컴파일 못 함 → Editor.log `error CS` 확인 필요.
 - 남은 문제/제안:
   - 걷기 클립의 골반 앞뒤 이동이 남아 있으면 반복할 때 보스가 툭 뒤로 돌아갈 수 있다. 보이면 걷기만 골반 앞뒤를 지우는 옵션을 붙인다.

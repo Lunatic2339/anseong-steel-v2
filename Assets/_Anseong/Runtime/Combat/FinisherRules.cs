@@ -13,6 +13,9 @@ namespace Anseong.Combat
         [Tooltip("정면에서 이 각도(°) 안으로 뻗어야 준비.")]
         [Range(5f, 90f)] public float maxAngleFromForward = 35f;
 
+        [Tooltip("켜면 팔을 뻗은 채 그립·트리거·A/B(X/Y)도 모두 눌러야 준비(01 원안). 끄면 팔만 뻗으면 준비(선우 11/04 \"그냥 팔만 뻗으면 되게\").")]
+        public bool needButtons;
+
         [Tooltip("두 팔이 준비를 시작한 시간 차가 이 안(초)이어야 충전(01: 0.5).")]
         [Range(0.1f, 2f)] public float startWindow = 0.5f;
 
@@ -33,7 +36,7 @@ namespace Anseong.Combat
     }
 
     /// <summary>
-    /// 합동 필살기(01 "필살기", M2-05): 두 팔이 준비(정면으로 85% 이상 뻗고 버튼을 모두 누름, 추적 유효)를 0.5초 안에 시작하면 1.5초 충전,
+    /// 합동 필살기(01 "필살기", M2-05): 두 팔이 준비(정면으로 85% 이상 뻗음, 추적 유효, 버튼은 설정으로 선택)를 0.5초 안에 시작하면 1.5초 충전,
     /// 충전 중 한 팔이라도 놓으면 처음부터, 다 차면 광선 3초 → 끝. 서버 시각으로만 진행. 순수 클래스.
     /// 팔 준비 여부는 그 팔 주인 PC가 사람 손으로 판정해 보고한다(<see cref="ArmReady"/>).
     /// </summary>
@@ -114,7 +117,7 @@ namespace Anseong.Combat
         /// </summary>
         public static bool IsArmReady(Vector3 ratio, bool tracked, bool allButtons, FinisherSettings s)
         {
-            if (!tracked || !allButtons) return false;
+            if (!tracked || (s.needButtons && !allButtons)) return false;
             if (ratio.magnitude < s.minExtension) return false;
             return Vector3.Angle(ratio, Vector3.forward) <= s.maxAngleFromForward;
         }

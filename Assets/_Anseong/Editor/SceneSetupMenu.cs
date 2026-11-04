@@ -31,6 +31,9 @@ namespace Anseong.EditorTools
         // 테스트 안내판: 카메라 기준 위치(m)와 글자 크기. 한 줄 높이 ≈ fontSize × characterSize × 0.1 m.
         static readonly Vector3 PanelOffset = new Vector3(0f, -0.12f, 0.8f);
         const int PanelFontSize = 64;
+        static readonly Vector3 CalloutOffset = new Vector3(0f, 0.16f, 1.2f);
+        const int CalloutFontSize = 96;
+        const float CalloutCharacterSize = 0.0045f;
         const float PanelCharacterSize = 0.0022f;
         // 조절 메뉴(카메라 로컬 m).
         const float TuningDimDistance = 0.35f;       // 어둡게 하는 막(눈앞)
@@ -139,6 +142,7 @@ namespace Anseong.EditorTools
             var drivers = RobotArmSetup.ConnectDrivers(input, flow);
             var combats = CombatSetup.ConnectScene(input, flow);
             var panel = AddTestGuidePanel(origin);
+            var callout = AddAttackCallout(origin);
             var tuning = AddTuningMenu(origin);
 
             EditorSceneManager.MarkSceneDirty(scene);
@@ -147,7 +151,7 @@ namespace Anseong.EditorTools
             if (drivers == 0)
                 Debug.LogWarning("[SceneSetupMenu] 씬에 RobotArmDriver가 없습니다. Robot_Player 프리팹을 다시 만들고(Build Player Robot Prefab) 이 메뉴를 다시 실행하세요.", origin);
             Debug.Log($"[SceneSetupMenu] XR Origin에 PilotHandInput·PilotCalibrationFlow를 연결하고 팔 드라이버 {drivers}개에 입력을 연결했습니다(기본 1인 양팔 모드). " +
-                      $"전투 판정 {combats}개에 입력·보스 연결. 테스트 안내판: {panel}. 조절 메뉴(오른손 B): {tuning}. 씬을 저장하세요.", origin);
+                      $"전투 판정 {combats}개에 입력·보스 연결. 테스트 안내판: {panel}. 공격 안내 글자: {callout}. 조절 메뉴(오른손 B): {tuning}. 씬을 저장하세요.", origin);
             return true;
         }
 
@@ -187,6 +191,41 @@ namespace Anseong.EditorTools
             serialized.FindProperty("classifier").objectReferenceValue = Object.FindAnyObjectByType<PunchClassifierDriver>(FindObjectsInactive.Include);
             serialized.ApplyModifiedProperties();
             return "XR 카메라 아래에 만듦";
+        }
+
+        /// <summary>보스 공격 안내 글자(M2-06): XR 카메라 앞 위쪽 가운데, 큰 글자. 이미 있으면 그대로 둔다.</summary>
+        static string AddAttackCallout(XROrigin origin)
+        {
+            var camera = origin.Camera != null ? origin.Camera.transform : null;
+            if (camera == null) return "카메라가 없어 만들지 않음";
+            if (camera.GetComponentInChildren<BossAttackCallout>(true) != null) return "이미 있음";
+
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var go = new GameObject("BossAttackCallout");
+            Undo.RegisterCreatedObjectUndo(go, "Add Boss Attack Callout");
+            go.transform.SetParent(camera, false);
+            go.transform.localPosition = CalloutOffset;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one / Mathf.Max(1e-6f, camera.lossyScale.x);
+            var text = go.AddComponent<TextMesh>();
+            text.font = font;
+            text.fontSize = CalloutFontSize;
+            text.characterSize = CalloutCharacterSize;
+            text.anchor = TextAnchor.MiddleCenter;
+            text.alignment = TextAlignment.Center;
+            text.richText = true;
+            text.color = Color.white;
+            text.text = string.Empty;
+            var renderer = go.GetComponent<MeshRenderer>();
+            if (font != null) renderer.sharedMaterial = font.material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+
+            var callout = go.AddComponent<BossAttackCallout>();
+            var serialized = new SerializedObject(callout);
+            serialized.FindProperty("text").objectReferenceValue = text;
+            serialized.ApplyModifiedProperties();
+            return "XR 카메라 앞 위쪽에 만듦";
         }
 
         /// <summary>

@@ -5,7 +5,7 @@ using UnityEngine;
 
 namespace Anseong.Tests
 {
-    /// <summary>M2-05: 필살기 준비 판정(버튼·펴짐·각도·추적), 0.5초 시작 창, 충전 중 놓으면 처음부터, 충전 완료·광선 끝 시각.</summary>
+    /// <summary>M2-05: 필살기 준비 판정(펴짐·각도·추적, 버튼은 선택), 0.5초 시작 창, 충전 중 놓으면 처음부터, 충전 완료·광선 끝 시각.</summary>
     public class FinisherTests
     {
         const PilotSide L = PilotSide.Left;
@@ -19,14 +19,24 @@ namespace Anseong.Tests
         // ── 한 팔 준비 판정 ──
 
         [Test]
-        public void ArmReady_NeedsAllButtonsTrackingAndExtension()
+        public void ArmReady_WithButtonOption_NeedsAllButtonsTrackingAndExtension()
         {
-            var s = new FinisherSettings();
+            var s = new FinisherSettings { needButtons = true };
             var straight = new Vector3(0f, 0f, 0.9f);
             Assert.IsTrue(FinisherRules.IsArmReady(straight, true, true, s));
             Assert.IsFalse(FinisherRules.IsArmReady(straight, true, false, s), "버튼 하나라도 안 누르면 아님");
             Assert.IsFalse(FinisherRules.IsArmReady(straight, false, true, s), "추적 끊기면 아님");
             Assert.IsFalse(FinisherRules.IsArmReady(new Vector3(0f, 0f, 0.8f), true, true, s), "85% 미만은 덜 뻗음");
+        }
+
+        [Test]
+        public void ArmReady_Default_ArmsOnly()
+        {
+            var s = new FinisherSettings();
+            var straight = new Vector3(0f, 0f, 0.9f);
+            Assert.IsTrue(FinisherRules.IsArmReady(straight, true, false, s), "기본(선우 11/04): 버튼 없이 팔만 뻗으면 준비");
+            Assert.IsFalse(FinisherRules.IsArmReady(straight, false, false, s), "추적 끊기면 아님");
+            Assert.IsFalse(FinisherRules.IsArmReady(new Vector3(0f, 0f, 0.8f), true, false, s), "덜 뻗음");
         }
 
         [Test]

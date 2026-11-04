@@ -36,7 +36,7 @@ namespace Anseong.Combat
                 case FirstCharge: return "막을 수 없다! 둘이 같은 쪽으로 피하라!";
                 case Phase2: return "적이 분노했다. 새 공격에 대비하라!";
                 case Phase3: return "마지막 발악이다. 버텨라!";
-                case FinisherHint: return "두 팔을 정면으로 뻗고 버튼을 모두 눌러라!";
+                case FinisherHint: return "두 팔을 정면으로 쭉 뻗어라!";
                 default: return string.Empty;
             }
         }
