@@ -424,13 +424,21 @@ namespace Anseong.EditorTools
 
         // ── 보스 ──
 
-        /// <summary>보스 컨트롤러(Idle + Stagger). 매번 새로 만든다(상태는 코드가 고른다, 전환 없음). 휘청 클립이 없으면 Idle만.</summary>
+        /// <summary>보스 컨트롤러(Idle + Stagger + M2 상태). 같은 파일을 매번 비우고 다시 채운다(상태는 코드가 고른다, 전환 없음). 휘청 클립이 없으면 Idle만.</summary>
         public static AnimatorController BuildBossController(AnimationClip idleClip, AnimationClip staggerClip,
             System.Collections.Generic.IEnumerable<(string name, AnimationClip clip, float speed)> extraStates = null)
         {
-            if (AssetDatabase.LoadAssetAtPath<AnimatorController>(BossControllerPath) != null) AssetDatabase.DeleteAsset(BossControllerPath);
-            var controller = AnimatorController.CreateAnimatorControllerAtPath(BossControllerPath);
+            // 지우고 새로 만들면 GUID가 바뀌어, 다시 만들기가 중간에 멈추거나 씬이 옛 컨트롤러를 가리키면 보스 Animator가 빈다
+            // ("Animator is not playing an AnimatorController", 11/04). 같은 파일을 비우고 다시 채운다.
+            var controller = AssetDatabase.LoadAssetAtPath<AnimatorController>(BossControllerPath);
+            if (controller == null || controller.layers.Length == 0)
+            {
+                if (controller != null) AssetDatabase.DeleteAsset(BossControllerPath);
+                controller = AnimatorController.CreateAnimatorControllerAtPath(BossControllerPath);
+            }
             var machine = controller.layers[0].stateMachine;
+            foreach (var child in machine.states) machine.RemoveState(child.state);
+            foreach (var t in machine.anyStateTransitions) machine.RemoveAnyStateTransition(t);
             var idle = machine.AddState(IdleState);
             idle.motion = idleClip;
             machine.defaultState = idle;
@@ -451,6 +459,7 @@ namespace Anseong.EditorTools
                     state.speed = speed > 0f ? speed : 1f;
                 }
             }
+            EditorUtility.SetDirty(controller);
             AssetDatabase.SaveAssets();
             return controller;
         }
