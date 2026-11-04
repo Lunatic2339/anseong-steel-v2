@@ -658,6 +658,8 @@ namespace Anseong.Pilot
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         void OnRecalibrate(InputAction.CallbackContext context)
         {
+            // 필살기(그립·트리거와 함께 X/Y)를 누르는 중에는 컨트롤러 Y로 다시 보정하지 않는다(M2-05).
+            if (PilotHandInput.IgnoreDevButton(context.control, PilotSide.Left)) return;
             Log($"다시 보정 ({context.control?.path})");
             Restart();
         }
