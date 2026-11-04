@@ -104,7 +104,6 @@ namespace Anseong.Tests
             Assert.IsFalse(s.BoostOpen);
             Assert.IsTrue(server.SubmitHit(Report(R, PunchKind.Jab, 6), 1.0, events));
         }
-    }
 
         [Test]
         public void FinisherTurn_IgnoresPunches()
@@ -115,7 +114,7 @@ namespace Anseong.Tests
             Assert.IsFalse(server.SubmitHit(Report(R, PunchKind.Jab, 1), 0.0, events), "무릎(필살기 차례)엔 팔을 뻗어도 펀치로 안 셈");
             server.SubmitMiss(L, PunchKind.Jab, 2, 0.1, events);
             Assert.AreEqual(0, events.Count);
-            Assert.AreEqual(100f, server.Snapshot.BossHealth, 1e-4f);
+            Assert.AreEqual(server.Snapshot.BossMax, server.Snapshot.BossHealth, 1e-4f);
         }
     }
 }
