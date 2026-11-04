@@ -16,7 +16,8 @@ namespace Anseong.Tests
             Assert.AreEqual(MoveKind.Retreat, CoopMoveRules.ForwardBack(Vector2.down, Vector2.down * 0.6f, S));
             Assert.AreEqual(MoveKind.None, CoopMoveRules.ForwardBack(Vector2.up, Vector2.zero, S), "한 명이 놓음");
             Assert.AreEqual(MoveKind.None, CoopMoveRules.ForwardBack(Vector2.up, Vector2.up * 0.3f, S), "약하게 밈");
-            Assert.AreEqual(MoveKind.None, CoopMoveRules.ForwardBack(Vector2.up, new Vector2(0.7f, 0.7f), S), "45° 차이");
+            Assert.AreEqual(MoveKind.None, CoopMoveRules.ForwardBack(Vector2.up, new Vector2(0.8f, 0.6f), S), "한쪽이 너무 옆으로");
+            Assert.AreEqual(MoveKind.Approach, CoopMoveRules.ForwardBack(new Vector2(-0.25f, 0.97f), new Vector2(0.30f, 0.91f), S), "엄지로 앞 밀기(33° 벌어짐, 11/04 기록)");
             Assert.AreEqual(MoveKind.None, CoopMoveRules.ForwardBack(Vector2.right, Vector2.right, S), "좌/우는 회피 규칙");
         }
 

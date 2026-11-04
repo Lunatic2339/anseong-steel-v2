@@ -19,10 +19,7 @@ namespace Anseong.Combat
         [Tooltip("두 스틱을 이만큼 이상 밀어야 입력(01: 0.5).")]
         [Range(0.1f, 1f)] public float minMagnitude = 0.5f;
 
-        [Tooltip("두 스틱 방향 차이가 이 각도(°) 안이어야 같은 방향(01: 25).")]
-        [Range(1f, 90f)] public float maxAngle = 25f;
-
-        [Tooltip("앞/뒤로 치는 방향: 수직에서 이 각도(°) 안.")]
+        [Tooltip("앞/뒤로 치는 방향: 스틱 하나하나가 수직에서 이 각도(°) 안. 두 스틱 사이 각도는 보지 않는다(회피와 같은 이유).")]
         [Range(10f, 80f)] public float maxFromVertical = 45f;
 
         [Tooltip("한 번 움직이는 시간(초). 01·07: 약 0.4.")]
@@ -81,7 +78,7 @@ namespace Anseong.Combat
     }
 
     /// <summary>
-    /// 협동 이동 규칙(M3-03, 순수). 01 "이동": 두 보조 스틱이 같은 방향(크기 ≥ 0.5, 차이 25° 이내)일 때만 인정, 한 명이 놓으면 정지.
+    /// 협동 이동 규칙(M3-03, 순수). 01 "이동": 두 보조 스틱이 같은 쪽(각 스틱 크기 ≥ 0.5, 그 축에서 45° 안)일 때만 인정(01의 "차이 25°"는 엄지 궤적 때문에 너무 빡빡해 바꿈, 11/04), 한 명이 놓으면 정지.
     /// 앞 = 근접 거리까지 접근, 뒤 = 사거리 밖까지 후퇴, 좌/우 = 회피(새로 민 순간만, DodgeRules, 걸음 도중이면 끊고 회피). 자유 이동 없음.
     /// 몸은 보스가 정면 ±20° 밖이면 초당 30° 이하로 돌린다.
     /// </summary>
@@ -91,12 +88,9 @@ namespace Anseong.Combat
         public static MoveKind ForwardBack(Vector2 a, Vector2 b, CoopMoveSettings s)
         {
             if (a.magnitude < s.minMagnitude || b.magnitude < s.minMagnitude) return MoveKind.None;
-            if (Vector2.Angle(a, b) > s.maxAngle) return MoveKind.None;
-            var mean = (a.normalized + b.normalized) * 0.5f;
-            if (mean.sqrMagnitude < 1e-6f) return MoveKind.None;
-            var fromVertical = Mathf.Atan2(Mathf.Abs(mean.x), Mathf.Abs(mean.y)) * Mathf.Rad2Deg;
-            if (fromVertical > s.maxFromVertical) return MoveKind.None;
-            return mean.y > 0f ? MoveKind.Approach : MoveKind.Retreat;
+            if (FromVertical(a) > s.maxFromVertical || FromVertical(b) > s.maxFromVertical) return MoveKind.None;
+            if ((a.y > 0f) != (b.y > 0f)) return MoveKind.None;
+            return a.y > 0f ? MoveKind.Approach : MoveKind.Retreat;
         }
 
         /// <summary>
@@ -202,6 +196,8 @@ namespace Anseong.Combat
         {
             return new MoveSegment { Kind = kind, From = from, To = to, Start = now, Duration = duration };
         }
+
+        static float FromVertical(Vector2 v) => Mathf.Atan2(Mathf.Abs(v.x), Mathf.Abs(v.y)) * Mathf.Rad2Deg;
 
         public static Vector3 Flat(Vector3 v)
         {

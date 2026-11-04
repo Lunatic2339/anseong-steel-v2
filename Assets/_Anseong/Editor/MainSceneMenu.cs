@@ -74,6 +74,34 @@ namespace Anseong.EditorTools
             return instance;
         }
 
+        /// <summary>
+        /// 열린 씬(샌드박스 포함)에 제철소 맵을 붙인다(선우 11/04: 앞으로 테스트는 맵 위에서). 맵 불러오기 + Build Profiles 목록에 맵 + 카메라 먼 거리.
+        /// Add Network Session도 이것을 부른다.
+        /// </summary>
+        [MenuItem("Anseong/Setup/Add Steelworks Map", priority = 3)]
+        static void AddMapToActiveScene()
+        {
+            var scene = SceneManager.GetActiveScene();
+            Debug.Log($"{LogPrefix} {AddMap(scene)}. 씬을 저장하세요.");
+            EditorSceneManager.MarkSceneDirty(scene);
+        }
+
+        public static string AddMap(Scene scene)
+        {
+            if (scene.path == EnvironmentScenePath) return "맵 씬 자체라 건너뜀";
+            var result = AddEnvironmentLoader(scene);
+            if (AssetDatabase.LoadAssetAtPath<SceneAsset>(EnvironmentScenePath) != null &&
+                EditorBuildSettings.scenes.All(s => s.path != EnvironmentScenePath))
+                EditorBuildSettings.scenes = EditorBuildSettings.scenes.Append(new EditorBuildSettingsScene(EnvironmentScenePath, true)).ToArray();
+            var origin = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<XROrigin>(true)).FirstOrDefault();
+            if (origin != null && origin.Camera != null && origin.Camera.farClipPlane < CameraFarClip)
+            {
+                Undo.RecordObject(origin.Camera, "Add Steelworks Map");
+                origin.Camera.farClipPlane = CameraFarClip;
+            }
+            return "맵: " + result;
+        }
+
         static string AddEnvironmentLoader(Scene scene)
         {
             var map = AssetDatabase.LoadAssetAtPath<SceneAsset>(EnvironmentScenePath);
