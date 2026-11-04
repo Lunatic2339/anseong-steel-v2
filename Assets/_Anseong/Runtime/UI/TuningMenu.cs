@@ -164,7 +164,8 @@ namespace Anseong.UI
 
         void Update()
         {
-            if (toggleAction.WasPressedThisFrame()) SetOpen(!IsOpen);
+            // 필살기(그립·트리거와 함께 A/B) 중에는 컨트롤러 B로 메뉴를 열지 않는다(M2-05). 키보드 F1은 그대로.
+            if (toggleAction.WasPressedThisFrame() && !PilotHandInput.IgnoreDevButton(toggleAction.activeControl, PilotSide.Right)) SetOpen(!IsOpen);
             if (!IsOpen || list.Items.Count == 0) return;
 
             var now = Time.unscaledTime;

@@ -108,6 +108,11 @@ namespace Anseong.Combat
             // M2-04 페이즈·밀려남·사령관 대사(파일이 없으면 무음)
             New(CombatCue.PhaseChanged, KindFilter.Any, "SFX_BossRoar", atHitPoint: true),
             New(CombatCue.BossKnockback, KindFilter.Any, "SFX_BossKnockback", atHitPoint: true),
+            // M2-05 필살기·쓰러짐
+            New(CombatCue.FinisherCharge, KindFilter.Any, "SFX_BeamCharge", pitch: 1f, haptic: 0.4f, seconds: 0.2f),
+            New(CombatCue.FinisherReset, KindFilter.Any, "SFX_GripRelease"),
+            New(CombatCue.FinisherFire, KindFilter.Any, "SFX_BeamFire", pitch: 1f, haptic: 1f, seconds: 0.5f),
+            New(CombatCue.BossDefeated, KindFilter.Any, "SFX_BossDown", atHitPoint: true),
             Voice(CommanderLines.IncomingAttack), Voice(CommanderLines.CounterNow), Voice(CommanderLines.KneelFinisher),
             Voice(CommanderLines.Victory), Voice(CommanderLines.FirstSlam), Voice(CommanderLines.FirstCombo),
             Voice(CommanderLines.FirstCharge), Voice(CommanderLines.Phase2), Voice(CommanderLines.Phase3), Voice(CommanderLines.FinisherHint),

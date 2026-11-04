@@ -95,6 +95,14 @@ namespace Anseong.Combat
         CommanderLine,
         /// <summary>보스가 크게 밀려남(부스트, M2-04). Amount = 거리(m).</summary>
         BossKnockback,
+        /// <summary>필살기 충전 시작(M2-05). Amount = 충전 시간(초). 각 PC가 그 시간 동안 발광을 키운다.</summary>
+        FinisherCharge,
+        /// <summary>충전 중 한 팔이 놓아 처음부터.</summary>
+        FinisherReset,
+        /// <summary>필살기 발사(광선). Amount = 광선 시간(초). 외골격 X(즉시 해제) 자리.</summary>
+        FinisherFire,
+        /// <summary>승리: 쓰러짐 연출 뒤. Amount = 보스전 걸린 시간(초). 결과 화면은 M4.</summary>
+        EncounterWon,
     }
 
     /// <summary>연계가 끊긴 이유.</summary>

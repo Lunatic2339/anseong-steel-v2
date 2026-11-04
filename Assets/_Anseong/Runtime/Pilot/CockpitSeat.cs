@@ -257,6 +257,8 @@ namespace Anseong.Pilot
         void OnSwitchSeat(InputAction.CallbackContext context)
         {
             if (SeatCount == 0) return;
+            // 필살기(그립·트리거와 함께 X/Y) 중에는 컨트롤러 X로 좌석을 바꾸지 않는다(M2-05).
+            if (PilotHandInput.IgnoreDevButton(context.control, PilotSide.Left)) return;
             SetActiveSeat((activeSeat + 1) % SeatCount);
             Debug.Log($"[CockpitSeat] 좌석 전환: {ActiveSeatLabel} ({context.control?.path})", this);
         }

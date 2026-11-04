@@ -79,8 +79,8 @@ namespace Anseong.Combat
                 PlaySound(i, entry, e);
                 if (!haptics || entry.hapticAmplitude <= 0f || entry.hapticSeconds <= 0f) continue;
                 var priority = Priority(e.Cue);
-                // 피격은 몸 전체로 느끼게 두 손 모두.
-                if (e.Cue == CombatCue.PilotHit)
+                // 피격·필살기는 몸 전체로 느끼게 두 손 모두.
+                if (e.Cue == CombatCue.PilotHit || e.Cue == CombatCue.FinisherCharge || e.Cue == CombatCue.FinisherFire)
                 {
                     Rumble(PilotSide.Left, entry.hapticAmplitude, entry.hapticSeconds, priority);
                     Rumble(PilotSide.Right, entry.hapticAmplitude, entry.hapticSeconds, priority);
@@ -110,6 +110,7 @@ namespace Anseong.Combat
             switch (cue)
             {
                 case CombatCue.PilotHit: return 5;
+                case CombatCue.FinisherFire: return 5;
                 case CombatCue.Boost: return 4;
                 case CombatCue.ComboStep: return 3;
                 case CombatCue.Hit: return 2;

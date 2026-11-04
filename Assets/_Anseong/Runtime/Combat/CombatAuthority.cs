@@ -15,16 +15,25 @@ namespace Anseong.Combat
         readonly CombatResolver resolver;
         readonly PilotHealth pilot;
         readonly DodgeRules dodge;
+        readonly FinisherRules finisher;
         readonly bool[] gripHeld = new bool[2];
         readonly bool[] triggerPressed = new bool[2];
         readonly bool[] guarding = new bool[2];
 
-        public CombatAuthority(CombatResolver resolver, PilotHealthSettings pilotSettings = null, DodgeSettings dodgeSettings = null)
+        public CombatAuthority(CombatResolver resolver, PilotHealthSettings pilotSettings = null, DodgeSettings dodgeSettings = null,
+            FinisherSettings finisherSettings = null)
         {
             this.resolver = resolver ?? new CombatResolver();
             pilot = new PilotHealth(pilotSettings);
             dodge = new DodgeRules(dodgeSettings);
+            finisher = new FinisherRules(finisherSettings);
         }
+
+        /// <summary>합동 필살기(M2-05). 보스 두뇌가 무릎 때 켠다.</summary>
+        public FinisherRules Finisher => finisher;
+
+        /// <summary>필살기 준비 보고.</summary>
+        public void SetFinisherReady(PilotSide side, bool ready, double serverTime) => finisher.ArmReady(side, ready, serverTime);
 
         public CombatResolver Resolver => resolver;
         public PilotHealth Pilot => pilot;
@@ -110,6 +119,7 @@ namespace Anseong.Combat
         {
             resolver.Reset();
             pilot.Reset();
+            finisher.Reset();
             BossPhase = 1;
             dodge.Reset();
             triggerPressed[0] = triggerPressed[1] = false;

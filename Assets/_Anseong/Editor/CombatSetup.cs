@@ -89,7 +89,146 @@ namespace Anseong.EditorTools
             serializedPlayer.FindProperty("cues").objectReferenceValue = GetOrCreateCueSet(out var filled);
             serializedPlayer.ApplyModifiedPropertiesWithoutUndo();
             var guardReport = AddPlayerGuard(arms, drivers);
-            return $"전투 판정 + 주먹 명중 구 {fists.Count(f => f != null)}개 + 소리 표(채운 소리 {filled}개) + {guardReport} + {AddPlayerDefense(arms)}";
+            return $"전투 판정 + 주먹 명중 구 {fists.Count(f => f != null)}개 + 소리 표(채운 소리 {filled}개) + {guardReport} + {AddPlayerDefense(arms)} + {AddFinisher(arms, drivers)}";
+        }
+
+        const string FinisherBeamPath = DebugFolder + "/FinisherBeam.mat";
+
+        /// <summary>M2-05: 필살기 준비 보고(Arms), 충전 발광·광선(로봇 루트).</summary>
+        static string AddFinisher(GameObject arms, RobotArmDriver[] drivers)
+        {
+            var reporter = arms.AddComponent<FinisherReporter>();
+            var serialized = new SerializedObject(reporter);
+            serialized.FindProperty("director").objectReferenceValue = arms.GetComponent<CombatDirector>();
+            SetArray(serialized.FindProperty("arms"), drivers.Where(d => d != null).Cast<Object>().ToArray());
+            serialized.ApplyModifiedPropertiesWithoutUndo();
+
+            var root = arms.transform.root;
+            var beamObject = new GameObject("FinisherBeam");
+            beamObject.transform.SetParent(root, false);
+            var line = beamObject.AddComponent<LineRenderer>();
+            line.useWorldSpace = true;
+            line.positionCount = 2;
+            line.sharedMaterial = GetOrCreateUnlit(FinisherBeamPath, new Color(0.4f, 0.9f, 1f));
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.receiveShadows = false;
+            line.enabled = false;
+
+            var visual = root.gameObject.AddComponent<FinisherVisual>();
+            var serializedVisual = new SerializedObject(visual);
+            serializedVisual.FindProperty("director").objectReferenceValue = arms.GetComponent<CombatDirector>();
+            serializedVisual.FindProperty("beam").objectReferenceValue = line;
+
+            // 파티클(선우 11/03): URP 기본 파티클 재질. 진짜 VFX는 M5.
+            var particleMaterial = FinisherParticleMaterial();
+            var charge = root.GetComponentsInChildren<FistHitProbe>(true)
+                .Select(probe => Particles("FinisherChargeFx", probe.transform, particleMaterial, ChargeFx)).ToArray();
+            var beamFx = Particles("FinisherBeamFx", root, particleMaterial, BeamFx);
+            var impactFx = Particles("FinisherImpactFx", root, particleMaterial, ImpactFx);
+            SetArray(serializedVisual.FindProperty("chargeFx"), charge.Cast<Object>().ToArray());
+            serializedVisual.FindProperty("beamFx").objectReferenceValue = beamFx;
+            serializedVisual.FindProperty("impactFx").objectReferenceValue = impactFx;
+            serializedVisual.ApplyModifiedPropertiesWithoutUndo();
+            return $"필살기 보고 + 충전 발광·광선 + 파티클(재질 {(particleMaterial != null ? particleMaterial.name : "없음")})";
+        }
+
+        const string UrpParticleMaterialPath = "Packages/com.unity.render-pipelines.universal/Runtime/Materials/ParticlesUnlit.mat";
+        const string FinisherParticlePath = DebugFolder + "/FinisherParticle.mat";
+
+        /// <summary>URP 패키지의 기본 파티클 재질. 없으면 URP Particles/Unlit로 하나 만든다(에디터에서만 셰이더 찾음).</summary>
+        static Material FinisherParticleMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(UrpParticleMaterialPath);
+            if (material != null) return material;
+            material = AssetDatabase.LoadAssetAtPath<Material>(FinisherParticlePath);
+            if (material != null) return material;
+            var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
+            if (shader == null) return null;
+            if (!AssetDatabase.IsValidFolder(DebugFolder)) AssetDatabase.CreateFolder("Assets/_Anseong/Art", "Debug");
+            material = new Material(shader);
+            AssetDatabase.CreateAsset(material, FinisherParticlePath);
+            return material;
+        }
+
+        static ParticleSystem Particles(string name, Transform parent, Material material, System.Action<ParticleSystem> setup)
+        {
+            var go = new GameObject(name);
+            go.transform.SetParent(parent, false);
+            // 부모 배율과 무관하게 m 단위로 쓴다(균일 배율 가정).
+            var scale = Mathf.Max(1e-6f, parent.lossyScale.x);
+            go.transform.localScale = Vector3.one / scale;
+            var ps = go.AddComponent<ParticleSystem>();
+            ps.Stop(true, ParticleSystemStopBehavior.StopEmittingAndClear);
+            var main = ps.main;
+            main.playOnAwake = false;
+            main.loop = true;
+            main.scalingMode = ParticleSystemScalingMode.Hierarchy;
+            var renderer = go.GetComponent<ParticleSystemRenderer>();
+            renderer.sharedMaterial = material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            setup(ps);
+            return ps;
+        }
+
+        static readonly Color FxBlue = new Color(0.35f, 0.85f, 1f), FxWhite = new Color(0.9f, 0.97f, 1f), FxOrange = new Color(1f, 0.6f, 0.2f);
+
+        // 충전: 주먹 둘레에서 안쪽으로 빨려 듦(로컬, 주먹을 따라감).
+        static void ChargeFx(ParticleSystem ps)
+        {
+            var main = ps.main;
+            main.simulationSpace = ParticleSystemSimulationSpace.Local;
+            main.startLifetime = 0.5f;
+            main.startSpeed = -14f;
+            main.startSize = new ParticleSystem.MinMaxCurve(0.8f, 2f);
+            main.startColor = new ParticleSystem.MinMaxGradient(FxBlue, FxWhite);
+            var emission = ps.emission;
+            emission.rateOverTime = 90f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 7f;
+            var size = ps.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 0.4f, 1f, 1f));
+        }
+
+        // 광선: 주먹 가운데에서 보스 쪽으로 좁게 쏟아짐(월드, 방향·수명은 런타임이 정함).
+        static void BeamFx(ParticleSystem ps)
+        {
+            var main = ps.main;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startLifetime = 0.3f;
+            main.startSpeed = 160f;
+            main.startSize = new ParticleSystem.MinMaxCurve(3f, 7f);
+            main.startColor = new ParticleSystem.MinMaxGradient(FxBlue, FxWhite);
+            main.maxParticles = 3000;
+            var emission = ps.emission;
+            emission.rateOverTime = 400f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Cone;
+            shape.angle = 1.5f;
+            shape.radius = 2f;
+        }
+
+        // 보스 쪽 폭발: 광선 끝에서 사방으로 튐(월드, 위치는 런타임이 옮김).
+        static void ImpactFx(ParticleSystem ps)
+        {
+            var main = ps.main;
+            main.simulationSpace = ParticleSystemSimulationSpace.World;
+            main.startLifetime = new ParticleSystem.MinMaxCurve(0.4f, 0.9f);
+            main.startSpeed = new ParticleSystem.MinMaxCurve(15f, 45f);
+            main.startSize = new ParticleSystem.MinMaxCurve(3f, 8f);
+            main.startColor = new ParticleSystem.MinMaxGradient(FxOrange, FxWhite);
+            main.gravityModifier = 0.5f;
+            main.maxParticles = 2000;
+            var emission = ps.emission;
+            emission.rateOverTime = 150f;
+            var shape = ps.shape;
+            shape.shapeType = ParticleSystemShapeType.Sphere;
+            shape.radius = 6f;
+            var size = ps.sizeOverLifetime;
+            size.enabled = true;
+            size.size = new ParticleSystem.MinMaxCurve(1f, AnimationCurve.Linear(0f, 1f, 1f, 0f));
         }
 
         /// <summary>M2-03: 가드·회피 보고(Arms), 회피 미끄러짐·피격 흔들림(로봇 루트), 조종사 HP 막대(콘솔 위).</summary>
@@ -373,7 +512,9 @@ namespace Anseong.EditorTools
             SetArray(serialized.FindProperty("attacks"), (attacks ?? new BossAttackDefinition[0]).Cast<Object>().ToArray());
             serialized.ApplyModifiedPropertiesWithoutUndo();
             if (go.GetComponent<BossAnimationDriver>() == null) go.AddComponent<BossAnimationDriver>();
-            if (go.GetComponent<BossTelegraphTint>() == null) go.AddComponent<BossTelegraphTint>();
+            var tint = go.GetComponent<BossTelegraphTint>();
+            if (tint == null) tint = go.AddComponent<BossTelegraphTint>();
+            AddTelegraphMarkers(boss, tint);
             // M2-04: 서버가 옮기는 보스 위치·회전 복제 + 스스로 싸우기(페이즈 표).
             if (go.GetComponent<Unity.Netcode.Components.NetworkTransform>() == null)
             {
@@ -385,7 +526,42 @@ namespace Anseong.EditorTools
             var serializedBrain = new SerializedObject(brain);
             serializedBrain.FindProperty("table").objectReferenceValue = BossAttackMenu.EnsurePhaseTable();
             serializedBrain.ApplyModifiedPropertiesWithoutUndo();
-            return $"보스 두뇌(기술 {attacks?.Length ?? 0}개, 숫자 1~5 시험) + 동작·위치 복제 + 예고 발광 + 스스로 싸우기(페이즈 표)";
+            return $"보스 두뇌(기술 {attacks?.Length ?? 0}개) + 동작·위치 복제 + 예고 발광·공격 쪽 표시 + 스스로 싸우기(페이즈 표)";
+        }
+
+        const string TelegraphMarkerPath = DebugFolder + "/BossTelegraphMarker.mat";
+        // 공격 쪽 표시 구(보스 루트 기준 m): 가슴 높이, 좌우로 벌리고 조종사 쪽으로 조금 앞. 보스 몸통 반지름 7.8 m 밖.
+        const float MarkerHeight = 42f, MarkerSide = 14f, MarkerForward = 6f, MarkerSize = 7f;
+
+        /// <summary>M2-05 보강: 막아야 할 쪽을 보여 주는 큰 구 두 개(조종사 왼팔 쪽 = 보스 기준 오른쪽).</summary>
+        static void AddTelegraphMarkers(Transform boss, BossTelegraphTint tint)
+        {
+            var material = GetOrCreateUnlit(TelegraphMarkerPath, Color.white);
+            Renderer Marker(string name, float side)
+            {
+                var old = boss.Find(name);
+                if (old != null) Object.DestroyImmediate(old.gameObject);
+                var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                sphere.name = name;
+                Object.DestroyImmediate(sphere.GetComponent<Collider>());
+                sphere.transform.SetParent(boss, false);
+                var scale = Mathf.Max(1e-6f, boss.lossyScale.x);
+                sphere.transform.position = boss.position + boss.up * MarkerHeight + boss.right * side + boss.forward * MarkerForward;
+                sphere.transform.localScale = Vector3.one * (MarkerSize / scale);
+                var renderer = sphere.GetComponent<MeshRenderer>();
+                renderer.sharedMaterial = material;
+                renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                renderer.receiveShadows = false;
+                renderer.enabled = false;
+                return renderer;
+            }
+            // 보스는 조종사를 마주 본다: 조종사 왼쪽 = 보스 오른쪽(+right).
+            var left = Marker("TelegraphMarker_PilotLeft", MarkerSide);
+            var right = Marker("TelegraphMarker_PilotRight", -MarkerSide);
+            var serialized = new SerializedObject(tint);
+            serialized.FindProperty("leftMarker").objectReferenceValue = left;
+            serialized.FindProperty("rightMarker").objectReferenceValue = right;
+            serialized.ApplyModifiedPropertiesWithoutUndo();
         }
 
         static GameObject ZoneObject(string name, Transform bone)
