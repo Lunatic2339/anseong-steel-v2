@@ -33,7 +33,7 @@ namespace Anseong.Net
     /// <summary>
     /// 협동 이동(M3-03). 서버가 두 조종사 보조 스틱(전투 서버가 이미 받는 회피 스틱)으로 접근·후퇴·회피를 정하고
     /// "언제 어디서 어디로" 한 번을 복제한다. 모든 PC가 같은 서버 시각으로 같은 곡선을 재생하므로 조종석(카메라)이 끊기지 않는다.
-    /// 몸 자동 회전(보스가 정면 ±20° 밖이면 초당 30°)은 서버가 계산하고 각도를 복제, 클라이언트는 같은 속도로 따라 돈다.
+    /// 기본은 보스 고정 시점(몸이 늘 보스를 봄, 회피는 보스 둘레 옆구르기). 고정을 끄면 몸 자동 회전(보스가 정면 ±20° 밖이면 초당 30°)을 서버가 계산·복제.
     /// 이동 중에는 플레이어 로봇 Animator의 "Walking"을 켠다(파라미터가 있을 때만, 다리 층). 1인 양팔도 같은 길(호스트).
     /// 판 재시작하면 처음 자리로. 메뉴 'Add Network Session'이 Combat Server 오브젝트에 붙인다.
     /// </summary>
@@ -55,7 +55,10 @@ namespace Anseong.Net
 
         [SerializeField] CoopMoveSettings settings = new CoopMoveSettings();
 
-        [SerializeField, Tooltip("몸 자동 회전을 쓴다.")]
+        [SerializeField, Tooltip("보스 고정 시점(선우 11/04): 로봇 몸이 늘 보스를 정면으로 본다. 회피는 보스 둘레로 옆구르기. 끄면 아래 자동 회전(20° 넘으면 초당 30°).")]
+        bool lockOnBoss = true;
+
+        [SerializeField, Tooltip("보스 고정을 끈 때만: 몸 자동 회전을 쓴다.")]
         bool autoTurn = true;
 
         [SerializeField, Tooltip("이동 중 걷기 클립(다리)을 켠다.")]
@@ -166,7 +169,7 @@ namespace Anseong.Net
             if (pendingDodge != 0)
             {
                 var from = current.Kind == MoveKind.None ? current.To : current.Evaluate(now);
-                if (CoopMoveRules.TryPlanDodge(now, pendingDodge, current, from, playerRoot.rotation, settings, ref nextAllowed, ref nextDodgeAllowed, out var dodgeSegment))
+                if (CoopMoveRules.TryPlanDodge(now, pendingDodge, current, from, playerRoot.rotation, bossPosition, settings, ref nextAllowed, ref nextDodgeAllowed, out var dodgeSegment))
                 {
                     Note(pendingDodge < 0 ? "왼쪽 회피" : "오른쪽 회피");
                     pendingDodge = 0;
@@ -185,7 +188,12 @@ namespace Anseong.Net
                 combat.Flush();
             }
 
-            if (autoTurn)
+            if (lockOnBoss)
+            {
+                var look = CoopMoveRules.LookYaw(playerRoot.position, bossPosition, yaw.Value);
+                if (Mathf.Abs(Mathf.DeltaAngle(look, yaw.Value)) > 0.5f) yaw.Value = look;   // 고정을 끌 때 이어 쓸 값(보내는 수 줄이기)
+            }
+            else if (autoTurn)
             {
                 var y = CoopMoveRules.TurnYaw(yaw.Value, playerRoot.position, bossPosition, Time.deltaTime, settings, ref turning);
                 if (Mathf.Abs(Mathf.DeltaAngle(y, yaw.Value)) > 0.01f) yaw.Value = y;
@@ -200,7 +208,8 @@ namespace Anseong.Net
 
             // 서버는 계산값 그대로, 클라이언트는 복제값을 같은 최대 속도로 따라간다(틱 사이 끊김 없이).
             var target = yaw.Value;
-            if (IsServer) shownYaw = target;
+            if (lockOnBoss && boss != null) shownYaw = CoopMoveRules.LookYaw(position, boss.transform.position, target);   // 각 PC가 같은 위치·보스로 바로 계산(끊김 없음)
+            else if (IsServer) shownYaw = target;
             else
             {
                 var diff = Mathf.DeltaAngle(shownYaw, target);
@@ -246,15 +255,16 @@ namespace Anseong.Net
         public void AddTuning(TuningList list)
         {
             const string g = "협동 이동";
-            list.Describe(g, "할 것: 두 스틱 같이 앞·뒤·옆으로, 한쪽만 밀기\n볼 것: 둘이 같이 밀 때만 묵직하게 한 걸음씩, 멀미 없음");
+            list.Describe(g, "할 것: 두 스틱 같이 앞·뒤·옆으로, 한쪽만 밀기\n볼 것: 둘이 같이 밀 때만 움직임, 옆은 보스 둘레로 옆구르기, 보스가 늘 정면");
             list.AddFloat(g, "move.stepMeters", "한 걸음 거리(m)", () => settings.stepMeters, v => settings.stepMeters = v, 2f, 20f, 1f, 0);
             list.AddFloat(g, "move.dodgeCooldown", "회피 뒤 쉼(초)", () => settings.dodgeCooldownSeconds, v => settings.dodgeCooldownSeconds = v, 0f, 1.5f, 0.1f, 1);
             list.AddFloat(g, "move.stepSeconds", "한 걸음 시간(초)", () => settings.stepSeconds, v => settings.stepSeconds = v, 0.2f, 1.5f, 0.1f, 1);
-            list.AddToggle(g, "move.autoTurn", "몸 자동 회전", () => autoTurn, v => autoTurn = v);
+            list.AddToggle(g, "move.lockOn", "보스 고정 시점", () => lockOnBoss, v => lockOnBoss = v);
+            list.AddToggle(g, "move.autoTurn", "몸 자동 회전(고정 끈 때)", () => autoTurn, v => autoTurn = v);
             list.AddToggle(g, "move.walkClip", "걷기 클립", () => walkAnimation, v => walkAnimation = v);
             list.AddCheck(g, "move.both", "둘이 같은 방향일 때만 움직임");
             list.AddCheck(g, "move.sick", "움직일 때 멀미 없음");
-            list.AddCheck(g, "move.turn", "보스가 옆으로 가면 몸이 천천히 돎");
+            list.AddCheck(g, "move.turn", "회피해도 보스가 늘 정면");
         }
     }
 }

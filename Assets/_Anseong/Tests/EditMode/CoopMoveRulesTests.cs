@@ -54,13 +54,14 @@ namespace Anseong.Tests
         public void Dodge_GoesSideways_AndCoolsDown()
         {
             double next = 0d, nextDodge = 0d;
-            Assert.IsTrue(CoopMoveRules.TryPlanDodge(1.0, -1, default, Vector3.zero, Quaternion.identity, S, ref next, ref nextDodge, out var seg));
+            Assert.IsTrue(CoopMoveRules.TryPlanDodge(1.0, -1, default, Vector3.zero, Quaternion.identity, Boss, S, ref next, ref nextDodge, out var seg));
             Assert.AreEqual(MoveKind.DodgeLeft, seg.Kind);
-            Assert.AreEqual(-S.dodgeMeters, seg.To.x, 1e-4f);
+            Assert.Less(seg.To.x, -S.dodgeMeters * 0.9f, "왼쪽");
+            Assert.AreEqual(Boss.z, Vector3.Distance(seg.To, Boss), 1e-3f, "보스 거리 그대로(둘레로)");
             Assert.AreEqual(1.0 + S.stepSeconds + S.dodgeCooldownSeconds, nextDodge, 1e-6);
             Assert.AreEqual(1.0 + S.stepSeconds + S.stepGapSeconds, next, 1e-6, "앞뒤 걸음은 회피 끝나면 바로");
-            Assert.IsFalse(CoopMoveRules.TryPlanDodge(1.2, 1, seg, Vector3.zero, Quaternion.identity, S, ref next, ref nextDodge, out _), "회피 도중");
-            Assert.IsFalse(CoopMoveRules.TryPlanDodge(1.6, 1, seg, Vector3.zero, Quaternion.identity, S, ref next, ref nextDodge, out _), "회피 쉼");
+            Assert.IsFalse(CoopMoveRules.TryPlanDodge(1.2, 1, seg, Vector3.zero, Quaternion.identity, Boss, S, ref next, ref nextDodge, out _), "회피 도중");
+            Assert.IsFalse(CoopMoveRules.TryPlanDodge(1.6, 1, seg, Vector3.zero, Quaternion.identity, Boss, S, ref next, ref nextDodge, out _), "회피 쉼");
             Assert.IsTrue(CoopMoveRules.TryPlan(1.6, MoveKind.Approach, Vector3.zero, Quaternion.identity, Boss, S, ref next, out _), "걸음은 됨");
         }
 
@@ -70,11 +71,20 @@ namespace Anseong.Tests
             double next = 0d, nextDodge = 0d;
             Assert.IsTrue(CoopMoveRules.TryPlan(1.0, MoveKind.Approach, Vector3.zero, Quaternion.identity, Boss, S, ref next, out var step));
             var mid = step.Evaluate(1.2);
-            Assert.IsTrue(CoopMoveRules.TryPlanDodge(1.2, 1, step, mid, Quaternion.identity, S, ref next, ref nextDodge, out var seg), "걸음 도중 회피");
+            Assert.IsTrue(CoopMoveRules.TryPlanDodge(1.2, 1, step, mid, Quaternion.identity, Boss, S, ref next, ref nextDodge, out var seg), "걸음 도중 회피");
             Assert.AreEqual(MoveKind.DodgeRight, seg.Kind);
             Assert.AreEqual(mid.z, seg.From.z, 1e-4f);
-            Assert.AreEqual(S.dodgeMeters, seg.To.x, 1e-4f);
-            Assert.IsFalse(CoopMoveRules.TryPlanDodge(1.2, 0, step, mid, Quaternion.identity, S, ref next, ref nextDodge, out _), "방향 없음");
+            Assert.Greater(seg.To.x, S.dodgeMeters * 0.9f, "오른쪽");
+            Assert.AreEqual(Vector3.Distance(mid, Boss), Vector3.Distance(seg.To, Boss), 1e-3f);
+            Assert.IsFalse(CoopMoveRules.TryPlanDodge(1.2, 0, step, mid, Quaternion.identity, Boss, S, ref next, ref nextDodge, out _), "방향 없음");
+        }
+
+        [Test]
+        public void LookYaw_FacesBoss()
+        {
+            Assert.AreEqual(0f, CoopMoveRules.LookYaw(Vector3.zero, Boss, 5f), 1e-4f);
+            Assert.AreEqual(90f, CoopMoveRules.LookYaw(Vector3.zero, new Vector3(30f, 0f, 0f), 5f), 1e-4f);
+            Assert.AreEqual(5f, CoopMoveRules.LookYaw(Boss, Boss, 5f), 1e-4f, "겹치면 그대로");
         }
 
         [Test]

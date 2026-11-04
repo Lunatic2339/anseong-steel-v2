@@ -103,16 +103,14 @@ namespace Anseong.Combat
         /// 회피 한 번을 정한다(앞뒤 걸음보다 먼저). 앞뒤 걸음 도중이면 그 자리(<paramref name="robot"/> = 지금 위치)에서 끊고 옆으로 간다.
         /// 회피 도중이거나 회피 쉼(<paramref name="nextDodgeAllowed"/>) 중이면 false(부르는 쪽이 잠깐 기억했다가 다시 부른다).
         /// </summary>
-        public static bool TryPlanDodge(double now, int direction, MoveSegment current, Vector3 robot, Quaternion robotRotation,
+        public static bool TryPlanDodge(double now, int direction, MoveSegment current, Vector3 robot, Quaternion robotRotation, Vector3 boss,
             CoopMoveSettings s, ref double nextAllowed, ref double nextDodgeAllowed, out MoveSegment segment)
         {
             segment = default;
             if (direction == 0 || now < nextDodgeAllowed) return false;
             if ((current.Kind == MoveKind.DodgeLeft || current.Kind == MoveKind.DodgeRight) && current.IsMoving(now)) return false;
-            var right = robotRotation * Vector3.right;
-            right.y = 0f;
-            right = right.sqrMagnitude > 1e-6f ? right.normalized : Vector3.right;
-            segment = Make(direction < 0 ? MoveKind.DodgeLeft : MoveKind.DodgeRight, robot, robot + right * (Mathf.Sign(direction) * s.dodgeMeters), now, s.stepSeconds);
+            var to = DodgeTarget(robot, robotRotation, boss, Mathf.Sign(direction) * s.dodgeMeters);
+            segment = Make(direction < 0 ? MoveKind.DodgeLeft : MoveKind.DodgeRight, robot, to, now, s.stepSeconds);
             nextAllowed = now + s.stepSeconds + s.stepGapSeconds;
             nextDodgeAllowed = now + s.stepSeconds + s.dodgeCooldownSeconds;
             return true;
@@ -145,7 +143,37 @@ namespace Anseong.Combat
         }
 
         /// <summary>
-        /// 몸 자동 회전 한 번. 보스 방향과의 차이가 시작 각도를 넘으면 돌기 시작해 멈춤 각도 안까지 초당 최대 속도로 돈다.
+        /// 회피 도착점: 보스를 중심으로 같은 거리를 유지하며 옆으로 <paramref name="meters"/>(+ 오른쪽, − 왼쪽)만큼 돈 자리(옆구르기, 보스 고정 시점).
+        /// 보스가 너무 가까우면(1 m 안) 로봇 오른쪽으로 곧게.
+        /// </summary>
+        public static Vector3 DodgeTarget(Vector3 robot, Quaternion robotRotation, Vector3 boss, float meters)
+        {
+            var from = robot - boss;
+            from.y = 0f;
+            var radius = from.magnitude;
+            if (radius < 1f)
+            {
+                var right = Flat(robotRotation * Vector3.right);
+                return robot + right * meters;
+            }
+            // 보스를 보는 사람 기준 오른쪽 = 위에서 볼 때 시계 방향(Unity y축 +회전).
+            var angle = -meters / radius * Mathf.Rad2Deg;
+            var rotated = Quaternion.Euler(0f, angle, 0f) * from;
+            var to = boss + rotated;
+            to.y = robot.y;
+            return to;
+        }
+
+        /// <summary>보스를 바로 보는 yaw(°). 보스 고정 시점.</summary>
+        public static float LookYaw(Vector3 robot, Vector3 boss, float fallback)
+        {
+            var to = boss - robot;
+            to.y = 0f;
+            return to.sqrMagnitude < 1e-4f ? fallback : Mathf.Atan2(to.x, to.z) * Mathf.Rad2Deg;
+        }
+
+        /// <summary>
+        /// 몸 자동 회전 한 번(보스 고정 시점을 끈 때만). 보스 방향과의 차이가 시작 각도를 넘으면 돌기 시작해 멈춤 각도 안까지 초당 최대 속도로 돈다.
         /// 돌리는 중인지(<paramref name="turning"/>)를 이어 받아 히스테리시스를 둔다. 새 yaw(°)를 돌려준다.
         /// </summary>
         public static float TurnYaw(float yaw, Vector3 robot, Vector3 boss, float dt, CoopMoveSettings s, ref bool turning)
@@ -175,7 +203,7 @@ namespace Anseong.Combat
             return new MoveSegment { Kind = kind, From = from, To = to, Start = now, Duration = duration };
         }
 
-        static Vector3 Flat(Vector3 v)
+        public static Vector3 Flat(Vector3 v)
         {
             v.y = 0f;
             return v.sqrMagnitude > 1e-6f ? v.normalized : Vector3.forward;
