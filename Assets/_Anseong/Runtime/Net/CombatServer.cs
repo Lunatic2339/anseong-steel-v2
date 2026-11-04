@@ -98,7 +98,8 @@ namespace Anseong.Net
         [Rpc(SendTo.Server)]
         void FinisherReadyRpc(byte side, bool ready, RpcParams rpc = default)
         {
-            authority?.SetFinisherReady((PilotSide)side, ready, Now);
+            if (authority == null || !FromOwner((PilotSide)side, rpc)) return;
+            authority.SetFinisherReady((PilotSide)side, ready, Now);
         }
         public void SubmitStick(PilotSide side, Vector2 stick) => StickRpc((byte)side, Quantize(stick.x), Quantize(stick.y));
 
@@ -107,13 +108,14 @@ namespace Anseong.Net
         [Rpc(SendTo.Server)]
         void GuardRpc(byte side, bool guarding, RpcParams rpc = default)
         {
-            authority?.SetGuard((PilotSide)side, guarding);
+            if (authority == null || !FromOwner((PilotSide)side, rpc)) return;
+            authority.SetGuard((PilotSide)side, guarding);
         }
 
         [Rpc(SendTo.Server)]
         void StickRpc(byte side, sbyte x, sbyte y, RpcParams rpc = default)
         {
-            if (authority == null) return;
+            if (authority == null || !FromOwner((PilotSide)side, rpc)) return;
             authority.SetStick((PilotSide)side, new Vector2(x / 127f, y / 127f), Now, events);
             Flush();
         }
