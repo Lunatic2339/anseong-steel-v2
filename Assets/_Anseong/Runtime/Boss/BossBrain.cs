@@ -63,8 +63,8 @@ namespace Anseong.Boss
 
         BossPatternPicker picker;
         BossPhaseRules phases;
-        readonly BossFightStats stats = new BossFightStats();
-        readonly HashSet<BossAttackKind> seen = new HashSet<BossAttackKind>();
+        BossFightStats stats = new BossFightStats();
+        HashSet<BossAttackKind> seen = new HashSet<BossAttackKind>();
         bool bound, sawOpening, finishedLog;
         double nextAttackAt, fightStart, lastHint, wonAt = -1;
         Vector3 startPosition, knockFrom, knockTo;
@@ -107,9 +107,19 @@ namespace Anseong.Boss
 #endif
         }
 
+        void Unbind()
+        {
+            if (server.Combat != null) server.Combat.ServerCue -= OnCue;
+            server.ServerEvent -= OnBossEvent;
+            server.ServerReset -= OnReset;
+            bound = false;
+        }
+
         bool TryBind()
         {
             if (!server.IsServer || server.Combat == null || server.Combat.Authority == null) return false;
+            if (stats == null) stats = new BossFightStats();
+            if (seen == null) seen = new HashSet<BossAttackKind>();
             var phaseTable = table != null ? table.phases : null;
             seed = table != null && table.seed != 0 ? table.seed : System.Environment.TickCount;
             picker = new BossPatternPicker(phaseTable, seed);
@@ -139,7 +149,10 @@ namespace Anseong.Boss
 
         void Update()
         {
+            // Play 중 스크립트가 다시 컴파일되면(예: Play 중 git pull) 직렬화 안 되는 규칙 객체만 비고 bound는 남는다 → 다시 묶는다.
+            if (bound && (phases == null || picker == null)) Unbind();
             if (!bound && !TryBind()) return;
+            if (server.Combat == null || server.Combat.Authority == null) return;
             var now = server.Now;
             var machine = server.Machine;
             var authority = server.Combat.Authority;
