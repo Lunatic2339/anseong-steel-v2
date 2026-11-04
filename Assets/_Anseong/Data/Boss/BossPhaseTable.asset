@@ -1,0 +1,59 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: a559d713bb7492e4ebb01014c02b5f15, type: 3}
+  m_Name: BossPhaseTable
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Boss.BossPhaseTable
+  phases:
+  - firstAttack: 1
+    weights:
+    - kind: 0
+      weight: 50
+    - kind: 1
+      weight: 50
+    restMin: 2.5
+    restMax: 3.5
+    showComboWithin: 0
+  - firstAttack: 3
+    weights:
+    - kind: 0
+      weight: 25
+    - kind: 1
+      weight: 25
+    - kind: 2
+      weight: 25
+    - kind: 3
+      weight: 25
+    restMin: 2
+    restMax: 3
+    showComboWithin: 3
+  - firstAttack: 4
+    weights:
+    - kind: 0
+      weight: 17.5
+    - kind: 1
+      weight: 17.5
+    - kind: 2
+      weight: 20
+    - kind: 3
+      weight: 20
+    - kind: 4
+      weight: 25
+    restMin: 1.5
+    restMax: 2.5
+    showComboWithin: 0
+  thresholds:
+  - 60
+  - 25
+  - 10
+  roarSeconds: 2
+  pilotRestorePercent: 60
+  seed: 0

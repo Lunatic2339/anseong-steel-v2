@@ -35,6 +35,12 @@ namespace Anseong.Combat
         [SerializeField] ComboSettings combo = new ComboSettings();
         [SerializeField] BoostSettings boost = new BoostSettings();
         [SerializeField] BossHealthSettings bossHealth = new BossHealthSettings();
+        [SerializeField, Tooltip("조종사 로봇 HP·위기 피해 감소(05, M2-03). 서버 PC의 값이 쓰인다.")]
+        PilotHealthSettings pilotHealth = new PilotHealthSettings();
+        [SerializeField, Tooltip("협동 회피 판정(01, M2-03). 서버 PC의 값이 쓰인다.")]
+        DodgeSettings dodge = new DodgeSettings();
+        [SerializeField, Tooltip("합동 필살기(01, M2-05). 펴짐·각도는 보고하는 PC, 시간은 서버 PC의 값이 쓰인다.")]
+        FinisherSettings finisher = new FinisherSettings();
 
         [Header("부스트 입력")]
         [SerializeField, Range(0.1f, 1f), Tooltip("트리거를 이만큼 당기면 누름(부스트).")]
@@ -91,6 +97,15 @@ namespace Anseong.Combat
         /// <summary>서버가 쓸 규칙 객체를 이 컴포넌트의 규칙 수치(01 초기값, 조절 메뉴)로 만든다. 같은 설정 객체를 나눠 써서 조절 메뉴 값이 바로 반영된다.</summary>
         public CombatResolver CreateResolver() => new CombatResolver(combo, boost, bossHealth);
 
+        /// <summary>서버 규칙 묶음 전체(전투 + 조종사 HP + 회피)를 이 컴포넌트의 수치로 만든다.</summary>
+        public CombatAuthority CreateAuthority() => new CombatAuthority(CreateResolver(), pilotHealth, dodge, finisher);
+
+        /// <summary>필살기 수치(준비 판정하는 쪽이 읽는다).</summary>
+        public FinisherSettings Finisher => finisher;
+
+        /// <summary>전투 서버 보고 통로(가드·회피 스틱 보고 컴포넌트가 쓴다). 연결 전이면 null.</summary>
+        public ICombatLink Link => link;
+
         /// <summary>그 팔의 그 동작을 이미 명중으로 보고했는지.</summary>
         public bool AlreadyHit(PilotSide side, int strikeId) => strikeId > 0 && strikeId <= reported[(int)side];
 
@@ -129,7 +144,7 @@ namespace Anseong.Combat
 
         void Awake()
         {
-            snapshot = CombatSnapshot.Full(bossHealth.maxHealth);
+            snapshot = CombatSnapshot.Full(bossHealth.maxHealth, pilotHealth.maxHealth);
             for (var h = 0; h < 2; h++)
             {
                 var s = state[h];
@@ -440,6 +455,7 @@ namespace Anseong.Combat
             list.AddFloat(c, "combo.comboSeconds", "다음 명중 제한(초)", () => combo.comboSeconds, v => combo.comboSeconds = v, 0.5f, 5f, 0.1f, 1);
             list.AddFloat(c, "boost.windowSeconds", "부스트 입력창(초)", () => boost.windowSeconds, v => boost.windowSeconds = v, 0.1f, 2f, 0.05f);
             // 값이 아니라 버튼처럼 쓴다: 켜는 순간 채우고 늘 "끔"으로 보인다(저장값도 끔).
+            list.AddToggle(c, "pilot.crisis", "위기 피해 감소(HP 낮을수록 덜 아픔)", () => pilotHealth.crisisReduction, v => pilotHealth.crisisReduction = v);
             list.AddToggle(c, "boss.refill", "보스 HP 다시 채우기(켜면 바로)", () => false, v => { if (v) ResetBoss(); });
         }
 

@@ -64,6 +64,45 @@ namespace Anseong.Combat
         BoostMissed,
         /// <summary>보스 HP 0.</summary>
         BossDefeated,
+
+        // ── M2 (enum 값이 소리 표 에셋에 숫자로 저장되므로 항상 끝에만 더한다) ──
+
+        /// <summary>보스가 빈틈·경직이 아닐 때 친 명중: 피해 0, 연계 차례 그대로(M2-02).</summary>
+        Blocked,
+        /// <summary>보스 공격 예고 시작. Code = 기술(BossAttackKind), Amount = 예고 등급(0 일반, 1 강, 2 가드 불가), Side = 들어오는 쪽.</summary>
+        BossTelegraph,
+        /// <summary>보스 공격 명중 순간(연타는 타마다). Code = 기술, Amount = 몇 번째 타(0부터), Side = 들어오는 쪽.</summary>
+        BossStrike,
+        /// <summary>보스 빈틈 시작(반격 기회). Amount = 빈틈 길이(초).</summary>
+        BossOpening,
+        /// <summary>보스 공격을 가드로 막음(M2-03). Side = 들어온 쪽, Code = 기술. 외골격 R(강한 저항 300ms) 자리.</summary>
+        GuardBlock,
+        /// <summary>가드가 모자람(반대 팔·한 팔만). Side = 들어온 쪽, Code = 기술. 이어서 PilotHit이 온다.</summary>
+        GuardFail,
+        /// <summary>두 스틱이 같은 좌/우로 새로 밀림(회피 동작 시작). Amount = 방향(-1 왼쪽, +1 오른쪽).</summary>
+        DodgeStart,
+        /// <summary>돌진 회피 성공. Code = 기술.</summary>
+        Dodge,
+        /// <summary>조종사 로봇이 맞음. Damage = 깎인 HP(%), Amount = 깎인 뒤 HP(%), Side = 들어온 쪽, Code = 기술.</summary>
+        PilotHit,
+        /// <summary>조종사 로봇 HP 0(패배 연출은 M4).</summary>
+        PilotDefeated,
+        /// <summary>페이즈가 바뀜(M2-04). Code = 새 페이즈 번호(2·3).</summary>
+        PhaseChanged,
+        /// <summary>보스가 무릎 꿇음(HP 10%, 필살기 대기).</summary>
+        BossKneel,
+        /// <summary>사령관 대사(M2-04). Code = 대사 번호(<c>CommanderLines</c>). 소리 파일이 없으면 무음, 안내판에 글자.</summary>
+        CommanderLine,
+        /// <summary>보스가 크게 밀려남(부스트, M2-04). Amount = 거리(m).</summary>
+        BossKnockback,
+        /// <summary>필살기 충전 시작(M2-05). Amount = 충전 시간(초). 각 PC가 그 시간 동안 발광을 키운다.</summary>
+        FinisherCharge,
+        /// <summary>충전 중 한 팔이 놓아 처음부터.</summary>
+        FinisherReset,
+        /// <summary>필살기 발사(광선). Amount = 광선 시간(초). 외골격 X(즉시 해제) 자리.</summary>
+        FinisherFire,
+        /// <summary>승리: 쓰러짐 연출 뒤. Amount = 보스전 걸린 시간(초). 결과 화면은 M4.</summary>
+        EncounterWon,
     }
 
     /// <summary>연계가 끊긴 이유.</summary>
@@ -92,5 +131,9 @@ namespace Anseong.Combat
         public BossZone Zone;
         public Vector3 Point;
         public double Time;
+        /// <summary>사건별 번호(보스 기술, 페이즈 번호 등). 뜻은 <see cref="CombatCue"/> 설명에.</summary>
+        public int Code;
+        /// <summary>사건별 수치(예고 등급, 빈틈 길이, 충전 비율 등). 뜻은 <see cref="CombatCue"/> 설명에.</summary>
+        public float Amount;
     }
 }

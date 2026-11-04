@@ -60,6 +60,8 @@ namespace Anseong.Net
             s.SerializeValue(ref Value.BossHealth);
             s.SerializeValue(ref Value.Point);
             s.SerializeValue(ref Value.Time);
+            s.SerializeValue(ref Value.Code);
+            s.SerializeValue(ref Value.Amount);
             if (!s.IsReader) return;
             Value.Cue = (CombatCue)cue;
             Value.Side = (PilotSide)side;
@@ -86,6 +88,9 @@ namespace Anseong.Net
             s.SerializeValue(ref next);
             s.SerializeValue(ref Value.BoostOpen);
             s.SerializeValue(ref boostSide);
+            s.SerializeValue(ref Value.PilotHealth);
+            s.SerializeValue(ref Value.PilotMax);
+            s.SerializeValue(ref Value.BossPhase);
             if (!s.IsReader) return;
             Value.ComboNextSide = (PilotSide)next;
             Value.BoostSide = (PilotSide)boostSide;
@@ -96,7 +101,7 @@ namespace Anseong.Net
             var a = Value;
             var b = other.Value;
             return a.BossHealth == b.BossHealth && a.BossMax == b.BossMax && a.ComboStep == b.ComboStep && a.ComboNextSide == b.ComboNextSide
-                   && a.BoostOpen == b.BoostOpen && a.BoostSide == b.BoostSide;
+                   && a.BoostOpen == b.BoostOpen && a.BoostSide == b.BoostSide && a.PilotHealth == b.PilotHealth && a.PilotMax == b.PilotMax && a.BossPhase == b.BossPhase;
         }
 
         public override bool Equals(object obj) => obj is NetCombatSnapshot other && Equals(other);
