@@ -11,6 +11,8 @@
 | 모델 | **Meshy** 또는 **Tripo** | Pro 약 $20 | 소품·부서지는 구조물·표적·조종사 헬멧 | 로봇 원본도 Tripo. 결과는 Blender 정리(면 수·재질 줄이기) 필수. 메인 로봇·조종석처럼 중요한 건 사람이 만든다 |
 | 하늘 | Blockade Labs Skybox AI | 요금제 확인 | 360° 하늘(제철소 노을·연기) | Poly Haven 무료 HDRI로 부족할 때만 |
 | 맵 | (지금처럼) Codex·Claude 절차 생성 | 이미 씀 | 건물·도로 배치 | 맵 전체를 만들어 주는 쓸 만한 AI는 아직 없다 |
-| 애니 | Rokoko Vision 유료판 | 요금제 확인 | 우리가 연기한 영상 → 동작 | 무료 월 30초로 부족할 때만. Mixamo가 먼저 |
+| 애니 | **Cascadeur** Indie | $19 (연간이면 월 $8), Pro는 14일 체험 | **기존 Mixamo 클립 고치기**: AutoPosing(몇 군데만 잡으면 몸 전체 자세를 맞춤), AutoPhysics(무게·관성 맞게 보정), 사이 동작 자동 | **모션 1순위**. 무료판은 FBX 내보내기 안 됨 → Indie 이상. Indie는 연 매출 $100k 미만만(우리는 해당). Mixamo 뼈 캐릭터 지원 여부는 체험판에서 우리 로봇 FBX를 열어 확인 |
+| 애니 | DeepMotion · Plask · Rokoko Vision | 무료 체험 있음, 유료 월 $15~ | 우리가 연기한 영상 → 동작(무릎 꿇기·포효 등 Mixamo에 없는 것) | 빠른 동작은 발 미끄러짐·떨림. 결과는 자기 뼈라 Mixamo 뼈로 옮겨야 함 |
+| 애니 | Meshy·Tripo 동작 라이브러리 | 모델 요금제에 포함 | – | Mixamo와 비슷한 라이브러리. Mixamo로 충분 |
 
-추천 조합: **ElevenLabs Starter 한 달 + Suno Pro 한 달**(약 $15). 모델 쪽은 부서지는 구조물을 넣기로(11/12 회의) 하면 Meshy·Tripo 중 하나 한 달.
+추천 조합: **ElevenLabs Starter 한 달 + Suno Pro 한 달**(약 $15), 모션은 **Cascadeur Pro 14일 체험 → 쓸 만하면 Indie 한 달**($19). 모델 쪽은 부서지는 구조물을 넣기로(11/12 회의) 하면 Meshy·Tripo 중 하나 한 달.
