@@ -1,6 +1,7 @@
 using System.Linq;
 using Anseong.Combat;
 using Anseong.Net;
+using Anseong.UI;
 using Unity.Netcode;
 using Unity.Netcode.Transports.UTP;
 using UnityEditor;
@@ -11,7 +12,7 @@ using UnityEngine.SceneManagement;
 namespace Anseong.EditorTools
 {
     /// <summary>
-    /// M2-01: 열린 씬에 네트워크 세션(NetworkManager + UnityTransport + SessionBootstrap)과 전투 서버(NetworkObject + CombatServer)를 붙인다.
+    /// M2-01·M3-01: 열린 씬에 네트워크 세션(NetworkManager + UnityTransport + SessionBootstrap)과 전투 서버(NetworkObject + CombatServer)를 붙인다.
     /// 여러 번 실행해도 된다(있으면 연결만 다시). Rebuild Robot + Pilot Input, Build M1 Main도 이것을 부른다. 씬 저장은 사람이 한다.
     /// NGO 씬 관리는 끈다: 두 PC가 같은 씬을 각자 열고 접속한다(맵 씬을 추가로 불러오는 EnvironmentLoader와 부딪히지 않게).
     /// </summary>
@@ -49,6 +50,8 @@ namespace Anseong.EditorTools
             network.NetworkConfig.EnableSceneManagement = false;
             EditorUtility.SetDirty(network);
             if (host.GetComponent<SessionBootstrap>() == null) Undo.AddComponent<SessionBootstrap>(host);
+            // M3-01: PC 모니터용 운영자 시작 화면(1인 양팔 / 호스트 / 클라이언트 + IP).
+            if (host.GetComponent<OperatorStartScreen>() == null) Undo.AddComponent<OperatorStartScreen>(host);
 
             var server = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<CombatServer>(true)).FirstOrDefault();
             if (server == null)
@@ -66,7 +69,7 @@ namespace Anseong.EditorTools
             if (director == null) Debug.LogWarning($"{LogPrefix} 씬에 CombatDirector가 없습니다. Rebuild Robot + Pilot Input을 먼저 실행하세요.");
 
             EditorSceneManager.MarkSceneDirty(scene);
-            return $"네트워크 세션({(made ? "새로 만듦" : "있던 것 다시 연결")}, 1인 양팔 호스트 127.0.0.1:7777) + 전투 서버";
+            return $"네트워크 세션({(made ? "새로 만듦" : "있던 것 다시 연결")}, 포트 7777, 운영자 시작 화면) + 전투 서버";
         }
     }
 }
