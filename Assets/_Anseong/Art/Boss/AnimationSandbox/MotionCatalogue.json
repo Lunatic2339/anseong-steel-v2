@@ -1,0 +1,114 @@
+{
+    "motions": [
+        {
+            "state": "Idle",
+            "duration": 7.700000286102295,
+            "loop": true
+        },
+        {
+            "state": "Walk",
+            "duration": 2.3333334922790529,
+            "loop": true
+        },
+        {
+            "state": "Punch",
+            "duration": 5.133333683013916,
+            "loop": false
+        },
+        {
+            "state": "TurnLeft",
+            "duration": 2.066666841506958,
+            "loop": false
+        },
+        {
+            "state": "TurnRight",
+            "duration": 2.066666841506958,
+            "loop": false
+        },
+        {
+            "state": "SwordIdle",
+            "duration": 2.0,
+            "loop": true
+        },
+        {
+            "state": "DrawSword",
+            "duration": 2.0709803104400636,
+            "loop": false
+        },
+        {
+            "state": "SheatheSword",
+            "duration": 2.73764705657959,
+            "loop": false
+        },
+        {
+            "state": "Stagger",
+            "duration": 1.2500001192092896,
+            "loop": false
+        },
+        {
+            "state": "Death",
+            "duration": 2.5833334922790529,
+            "loop": false
+        },
+        {
+            "state": "Combat_AlternatingCombo",
+            "duration": 2.0833334922790529,
+            "loop": false
+        },
+        {
+            "state": "Combat_ArmLock",
+            "duration": 1.149999976158142,
+            "loop": false
+        },
+        {
+            "state": "Combat_EMP",
+            "duration": 3.500000238418579,
+            "loop": false
+        },
+        {
+            "state": "Combat_Feint",
+            "duration": 1.8900001049041749,
+            "loop": false
+        },
+        {
+            "state": "Combat_Grab",
+            "duration": 1.149999976158142,
+            "loop": false
+        },
+        {
+            "state": "Combat_OverheadSmash",
+            "duration": 1.2666667699813843,
+            "loop": false
+        },
+        {
+            "state": "Combat_SensorJam",
+            "duration": 3.500000238418579,
+            "loop": false
+        },
+        {
+            "state": "Combat_Shockwave",
+            "duration": 4.783333778381348,
+            "loop": false
+        },
+        {
+            "state": "Combat_SwordSlash",
+            "duration": 1.8166667222976685,
+            "loop": false
+        },
+        {
+            "state": "Combat_VisionDisruption",
+            "duration": 3.500000238418579,
+            "loop": false
+        },
+        {
+            "state": "Combat_WeaponBreak",
+            "duration": 1.8166667222976685,
+            "loop": false
+        },
+        {
+            "state": "WalkBackward",
+            "duration": 2.3333334922790529,
+            "loop": true
+        }
+    ]
+}
