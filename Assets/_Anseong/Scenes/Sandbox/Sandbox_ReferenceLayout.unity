@@ -62896,7 +62896,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 782433784}
-  m_Mesh: {fileID: 4300000, guid: ff7f8dc10ceaf9e41af0bab13bbaf240, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 6f0f86c3d1be63145a399213d38b6ca1, type: 2}
 --- !u!1001 &782805800
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -82879,7 +82879,7 @@ MeshFilter:
   m_PrefabInstance: {fileID: 0}
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 1040957748}
-  m_Mesh: {fileID: 4300000, guid: 8c6deea828e5f16469519693768a4cf1, type: 2}
+  m_Mesh: {fileID: 4300000, guid: 8b43d54d04021914ea3397f76511f83f, type: 2}
 --- !u!4 &1040957751
 Transform:
   m_ObjectHideFlags: 0
@@ -107388,6 +107388,14 @@ PrefabInstance:
       propertyPath: m_LocalEulerAnglesHint.z
       value: 0
       objectReference: {fileID: 0}
+    - target: {fileID: 1428512062795095052, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
+      propertyPath: m_Size.z
+      value: 5400
+      objectReference: {fileID: 0}
+    - target: {fileID: 1428512062795095052, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
+      propertyPath: m_Center.z
+      value: -300
+      objectReference: {fileID: 0}
     - target: {fileID: 2525052954730649928, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
       propertyPath: m_Name
       value: CoastalLand
@@ -107396,10 +107404,22 @@ PrefabInstance:
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 28b6aa03a8dc97e4ca44501537343eed, type: 2}
+    - target: {fileID: 4459250316319451676, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
+      propertyPath: m_Size.z
+      value: 5400
+      objectReference: {fileID: 0}
+    - target: {fileID: 4459250316319451676, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
+      propertyPath: m_Center.z
+      value: -300
+      objectReference: {fileID: 0}
     - target: {fileID: 7412144194837045264, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
       propertyPath: 'm_Materials.Array.data[0]'
       value: 
       objectReference: {fileID: 2100000, guid: 28b6aa03a8dc97e4ca44501537343eed, type: 2}
+    - target: {fileID: 8071200414214117787, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
+      propertyPath: m_Mesh
+      value: 
+      objectReference: {fileID: 4300000, guid: b6eb1b3958836e24e8921a7112c794b4, type: 2}
     - target: {fileID: 8403543517942035933, guid: 12ff821f77e1cfc4b940fd5d08cfe09e, type: 3}
       propertyPath: m_IsActive
       value: 0
