@@ -59,6 +59,7 @@ namespace Anseong.Net
         CockpitSeat seat;
 
         readonly HashSet<ulong> remotePilots = new HashSet<ulong>();
+        uint sceneFingerprint;
         bool subscribed;
         bool clientConnected;
         bool ending;
@@ -145,7 +146,8 @@ namespace Anseong.Net
 
             var config = network.NetworkConfig;
             config.ConnectionApproval = true;
-            config.ConnectionData = SessionRules.ConnectionPayload();
+            sceneFingerprint = ComputeSceneFingerprint();
+            config.ConnectionData = SessionRules.ConnectionPayload(sceneFingerprint);
             network.ConnectionApprovalCallback = OnApproval;
 
             bool ok;
@@ -205,10 +207,22 @@ namespace Anseong.Net
             Debug.Log($"[Session] 이 PC가 맡는 팔: {(both ? "두 팔" : side == PilotSide.Left ? "왼팔" : "오른팔")}. 보정을 처음부터 합니다.", this);
         }
 
+        /// <summary>세션 시작 때 한 번: 씬에 놓인 네트워크 오브젝트 번호들의 지문(두 PC 씬이 같은지 접속 때 비교).</summary>
+        static uint ComputeSceneFingerprint()
+        {
+            var objects = FindObjectsByType<NetworkObject>(FindObjectsInactive.Include, FindObjectsSortMode.None);
+            var hashes = new List<uint>(objects.Length);
+            foreach (var o in objects) hashes.Add(o.PrefabIdHash);
+            var fingerprint = SessionRules.SceneFingerprint(hashes);
+            Debug.Log($"[Session] 씬 지문 {fingerprint:X8} (네트워크 오브젝트 {objects.Length}개). 두 PC가 같아야 붙습니다.");
+            return fingerprint;
+        }
+
         void OnApproval(NetworkManager.ConnectionApprovalRequest request, NetworkManager.ConnectionApprovalResponse response)
         {
             var self = request.ClientNetworkId == NetworkManager.ServerClientId;
-            var result = SessionRules.Approve(mode, self, remotePilots.Count, SessionRules.ReadPayload(request.Payload));
+            var result = SessionRules.Approve(mode, self, remotePilots.Count, SessionRules.ReadPayload(request.Payload),
+                                              SessionRules.ReadSceneFingerprint(request.Payload), sceneFingerprint);
             response.Approved = result.Approved;
             response.Reason = result.Reason;
             response.CreatePlayerObject = false;
