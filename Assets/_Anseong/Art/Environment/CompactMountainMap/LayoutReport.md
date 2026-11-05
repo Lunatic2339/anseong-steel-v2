@@ -4,3 +4,5 @@ Pink-line approximation: foothills startZ1080–1150, just behind the factory re
 
 Occlusion verification: 260 rays from both65m robot-eye proxies to rear edge X-3000..225, all blocked by terrain with2m margin. This is a static composition check, not headset validation or an occlusion-culling benchmark. User annotation interpreted from screenshot, not surveyed coordinates.
 Meshes clipped=2; land box colliders shortened=2.
+
+Current arrangement revised to10 rear peaks plus5 left-side peaks, forming an L; see LMountainLayout.md for fixed-seed integer spacing, coordinates and updated clearance checks.
