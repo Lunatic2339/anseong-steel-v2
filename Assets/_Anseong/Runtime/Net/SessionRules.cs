@@ -163,6 +163,33 @@ namespace Anseong.Net
             return null;
         }
 
+        /// <summary>같은 공유기 자동 찾기: 호스트가 방송하는 알림 앞머리.</summary>
+        public const string BeaconTag = "ANSEONG";
+
+        /// <summary>호스트 알림 바이트: "ANSEONG|약속 번호|게임 포트".</summary>
+        public static byte[] BeaconPayload(int gamePort) =>
+            System.Text.Encoding.ASCII.GetBytes($"{BeaconTag}|{ProtocolVersion}|{gamePort}");
+
+        /// <summary>받은 알림을 읽는다. 우리 게임 알림이 아니면 false.</summary>
+        public static bool TryReadBeacon(byte[] data, out int version, out int gamePort)
+        {
+            version = -1;
+            gamePort = -1;
+            if (data == null || data.Length == 0 || data.Length > 64) return false;
+            var parts = System.Text.Encoding.ASCII.GetString(data).Split('|');
+            return parts.Length == 3 && parts[0] == BeaconTag &&
+                   int.TryParse(parts[1], NumberStyles.Integer, CultureInfo.InvariantCulture, out version) &&
+                   int.TryParse(parts[2], NumberStyles.Integer, CultureInfo.InvariantCulture, out gamePort);
+        }
+
+        /// <summary>IPv4 주소의 /24 방송 주소(192.168.0.5 → 192.168.0.255). 가정집·전시 공유기 기본값 기준. 못 읽으면 null.</summary>
+        public static string SubnetBroadcast(string ipv4)
+        {
+            if (!IPAddress.TryParse(ipv4, out var ip) || ip.AddressFamily != AddressFamily.InterNetwork) return null;
+            var b = ip.GetAddressBytes();
+            return $"{b[0]}.{b[1]}.{b[2]}.255";
+        }
+
         /// <summary>접속 요청에 싣는 바이트(약속 번호 4바이트 + 씬 지문 4바이트).</summary>
         public static byte[] ConnectionPayload(uint sceneFingerprint = 0)
         {

@@ -11,7 +11,8 @@ namespace Anseong.UI
     /// 운영자 시작 화면(M3-01, 07_milestones M3-01). PC 모니터에만 보이는 화면(Screen Space Overlay, 헤드셋에는 안 보임)에서
     /// 1인 양팔 / 호스트 / 클라이언트 + 호스트 IP를 고르고 시작한다. 마지막 모드·IP는 <see cref="SessionBootstrap"/>이 기억한다.
     /// 시작한 뒤에는 모니터 왼쪽 위에 상태 한 줄과 "다시 고르기" 버튼만 남는다.
-    /// 키보드: 1·2·3 = 모드(IP 칸에 쓰는 중이 아닐 때), Enter = 시작.
+    /// 키보드: 1·2·3 = 모드(IP 칸에 쓰는 중이 아닐 때), Enter = 시작. 마우스로 큰 버튼을 눌러도 된다(선우 11/05: 플레이 전에 큰 버튼으로 고르기).
+    /// 클라이언트는 같은 공유기의 호스트를 자동으로 찾아 IP 칸을 채운다(마인크래프트 LAN처럼).
     /// 화면은 시작할 때 코드로 만든다(씬·프리팹에 UI를 저장하지 않음). 메뉴 'Add Network Session'이 세션 오브젝트에 붙인다.
     /// </summary>
     public class OperatorStartScreen : MonoBehaviour
@@ -66,6 +67,11 @@ namespace Anseong.UI
             if (!built) return;
             if (statusBar.activeSelf) RefreshStatus();
             if (!panel.activeSelf) return;
+            if (selected == SessionMode.Client && session.HostFoundRecently && !ipField.isFocused && ipField.text != session.FoundHost)
+            {
+                ipField.text = session.FoundHost;
+                Refresh();
+            }
             var keyboard = Keyboard.current;
             if (keyboard == null) return;
             var typing = ipField.isFocused;
@@ -107,7 +113,9 @@ namespace Anseong.UI
                                 (ips.Count > 0 ? string.Join("  /  ", ips) : "(못 읽음: cmd에서 ipconfig)") + $"   포트 {session.Port}";
                     break;
                 case SessionMode.Client:
-                    info.text = "PC-B · 오른팔 조종사. PC-A 시작 화면에 나온 IP를 넣으세요.";
+                    info.text = session.HostFoundRecently
+                        ? $"같은 공유기에서 호스트를 찾았습니다: {session.FoundHost}\n아래 시작을 누르세요."
+                        : "같은 공유기에서 호스트를 찾는 중… (호스트 PC를 먼저 시작하세요)\n못 찾으면 PC-A 시작 화면에 나온 IP를 아래 칸에 넣으세요.";
                     break;
                 default:
                     info.text = "이 PC 하나로 두 팔을 모두 조종합니다(개발·시연 대체용). 다른 PC는 받지 않습니다.";
@@ -120,7 +128,8 @@ namespace Anseong.UI
         void RefreshStatus()
         {
             var text = SessionRules.ModeLabel(session.Mode);
-            if (session.Connecting) text += $" · {session.Address} 찾는 중…";
+            if (session.Searching) text += " · 같은 공유기에서 호스트 찾는 중…";
+            else if (session.Connecting) text += $" · {session.Address} 찾는 중…";
             else if (session.Running) text += $" · 조종사 {session.PilotCount}/{SessionRules.MaxPilots}";
             if (!string.IsNullOrEmpty(session.Problem)) text += " · " + session.Problem;
             if (status.text != text) status.text = text;
@@ -142,20 +151,20 @@ namespace Anseong.UI
             scaler.matchWidthOrHeight = 0.5f;
             canvasGo.AddComponent<GraphicRaycaster>();
 
-            panel = Box(canvasGo.transform, "Start Panel", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1100f, 640f), PanelColor);
-            Label(panel.transform, "안성제철 · 운영자 시작", new Vector2(0f, 250f), new Vector2(1000f, 70f), 48, Color.white);
+            panel = Box(canvasGo.transform, "Start Panel", new Vector2(0.5f, 0.5f), Vector2.zero, new Vector2(1760f, 980f), PanelColor);
+            Label(panel.transform, "안성제철 · 어떻게 플레이할까요?", new Vector2(0f, 400f), new Vector2(1600f, 90f), 60, Color.white);
 
-            string[] names = { "1  1인 양팔", "2  호스트 (PC-A · 왼팔)", "3  클라이언트 (PC-B · 오른팔)" };
+            string[] names = { "1\n양팔 모드\n(혼자 두 팔)", "2\n호스트\n(PC-A · 왼팔)", "3\n클라이언트\n(PC-B · 오른팔)" };
             for (var i = 0; i < 3; i++)
             {
                 var mode = (SessionMode)i;
-                modeButtons[i] = MakeButton(panel.transform, names[i], new Vector2(-350f + 350f * i, 140f), new Vector2(330f, 80f), ButtonColor, () => Select(mode));
+                modeButtons[i] = MakeButton(panel.transform, names[i], new Vector2(-560f + 560f * i, 160f), new Vector2(520f, 300f), ButtonColor, () => Select(mode), 52);
             }
 
-            info = Label(panel.transform, string.Empty, new Vector2(0f, 20f), new Vector2(1000f, 110f), 28, new Color(0.9f, 0.9f, 0.9f));
-            ipField = MakeInputField(panel.transform, new Vector2(0f, -70f), new Vector2(500f, 70f));
-            MakeButton(panel.transform, "시작  (Enter)", new Vector2(0f, -170f), new Vector2(400f, 80f), StartColor, StartSession);
-            problem = Label(panel.transform, string.Empty, new Vector2(0f, -260f), new Vector2(1040f, 80f), 26, ProblemColor);
+            info = Label(panel.transform, string.Empty, new Vector2(0f, -60f), new Vector2(1600f, 120f), 34, new Color(0.9f, 0.9f, 0.9f));
+            ipField = MakeInputField(panel.transform, new Vector2(0f, -170f), new Vector2(640f, 90f));
+            MakeButton(panel.transform, "시작  (Enter)", new Vector2(0f, -300f), new Vector2(700f, 140f), StartColor, StartSession, 56);
+            problem = Label(panel.transform, string.Empty, new Vector2(0f, -425f), new Vector2(1640f, 90f), 30, ProblemColor);
 
             statusBar = Box(canvasGo.transform, "Status Bar", new Vector2(0f, 1f), new Vector2(20f, -20f), new Vector2(900f, 56f), PanelColor, new Vector2(0f, 1f));
             status = Label(statusBar.transform, string.Empty, new Vector2(-90f, 0f), new Vector2(700f, 50f), 24, Color.white, TextAnchor.MiddleLeft);
@@ -216,9 +225,9 @@ namespace Anseong.UI
         InputField MakeInputField(Transform parent, Vector2 position, Vector2 size)
         {
             var go = Box(parent, "Host IP", new Vector2(0.5f, 0.5f), position, size, new Color(0.95f, 0.95f, 0.95f, 1f));
-            var placeholder = Label(go.transform, "호스트 IP (예: 192.168.0.10)", Vector2.zero, size - new Vector2(30f, 10f), 28, new Color(0.45f, 0.45f, 0.45f));
+            var placeholder = Label(go.transform, "호스트 IP (자동으로 채워짐)", Vector2.zero, size - new Vector2(30f, 10f), 36, new Color(0.45f, 0.45f, 0.45f));
             placeholder.fontStyle = FontStyle.Italic;
-            var text = Label(go.transform, string.Empty, Vector2.zero, size - new Vector2(30f, 10f), 30, Color.black);
+            var text = Label(go.transform, string.Empty, Vector2.zero, size - new Vector2(30f, 10f), 40, Color.black);
             text.supportRichText = false;
             var field = go.AddComponent<InputField>();
             field.textComponent = text;

@@ -1,5 +1,7 @@
 using System;
+using System.Collections;
 using System.Collections.Generic;
+using System.Net;
 using System.Net.NetworkInformation;
 using System.Net.Sockets;
 using Anseong.Pilot;
@@ -43,8 +45,14 @@ namespace Anseong.Net
         [SerializeField, Tooltip("포트(CLAUDE.md 고정 7777).")]
         ushort port = 7777;
 
-        [SerializeField, Tooltip("에디터 Play에서는 시작 화면 없이 위 Mode로 바로 시작한다(개발 편의). 끄면 에디터에서도 시작 화면이 뜬다.")]
-        bool skipStartScreenInEditor = true;
+        [SerializeField, Tooltip("선우 11/05: 기본은 에디터에서도 Play하면 시작 화면(큰 버튼 3개)에서 고른다. 켜면 시작 화면 없이 위 Mode로 바로 시작(혼자 개발할 때).")]
+        bool editorSkipStartScreen;
+
+        [SerializeField, Tooltip("같은 공유기 안 호스트를 자동으로 찾는다(마인크래프트 LAN처럼). 호스트는 1초마다 알리고, 클라이언트는 듣고 IP를 채운다. 공유기가 다르면 못 찾는다.")]
+        bool lanDiscovery = true;
+
+        [SerializeField, Tooltip("자동 찾기용 UDP 포트(게임 포트 7777과 다름).")]
+        ushort discoveryPort = 47777;
 
         [SerializeField, Range(1, 30), Tooltip("클라이언트가 호스트를 찾는 시간(초). 넘으면 실패로 보고 시작 화면으로 돌아간다.")]
         int connectSeconds = 5;
@@ -60,6 +68,9 @@ namespace Anseong.Net
 
         readonly HashSet<ulong> remotePilots = new HashSet<ulong>();
         uint sceneFingerprint;
+        UdpClient beaconSender, beaconListener;
+        float nextBeacon, foundAt = -100f;
+        bool discoveryWarned;
         bool subscribed;
         bool clientConnected;
         bool ending;
@@ -88,6 +99,13 @@ namespace Anseong.Net
             }
         }
 
+        /// <summary>자동 찾기로 마지막에 찾은 호스트 IP(없으면 빈 문자열).</summary>
+        public string FoundHost { get; private set; } = string.Empty;
+        /// <summary>최근 3초 안에 호스트 알림을 받았다.</summary>
+        public bool HostFoundRecently => !string.IsNullOrEmpty(FoundHost) && Time.unscaledTime - foundAt < 3f;
+        /// <summary>클라이언트가 같은 공유기에서 호스트를 찾는 중(-mode client만 주고 IP를 안 준 경우).</summary>
+        public bool Searching { get; private set; }
+
         public event Action<string> ProblemChanged;
         /// <summary>시작·끝·접속·끊김. 시작 화면·상태 줄이 다시 그린다.</summary>
         public event Action StateChanged;
@@ -104,16 +122,101 @@ namespace Anseong.Net
             var argIp = SessionRules.ArgValue(args, "-ip");
             if (SessionRules.TryModeFromArgs(args, out var argMode))
             {
+                // 바로가기에 IP 없이 -mode client만 있으면 같은 공유기에서 호스트를 찾아 들어간다.
+                if (argMode == SessionMode.Client && argIp == null && lanDiscovery) { StartCoroutine(FindHostThenBegin()); return; }
                 if (!Begin(argMode, argIp ?? address)) SetWaiting(true);
                 return;
             }
             if (argIp != null) address = argIp;
-            if (!(Application.isEditor && skipStartScreenInEditor) || !Begin(mode, address)) SetWaiting(true);
+            if (Application.isEditor && editorSkipStartScreen && Begin(mode, address)) return;
+            SetWaiting(true);
+        }
+
+        void Update()
+        {
+            if (!lanDiscovery) return;
+            if (Running && mode == SessionMode.Host && remotePilots.Count == 0) SendBeacon();
+            if (!Running || Connecting) Listen();
         }
 
         void OnDestroy()
         {
             Unsubscribe();
+            CloseDiscovery();
+        }
+
+        IEnumerator FindHostThenBegin()
+        {
+            Searching = true;
+            StateChanged?.Invoke();
+            Debug.Log("[Session] 같은 공유기에서 호스트 찾는 중…", this);
+            var until = Time.unscaledTime + Mathf.Max(3, connectSeconds);
+            while (!HostFoundRecently && Time.unscaledTime < until) yield return null;
+            Searching = false;
+            if (!HostFoundRecently) Debug.Log($"[Session] 자동으로 못 찾음 → 저장된 IP {address}로 시도", this);
+            if (!Begin(SessionMode.Client, HostFoundRecently ? FoundHost : address)) SetWaiting(true);
+        }
+
+        // ── 같은 공유기 자동 찾기(UDP 방송) ──
+
+        void SendBeacon()
+        {
+            if (Time.unscaledTime < nextBeacon) return;
+            nextBeacon = Time.unscaledTime + 1f;
+            try
+            {
+                if (beaconSender == null) beaconSender = new UdpClient { EnableBroadcast = true };
+                var data = SessionRules.BeaconPayload(port);
+                beaconSender.Send(data, data.Length, new IPEndPoint(IPAddress.Broadcast, discoveryPort));
+                foreach (var ip in LocalAddresses())
+                {
+                    var subnet = SessionRules.SubnetBroadcast(ip);
+                    if (subnet != null) beaconSender.Send(data, data.Length, new IPEndPoint(IPAddress.Parse(subnet), discoveryPort));
+                }
+            }
+            catch (Exception e) { WarnDiscovery(e); }
+        }
+
+        void Listen()
+        {
+            try
+            {
+                if (beaconListener == null)
+                {
+                    beaconListener = new UdpClient();
+                    beaconListener.Client.SetSocketOption(SocketOptionLevel.Socket, SocketOptionName.ReuseAddress, true);
+                    beaconListener.Client.Bind(new IPEndPoint(IPAddress.Any, discoveryPort));
+                }
+                while (beaconListener.Available > 0)
+                {
+                    IPEndPoint from = null;
+                    var data = beaconListener.Receive(ref from);
+                    if (!SessionRules.TryReadBeacon(data, out var version, out var gamePort) || gamePort != port) continue;
+                    if (version != SessionRules.ProtocolVersion) continue;   // 다른 빌드 호스트는 무시
+                    var ip = from.Address.ToString();
+                    foundAt = Time.unscaledTime;
+                    if (FoundHost == ip) continue;
+                    FoundHost = ip;
+                    Debug.Log($"[Session] 같은 공유기에서 호스트 찾음: {ip}", this);
+                    StateChanged?.Invoke();
+                }
+            }
+            catch (Exception e) { WarnDiscovery(e); }
+        }
+
+        void WarnDiscovery(Exception e)
+        {
+            if (discoveryWarned) return;
+            discoveryWarned = true;
+            Debug.LogWarning($"[Session] 자동 찾기를 못 씁니다(IP를 직접 넣으면 됩니다): {e.Message}", this);
+        }
+
+        void CloseDiscovery()
+        {
+            beaconSender?.Close();
+            beaconListener?.Close();
+            beaconSender = null;
+            beaconListener = null;
         }
 
         /// <summary>운영자가 고른 방식으로 세션 시작. 이미 돌고 있으면 거절(먼저 End). 클라이언트는 IP가 맞아야 한다.</summary>
@@ -126,6 +229,7 @@ namespace Anseong.Net
             if (transport == null) return Fail("NetworkManager에 UnityTransport가 연결되지 않았습니다. 메뉴를 다시 실행하세요.");
 
             var target = address;
+            if (chosen == SessionMode.Client && string.IsNullOrWhiteSpace(hostAddress) && HostFoundRecently) hostAddress = FoundHost;
             if (chosen == SessionMode.Client)
             {
                 if (!SessionRules.TryParseAddress(hostAddress, out target))

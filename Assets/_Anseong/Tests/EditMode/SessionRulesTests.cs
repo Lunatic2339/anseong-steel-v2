@@ -139,5 +139,17 @@ namespace Anseong.Tests
             Assert.AreEqual(0xDEADBEEFu, SessionRules.ReadSceneFingerprint(p));
             Assert.AreEqual(0u, SessionRules.ReadSceneFingerprint(new byte[4]));
         }
+
+        [Test]
+        public void Beacon_RoundTrips_AndIgnoresOthers()
+        {
+            Assert.IsTrue(SessionRules.TryReadBeacon(SessionRules.BeaconPayload(7777), out var v, out var p));
+            Assert.AreEqual(SessionRules.ProtocolVersion, v);
+            Assert.AreEqual(7777, p);
+            Assert.IsFalse(SessionRules.TryReadBeacon(System.Text.Encoding.ASCII.GetBytes("MINECRAFT|1|7777"), out _, out _));
+            Assert.IsFalse(SessionRules.TryReadBeacon(null, out _, out _));
+            Assert.AreEqual("192.168.0.255", SessionRules.SubnetBroadcast("192.168.0.5"));
+            Assert.IsNull(SessionRules.SubnetBroadcast("abc"));
+        }
     }
 }
