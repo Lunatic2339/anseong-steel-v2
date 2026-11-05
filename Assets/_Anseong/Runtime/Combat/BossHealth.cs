@@ -35,11 +35,21 @@ namespace Anseong.Combat
         }
 
         public float Current { get; private set; }
+
+        /// <summary>
+        /// 이 아래로는 깎이지 않는 바닥(HP 값, M2-04 페이즈 경계). 넘친 피해는 버린다(큰 연계 한 번으로 페이즈를 건너뛰지 않게).
+        /// 0이면 바닥 없음.
+        /// </summary>
+        public float Floor { get; set; }
         public float Max => settings.maxHealth;
         public float Fraction => Max > 0f ? Current / Max : 0f;
         public bool IsDefeated => Current <= 0f;
 
-        public void Reset() => Current = settings.maxHealth;
+        public void Reset()
+        {
+            Current = settings.maxHealth;
+            Floor = 0f;
+        }
 
         public float DamageOf(PunchKind kind)
         {
@@ -58,7 +68,7 @@ namespace Anseong.Combat
         public float Apply(float percent)
         {
             if (IsDefeated || percent <= 0f || float.IsNaN(percent)) return 0f;
-            var amount = Mathf.Min(Current, settings.maxHealth * percent / 100f);
+            var amount = Mathf.Min(Mathf.Max(0f, Current - Mathf.Max(0f, Floor)), settings.maxHealth * percent / 100f);
             Current -= amount;
             return amount / settings.maxHealth * 100f;
         }

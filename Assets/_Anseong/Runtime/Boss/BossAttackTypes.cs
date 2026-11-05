@@ -51,6 +51,14 @@ namespace Anseong.Boss
         Staggered,
         /// <summary>HP 0. 더 움직이지 않는다.</summary>
         Defeated,
+        /// <summary>근접 거리 밖: 걸어서 다가옴(M2-04). 피해 없음.</summary>
+        Walk,
+        /// <summary>페이즈 전환 포효(약 2초, 무적).</summary>
+        Roar,
+        /// <summary>부스트에 크게 밀려남(뒤로 약 10m).</summary>
+        KnockedBack,
+        /// <summary>HP 10%: 무릎 꿇고 필살기 대기. 공격 안 함.</summary>
+        Kneel,
     }
 
     /// <summary>

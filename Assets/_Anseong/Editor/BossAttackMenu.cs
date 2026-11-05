@@ -33,6 +33,7 @@ namespace Anseong.EditorTools
         static void CreateMenu()
         {
             var assets = EnsureAttackAssets(out var made);
+            EnsurePhaseTable();
             Debug.Log($"{LogPrefix} 기술 에셋 {assets.Length}개({BossDataFolder}), 새로 만든 것 {made}개. 값은 05 기술표 제안값. 바꾼 뒤 Rebuild를 다시 돌리면 클립이 바뀐다.");
             if (assets.Length > 0) Selection.activeObject = assets[0];
         }
@@ -91,7 +92,28 @@ namespace Anseong.EditorTools
             var states = AttackStates(attacks).ToList();
             if (art.BossDeathClip != null) states.Add(("Death", art.BossDeathClip, 1f));
             else Debug.Log($"{LogPrefix} 쓰러짐(Death) 클립이 없어 보스가 쓰러질 때 대기 자세로 멈춥니다. Robot Art Settings의 보스 쓰러짐 칸에 넣으면 됩니다.");
+            // M2-04 이동·전환(클립이 없으면 임시: 걷기 = Walk.fbx, 밀려남 = 휘청 전체, 포효 = 대기, 무릎 = 대기 정지).
+            var idle = RobotArtSettings.ClipIn(ClipFolder + "/Idle.fbx");
+            if (art.BossWalkClip != null) states.Add(("Walk", art.BossWalkClip, 1f));
+            states.Add(("Roar", art.BossRoarClip != null ? art.BossRoarClip : idle, 1f));
+            states.Add(("Knockback", art.BossKnockbackClip != null ? art.BossKnockbackClip : art.BossStaggerClip, 1f));
+            states.Add(("Kneel", art.BossKneelClip != null ? art.BossKneelClip : idle, art.BossKneelClip != null ? 1f : 0f));
             return states;
+        }
+
+        public static string PhaseTablePath => BossDataFolder + "/BossPhaseTable.asset";
+
+        /// <summary>페이즈 순서표(05 기본값). 없으면 만든다.</summary>
+        public static BossPhaseTable EnsurePhaseTable()
+        {
+            EnsureAttackAssets(out _);
+            var table = AssetDatabase.LoadAssetAtPath<BossPhaseTable>(PhaseTablePath);
+            if (table != null) return table;
+            table = ScriptableObject.CreateInstance<BossPhaseTable>();
+            AssetDatabase.CreateAsset(table, PhaseTablePath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"{LogPrefix} 페이즈 순서표 생성: {PhaseTablePath} (05 제안값)");
+            return table;
         }
 
         [MenuItem("Anseong/Boss/Measure Strike Moments")]

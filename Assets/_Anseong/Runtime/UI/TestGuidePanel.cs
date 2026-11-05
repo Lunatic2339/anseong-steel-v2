@@ -62,6 +62,7 @@ namespace Anseong.UI
         float nextOffsetCheck;
         Vector3 shownOffset;
         string lastCombat = string.Empty;
+        string lastCommander = string.Empty;
         bool boostOpen;
         int guardKey = -1;
         int readyKey = -1;
@@ -87,9 +88,12 @@ namespace Anseong.UI
             if (classifier != null) classifier.StrikeCompleted += OnStrike;
             if (combat != null) combat.Cue += OnCombat;
             if (session != null) session.ProblemChanged += OnSessionProblem;
+            if (session != null) session.StateChanged += OnSessionState;
         }
 
         void OnSessionProblem(string problem) => dirty = true;
+
+        void OnSessionState() => dirty = true;
 
         void OnDestroy()
         {
@@ -101,6 +105,7 @@ namespace Anseong.UI
             if (classifier != null) classifier.StrikeCompleted -= OnStrike;
             if (combat != null) combat.Cue -= OnCombat;
             if (session != null) session.ProblemChanged -= OnSessionProblem;
+            if (session != null) session.StateChanged -= OnSessionState;
         }
 
         void OnCombat(CombatEvent e)
@@ -144,11 +149,36 @@ namespace Anseong.UI
                 case CombatCue.PilotDefeated:
                     lastCombat = "<color=#FF6B6B>기체 HP 0 (두 스틱 함께 1초 눌러 재시작)</color>";
                     break;
+                case CombatCue.PhaseChanged:
+                    lastCombat = $"<color=#FFD24D>{e.Code}페이즈 시작 (포효 중 무적)</color>";
+                    break;
+                case CombatCue.BossKneel:
+                    lastCombat = "<color=#5BE37D>보스 무릎: 필살기 차례</color> 두 팔 정면으로 쭉 + 그립·트리거·A·B(X·Y) 모두 누르고 버티기";
+                    break;
+                case CombatCue.BossKnockback:
+                    lastCombat = $"<color=#BF4DFF>보스 밀려남 {e.Amount:F0}m</color>";
+                    break;
+                case CombatCue.CommanderLine:
+                    lastCommander = CommanderLines.Text(e.Code);
+                    break;
                 case CombatCue.BossOpening:
                     lastCombat = $"<color=#5BE37D>보스 빈틈 {e.Amount:F1}초: 지금 치기</color>";
                     break;
                 case CombatCue.BossDefeated:
                     lastCombat = "<color=#5BE37D>보스 HP 0</color>";
+                    break;
+                case CombatCue.FinisherCharge:
+                    lastCombat = $"<color=#4DD2FF>필살기 충전 중 {e.Amount:F1}초: 그대로 버티기</color>";
+                    break;
+                case CombatCue.FinisherReset:
+                    lastCombat = "<color=#FF6B6B>충전 풀림: 두 팔을 다시 함께 뻗기</color>";
+                    break;
+                case CombatCue.FinisherFire:
+                    lastCombat = "<color=#4DD2FF>필살기 발사!</color>";
+                    break;
+                case CombatCue.EncounterWon:
+                    var seconds = Mathf.Max(0, Mathf.RoundToInt(e.Amount));
+                    lastCombat = $"<color=#5BE37D>승리! 걸린 시간 {seconds / 60}:{seconds % 60:00} (두 스틱 함께 1초 눌러 재시작)</color>";
                     break;
                 case CombatCue.BoostReady:
                 case CombatCue.BoostMissed:
@@ -304,6 +334,7 @@ namespace Anseong.UI
         {
             builder.Length = 0;
             if (session != null && session.Problem.Length > 0) builder.Append("<color=#FF6B6B>").Append(session.Problem).Append("</color>\n");
+            if (session != null && session.WaitingForOperator) builder.Append("<color=#FFD166>PC 화면에서 운영자가 시작하기를 기다리는 중</color>\n");
             if (!calibration.IsComplete) DrawCalibration();
             else DrawPunches();
             text.text = builder.ToString();
@@ -403,6 +434,7 @@ namespace Anseong.UI
         {
             var r = combat.State;
             if (!combat.Connected) builder.Append("<color=#FF6B6B>전투 서버 연결 안 됨: 명중이 들어가지 않음</color>\n");
+            builder.Append(r.BossPhase >= 4 ? "무릎   " : r.BossPhase + "페이즈   ");
             builder.Append("기체 HP ").Append(r.PilotHealth.ToString("F0")).Append("%   ");
             builder.Append("보스 HP ").Append(r.BossHealth.ToString("F0")).Append("%   연계 ").Append(r.ComboStep).Append("/3");
             if (r.ComboStep > 0)
@@ -411,6 +443,7 @@ namespace Anseong.UI
             builder.Append('\n');
             if (combat.Boss == null) builder.Append("<color=#FF6B6B>보스 없음: 모든 공격이 헛침</color>\n");
             if (lastCombat.Length > 0) builder.Append(lastCombat).Append('\n');
+            if (lastCommander.Length > 0) builder.Append("<color=#7FD4FF>사령관: ").Append(lastCommander).Append("</color>\n");
         }
 
         bool Waiting(PilotSide side)

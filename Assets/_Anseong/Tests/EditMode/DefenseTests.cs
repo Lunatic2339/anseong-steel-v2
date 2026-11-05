@@ -74,7 +74,8 @@ namespace Anseong.Tests
             var s = new DodgeSettings();
             Assert.IsFalse(DodgeRules.Agree(new Vector2(-1f, 0f), new Vector2(1f, 0f), s, out _), "반대 방향");
             Assert.IsFalse(DodgeRules.Agree(new Vector2(1f, 0f), new Vector2(0.3f, 0f), s, out _), "크기 0.5 미만");
-            Assert.IsFalse(DodgeRules.Agree(new Vector2(1f, 0f), new Vector2(0.7f, 0.7f), s, out _), "45° 차이");
+            Assert.IsFalse(DodgeRules.Agree(new Vector2(1f, 0f), new Vector2(0.5f, 0.85f), s, out _), "한쪽이 너무 위로");
+            Assert.IsTrue(DodgeRules.Agree(new Vector2(0.91f, 0.42f), new Vector2(0.92f, -0.39f), s, out _), "엄지로 옆 밀기(47° 벌어짐, 11/04 기록)");
             Assert.IsFalse(DodgeRules.Agree(new Vector2(0f, 1f), new Vector2(0.1f, 1f), s, out _), "앞으로 미는 것은 회피 아님");
             Assert.IsTrue(DodgeRules.Agree(new Vector2(1f, 0.2f), new Vector2(0.9f, -0.1f), s, out var dir));
             Assert.AreEqual(1, dir);

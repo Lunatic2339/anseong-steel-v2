@@ -103,6 +103,19 @@ namespace Anseong.Pilot
         bool aligned;
 
         public int ActiveSeat => activeSeat;
+
+        /// <summary>이 PC 조종사가 서는 좌석 쪽(M3-01: 호스트 = 왼쪽, 클라이언트 = 오른쪽). 바꾸면 보정 맞춤을 버리고 바로 그 좌석으로.</summary>
+        public PilotSide Side
+        {
+            get => side;
+            set
+            {
+                if (side == value) return;
+                side = value;
+                aligned = false;
+                PlaceOrigin();
+            }
+        }
         public int SeatCount => seats != null ? seats.Length : 0;
         public string ActiveSeatLabel => IsValidSeat(activeSeat) ? seats[activeSeat].label : string.Empty;
 
@@ -257,6 +270,8 @@ namespace Anseong.Pilot
         void OnSwitchSeat(InputAction.CallbackContext context)
         {
             if (SeatCount == 0) return;
+            // 필살기(그립·트리거와 함께 X/Y) 중에는 컨트롤러 X로 좌석을 바꾸지 않는다(M2-05).
+            if (PilotHandInput.IgnoreDevButton(context.control, PilotSide.Left)) return;
             SetActiveSeat((activeSeat + 1) % SeatCount);
             Debug.Log($"[CockpitSeat] 좌석 전환: {ActiveSeatLabel} ({context.control?.path})", this);
         }
