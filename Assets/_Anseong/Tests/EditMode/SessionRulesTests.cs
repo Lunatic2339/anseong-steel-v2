@@ -114,5 +114,30 @@ namespace Anseong.Tests
             Assert.IsFalse(SessionRules.TryModeFromArgs(new[] { "-mode", "server" }, out _));
             Assert.IsFalse(SessionRules.TryModeFromArgs(new[] { "game.exe" }, out _));
         }
+
+        [Test]
+        public void SceneFingerprint_SameSet_AnyOrder_Matches_DifferentRejected()
+        {
+            var a = SessionRules.SceneFingerprint(new uint[] { 3883444392u, 1288582861u });
+            var b = SessionRules.SceneFingerprint(new uint[] { 1288582861u, 3883444392u });
+            var c = SessionRules.SceneFingerprint(new uint[] { 3872961797u, 1288582861u });
+            Assert.AreEqual(a, b, "순서 무관");
+            Assert.AreNotEqual(a, c);
+            var v = SessionRules.ProtocolVersion;
+            Assert.IsTrue(SessionRules.Approve(SessionMode.Host, false, 0, v, a, b).Approved);
+            var r = SessionRules.Approve(SessionMode.Host, false, 0, v, c, a);
+            Assert.IsFalse(r.Approved);
+            StringAssert.Contains("씬이 다릅니다", r.Reason);
+            Assert.IsTrue(SessionRules.Approve(SessionMode.Host, true, 0, -1, 0, a).Approved, "호스트 자신");
+        }
+
+        [Test]
+        public void Payload_CarriesSceneFingerprint()
+        {
+            var p = SessionRules.ConnectionPayload(0xDEADBEEFu);
+            Assert.AreEqual(SessionRules.ProtocolVersion, SessionRules.ReadPayload(p));
+            Assert.AreEqual(0xDEADBEEFu, SessionRules.ReadSceneFingerprint(p));
+            Assert.AreEqual(0u, SessionRules.ReadSceneFingerprint(new byte[4]));
+        }
     }
 }

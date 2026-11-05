@@ -1,4 +1,5 @@
 using System;
+using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
@@ -26,7 +27,7 @@ namespace Anseong.Net
         /// <summary>호스트 포함 최대 조종사 수.</summary>
         public const int MaxPilots = 2;
         /// <summary>접속 요청에 실어 보내는 약속 번호. 네트워크로 주고받는 형식이 바뀌면 올린다(다른 빌드끼리 붙지 않게).</summary>
-        public const int ProtocolVersion = 1;
+        public const int ProtocolVersion = 2;   // 2: 씬 지문 추가(11/05)
         /// <summary>팔 주인이 아무도 아님(오른쪽 조종사가 아직 안 들어옴·나감).</summary>
         public const ulong NoOwner = ulong.MaxValue;
 
@@ -56,6 +57,34 @@ namespace Anseong.Net
                 return ApprovalResult.No($"두 PC의 게임 빌드가 다릅니다(약속 번호 {theirVersion} ≠ {ProtocolVersion}). 같은 빌드로 맞추세요.");
             if (remotePilots >= MaxPilots - 1) return ApprovalResult.No("이미 조종사 2명이 접속해 있습니다.");
             return ApprovalResult.Yes;
+        }
+
+        /// <summary>
+        /// 위 판정 + 씬 지문 비교(선우 11/05: 두 PC 씬이 다르면 접속은 되는데 상대 팔이 조용히 안 보였다).
+        /// 씬에 놓인 네트워크 오브젝트 번호가 다르면 승인하지 않고 이유를 알려 준다.
+        /// </summary>
+        public static ApprovalResult Approve(SessionMode mode, bool isSelf, int remotePilots, int theirVersion, uint theirScene, uint myScene)
+        {
+            var result = Approve(mode, isSelf, remotePilots, theirVersion);
+            if (!result.Approved || isSelf || theirScene == myScene) return result;
+            return ApprovalResult.No($"두 PC의 씬이 다릅니다(씬 지문 {theirScene:X8} ≠ {myScene:X8}). 같은 커밋을 받고 같은 씬을 다시 연 뒤 시작하세요. " +
+                                     "다른 PC에서 'Add Network Session' 메뉴를 따로 실행했다면 버리고 받은 씬을 쓰세요.");
+        }
+
+        /// <summary>씬에 놓인 네트워크 오브젝트 번호(GlobalObjectIdHash)들의 지문. 순서와 상관없이 같은 묶음이면 같은 값.</summary>
+        public static uint SceneFingerprint(IEnumerable<uint> objectHashes)
+        {
+            var list = new List<uint>();
+            if (objectHashes != null) list.AddRange(objectHashes);
+            list.Sort();
+            var h = 2166136261u;   // FNV-1a
+            foreach (var v in list)
+                for (var i = 0; i < 4; i++)
+                {
+                    h ^= (v >> (8 * i)) & 0xFF;
+                    h *= 16777619u;
+                }
+            return h;
         }
 
         /// <summary>새로 들어온 PC의 담당 팔. 오른쪽이 비어 있으면 오른쪽, 아니면 없음.</summary>
@@ -134,8 +163,20 @@ namespace Anseong.Net
             return null;
         }
 
-        /// <summary>접속 요청에 싣는 바이트(약속 번호 4바이트).</summary>
-        public static byte[] ConnectionPayload() => BitConverter.GetBytes(ProtocolVersion);
+        /// <summary>접속 요청에 싣는 바이트(약속 번호 4바이트 + 씬 지문 4바이트).</summary>
+        public static byte[] ConnectionPayload(uint sceneFingerprint = 0)
+        {
+            var bytes = new byte[8];
+            BitConverter.GetBytes(ProtocolVersion).CopyTo(bytes, 0);
+            BitConverter.GetBytes(sceneFingerprint).CopyTo(bytes, 4);
+            return bytes;
+        }
+
+        /// <summary>접속 요청의 씬 지문(없으면 0).</summary>
+        public static uint ReadSceneFingerprint(byte[] payload)
+        {
+            return payload != null && payload.Length >= 8 ? BitConverter.ToUInt32(payload, 4) : 0u;
+        }
 
         public static int ReadPayload(byte[] payload)
         {
