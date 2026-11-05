@@ -149,6 +149,10 @@ namespace Anseong.Net
             sceneFingerprint = ComputeSceneFingerprint();
             config.ConnectionData = SessionRules.ConnectionPayload(sceneFingerprint);
             network.ConnectionApprovalCallback = OnApproval;
+            // 11/05 2대 테스트: NGO 씬 관리를 끄면 씬에 놓인 네트워크 오브젝트(전투 서버·보스)를 클라이언트가
+            // "등록된 프리팹"으로만 찾아서 상대 팔·보스가 안 붙었다. 켜되, 클라이언트는 이미 연 씬을 그대로 쓰고
+            // 새 씬은 불러오지 않는다(맵은 EnvironmentLoader가 각자 불러온다).
+            config.EnableSceneManagement = true;
 
             bool ok;
             switch (chosen)
@@ -158,6 +162,7 @@ namespace Anseong.Net
                     transport.SetConnectionData("127.0.0.1", port, "0.0.0.0");
                     ok = network.StartHost();
                     if (!ok) return Fail($"호스트 시작 실패(포트 {port}). 이 PC에서 다른 Unity 창이나 빌드가 돌고 있으면 끄고 다시 시작하세요.");
+                    network.SceneManager.SetClientSynchronizationMode(UnityEngine.SceneManagement.LoadSceneMode.Additive);
                     Debug.Log($"[Session] Host started (호스트·왼팔, 포트 {port}, 이 PC IP: {string.Join(", ", LocalAddresses())})", this);
                     break;
                 case SessionMode.Client:
@@ -166,6 +171,7 @@ namespace Anseong.Net
                     transport.MaxConnectAttempts = Mathf.Max(1, connectSeconds);
                     ok = network.StartClient();
                     if (!ok) return Fail($"클라이언트 시작 실패({target}:{port}).");
+                    network.SceneManager.VerifySceneBeforeLoading = OnlyAlreadyOpenScenes;
                     Debug.Log($"[Session] Client connecting → {target}:{port} (오른팔)", this);
                     break;
                 default:
@@ -205,6 +211,12 @@ namespace Anseong.Net
             // 맡은 손이 바뀌면 보정도 그 손으로 처음부터.
             if (calibration != null) calibration.Restart();
             Debug.Log($"[Session] 이 PC가 맡는 팔: {(both ? "두 팔" : side == PilotSide.Left ? "왼팔" : "오른팔")}. 보정을 처음부터 합니다.", this);
+        }
+
+        /// <summary>클라이언트: 호스트가 알려 준 씬 중 이 PC에 이미 열린 것만 쓴다(다시 불러오거나 맵을 두 번 불러오지 않게).</summary>
+        static bool OnlyAlreadyOpenScenes(int sceneIndex, string sceneName, UnityEngine.SceneManagement.LoadSceneMode loadMode)
+        {
+            return UnityEngine.SceneManagement.SceneManager.GetSceneByName(sceneName).isLoaded;
         }
 
         /// <summary>세션 시작 때 한 번: 씬에 놓인 네트워크 오브젝트 번호들의 지문(두 PC 씬이 같은지 접속 때 비교).</summary>
