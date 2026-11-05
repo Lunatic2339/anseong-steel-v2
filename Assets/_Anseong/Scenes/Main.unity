@@ -1423,9 +1423,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 5ced1df15f502ac4e9d445ecee6b4c43, type: 3}
   m_Name: 
   m_EditorClassIdentifier: Anseong.Runtime::Anseong.Net.SessionBootstrap
-  mode: 2
+  mode: 1
   network: {fileID: 0}
-  address: 192.168.0.8
+  address: 192.168.0.19
   port: 7777
   skipStartScreenInEditor: 1
   connectSeconds: 5
