@@ -62,6 +62,8 @@ namespace Anseong.EditorTools
                 go.AddComponent<NetworkObject>();
                 server = go.AddComponent<CombatServer>();
             }
+            // M3-03: 협동 이동(서버가 정하고 모든 PC가 같은 곡선으로 재생). 같은 NetworkObject에 붙인다.
+            if (server.GetComponent<RobotMotionSync>() == null) Undo.AddComponent<RobotMotionSync>(server.gameObject);
             var director = scene.GetRootGameObjects().SelectMany(r => r.GetComponentsInChildren<CombatDirector>(true)).FirstOrDefault();
             var serialized = new SerializedObject(server);
             serialized.FindProperty("director").objectReferenceValue = director;
@@ -82,8 +84,11 @@ namespace Anseong.EditorTools
             }
             syncSerialized.ApplyModifiedProperties();
 
+            // 선우 11/04: 테스트는 앞으로 제철소 맵 위에서(샌드박스도).
+            var map = MainSceneMenu.AddMap(scene);
+
             EditorSceneManager.MarkSceneDirty(scene);
-            return $"네트워크 세션({(made ? "새로 만듦" : "있던 것 다시 연결")}, 포트 7777, 운영자 시작 화면) + 전투 서버 + 상대 자세 동기화" +
+            return $"네트워크 세션({(made ? "새로 만듦" : "있던 것 다시 연결")}, 포트 7777, 운영자 시작 화면) + 전투 서버 + 상대 자세 동기화 + " + map +
                    (remote != null ? "" : "(조종석이 없어 상대 조종사 표시는 안 만듦)");
         }
 
