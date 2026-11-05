@@ -6,3 +6,5 @@ Occlusion verification: 260 rays from both65m robot-eye proxies to rear edge X-3
 Meshes clipped=2; land box colliders shortened=2.
 
 Current arrangement revised to10 rear peaks plus5 left-side peaks, forming an L; see LMountainLayout.md for fixed-seed integer spacing, coordinates and updated clearance checks.
+
+Current terrain uses NaturalRelief.md continuous asymmetric relief. Layout regeneration delegates to the same natural height function, retaining moved peak controls and removed seaward peaks.

@@ -15,16 +15,7 @@ float z=-220+random.Next(0,61);
 for(int i=0;i<5;i++){peaks[index++]=new LPeak{x=-1500+random.Next(-120,81),z=z,h=random.Next(110,161),wx=random.Next(310,381),wz=random.Next(350,481),side=true};z+=random.Next(245,371);}
 peaks[0].h=0;peaks[5].h=0;peaks[13].x-=180;peaks[14].x-=180;return peaks;
 }
-static float LMountainHeight(float x,float z,LPeak[] peaks){
-float rearGate=Mathf.SmoothStep(0,1,Mathf.InverseLerp(1080,1170,z));
-float rear=66*Mathf.SmoothStep(0,1,Mathf.InverseLerp(1100,1710,z));
-float sideGate=(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(-1600,-1020,x)))*Mathf.SmoothStep(0,1,Mathf.InverseLerp(-850,-400,z));
-float rearBump=0,sideBump=0;
-foreach(var p in peaks){float dx=(x-p.x)/p.wx,dz=(z-p.z)/p.wz;float q=Mathf.Clamp01(1-Mathf.Sqrt(dx*dx+dz*dz));float bump=q*q*(3-2*q)*p.h;if(p.side)sideBump=Mathf.Max(sideBump,bump);else rearBump=Mathf.Max(rearBump,bump);}
-float value=Mathf.Max(rear+rearBump*rearGate,88*sideGate+sideBump*sideGate);
-float bank=34*Mathf.SmoothStep(0,1,Mathf.InverseLerp(1100,1500,z))*(1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(1800,2400,z)));value=Mathf.Lerp(value,bank,Mathf.SmoothStep(0,1,Mathf.InverseLerp(-180,120,x)));
-float taper=1-Mathf.SmoothStep(0,1,Mathf.InverseLerp(175,250,x));return value*taper-.08f;
-}
+static float LMountainHeight(float x,float z,LPeak[] peaks){return NaturalHill(x,z,peaks);}
 public static void ArrangeLMountainLayout(){
 EditorSceneManager.OpenScene(Scene);var peaks=LPeaks();const string folder="Assets/_Anseong/Art/Environment/CompactMountainMap";
 var mesh=AssetDatabase.LoadAssetAtPath<Mesh>(folder+"/CompactNearMountainTerrain.asset");var vertices=mesh.vertices;
