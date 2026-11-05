@@ -1,6 +1,6 @@
 # L-shaped mountain layout
 
-13 peaks remain:8 rear and5 left. The two overlapping seaward-end peaks were removed; a low bank keeps the cropped edge hidden without the tall silhouette. Reproducible integer random generator System.Random seed511057; rear gaps310–530m, side gaps245–370m, independent position/height/width jitter. Existing cropped meshXZ and rearZ2400 boundary unchanged. Current foliage material reused, no new textures or runtime components.
+13 peaks remain:8 rear and5 left. The two overlapping seaward-end peaks were removed; a low bank keeps the cropped edge hidden without the tall silhouette. Reproducible integer random generator System.Random seed511057; rear gaps310–530m, side gaps245–370m, independent position/height/width jitter. Existing cropped meshXZ and rearZ2400 boundary unchanged. The two left-flank peaks near the L-corner (Peak14/15) moved180m further inland (negativeX), following the annotated arrows. Current foliage material reused, no new textures or runtime components.
 
 - Peak1: rear X125 Z1525; height0, widths368/411
 - Peak2: rear X-218 Z1393; height125, widths394/434
@@ -15,7 +15,7 @@
 - Peak11: left X-1552 Z-178; height117, widths349/476
 - Peak12: left X-1566 Z187; height149, widths370/408
 - Peak13: left X-1471 Z471; height142, widths347/356
-- Peak14: left X-1523 Z745; height150, widths362/421
-- Peak15: left X-1583 Z998; height118, widths344/374
+- Peak14: left X-1703 Z745; height150, widths362/421
+- Peak15: left X-1763 Z998; height118, widths344/374
 
 Validation: 260 rear-edge rays remain hidden from both65m eye proxies; 260 factory prefab footprints remain flat.
