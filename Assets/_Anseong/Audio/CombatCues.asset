@@ -628,3 +628,18 @@ MonoBehaviour:
     code: 16
     matchAmount: 0
     amount: 0
+  - cue: 29
+    kind: 0
+    soundName: SFX_MoveConfirm
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0

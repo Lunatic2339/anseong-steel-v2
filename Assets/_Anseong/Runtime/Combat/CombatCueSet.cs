@@ -113,6 +113,8 @@ namespace Anseong.Combat
             New(CombatCue.FinisherReset, KindFilter.Any, "SFX_GripRelease"),
             New(CombatCue.FinisherFire, KindFilter.Any, "SFX_BeamFire", pitch: 1f, haptic: 1f, seconds: 0.5f),
             New(CombatCue.BossDefeated, KindFilter.Any, "SFX_BossDown", atHitPoint: true),
+            // M3-03 협동 이동(둘이 같은 방향으로 밀면 승인음)
+            New(CombatCue.MoveStart, KindFilter.Any, "SFX_MoveConfirm", pitch: 1f),
             Voice(CommanderLines.IncomingAttack), Voice(CommanderLines.CounterNow), Voice(CommanderLines.KneelFinisher),
             Voice(CommanderLines.Victory), Voice(CommanderLines.FirstSlam), Voice(CommanderLines.FirstCombo),
             Voice(CommanderLines.FirstCharge), Voice(CommanderLines.Phase2), Voice(CommanderLines.Phase3), Voice(CommanderLines.FinisherHint),

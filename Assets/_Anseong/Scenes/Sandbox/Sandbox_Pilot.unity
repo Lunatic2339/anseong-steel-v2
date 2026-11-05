@@ -450,6 +450,54 @@ MeshRenderer:
   m_SortingOrder: 0
   m_MaskInteraction: 0
   m_AdditionalVertexStreams: {fileID: 0}
+--- !u!1 &318635752
+GameObject:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  serializedVersion: 6
+  m_Component:
+  - component: {fileID: 318635754}
+  - component: {fileID: 318635753}
+  m_Layer: 0
+  m_Name: Environment
+  m_TagString: Untagged
+  m_Icon: {fileID: 0}
+  m_NavMeshLayer: 0
+  m_StaticEditorFlags: 0
+  m_IsActive: 1
+--- !u!114 &318635753
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 318635752}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 15b4f8f71daf624488eac7dd39d0bedc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Flow.EnvironmentLoader
+  environmentScene: Sandbox_ReferenceLayout
+  disableEnvironmentCameras: 1
+  freezeEnvironmentScripts: 1
+  mainLight: {fileID: 135121679}
+--- !u!4 &318635754
+Transform:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 318635752}
+  serializedVersion: 2
+  m_LocalRotation: {x: 0, y: 0, z: 0, w: 1}
+  m_LocalPosition: {x: 0, y: 0, z: 0}
+  m_LocalScale: {x: 1, y: 1, z: 1}
+  m_ConstrainProportionsScale: 0
+  m_Children: []
+  m_Father: {fileID: 0}
+  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
 --- !u!1 &348608424
 GameObject:
   m_ObjectHideFlags: 0
@@ -1098,6 +1146,7 @@ GameObject:
   - component: {fileID: 960740064}
   - component: {fileID: 960740063}
   - component: {fileID: 960740065}
+  - component: {fileID: 960740066}
   m_Layer: 0
   m_Name: Combat Server
   m_TagString: Untagged
@@ -1161,6 +1210,39 @@ MonoBehaviour:
   m_EditorClassIdentifier: Anseong.Runtime::Anseong.Net.CombatServer
   ShowTopMostFoldoutHeaderGroup: 1
   director: {fileID: 1677834551}
+--- !u!114 &960740066
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 960740062}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7fc646e158636b147aecce8b0f1f3b6b, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Net.RobotMotionSync
+  ShowTopMostFoldoutHeaderGroup: 1
+  combat: {fileID: 0}
+  playerRoot: {fileID: 0}
+  boss: {fileID: 0}
+  settings:
+    minMagnitude: 0.5
+    maxFromVertical: 45
+    stepSeconds: 0.4
+    stepMeters: 8
+    approachStopMeters: 26
+    retreatStopMeters: 60
+    stepGapSeconds: 0.1
+    dodgeMeters: 10
+    dodgeCooldownSeconds: 0.8
+    dodgeBufferSeconds: 0.3
+    turnStartDegrees: 20
+    turnStopDegrees: 2
+    turnDegreesPerSecond: 30
+  lockOnBoss: 1
+  autoTurn: 1
+  walkAnimation: 1
 --- !u!114 &1629297706 stripped
 MonoBehaviour:
   m_CorrespondingSourceObject: {fileID: 114430781125800924, guid: 615b9f1fc6771b8418de9b8d3485a32b, type: 3}
@@ -1362,7 +1444,7 @@ Camera:
     width: 1
     height: 1
   near clip plane: 0.01
-  far clip plane: 2000
+  far clip plane: 8000
   field of view: 60
   orthographic: 0
   orthographic size: 5
@@ -1997,3 +2079,4 @@ SceneRoots:
   - {fileID: 810749100}
   - {fileID: 1906850463}
   - {fileID: 960740064}
+  - {fileID: 318635754}
