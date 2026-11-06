@@ -19,3 +19,5 @@
 - Peak15: left X-1763 Z998; height118, widths344/374
 
 Validation: 260 rear-edge rays remain hidden from both65m eye proxies; 260 factory prefab footprints remain flat.
+
+Height/width values above precede the gentler-profile revision. Current size factors and slope measurements are documented in GentleRelief.md; XZ positions are unchanged.

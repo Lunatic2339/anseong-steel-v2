@@ -13,7 +13,7 @@ x-=random.Next(310,531);
 }}
 float z=-220+random.Next(0,61);
 for(int i=0;i<5;i++){peaks[index++]=new LPeak{x=-1500+random.Next(-120,81),z=z,h=random.Next(110,161),wx=random.Next(310,381),wz=random.Next(350,481),side=true};z+=random.Next(245,371);}
-peaks[0].h=0;peaks[5].h=0;peaks[13].x-=180;peaks[14].x-=180;return peaks;
+peaks[0].h=0;peaks[5].h=0;peaks[13].x-=180;peaks[14].x-=180;GentleMountainSizes(peaks);return peaks;
 }
 static float LMountainHeight(float x,float z,LPeak[] peaks){return NaturalHill(x,z,peaks);}
 public static void ArrangeLMountainLayout(){
