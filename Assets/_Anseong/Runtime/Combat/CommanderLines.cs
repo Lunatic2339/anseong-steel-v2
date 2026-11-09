@@ -16,6 +16,16 @@ namespace Anseong.Combat
         public const int Phase2 = 14;
         public const int Phase3 = 15;
         public const int FinisherHint = 16;
+        // M4-01 판 흐름(10_game_scenario.md 번호). 번호표 전체 정리는 M4-06.
+        public const int Sortie = 6;
+        public const int Ambush = 18;
+        public const int GunLost = 20;
+        public const int AllWeaponsLost = 23;
+        public const int Reboot = 25;
+        public const int DronesCleared = 46;
+        public const int TargetCannon = 47;
+        public const int TargetArmor = 48;
+        public const int TargetCore = 49;
 
         public static string Text(int line)
         {
@@ -37,6 +47,14 @@ namespace Anseong.Combat
                 case Phase2: return "적이 분노했다. 새 공격에 대비하라!";
                 case Phase3: return "마지막 발악이다. 버텨라!";
                 case FinisherHint: return "두 팔을 정면으로 뻗고 버튼을 모두 눌러라!";
+                case Ambush: return "피격! 어디선가 쏜다. 왼팔, 스캐너로 찾아라!";
+                case GunLost: return "주포 파손! 칼과 방패뿐이다!";
+                case AllWeaponsLost: return "무장 전부 상실. 처음 배운 주먹이 남았다. 쥐어라!";
+                case Reboot: return "기체 정지…. 재기동한다!";
+                case DronesCleared: return "드론 전멸. 놈이 직접 온다!";
+                case TargetCannon: return "놈의 팔뚝 포를 부숴라!";
+                case TargetArmor: return "가슴 장갑을 뜯어내라!";
+                case TargetCore: return "핵이 드러났다! 주먹으로 부숴라!";
                 default: return string.Empty;
             }
         }

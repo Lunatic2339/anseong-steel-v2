@@ -75,6 +75,15 @@ namespace Anseong.Boss
         public BossPhaseRules Phases => phases;
         public int Phase => phases != null ? phases.Phase : 1;
 
+        /// <summary>판 흐름(M4-01)이 켠다: 걷지 않는다(기체 점검·등장·드론·상실·재기동·결과 동안).</summary>
+        public bool MovementHeld { get; set; }
+
+        /// <summary>판 흐름(M4-01)이 켠다: 새 공격을 시작하지 않는다. 풀리면 첫 공격 지연 뒤부터 공격.</summary>
+        public bool AttacksHeld { get; set; }
+
+        /// <summary>조종사가 근접 거리 안에 있는지(접근 → 근접전 전환).</summary>
+        public bool InMeleeRange => InReach();
+
         void Start()
         {
             if (server == null) server = GetComponent<BossServer>();
@@ -196,9 +205,11 @@ namespace Anseong.Boss
             }
             if (phases.Kneeling) Finisher(now, authority);
 
-            Move(now, machine);
+            if (!MovementHeld) Move(now, machine);
+            else if (machine.State == BossState.Walk) machine.Release(now);
+            if (AttacksHeld) nextAttackAt = now + firstAttackDelay;
 
-            if (autoAttack && machine.IsResting && now >= nextAttackAt && !authority.Pilot.IsDefeated && InReach())
+            if (autoAttack && !AttacksHeld && machine.IsResting && now >= nextAttackAt && !authority.Pilot.IsDefeated && InReach())
             {
                 var kind = picker.Next();
                 if (server.TryBegin(kind))

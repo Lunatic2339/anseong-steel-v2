@@ -118,6 +118,10 @@ namespace Anseong.Combat
             Voice(CommanderLines.IncomingAttack), Voice(CommanderLines.CounterNow), Voice(CommanderLines.KneelFinisher),
             Voice(CommanderLines.Victory), Voice(CommanderLines.FirstSlam), Voice(CommanderLines.FirstCombo),
             Voice(CommanderLines.FirstCharge), Voice(CommanderLines.Phase2), Voice(CommanderLines.Phase3), Voice(CommanderLines.FinisherHint),
+            // M4-01 판 흐름 대사
+            Voice(CommanderLines.Sortie), Voice(CommanderLines.Ambush), Voice(CommanderLines.GunLost), Voice(CommanderLines.AllWeaponsLost),
+            Voice(CommanderLines.Reboot), Voice(CommanderLines.DronesCleared), Voice(CommanderLines.TargetCannon),
+            Voice(CommanderLines.TargetArmor), Voice(CommanderLines.TargetCore),
         };
 
         static Entry Voice(int line)

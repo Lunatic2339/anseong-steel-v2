@@ -72,9 +72,11 @@ namespace Anseong.EditorTools
 
             // 선우 11/04: 테스트는 앞으로 제철소 맵 위에서(샌드박스도).
             var map = MainSceneMenu.AddMap(scene);
+            // M4-01: 한 판 흐름 + 글자판.
+            var match = MatchFlowMenu.AddToScene(scene);
 
             EditorSceneManager.MarkSceneDirty(scene);
-            return $"네트워크 세션({(made ? "새로 만듦" : "있던 것 다시 연결")}, 포트 7777, 운영자 시작 화면) + 전투 서버 + {map}";
+            return $"네트워크 세션({(made ? "새로 만듦" : "있던 것 다시 연결")}, 포트 7777, 운영자 시작 화면) + 전투 서버 + {map} + {match}";
         }
     }
 }
