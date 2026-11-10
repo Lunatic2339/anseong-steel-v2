@@ -65,11 +65,61 @@ namespace Anseong.EditorTools
             serialized.FindProperty("combat").objectReferenceValue = server;
             serialized.ApplyModifiedProperties();
 
+            var effects = AddEffects(roots, server);
             var panel = AddPanel(roots, flow);
             var weapons = AddPlayerWeapons(roots);
             var hud = AddHud(roots);
             EditorSceneManager.MarkSceneDirty(scene);
-            return $"판 흐름({(made ? "새로 붙임" : "있던 것 다시 연결")}), 글자판: {panel}, 우리 무기: {weapons}, HUD: {hud}";
+            return $"판 흐름({(made ? "새로 붙임" : "있던 것 다시 연결")}), 글자판: {panel}, 우리 무기: {weapons}, HUD: {hud}, 연출: {effects}";
+        }
+
+        const string EffectFolderParent = "Assets/_Anseong/Art";
+        const string EffectFolderName = "VFX";
+        const string EffectSetPath = EffectFolderParent + "/" + EffectFolderName + "/CombatEffects.asset";
+
+        /// <summary>M5-01·03: 효과 표 에셋(유진 VFX 칸) + 효과 재생기(전투 서버 오브젝트, 모든 PC) + 보스 히트스톱.</summary>
+        static string AddEffects(GameObject[] roots, CombatServer server)
+        {
+            if (!AssetDatabase.IsValidFolder(EffectFolderParent + "/" + EffectFolderName)) AssetDatabase.CreateFolder(EffectFolderParent, EffectFolderName);
+            var set = AssetDatabase.LoadAssetAtPath<CombatEffectSet>(EffectSetPath);
+            var added = 0;
+            if (set == null)
+            {
+                set = ScriptableObject.CreateInstance<CombatEffectSet>();
+                set.SetEntries(CombatEffectSet.DefaultEntries());
+                AssetDatabase.CreateAsset(set, EffectSetPath);
+                added = set.Entries.Length;
+            }
+            else
+            {
+                var missing = set.MissingDefaults();
+                if (missing.Length > 0)
+                {
+                    set.SetEntries(set.Entries.Concat(missing).ToArray());
+                    EditorUtility.SetDirty(set);
+                    added = missing.Length;
+                }
+            }
+            AssetDatabase.SaveAssets();
+
+            var player = server.GetComponent<CombatEffectPlayer>();
+            if (player == null) player = Undo.AddComponent<CombatEffectPlayer>(server.gameObject);
+            var s = new SerializedObject(player);
+            s.FindProperty("effects").objectReferenceValue = set;
+            s.FindProperty("director").objectReferenceValue =
+                roots.SelectMany(r => r.GetComponentsInChildren<CombatDirector>(true)).FirstOrDefault();
+            if (s.FindProperty("shapeMaterial").objectReferenceValue == null)
+                s.FindProperty("shapeMaterial").objectReferenceValue = CombatSetup.GetOrCreateUnlit(WeaponShapePath, Color.white);
+            s.ApplyModifiedProperties();
+
+            var boss = roots.SelectMany(r => r.GetComponentsInChildren<Anseong.Boss.BossBrain>(true)).FirstOrDefault();
+            var hitstop = "보스 없음";
+            if (boss != null)
+            {
+                if (boss.GetComponent<Anseong.Boss.BossHitstop>() == null) Undo.AddComponent<Anseong.Boss.BossHitstop>(boss.gameObject);
+                hitstop = "보스 히트스톱";
+            }
+            return $"효과 표 {EffectSetPath}(새 줄 {added}개) + {hitstop}";
         }
 
         static readonly Vector3 HudOffset = new Vector3(-0.22f, -0.05f, 0.9f);

@@ -105,5 +105,26 @@ namespace Anseong.Tests
             Assert.IsNull(ExoArmLink.PortFromCommandLine(new[] { "game.exe", "-exoLeft" }, "-exoLeft"));
             Assert.IsNull(ExoArmLink.PortFromCommandLine(null, "-exoLeft"));
         }
+
+        [Test]
+        public void M5Signals_GuardRecoilHitHack()
+        {
+            var s = new ExoCueSettings();
+            // 방패 막기: 왼팔만, 두 손 내려찍기(3)는 두 팔.
+            Assert.IsNotNull(ExoCueRules.CommandFor(new CombatEvent { Cue = CombatCue.GuardBlock, Code = 0 }, PilotSide.Left, s));
+            Assert.IsNull(ExoCueRules.CommandFor(new CombatEvent { Cue = CombatCue.GuardBlock, Code = 0 }, PilotSide.Right, s));
+            Assert.IsNotNull(ExoCueRules.CommandFor(new CombatEvent { Cue = CombatCue.GuardBlock, Code = 3 }, PilotSide.Right, s));
+            // 포 반동: 쏜 팔만.
+            Assert.AreEqual(ExoProtocol.Resist(s.recoilStrength, s.recoilMs), ExoCueRules.CommandFor(Event(CombatCue.CannonFire, PilotSide.Right), PilotSide.Right, s));
+            Assert.IsNull(ExoCueRules.CommandFor(Event(CombatCue.CannonFire, PilotSide.Right), PilotSide.Left, s));
+            // 피격: 두 팔.
+            Assert.IsNotNull(ExoCueRules.CommandFor(Event(CombatCue.PilotHit, PilotSide.Left), PilotSide.Right, s));
+            // 해킹: 붙은 팔만 무겁고, 떼면 풀림.
+            Assert.IsNotNull(ExoCueRules.CommandFor(Event(CombatCue.HackStart, PilotSide.Left), PilotSide.Left, s));
+            Assert.IsNull(ExoCueRules.CommandFor(Event(CombatCue.HackStart, PilotSide.Left), PilotSide.Right, s));
+            Assert.AreEqual(ExoProtocol.Release, ExoCueRules.CommandFor(Event(CombatCue.HackCleared, PilotSide.Left), PilotSide.Left, s));
+            s.hackStrength = 0;
+            Assert.IsNull(ExoCueRules.CommandFor(Event(CombatCue.HackStart, PilotSide.Left), PilotSide.Left, s));
+        }
     }
 }

@@ -32,6 +32,24 @@ namespace Anseong.Haptics
 
         [Tooltip("헛치면 준비 대기를 기다리지 않고 바로 푼다(X).")]
         public bool releaseOnMiss = true;
+
+        [Range(0, 255), Tooltip("포 반동 세기(M5-01, 대본 3-2 '반동으로 팔이 튕긴다'). 임시값.")]
+        public int recoilStrength = 200;
+
+        [Range(20, 500), Tooltip("포 반동 시간(ms).")]
+        public int recoilMs = 150;
+
+        [Range(0, 255), Tooltip("피격 세기(두 팔 짧게). 임시값.")]
+        public int pilotHitStrength = 120;
+
+        [Range(20, 500), Tooltip("피격 시간(ms).")]
+        public int pilotHitMs = 100;
+
+        [Range(0, 255), Tooltip("해킹된 팔 무거움 세기(선택). 0이면 안 씀.")]
+        public int hackStrength = 90;
+
+        [Range(20, 500), Tooltip("해킹 무거움 시간(ms, 펌웨어 최대 500. 동료가 떼면 바로 풀림).")]
+        public int hackMs = 500;
     }
 
     /// <summary>
@@ -55,7 +73,19 @@ namespace Anseong.Haptics
                     // 부스트 점화: 순간 가벼워짐(즉시 해제).
                     return e.Side == arm ? ExoProtocol.Release : null;
                 case CombatCue.BossDefeated:
+                case CombatCue.FinisherFire:
+                case CombatCue.HackCleared:
                     return ExoProtocol.Release;
+                // M5-01: 대본 외골격 신호 4종(막기 저항·포 반동·피격·부스트) + 해킹 무거움(선택).
+                case CombatCue.GuardBlock:
+                    // 방패 하나로 양쪽 막기: 막는 팔은 왼팔. 두 손 내려찍기(양팔)는 두 팔 다.
+                    return arm == PilotSide.Left || e.Code == 3 ? ExoProtocol.Resist(s.guardStrength, s.guardMs) : null;
+                case CombatCue.CannonFire:
+                    return e.Side == arm ? ExoProtocol.Resist(s.recoilStrength, s.recoilMs) : null;
+                case CombatCue.PilotHit:
+                    return ExoProtocol.Resist(s.pilotHitStrength, s.pilotHitMs);
+                case CombatCue.HackStart:
+                    return e.Side == arm && s.hackStrength > 0 ? ExoProtocol.Resist(s.hackStrength, s.hackMs) : null;
                 default:
                     return null;
             }

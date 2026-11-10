@@ -38,7 +38,7 @@ namespace Anseong.Combat
         readonly float[] hapticAmplitude = new float[2];
         readonly float[] hapticStart = { -1f, -1f };
         readonly int[] hapticPriority = new int[2];
-        readonly int[] clipCursor = new int[64];
+        readonly int[] clipCursor = new int[128];
 
         void Start()
         {

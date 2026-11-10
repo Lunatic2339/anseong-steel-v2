@@ -123,6 +123,17 @@ namespace Anseong.Combat
             New(CombatCue.BossDefeated, KindFilter.Any, "SFX_BossDown", atHitPoint: true),
             // M3-03 협동 이동(둘이 같은 방향으로 밀면 승인음)
             New(CombatCue.MoveStart, KindFilter.Any, "SFX_MoveConfirm", pitch: 1f),
+            // M5-02 대본 사건(M4 새 사건, 파일이 없으면 무음)
+            New(CombatCue.DroneFire, KindFilter.Any, "SFX_DroneShot", atHitPoint: true),
+            New(CombatCue.DroneRevealed, KindFilter.Any, "SFX_ScanFound", pitch: 1f, haptic: 0.3f, seconds: 0.05f),
+            New(CombatCue.DroneHidden, KindFilter.Any, "SFX_ScanLost", pitch: 1f),
+            New(CombatCue.DroneDown, KindFilter.Any, "SFX_DroneExplode", atHitPoint: true),
+            New(CombatCue.CannonFire, KindFilter.Any, "SFX_CannonFire", haptic: 0.9f, seconds: 0.15f),
+            New(CombatCue.HackStart, KindFilter.Any, "SFX_HackNoise", pitch: 1f),
+            New(CombatCue.HackCleared, KindFilter.Any, "SFX_HackClear", pitch: 1f),
+            New(CombatCue.CheckupStep, KindFilter.Any, "SFX_EquipClank"),
+            New(CombatCue.MapEvent, KindFilter.Any, "SFX_MapImpact", atHitPoint: true),
+            New(CombatCue.MatchScene, KindFilter.Any, "SFX_SceneSting", pitch: 1f),
         };
 
         static Entry Voice(int line)
