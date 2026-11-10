@@ -96,6 +96,9 @@ namespace Anseong.Flow
             Publish();
         }
 
+        /// <summary>서버: 드론 격추 하나(결과판 숫자).</summary>
+        public void ServerDroneDown() => stats.DroneDown();
+
         /// <summary>서버: 드론 전멸 등 바깥 신호를 넣는다(M4-04·05).</summary>
         public void ServerSignal(MatchSignal signal)
         {
@@ -196,7 +199,8 @@ namespace Anseong.Flow
             if (boss == null) return;
             var scene = rules.Scene;
             boss.MovementHeld = !MatchFlowRules.BossMayMove(scene);
-            boss.AttacksHeld = !MatchFlowRules.BossMayAttack(scene);
+            // 드론이 떠 있는 동안(근접전 끼어들기) 보스는 물러나 쉰다.
+            boss.AttacksHeld = !MatchFlowRules.BossMayAttack(scene) || dronesActive;
             boss.RangedAllowed = scene == MatchScene.Approach;
         }
 

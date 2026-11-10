@@ -40,6 +40,13 @@ namespace Anseong.EditorTools
             var flow = server.GetComponent<MatchFlow>();
             var made = flow == null;
             if (made) flow = Undo.AddComponent<MatchFlow>(server.gameObject);
+            // M4-04: 드론(같은 NetworkObject).
+            var drones = server.GetComponent<DroneDirector>();
+            if (drones == null) drones = Undo.AddComponent<DroneDirector>(server.gameObject);
+            var droneSerialized = new SerializedObject(drones);
+            if (droneSerialized.FindProperty("shapeMaterial").objectReferenceValue == null)
+                droneSerialized.FindProperty("shapeMaterial").objectReferenceValue = CombatSetup.GetOrCreateUnlit(WeaponShapePath, Color.white);
+            droneSerialized.ApplyModifiedProperties();
             var serialized = new SerializedObject(flow);
             serialized.FindProperty("combat").objectReferenceValue = server;
             serialized.ApplyModifiedProperties();
