@@ -76,7 +76,15 @@ namespace Anseong.Combat
         public Entry[] Entries => entries ?? new Entry[0];
 
         /// <summary>06_feel_and_sound·S-01 표의 기본 줄(메뉴가 새 에셋을 만들 때 쓴다).</summary>
-        public static Entry[] DefaultEntries() => new[]
+        public static Entry[] DefaultEntries() => System.Linq.Enumerable.ToArray(System.Linq.Enumerable.Concat(BaseEntries(), Voices()));
+
+        /// <summary>사령관 대사 전부(M4-06 번호표, 파일이 없으면 무음).</summary>
+        static System.Collections.Generic.IEnumerable<Entry> Voices()
+        {
+            foreach (var line in CommanderLines.All) yield return Voice(line);
+        }
+
+        static Entry[] BaseEntries() => new[]
         {
             New(CombatCue.GripLock, KindFilter.Any, "SFX_GripLock", haptic: 0.15f, seconds: 0.03f),
             New(CombatCue.GripRelease, KindFilter.Any, "SFX_GripRelease"),
@@ -115,13 +123,6 @@ namespace Anseong.Combat
             New(CombatCue.BossDefeated, KindFilter.Any, "SFX_BossDown", atHitPoint: true),
             // M3-03 협동 이동(둘이 같은 방향으로 밀면 승인음)
             New(CombatCue.MoveStart, KindFilter.Any, "SFX_MoveConfirm", pitch: 1f),
-            Voice(CommanderLines.IncomingAttack), Voice(CommanderLines.CounterNow), Voice(CommanderLines.KneelFinisher),
-            Voice(CommanderLines.Victory), Voice(CommanderLines.FirstSlam), Voice(CommanderLines.FirstCombo),
-            Voice(CommanderLines.FirstCharge), Voice(CommanderLines.Phase2), Voice(CommanderLines.Phase3), Voice(CommanderLines.FinisherHint),
-            // M4-01 판 흐름 대사
-            Voice(CommanderLines.Sortie), Voice(CommanderLines.Ambush), Voice(CommanderLines.GunLost), Voice(CommanderLines.AllWeaponsLost),
-            Voice(CommanderLines.Reboot), Voice(CommanderLines.DronesCleared), Voice(CommanderLines.TargetCannon),
-            Voice(CommanderLines.TargetArmor), Voice(CommanderLines.TargetCore),
         };
 
         static Entry Voice(int line)

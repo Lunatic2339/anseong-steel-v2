@@ -46,8 +46,57 @@ namespace Anseong.EditorTools
 
             var panel = AddPanel(roots, flow);
             var weapons = AddPlayerWeapons(roots);
+            var hud = AddHud(roots);
             EditorSceneManager.MarkSceneDirty(scene);
-            return $"판 흐름({(made ? "새로 붙임" : "있던 것 다시 연결")}), 글자판: {panel}, 우리 무기: {weapons}";
+            return $"판 흐름({(made ? "새로 붙임" : "있던 것 다시 연결")}), 글자판: {panel}, 우리 무기: {weapons}, HUD: {hud}";
+        }
+
+        static readonly Vector3 HudOffset = new Vector3(-0.22f, -0.05f, 0.9f);
+
+        /// <summary>M4-06: 조종사 HUD(글자, 한쪽에만 보이는 공격·드론 방향, 기체 HP). XR 카메라 왼쪽 아래.</summary>
+        static string AddHud(GameObject[] roots)
+        {
+            var origin = roots.SelectMany(r => r.GetComponentsInChildren<XROrigin>(true)).FirstOrDefault();
+            var camera = origin != null && origin.Camera != null ? origin.Camera.transform : null;
+            if (camera == null) return "XR 카메라가 없어 안 만듦";
+            var hud = camera.GetComponentInChildren<PilotHud>(true);
+            if (hud == null)
+            {
+                var text = MakeText(camera, "PilotHud", HudOffset, TextAnchor.UpperLeft, TextAlignment.Left);
+                hud = text.gameObject.AddComponent<PilotHud>();
+                var s = new SerializedObject(hud);
+                s.FindProperty("text").objectReferenceValue = text;
+                s.ApplyModifiedProperties();
+            }
+            var serialized = new SerializedObject(hud);
+            serialized.FindProperty("director").objectReferenceValue =
+                roots.SelectMany(r => r.GetComponentsInChildren<CombatDirector>(true)).FirstOrDefault();
+            serialized.ApplyModifiedProperties();
+            return "XR 카메라 왼쪽 아래";
+        }
+
+        static TextMesh MakeText(Transform camera, string name, Vector3 offset, TextAnchor anchor, TextAlignment alignment)
+        {
+            var font = Resources.GetBuiltinResource<Font>("LegacyRuntime.ttf");
+            var go = new GameObject(name);
+            Undo.RegisterCreatedObjectUndo(go, "Add Match Flow");
+            go.transform.SetParent(camera, false);
+            go.transform.localPosition = offset;
+            go.transform.localRotation = Quaternion.identity;
+            go.transform.localScale = Vector3.one / Mathf.Max(1e-6f, camera.lossyScale.x);
+            var text = go.AddComponent<TextMesh>();
+            text.font = font;
+            text.fontSize = PanelFontSize;
+            text.characterSize = PanelCharacterSize;
+            text.anchor = anchor;
+            text.alignment = alignment;
+            text.richText = true;
+            text.color = Color.white;
+            var renderer = go.GetComponent<MeshRenderer>();
+            if (font != null) renderer.sharedMaterial = font.material;
+            renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            renderer.receiveShadows = false;
+            return text;
         }
 
         /// <summary>M4-03: 플레이어 로봇 루트에 무기 겉모습(방패·검·스캐너·포 도형).</summary>

@@ -107,6 +107,26 @@ namespace Anseong.Combat
         MoveStart,
         /// <summary>판 장면이 바뀜(M4-01). Code = 새 장면(Anseong.Flow.MatchScene), Amount = 이전 장면. 소리·연출·맵 장치가 장면에 맞춰 켜고 끈다.</summary>
         MatchScene,
+        // ── M4-04 드론 (Code = 드론 번호, Point = 드론 위치) ──
+        /// <summary>숨은 드론이 쐈다(포탄 방향 = 왼쪽 HUD에만). Amount = 0 은폐 사격, 1 달려들기.</summary>
+        DroneFire,
+        /// <summary>스캐너에 드러남(3초).</summary>
+        DroneRevealed,
+        /// <summary>다시 숨음.</summary>
+        DroneHidden,
+        /// <summary>격추·쳐냄.</summary>
+        DroneDown,
+        /// <summary>오른팔 포 발사(Side = 쏜 팔, Point = 조준점). Amount = 1이면 보스 장갑에 튕김.</summary>
+        CannonFire,
+        /// <summary>해킹 드론이 팔에 붙음(Side = 해킹된 팔).</summary>
+        HackStart,
+        /// <summary>동료가 떼어 냄.</summary>
+        HackCleared,
+        // ── M4-05·07 ──
+        /// <summary>기체 점검 단계가 바뀜. Code = 단계 번호(PilotCheckup).</summary>
+        CheckupStep,
+        /// <summary>맵 장치 작동. Code = MapEventKind(크레인 코일·컨베이어·사일로).</summary>
+        MapEvent,
     }
 
     /// <summary>연계가 끊긴 이유.</summary>
