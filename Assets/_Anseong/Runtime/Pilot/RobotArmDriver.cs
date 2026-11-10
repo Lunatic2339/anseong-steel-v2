@@ -101,6 +101,11 @@ namespace Anseong.Pilot
         bool active;
 
         public PilotSide Side => side;
+        /// <summary>팔 뼈(M3-02 상대 팔 동기화가 읽고 쓴다). 위팔·아래팔·손, 로봇 정면 기준.</summary>
+        public Transform UpperArmBone => upperArm;
+        public Transform ForeArmBone => foreArm;
+        public Transform HandBone => hand;
+        public Transform RobotRoot => robotRoot;
 
         /// <summary>마지막 프레임에 IK를 적용했다.</summary>
         public bool IsActive => active;
