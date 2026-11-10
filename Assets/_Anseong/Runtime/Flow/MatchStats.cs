@@ -43,10 +43,11 @@ namespace Anseong.Flow
             if (!Running) start = now;
         }
 
-        public void Blocked() => blocked++;
-        public void Hit() => hit++;
-        public void DroneDown() => drones++;
-        public void Combo(int step) => bestCombo = Mathf.Max(bestCombo, step);
+        // 출격 전(기체 점검 연습)은 세지 않는다.
+        public void Blocked() { if (Running) blocked++; }
+        public void Hit() { if (Running) hit++; }
+        public void DroneDown() { if (Running) drones++; }
+        public void Combo(int step) { if (Running) bestCombo = Mathf.Max(bestCombo, step); }
 
         public MatchResult Finish(double now, bool won, int reboots)
         {

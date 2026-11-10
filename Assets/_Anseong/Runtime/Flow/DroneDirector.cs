@@ -205,7 +205,7 @@ namespace Anseong.Flow
                 interludesDone++;
                 for (var i = 0; i < pairOffsets.Length && i < Slots; i++) Spawn(i, DroneKind.Cloaked, Offset(pairOffsets[i]), now + i * 2f);
                 flow.SetDronesActive(true);
-                Line(CommanderLines.DronesAgain, now);
+                Line(interludesDone == 2 ? CommanderLines.ShootCrane : CommanderLines.DronesAgain, now);
                 Publish(now);
             }
             lastCracks = cracks;

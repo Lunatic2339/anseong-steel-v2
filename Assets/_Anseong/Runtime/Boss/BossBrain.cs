@@ -448,6 +448,23 @@ namespace Anseong.Boss
             Emit(CombatCue.BossKnockback, 0, now, knockbackMeters);
         }
 
+        /// <summary>서버: 지금 밀려나는 중이면 더 멀리(맵 연출 사일로 처박기, M4-07).</summary>
+        public void PushFurther(float extraMeters)
+        {
+            if (knockStart < 0 || extraMeters <= 0f) return;
+            var away = knockTo - knockFrom;
+            away.y = 0f;
+            if (away.sqrMagnitude < 1e-4f) return;
+            knockTo += away.normalized * extraMeters;
+        }
+
+        /// <summary>서버: 경직(크레인 코일에 맞음·컨베이어 다리에 박힘, M4-07). 끝나면 빈틈.</summary>
+        public void Stun(float seconds, float openingAfter)
+        {
+            if (server == null) return;
+            server.Machine.Stagger(seconds, openingAfter, server.Now, null);
+        }
+
         /// <summary>무릎: 필살기 광선이 잘 보이게 플레이어에게서 멀어진다(이미 멀면 그대로).</summary>
         void BeginRetreat(double now)
         {

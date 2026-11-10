@@ -54,6 +54,13 @@ namespace Anseong.EditorTools
             if (checkupSerialized.FindProperty("shapeMaterial").objectReferenceValue == null)
                 checkupSerialized.FindProperty("shapeMaterial").objectReferenceValue = CombatSetup.GetOrCreateUnlit(WeaponShapePath, Color.white);
             checkupSerialized.ApplyModifiedProperties();
+            // M4-07: 맵 연출(크레인 코일·컨베이어·사일로). 윤주 맵 자리는 Inspector 칸에 사람이 넣는다.
+            var mapEvents = server.GetComponent<MapEvents>();
+            if (mapEvents == null) mapEvents = Undo.AddComponent<MapEvents>(server.gameObject);
+            var mapSerialized = new SerializedObject(mapEvents);
+            if (mapSerialized.FindProperty("shapeMaterial").objectReferenceValue == null)
+                mapSerialized.FindProperty("shapeMaterial").objectReferenceValue = CombatSetup.GetOrCreateUnlit(WeaponShapePath, Color.white);
+            mapSerialized.ApplyModifiedProperties();
             var serialized = new SerializedObject(flow);
             serialized.FindProperty("combat").objectReferenceValue = server;
             serialized.ApplyModifiedProperties();
