@@ -23,6 +23,25 @@ namespace Anseong.Flow
         public override int GetHashCode() => (Won ? 1 : 0) ^ Seconds.GetHashCode() ^ (BlockPercent << 8) ^ (Drones << 16) ^ (BestCombo << 24);
     }
 
+    /// <summary>M6 테스트 기록: 판마다 결과 한 줄(Logs/Anseong/logs/matches_*.csv, 호스트 PC). 외부인 10쌍 완주 기록·수치 조정에 쓴다.</summary>
+    public static class MatchLogRow
+    {
+        public const string Header = "time,won,seconds,block_percent,drones,best_combo,reboots";
+
+        public static string Format(MatchResult r, DateTime now)
+        {
+            var c = System.Globalization.CultureInfo.InvariantCulture;
+            return string.Join(",",
+                now.ToString("yyyy-MM-dd HH:mm:ss", c),
+                r.Won ? "1" : "0",
+                r.Seconds.ToString("F1", c),
+                r.BlockPercent < 0 ? string.Empty : r.BlockPercent.ToString(c),
+                r.Drones.ToString(c),
+                r.BestCombo.ToString(c),
+                r.Reboots.ToString(c));
+        }
+    }
+
     /// <summary>한 판 동안 결과판 숫자를 모은다(M4-01). 서버만. 순수 클래스.</summary>
     public sealed class MatchStats
     {

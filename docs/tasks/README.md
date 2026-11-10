@@ -33,6 +33,10 @@
 | `M2-03-guard-dodge-pilot-hp.md` | M2 (11/02) | 선우 | M2-02·M1-06 후 |
 | `M2-04-boss-patterns-phases-movement.md` | M2 (11/04) | 선우 | M2-03 후 |
 | `M2-05-finisher-boss-defeat.md` | M2 완료 (11/05) | 선우 | M2-04 후 |
+| `M2-06-boss-clips.md` | M2 | 선우 | `feat/m4-m7-skeleton`에 합침 |
+| `M3-01`~`M3-05` | M3 | 선우 (+성재·고건) | 01·03 develop, 02·04·05는 `feat/m4-m7-skeleton`에 합침. 2대 확인 남음 |
+| `M4-01-match-flow.md` | M4 | 선우 | `feat/m4-m7-skeleton`에 합침 |
+| `M4-M7-skeleton.md` | M4~M7 밑바탕 | 선우 | **한 브랜치 `feat/m4-m7-skeleton`** (M4-02~07, M5-01~04, M6 기록, M7 체크리스트). 컴파일·헤드셋 확인 대기 |
 | `A-01-boss-animations.md` | 아트 (10/29, 11/12) | 유진 (보스 + 플레이어 몸 클립) | 지금 시작 |
 | `A-02-merge-and-material-slots.md` | 아트 (11/05) | 성재 (+유진) | 지금 시작 |
 | `A-03-robot-colors.md` | 아트 (11/19) | 성재 (플레이어 색) + 유진 (보스 색) | A-02 후 |

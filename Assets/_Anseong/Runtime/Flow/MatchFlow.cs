@@ -144,6 +144,8 @@ namespace Anseong.Flow
             state.OnValueChanged -= OnState;
             Unbind();
             rules = null;
+            matchLog?.Dispose();
+            matchLog = null;
         }
 
         void OnState(MatchFlowState previous, MatchFlowState current)
@@ -298,6 +300,18 @@ namespace Anseong.Flow
             if ((previous == MatchScene.LostGun || previous == MatchScene.LostSword) && authority != null)
                 authority.Pilot.RestoreTo(restoreAfterLoss);
             Publish();
+            if (scene == MatchScene.Result) LogResult();
+        }
+
+        CsvLog matchLog;
+
+        /// <summary>M6: 결과판이 뜨면 호스트가 판 기록 한 줄을 남긴다.</summary>
+        void LogResult()
+        {
+            if (!IsServer) return;
+            if (matchLog == null) matchLog = new CsvLog(CsvLog.DefaultPath(LogFolder.Root, "matches", DateTime.Now), MatchLogRow.Header);
+            matchLog.Add(MatchLogRow.Format(state.Value.Result, DateTime.Now));
+            matchLog.Pump();
         }
 
         void Publish()

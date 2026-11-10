@@ -167,5 +167,14 @@ namespace Anseong.Tests
             stats.Reset();
             Assert.IsFalse(stats.Running);
         }
+
+        [Test]
+        public void MatchLogRow_FormatsOneLine()
+        {
+            var r = new MatchResult { Won = true, Seconds = 412.34f, BlockPercent = -1, Drones = 5, BestCombo = 3, Reboots = 1 };
+            var row = MatchLogRow.Format(r, new System.DateTime(2026, 11, 27, 14, 5, 9));
+            Assert.AreEqual("2026-11-27 14:05:09,1,412.3,,5,3,1", row);
+            Assert.AreEqual(MatchLogRow.Header.Split(',').Length, row.Split(',').Length);
+        }
     }
 }
