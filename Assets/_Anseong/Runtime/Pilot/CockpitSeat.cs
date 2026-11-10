@@ -103,6 +103,19 @@ namespace Anseong.Pilot
         bool aligned;
 
         public int ActiveSeat => activeSeat;
+
+        /// <summary>이 PC 조종사가 서는 좌석 쪽(M3-01: 호스트 = 왼쪽, 클라이언트 = 오른쪽). 바꾸면 보정 맞춤을 버리고 바로 그 좌석으로.</summary>
+        public PilotSide Side
+        {
+            get => side;
+            set
+            {
+                if (side == value) return;
+                side = value;
+                aligned = false;
+                PlaceOrigin();
+            }
+        }
         public int SeatCount => seats != null ? seats.Length : 0;
         public string ActiveSeatLabel => IsValidSeat(activeSeat) ? seats[activeSeat].label : string.Empty;
 

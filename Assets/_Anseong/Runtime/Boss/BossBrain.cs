@@ -66,6 +66,7 @@ namespace Anseong.Boss
         BossFightStats stats = new BossFightStats();
         HashSet<BossAttackKind> seen = new HashSet<BossAttackKind>();
         bool bound, sawOpening, finishedLog;
+        CombatAuthority boundAuthority;
         double nextAttackAt, fightStart, lastHint, wonAt = -1;
         Vector3 startPosition, knockFrom, knockTo;
         Quaternion startRotation;
@@ -130,6 +131,7 @@ namespace Anseong.Boss
             server.RestIsOpening = !autoAttack;
             server.TestAttacksBlocked = autoAttack;
             bound = true;
+            boundAuthority = server.Combat.Authority;
             BeginRun();
             return true;
         }
@@ -151,6 +153,8 @@ namespace Anseong.Boss
         {
             // Play 중 스크립트가 다시 컴파일되면(예: Play 중 git pull) 직렬화 안 되는 규칙 객체만 비고 bound는 남는다 → 다시 묶는다.
             if (bound && (phases == null || picker == null)) Unbind();
+            // 세션을 다시 시작하면(M3-01 다시 고르기·호스트 재시작) 전투 서버가 새 판정 객체를 만든다 → 새것에 다시 묶고 판을 처음부터.
+            if (bound && server.Combat != null && server.Combat.Authority != boundAuthority) Unbind();
             if (!bound && !TryBind()) return;
             if (server.Combat == null || server.Combat.Authority == null) return;
             var now = server.Now;

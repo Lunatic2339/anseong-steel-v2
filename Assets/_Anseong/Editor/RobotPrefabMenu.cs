@@ -53,6 +53,7 @@ namespace Anseong.EditorTools
             {
                 var player = CreateRobot(playerModel, controller, RobotArtSettings.AvatarOf(playerModel), "Robot_Player", preview);
                 if (player == null) return false;
+                Debug.Log($"{LogPrefix} 플레이어 Animator: {PlayerMotionSetup.Apply(player, IdleClip(controller))}");
                 RobotSandboxUtility.ApplyPlayerMaterials(player);
                 if (!AddCockpit(player, IdleClip(controller), switchSeat)) return false;
                 if (!RobotArmSetup.AddArmDrivers(player, out var armReport))

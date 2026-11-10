@@ -103,6 +103,8 @@ namespace Anseong.Combat
         FinisherFire,
         /// <summary>승리: 쓰러짐 연출 뒤. Amount = 보스전 걸린 시간(초). 결과 화면은 M4.</summary>
         EncounterWon,
+        /// <summary>협동 이동 시작(M3-03, 앞/뒤). Amount = MoveKind(1 접근, 2 후퇴). 좌/우 회피는 DodgeStart.</summary>
+        MoveStart,
     }
 
     /// <summary>연계가 끊긴 이유.</summary>

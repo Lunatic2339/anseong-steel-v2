@@ -40,6 +40,17 @@ namespace Anseong.Combat
         [SerializeField, Range(0.05f, 1f), Tooltip("흔들림 시간(초).")]
         float shakeSeconds = 0.3f;
 
+        /// <summary>회피 미끄러짐. M3-03 협동 이동(RobotMotionSync)이 로봇 루트를 맡으면 끈다(두 곳이 같이 옮기지 않게).</summary>
+        public bool SlideEnabled
+        {
+            get => slide;
+            set
+            {
+                slide = value;
+                if (!value) slideStart = -1f;
+            }
+        }
+
         Vector3 slideFrom, slideTo;
         float slideStart = -1f, nextSlide, shakeStart = -1f, shakeScale;
 
