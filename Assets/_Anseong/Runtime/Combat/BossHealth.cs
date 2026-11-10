@@ -51,6 +51,13 @@ namespace Anseong.Combat
             Floor = 0f;
         }
 
+        /// <summary>체력을 percent(% , 최대 대비)로 되돌린다(재기동 → 그 보스 무기 구간 처음부터, M4-02). 쓰러졌으면 안 바꾼다.</summary>
+        public void RestoreTo(float percent)
+        {
+            if (IsDefeated) return;
+            Current = Mathf.Clamp(settings.maxHealth * percent / 100f, 0f, settings.maxHealth);
+        }
+
         public float DamageOf(PunchKind kind)
         {
             switch (kind)

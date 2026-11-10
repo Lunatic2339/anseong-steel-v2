@@ -535,7 +535,30 @@ namespace Anseong.EditorTools
             var serializedBrain = new SerializedObject(brain);
             serializedBrain.FindProperty("table").objectReferenceValue = BossAttackMenu.EnsurePhaseTable();
             serializedBrain.ApplyModifiedPropertiesWithoutUndo();
-            return $"보스 두뇌(기술 {attacks?.Length ?? 0}개) + 동작·위치 복제 + 예고 발광·공격 쪽 표시 + 스스로 싸우기(페이즈 표)";
+            var weapons = AddWeaponVisuals(boss);
+            return $"보스 두뇌(기술 {attacks?.Length ?? 0}개) + 동작·위치 복제 + 예고 발광·공격 쪽 표시 + 스스로 싸우기(페이즈 표) + {weapons}";
+        }
+
+        const string WeaponShapePath = DebugFolder + "/BossWeaponShape.mat";
+
+        /// <summary>M4-02: 보스 무기(팔뚝 포·가슴 장갑판·핵)·머리 빛·주먹 포탄 겉모습. 뼈를 이름으로 찾아 채운다.</summary>
+        static string AddWeaponVisuals(Transform boss)
+        {
+            var visuals = boss.GetComponent<BossWeaponVisuals>();
+            if (visuals == null) visuals = boss.gameObject.AddComponent<BossWeaponVisuals>();
+            var s = new SerializedObject(visuals);
+            Transform Bone(string name) => RobotSandboxUtility.FindBone(boss, name);
+            s.FindProperty("leftForeArm").objectReferenceValue = Bone(RobotSandboxUtility.LeftPrefix + "ForeArm");
+            s.FindProperty("leftHand").objectReferenceValue = Bone(RobotSandboxUtility.LeftPrefix + "Hand");
+            s.FindProperty("rightForeArm").objectReferenceValue = Bone(RobotSandboxUtility.RightPrefix + "ForeArm");
+            s.FindProperty("rightHand").objectReferenceValue = Bone(RobotSandboxUtility.RightPrefix + "Hand");
+            s.FindProperty("chest").objectReferenceValue = Bone(BodyBone) ?? Bone(RobotSandboxUtility.SpineBone);
+            s.FindProperty("head").objectReferenceValue = Bone(RobotSandboxUtility.HeadBone);
+            if (s.FindProperty("shapeMaterial").objectReferenceValue == null)
+                s.FindProperty("shapeMaterial").objectReferenceValue = GetOrCreateUnlit(WeaponShapePath, Color.white);
+            s.ApplyModifiedPropertiesWithoutUndo();
+            var missing = Bone(RobotSandboxUtility.HeadBone) == null ? " (뼈를 못 찾음)" : "";
+            return "보스 무기 도형" + missing;
         }
 
         const string TelegraphMarkerPath = DebugFolder + "/BossTelegraphMarker.mat";

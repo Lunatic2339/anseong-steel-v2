@@ -25,7 +25,7 @@ namespace Anseong.Flow
     /// 한 판 흐름(M4-01 프로토타입, 10_game_scenario.md). 서버만 장면을 정하고 장면 + 시작 시각을 복제한다.
     /// 전투 사건(<see cref="CombatServer.ServerCue"/>)을 듣고 <see cref="MatchFlowRules"/>에 신호로 넣으며, 장면에 맞춰 보스를 멈추거나 풀고,
     /// 사령관 대사와 장면 사건(<see cref="CombatCue.MatchScene"/>)을 낸다. 소리·글자판·맵 장치는 그 사건만 듣고 갈아 끼운다.
-    /// 아직 없는 것은 자리만: 드론(M4-04) 전에는 장면 3을 시간으로 넘기고, 보스 무기(M4-02) 전에는 보스 HP 페이즈 전환을 "무기 부서짐"으로 쓴다.
+    /// 보스 무기(M4-02)가 부서지면(= 페이즈 전환) 상실 장면, 핵이면 필살기. 드론(M4-04)이 신호를 안 주면 장면 3은 시간으로 넘어간다.
     /// 운영자 조작은 키보드 없이 조절 메뉴(오른손 B) "판" 묶음. 메뉴 'Add Network Session'이 Combat Server 오브젝트에 붙인다.
     /// </summary>
     public class MatchFlow : NetworkBehaviour, ITunable
@@ -41,6 +41,12 @@ namespace Anseong.Flow
 
         [SerializeField, Tooltip("조종사가 다 들어오면(1인 양팔은 바로, 호스트는 둘) 운영자가 누르지 않아도 기체 점검을 시작한다.")]
         bool autoStart = true;
+
+        [SerializeField, Min(0f), Tooltip("기체 점검·등장 때 보스를 이 거리(m)에 둔다(대본: 마당 끝 약 120 m). 0이면 옮기지 않는다.")]
+        float entranceDistance = 120f;
+
+        [SerializeField, Range(0f, 100f), Tooltip("상실 장면이 끝나 다음 구간을 시작할 때 기체 HP를 이것(%)까지 채운다(대본 60).")]
+        float restoreAfterLoss = 60f;
 
         [SerializeField, Tooltip("결과판 시간이 지나면 저절로 처음부터(전시 운영 편의, 기본 끔: 운영자가 재시작).")]
         bool autoRestartAfterResult;
@@ -152,6 +158,7 @@ namespace Anseong.Flow
             var scene = rules.Scene;
             boss.MovementHeld = !MatchFlowRules.BossMayMove(scene);
             boss.AttacksHeld = !MatchFlowRules.BossMayAttack(scene);
+            boss.RangedAllowed = scene == MatchScene.Approach;
         }
 
         void Signal(MatchSignal signal)
@@ -169,7 +176,7 @@ namespace Anseong.Flow
                 case CombatCue.MoveStart:
                     if ((MoveKind)(int)e.Amount == MoveKind.Approach) Signal(MatchSignal.CheckupDone);
                     break;
-                // M4-02 전 다리: 보스 HP 페이즈 전환 = 지금 차례 보스 무기 부서짐.
+                // M4-02: 페이즈 전환 = 지금 차례 보스 무기 부서짐(보스 체력을 무기 셋이 30씩 나눠 가짐, BossWeaponRules).
                 case CombatCue.PhaseChanged: Signal(MatchSignal.BossWeaponBroken); break;
                 case CombatCue.BossKneel: Signal(MatchSignal.BossKneel); break;
                 case CombatCue.EncounterWon: Signal(MatchSignal.BossDefeated); break;
@@ -203,7 +210,11 @@ namespace Anseong.Flow
                 case MatchScene.Waiting:
                     stats.Reset();
                     break;
+                case MatchScene.Checkup:
+                    if (boss != null && entranceDistance > 0f) boss.PlaceAtDistance(entranceDistance);
+                    break;
                 case MatchScene.Entrance:
+                    if (boss != null && entranceDistance > 0f && previous != MatchScene.Checkup) boss.PlaceAtDistance(entranceDistance);
                     stats.Begin(now);
                     Line(CommanderLines.Sortie, now);
                     break;
@@ -222,9 +233,22 @@ namespace Anseong.Flow
                 case MatchScene.Result:
                     break;
             }
-            // 재기동이 끝나 그 구간으로 돌아감: 기체 HP를 채운다(보스 무기 내구도 되돌리기는 M4-02).
-            if (previous == MatchScene.Rebooting && scene != MatchScene.Waiting && combat.Authority != null)
-                combat.Authority.Pilot.Reset();
+            var authority = combat.Authority;
+            // 재기동이 끝나 그 구간으로 돌아감: 기체 HP를 채우고 지금 보스 무기를 금 0개로(그 구간 처음부터).
+            if (previous == MatchScene.Rebooting && scene != MatchScene.Waiting && authority != null)
+            {
+                authority.Pilot.Reset();
+                if (boss != null)
+                {
+                    var bossHealth = authority.Resolver.Boss;
+                    var hp = bossHealth.Max > 0f ? bossHealth.Current / bossHealth.Max * 100f : 0f;
+                    var weapon = BossWeaponRules.Current(hp, boss.Thresholds);
+                    if (weapon != BossWeapon.None) bossHealth.RestoreTo(BossWeaponRules.SegmentTop(weapon, boss.Thresholds));
+                }
+            }
+            // 상실 장면이 끝나 다음 구간: 보복으로 깎인 기체 HP를 채운다.
+            if ((previous == MatchScene.LostGun || previous == MatchScene.LostSword) && authority != null)
+                authority.Pilot.RestoreTo(restoreAfterLoss);
             Publish();
         }
 
@@ -272,7 +296,7 @@ namespace Anseong.Flow
         }
 
         /// <summary>
-        /// 시험용: 지금 차례 보스 무기를 바로 부순다. M4-02 전에는 보스 HP를 페이즈 바닥까지 깎아
+        /// 시험용: 지금 차례 보스 무기를 바로 부순다. 보스 체력을 그 무기 구간 바닥까지 깎아
         /// 보스 두뇌가 페이즈 전환(→ 무기 부서짐 신호)을 내게 한다. 핵이면 무릎.
         /// </summary>
         void BreakBossWeapon()

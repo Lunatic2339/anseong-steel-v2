@@ -41,8 +41,17 @@ namespace Anseong.Boss
         [Tooltip("페이즈 1·2·3.")]
         public BossPhaseEntry[] phases = DefaultPhases();
 
-        [Tooltip("페이즈가 바뀌는 보스 HP(%): 1→2, 2→3, 3→무릎. 그 아래로는 한 번에 내려가지 않는다.")]
+        [Tooltip("보스 무기로 페이즈를 나눈다(M4-02, 확정 사항 14). 켜면 아래 HP 경계 대신 무기 내구도로 경계를 만든다(30 → 70·40·10).")]
+        public bool weaponPhases = true;
+
+        [Tooltip("보스 무기 하나의 내구도(최대 체력 대비 %, 대본 30). 팔뚝 포 → 가슴 장갑판 → 핵, 남은 체력은 필살기 몫.")]
+        [Range(5f, 33f)] public float weaponDurability = 30f;
+
+        [Tooltip("무기 페이즈를 끌 때만: 페이즈가 바뀌는 보스 HP(%): 1→2, 2→3, 3→무릎. 그 아래로는 한 번에 내려가지 않는다.")]
         public float[] thresholds = { 60f, 25f, 10f };
+
+        /// <summary>지금 쓰는 페이즈 경계(%).</summary>
+        public float[] ActiveThresholds => weaponPhases ? BossWeaponRules.Thresholds(weaponDurability) : thresholds;
 
         [Tooltip("페이즈 전환 포효 길이(초, 무적).")]
         [Min(0f)] public float roarSeconds = 2f;

@@ -1,4 +1,5 @@
 using System.Text;
+using Anseong.Boss;
 using Anseong.Combat;
 using Anseong.Flow;
 using UnityEngine;
@@ -17,6 +18,9 @@ namespace Anseong.UI
 
         [SerializeField, Tooltip("이 PC의 전투 판정(사령관 대사 사건을 듣는다). 비어 있으면 시작할 때 한 번 찾는다.")]
         CombatDirector director;
+
+        [SerializeField, Tooltip("보스 두뇌(무기 경계). 비어 있으면 시작할 때 한 번 찾는다.")]
+        BossBrain boss;
 
         [SerializeField, Tooltip("글자를 쓸 TextMesh. 메뉴가 만든다.")]
         TextMesh text;
@@ -41,6 +45,7 @@ namespace Anseong.UI
         {
             if (flow == null) flow = FindAnyObjectByType<MatchFlow>();
             if (director == null) director = FindAnyObjectByType<CombatDirector>();
+            if (boss == null) boss = FindAnyObjectByType<BossBrain>();
             if (tuningMenu == null) tuningMenu = FindAnyObjectByType<TuningMenu>();
             if (text == null)
             {
@@ -94,9 +99,22 @@ namespace Anseong.UI
             builder.Append('\n');
             if (scene == MatchScene.Result) AppendResult(flow.Result);
             else builder.Append("<color=#cccccc>").Append(Hint(scene)).Append("</color>");
+            if (MatchFlowRules.IsFight(scene) && boss != null && director != null) AppendWeapon();
             if (Time.unscaledTime < lineUntil && lineText.Length > 0)
                 builder.Append("\n<color=#ffd24a>사령관: ").Append(lineText).Append("</color>");
             return builder.ToString();
+        }
+
+        /// <summary>보스 무기 금 세 칸(M4-02). HUD 시안이 오면 M4-06이 그림으로 바꾼다.</summary>
+        void AppendWeapon()
+        {
+            var state = director.State;
+            var hp = state.BossMax > 0f ? state.BossHealth / state.BossMax * 100f : 100f;
+            var weapon = BossWeaponRules.Current(hp, boss.Thresholds);
+            if (weapon == BossWeapon.None) return;
+            var cracks = BossWeaponRules.CrackCount(hp, boss.Thresholds);
+            builder.Append("\n보스 ").Append(BossWeaponRules.Name(weapon)).Append(" 금 ");
+            for (var i = 0; i < BossWeaponRules.Cracks; i++) builder.Append(i < cracks ? "■" : "□");
         }
 
         void AppendResult(MatchResult r)
@@ -139,9 +157,9 @@ namespace Anseong.UI
             {
                 case MatchScene.Waiting: return "조종사 접속을 기다리는 중";
                 case MatchScene.Checkup: return "보정을 마치고 둘이 같이 스틱을 앞으로 → 출격\n(철판·공 막기·무장 달기는 M4-05)";
-                case MatchScene.Entrance: return "마당 끝에 보스(120m 등장·머리 빛은 M4-02)";
+                case MatchScene.Entrance: return "마당 끝 120m에 보스, 머리에 붉은 빛";
                 case MatchScene.DroneHunt: return "드론 자리(M4-04). 지금은 시간이 지나면 넘어감";
-                case MatchScene.Approach: return "둘이 같이 스틱을 앞으로 → 보스에게 다가가기";
+                case MatchScene.Approach: return "주먹 포탄을 막으며 둘이 같이 스틱을 앞으로";
                 case MatchScene.FightCannon:
                 case MatchScene.FightArmor:
                 case MatchScene.FightCore: return "막고 → 빈틈에 번갈아 세 번 + 트리거";

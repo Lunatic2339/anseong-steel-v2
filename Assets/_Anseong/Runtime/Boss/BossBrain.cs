@@ -57,6 +57,14 @@ namespace Anseong.Boss
         [SerializeField, Min(0.1f), Tooltip("물러나는 시간(초).")]
         float finisherRetreatSeconds = 2.5f;
 
+        [Header("보스 무기·원거리 (M4-02)")]
+        [SerializeField, Tooltip("보스 무기가 부서지면 보복 공격(팔뚝 포 → 돌진, 가슴 장갑판 → 큰 내려찍기). 끄면 예전처럼 포효.")]
+        bool retaliate = true;
+        [SerializeField, Min(0.5f), Tooltip("접근 장면 주먹 포탄 사이 쉬는 시간 최소(초, 11 참고표 3.0).")]
+        float rangedRestMin = 3f;
+        [SerializeField, Min(0.5f), Tooltip("주먹 포탄 사이 쉬는 시간 최대(초, 4.0).")]
+        float rangedRestMax = 4f;
+
         [Header("개발용")]
         [SerializeField, Tooltip("판마다 페이즈 시간·피해·가드 성공률 CSV(logs/bossfight_<날짜시각>.csv, 에디터·개발 빌드).")]
         bool writeCsv = true;
@@ -67,7 +75,7 @@ namespace Anseong.Boss
         HashSet<BossAttackKind> seen = new HashSet<BossAttackKind>();
         bool bound, sawOpening, finishedLog;
         CombatAuthority boundAuthority;
-        double nextAttackAt, fightStart, lastHint, wonAt = -1;
+        double nextAttackAt, nextRangedAt, fightStart, lastHint, wonAt = -1;
         Vector3 startPosition, knockFrom, knockTo;
         Quaternion startRotation;
         double knockStart = -1;
@@ -89,6 +97,50 @@ namespace Anseong.Boss
 
         /// <summary>조종사가 근접 거리 안에 있는지(접근 → 근접전 전환).</summary>
         public bool InMeleeRange => InReach();
+
+        /// <summary>판 흐름(M4-02)이 접근 장면에서 켠다: 걸어오면서 주먹 포탄(펀치 클립 + 탄)을 쏜다. 근접 공격 잠금과 따로.</summary>
+        public bool RangedAllowed { get; set; }
+
+        float[] thresholds;
+
+        /// <summary>페이즈 경계(%). 모든 PC가 같은 표에서 계산한다(보스 무기 표시용).</summary>
+        public float[] Thresholds
+        {
+            get
+            {
+                if (thresholds == null) thresholds = table != null ? table.ActiveThresholds : BossWeaponRules.Thresholds(30f);
+                return thresholds;
+            }
+        }
+
+        /// <summary>조종사(루트)에서 몸을 잰 거리. 조종사를 모르면 -1.</summary>
+        public float DistanceToPilot
+        {
+            get
+            {
+                if (player == null) return -1f;
+                var to = player.position - transform.position;
+                to.y = 0f;
+                return to.magnitude;
+            }
+        }
+
+        /// <summary>서버: 조종사에서 meters 떨어진 곳으로 옮기고 조종사를 보게 한다(장면 2 마당 끝 120 m, M4-02). 방향은 지금 보스가 있는 쪽.</summary>
+        public void PlaceAtDistance(float meters)
+        {
+            if (player == null) return;
+            var away = transform.position - player.position;
+            away.y = 0f;
+            if (away.sqrMagnitude < 1e-4f) away = player.forward;
+            var position = player.position + away.normalized * meters;
+            position.y = transform.position.y;
+            transform.position = position;
+            var look = player.position - position;
+            look.y = 0f;
+            if (look.sqrMagnitude > 1e-4f) transform.rotation = Quaternion.LookRotation(look.normalized, Vector3.up);
+            knockStart = -1;
+            if (server != null && server.Machine.State == BossState.Walk) server.Machine.Release(server.Now);
+        }
 
         void Start()
         {
@@ -133,7 +185,7 @@ namespace Anseong.Boss
             var phaseTable = table != null ? table.phases : null;
             seed = table != null && table.seed != 0 ? table.seed : System.Environment.TickCount;
             picker = new BossPatternPicker(phaseTable, seed);
-            phases = new BossPhaseRules(table != null ? table.thresholds : null, table != null ? table.roarSeconds : 2f);
+            phases = new BossPhaseRules(Thresholds, table != null ? table.roarSeconds : 2f);
             server.Combat.ServerCue += OnCue;
             server.ServerEvent += OnBossEvent;
             server.ServerReset += OnReset;
@@ -192,7 +244,9 @@ namespace Anseong.Boss
             switch (phases.Update(now, hp, machine.IsAttacking || machine.State == BossState.Staggered))
             {
                 case PhaseStep.PhaseChanged:
-                    machine.Hold(BossState.Roar, now, table != null ? table.roarSeconds : 2f);
+                    // M4-02: 무기를 잃은 보스의 보복(팔뚝 포 → 돌진, 가슴 장갑판 → 큰 내려찍기). 시작 못 하면 포효.
+                    var payback = phases.Phase == 2 ? BossAttackKind.Charge : BossAttackKind.SlamBoth;
+                    if (!retaliate || !server.TryBegin(payback)) machine.Hold(BossState.Roar, now, table != null ? table.roarSeconds : 2f);
                     picker.BeginPhase(phases.Phase);
                     var restore = table != null ? table.pilotRestorePercent : 60f;
                     if (restore > 0f) authority.Pilot.RestoreTo(restore);
@@ -216,6 +270,8 @@ namespace Anseong.Boss
             if (!MovementHeld) Move(now, machine);
             else if (machine.State == BossState.Walk) machine.Release(now);
             if (AttacksHeld) nextAttackAt = now + firstAttackDelay;
+            if (RangedAllowed) Ranged(now, machine, authority);
+            else nextRangedAt = now + firstAttackDelay;
 
             if (autoAttack && !AttacksHeld && machine.IsResting && now >= nextAttackAt && !authority.Pilot.IsDefeated && InReach())
             {
@@ -227,6 +283,17 @@ namespace Anseong.Boss
                 }
             }
             server.Combat.Flush();
+        }
+
+        /// <summary>접근 장면: 걷다가 멈춰 주먹 포탄 한 발(좌/우 펀치 기술 그대로, 판정은 같은 막기). 쏘고 나면 다시 걷는다.</summary>
+        void Ranged(double now, BossAttackStateMachine machine, CombatAuthority authority)
+        {
+            if (now < nextRangedAt || authority.Pilot.IsDefeated || InReach()) return;
+            if (machine.State != BossState.Walk && !machine.IsResting) return;
+            if (machine.State == BossState.Walk) machine.Release(now);
+            var kind = Random.value < 0.5f ? BossAttackKind.PunchLeft : BossAttackKind.PunchRight;
+            if (server.TryBegin(kind)) stats.AttackStarted();
+            nextRangedAt = now + Random.Range(Mathf.Min(rangedRestMin, rangedRestMax), Mathf.Max(rangedRestMin, rangedRestMax));
         }
 
         /// <summary>무릎 뒤: 필살기 충전·발사·쓰러짐(M2-05). 20초마다 못 하면 다시 안내.</summary>
