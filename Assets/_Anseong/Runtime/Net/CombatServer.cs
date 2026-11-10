@@ -93,6 +93,14 @@ namespace Anseong.Net
         public void SubmitArmInput(PilotSide side, bool gripHeld, bool triggerPressed) => ArmInputRpc((byte)side, gripHeld, triggerPressed);
         public void RequestReset() => ResetRpc();
         public void SubmitGuard(PilotSide side, bool guarding) => GuardRpc((byte)side, guarding);
+        public void SubmitGuardCover(PilotSide side, PilotSide cover) => GuardCoverRpc((byte)side, (byte)cover);
+
+        [Rpc(SendTo.Server)]
+        void GuardCoverRpc(byte side, byte cover, RpcParams rpc = default)
+        {
+            if (authority == null || !FromOwner((PilotSide)side, rpc)) return;
+            authority.SetGuardCover((PilotSide)side, (PilotSide)cover);
+        }
         public void SubmitFinisherReady(PilotSide side, bool ready) => FinisherReadyRpc((byte)side, ready);
 
         [Rpc(SendTo.Server)]

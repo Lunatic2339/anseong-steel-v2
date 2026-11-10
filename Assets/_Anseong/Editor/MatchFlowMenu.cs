@@ -45,9 +45,27 @@ namespace Anseong.EditorTools
             serialized.ApplyModifiedProperties();
 
             var panel = AddPanel(roots, flow);
+            var weapons = AddPlayerWeapons(roots);
             EditorSceneManager.MarkSceneDirty(scene);
-            return $"판 흐름({(made ? "새로 붙임" : "있던 것 다시 연결")}), 글자판: {panel}";
+            return $"판 흐름({(made ? "새로 붙임" : "있던 것 다시 연결")}), 글자판: {panel}, 우리 무기: {weapons}";
         }
+
+        /// <summary>M4-03: 플레이어 로봇 루트에 무기 겉모습(방패·검·스캐너·포 도형).</summary>
+        static string AddPlayerWeapons(GameObject[] roots)
+        {
+            var arm = roots.SelectMany(r => r.GetComponentsInChildren<Anseong.Pilot.RobotArmDriver>(true)).FirstOrDefault();
+            if (arm == null) return "로봇 팔이 없어 안 붙임";
+            var root = arm.transform.root.gameObject;
+            var visuals = root.GetComponent<PlayerWeaponVisuals>();
+            if (visuals == null) visuals = Undo.AddComponent<PlayerWeaponVisuals>(root);
+            var s = new SerializedObject(visuals);
+            if (s.FindProperty("shapeMaterial").objectReferenceValue == null)
+                s.FindProperty("shapeMaterial").objectReferenceValue = CombatSetup.GetOrCreateUnlit(WeaponShapePath, Color.white);
+            s.ApplyModifiedProperties();
+            return "도형";
+        }
+
+        const string WeaponShapePath = "Assets/_Anseong/Art/Debug/BossWeaponShape.mat";
 
         static string AddPanel(GameObject[] roots, MatchFlow flow)
         {

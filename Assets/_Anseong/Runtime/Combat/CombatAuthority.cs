@@ -66,6 +66,14 @@ namespace Anseong.Combat
 
         /// <summary>가드 보고(그 팔 주인 PC가 사람 손으로 판정한 값).</summary>
         public void SetGuard(PilotSide side, bool value) => guarding[(int)side] = value;
+
+        readonly PilotSide[] cover = { PilotSide.Left, PilotSide.Right };
+
+        /// <summary>방패 하나로 양쪽 막기(M4-03, 확정 사항 11). 끄면 들어오는 쪽 팔이 막는 옛 규칙.</summary>
+        public bool ShieldBothSides { get; set; } = true;
+
+        /// <summary>그 팔이 얼굴 앞 어느 쪽을 덮는지(방패).</summary>
+        public void SetGuardCover(PilotSide side, PilotSide value) => cover[(int)side] = value;
         public bool Guarding(PilotSide side) => guarding[(int)side];
 
         /// <summary>회피 스틱 보고. 두 스틱이 같은 방향으로 새로 맞으면 DodgeStart.</summary>
@@ -81,7 +89,9 @@ namespace Anseong.Combat
         /// </summary>
         public DefenseResult ResolveBossStrike(BossCounter counter, PilotSide incoming, float failDamage, int attackCode, double serverTime, List<CombatEvent> events)
         {
-            var result = DefenseRules.Judge(counter, incoming, guarding[0], guarding[1], dodge.Dodged(serverTime));
+            var result = ShieldBothSides
+                ? DefenseRules.JudgeShield(counter, incoming, guarding[0], cover[0], guarding[1], dodge.Dodged(serverTime))
+                : DefenseRules.Judge(counter, incoming, guarding[0], guarding[1], dodge.Dodged(serverTime));
             switch (result)
             {
                 case DefenseResult.Blocked:

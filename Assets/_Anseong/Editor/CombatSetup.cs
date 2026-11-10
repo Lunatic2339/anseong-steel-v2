@@ -650,7 +650,7 @@ namespace Anseong.EditorTools
             return quad.transform;
         }
 
-        static Material GetOrCreateUnlit(string path, Color color)
+        internal static Material GetOrCreateUnlit(string path, Color color)
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material != null) return material;

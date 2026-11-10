@@ -23,6 +23,7 @@ namespace Anseong.Combat
 
         readonly bool[] sentGuard = new bool[2];
         readonly Vector2[] sentStick = new Vector2[2];
+        readonly PilotSide[] sentCover = new PilotSide[2];
         ICombatLink sentTo;
 
         void Start()
@@ -52,6 +53,12 @@ namespace Anseong.Combat
                 {
                     link.SubmitGuard(side, guarding);
                     sentGuard[h] = guarding;
+                }
+                var cover = guard != null ? GuardRules.CoverSide(guard.State(side)) : side;
+                if (fresh || cover != sentCover[h])
+                {
+                    link.SubmitGuardCover(side, cover);
+                    sentCover[h] = cover;
                 }
                 var stick = Stick(side);
                 if (fresh || (stick - sentStick[h]).sqrMagnitude >= stickStep * stickStep || (stick == Vector2.zero && sentStick[h] != Vector2.zero))

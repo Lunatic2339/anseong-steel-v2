@@ -13,10 +13,15 @@ namespace Anseong.Flow
     {
         public byte Scene;
         public byte Resume;
+        /// <summary>드론이 떠 있음(M4-04): 근접전 중에도 사격 무장.</summary>
+        public byte Drones;
+        /// <summary>점검 단계(M4-05): 장착한 무기 등.</summary>
+        public byte CheckupStep;
         public double Start;
         public MatchResult Result;
 
-        public bool Equals(MatchFlowState o) => Scene == o.Scene && Resume == o.Resume && Start.Equals(o.Start) && Result.Equals(o.Result);
+        public bool Equals(MatchFlowState o) =>
+            Scene == o.Scene && Resume == o.Resume && Drones == o.Drones && CheckupStep == o.CheckupStep && Start.Equals(o.Start) && Result.Equals(o.Result);
         public override bool Equals(object obj) => obj is MatchFlowState o && Equals(o);
         public override int GetHashCode() => Scene ^ (Resume << 8) ^ Start.GetHashCode();
     }
@@ -65,6 +70,38 @@ namespace Anseong.Flow
         public MatchScene Scene => (MatchScene)state.Value.Scene;
         public double SceneStart => state.Value.Start;
         public MatchResult Result => state.Value.Result;
+        public MatchScene ResumeScene => (MatchScene)state.Value.Resume;
+        public bool DronesActive => state.Value.Drones != 0;
+        public int CheckupStep => state.Value.CheckupStep;
+
+        /// <summary>지금 두 팔 무기(M4-03). 모든 PC가 복제된 장면으로 같은 답을 낸다.</summary>
+        public Loadout Loadout => WeaponRules.For(Scene, DronesActive, ResumeScene);
+
+        bool dronesActive;
+        int checkupStep;
+
+        /// <summary>서버: 드론이 떴는지(M4-04가 부른다).</summary>
+        public void SetDronesActive(bool value)
+        {
+            if (!IsServer || dronesActive == value) return;
+            dronesActive = value;
+            Publish();
+        }
+
+        /// <summary>서버: 기체 점검 단계(M4-05가 부른다).</summary>
+        public void SetCheckupStep(int value)
+        {
+            if (!IsServer || checkupStep == value) return;
+            checkupStep = value;
+            Publish();
+        }
+
+        /// <summary>서버: 드론 전멸 등 바깥 신호를 넣는다(M4-04·05).</summary>
+        public void ServerSignal(MatchSignal signal)
+        {
+            if (!IsServer || rules == null) return;
+            Signal(signal);
+        }
         public MatchFlowSettings Settings => settings;
         public bool Running => IsSpawned;
         public double Now => NetworkManager != null ? NetworkManager.ServerTime.Time : 0d;
@@ -143,6 +180,8 @@ namespace Anseong.Flow
             if (rules.Update(now)) Enter(before);
             if (autoRestartAfterResult && rules.ResultExpired(now)) combat.RequestReset();
             HoldBoss();
+            // M4-03: 무기를 든 동안은 잽·훅 구분 없이 번갈아 세 번이 연계.
+            if (combat.Authority != null) combat.Authority.Resolver.Combo.AnyKind = WeaponRules.For(rules.Scene, dronesActive, rules.ResumeScene) != Loadout.Bare;
             combat.Flush();
         }
 
@@ -195,6 +234,8 @@ namespace Anseong.Flow
             if (rules == null) return;
             var before = rules.Scene;
             stats.Reset();
+            dronesActive = false;
+            checkupStep = 0;
             rules.Reset(Now);
             Enter(before);
         }
@@ -259,6 +300,7 @@ namespace Anseong.Flow
             state.Value = new MatchFlowState
             {
                 Scene = (byte)rules.Scene, Resume = (byte)rules.ResumeScene, Start = rules.SceneStart, Result = result,
+                Drones = (byte)(dronesActive ? 1 : 0), CheckupStep = (byte)checkupStep,
             };
         }
 

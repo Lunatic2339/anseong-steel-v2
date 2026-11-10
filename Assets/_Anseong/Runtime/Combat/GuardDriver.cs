@@ -24,6 +24,10 @@ namespace Anseong.Combat
         [Header("판정 (01 초기값)")]
         [SerializeField] GuardSettings settings = new GuardSettings();
 
+        [Header("방패 (M4-03, 확정 사항 11)")]
+        [SerializeField, Min(0f), Tooltip("왼팔(방패) 가드 영역을 좌우로 이만큼(m) 넓힌다. 얼굴 앞 왼쪽·오른쪽으로 옮겨 양쪽을 막는다.")]
+        float shieldExtraWidth = 0.25f;
+
         [Header("개발용")]
         [SerializeField, Tooltip("가드 판정을 CSV로 남긴다(에디터·개발 빌드, logs/guard_<날짜시각>.csv: 에디터는 프로젝트 Logs/Anseong, 빌드는 persistentDataPath).")]
         bool writeCsv = true;
@@ -107,6 +111,7 @@ namespace Anseong.Combat
                 HumanForearm = calibrated ? GuardRules.HumanForearm(sample.Rotation, arm.ReachRotation, body) : Vector3.zero,
                 RobotForearm = robot != null ? robot.ForearmDirection : Vector3.zero,
                 WasGuarding = wasGuarding,
+                ExtraHalfWidth = side == PilotSide.Left ? shieldExtraWidth : 0f,
             };
             return GuardRules.Evaluate(data, settings);
         }

@@ -38,6 +38,23 @@ namespace Anseong.Boss
             }
         }
 
+        /// <summary>
+        /// 방패 하나로 양쪽 막기(M4-03, 확정 사항 11): 한쪽 공격(좌/우 펀치·연타·주먹 포탄)은 왼팔 하나가 들어오는 쪽을 덮고 있으면 막음.
+        /// 오른팔은 막기를 맡지 않는다. 두 손 내려찍기는 그대로 두 팔(X자), 돌진은 회피.
+        /// </summary>
+        public static DefenseResult JudgeShield(BossCounter counter, PilotSide incoming, bool leftGuard, PilotSide leftCover, bool rightGuard, bool dodged)
+        {
+            switch (counter)
+            {
+                case BossCounter.LeftGuard:
+                case BossCounter.RightGuard:
+                case BossCounter.AlternateGuard:
+                    return leftGuard && leftCover == incoming ? DefenseResult.Blocked : DefenseResult.Hit;
+                default:
+                    return Judge(counter, incoming, leftGuard, rightGuard, dodged);
+            }
+        }
+
         public static bool IsSuccess(DefenseResult result) => result == DefenseResult.Blocked || result == DefenseResult.Dodged;
     }
 }

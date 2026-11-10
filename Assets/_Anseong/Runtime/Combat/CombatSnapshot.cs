@@ -60,6 +60,8 @@ namespace Anseong.Combat
         void RequestReset();
         /// <summary>그 팔의 가드가 켜지거나 꺼짐(M2-03, 바뀐 때만).</summary>
         void SubmitGuard(PilotSide side, bool guarding);
+        /// <summary>그 팔이 얼굴 앞 어느 쪽을 덮는지(M4-03 방패, 바뀐 때만).</summary>
+        void SubmitGuardCover(PilotSide side, PilotSide cover);
         /// <summary>그 조종사의 회피 스틱(M2-03, 바뀐 때만, -1~1).</summary>
         void SubmitStick(PilotSide side, UnityEngine.Vector2 stick);
         /// <summary>그 팔이 필살기 준비 자세인지(M2-05, 바뀐 때만).</summary>

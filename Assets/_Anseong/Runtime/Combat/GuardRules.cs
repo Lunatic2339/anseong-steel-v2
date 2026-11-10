@@ -44,6 +44,8 @@ namespace Anseong.Combat
         public Vector3 Guard;
         public Vector3 Head;
         public Quaternion Body;
+        /// <summary>좌우 영역을 이만큼(m) 더 넓힌다(M4-03 방패: 왼팔이 얼굴 앞 왼쪽·오른쪽으로 옮겨 막음).</summary>
+        public float ExtraHalfWidth;
         public Vector3 HumanForearm;
         public Vector3 RobotForearm;
         public bool WasGuarding;
@@ -57,6 +59,8 @@ namespace Anseong.Combat
         public Vector3 Offset;
         /// <summary>손이 얼굴보다 앞인 거리(m, 몸 정면).</summary>
         public float FrontOfFace;
+        /// <summary>손이 얼굴 가운데에서 옆으로 간 거리(m, 몸 기준, + = 오른쪽). 방패가 어느 쪽을 막는지.</summary>
+        public float SideOfFace;
         /// <summary>수직에서 기운 각도(도). 모르면 NaN.</summary>
         public float HumanTilt, RobotTilt;
     }
@@ -91,13 +95,16 @@ namespace Anseong.Combat
             };
             var inverse = Quaternion.Inverse(input.Body);
             result.Offset = inverse * (input.Hand - input.Guard);
-            result.FrontOfFace = (inverse * (input.Hand - input.Head)).z;
+            var fromHead = inverse * (input.Hand - input.Head);
+            result.FrontOfFace = fromHead.z;
+            result.SideOfFace = fromHead.x;
 
             if (!input.Calibrated) return Fail(result, GuardReason.NotCalibrated);
             if (!input.Tracked) return Fail(result, GuardReason.Untracked);
 
             var margin = input.WasGuarding ? settings.releaseMargin : 0f;
             var half = settings.zoneHalfSize + Vector3.one * margin;
+            half.x += Mathf.Max(0f, input.ExtraHalfWidth);
             var o = result.Offset;
             if (Mathf.Abs(o.x) > half.x || Mathf.Abs(o.y) > half.y || Mathf.Abs(o.z) > half.z) return Fail(result, GuardReason.OutOfZone);
             if (result.FrontOfFace < settings.minFrontOfFace - margin) return Fail(result, GuardReason.BehindFace);
@@ -108,6 +115,9 @@ namespace Anseong.Combat
             result.IsGuarding = true;
             return result;
         }
+
+        /// <summary>방패가 막는 쪽(M4-03): 손이 얼굴 가운데보다 왼쪽이면 왼쪽.</summary>
+        public static PilotSide CoverSide(GuardResult r) => r.SideOfFace < 0f ? PilotSide.Left : PilotSide.Right;
 
         /// <summary>양팔 가드(강공격): 두 팔 모두 가드.</summary>
         public static bool BothGuarding(GuardResult left, GuardResult right) => left.IsGuarding && right.IsGuarding;

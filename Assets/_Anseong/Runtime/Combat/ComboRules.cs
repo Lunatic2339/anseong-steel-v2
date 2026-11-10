@@ -74,8 +74,15 @@ namespace Anseong.Combat
         }
 
         /// <summary>명중 하나.</summary>
+        /// <summary>
+        /// 무기 연계(M4-03, 대본 "번갈아 세 번 + 트리거"): 켜면 잽·훅·어퍼컷을 가리지 않고 좌우 번갈아 세 번이면 완성.
+        /// 맨손은 끄고 잽–잽–훅 그대로.
+        /// </summary>
+        public bool AnyKind { get; set; }
+
         public ComboOutcome OnHit(PilotSide side, PunchKind kind, double time)
         {
+            if (AnyKind && kind != PunchKind.None) kind = Step == 2 ? PunchKind.Hook : PunchKind.Jab;
             var outcome = new ComboOutcome { Broken = Tick(time) };
             var onTurn = Step > 0 && side == next && time - lastStepTime >= settings.minComboGap;
             switch (kind)
