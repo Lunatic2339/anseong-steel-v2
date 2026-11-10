@@ -105,6 +105,8 @@ namespace Anseong.Combat
         EncounterWon,
         /// <summary>협동 이동 시작(M3-03, 앞/뒤). Amount = MoveKind(1 접근, 2 후퇴). 좌/우 회피는 DodgeStart.</summary>
         MoveStart,
+        /// <summary>판 장면이 바뀜(M4-01). Code = 새 장면(Anseong.Flow.MatchScene), Amount = 이전 장면. 소리·연출·맵 장치가 장면에 맞춰 켜고 끈다.</summary>
+        MatchScene,
     }
 
     /// <summary>연계가 끊긴 이유.</summary>
