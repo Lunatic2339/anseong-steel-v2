@@ -23,14 +23,17 @@ namespace Anseong.Flow
         /// <summary>그 장면에 아직 검·방패가 있는지.</summary>
         public static bool HasSword(MatchScene scene) => scene <= MatchScene.FightArmor || scene == MatchScene.Rebooting;
 
-        public static Loadout For(MatchScene scene, bool dronesActive, MatchScene resumeScene = MatchScene.Waiting)
+        /// <param name="checkupStep">기체 점검 단계(<see cref="CheckupStep"/>): 1-3에서 검·방패, 1-4부터 스캐너·포를 단다.</param>
+        public static Loadout For(MatchScene scene, bool dronesActive, MatchScene resumeScene = MatchScene.Waiting, int checkupStep = 0)
         {
             if (scene == MatchScene.Rebooting) scene = resumeScene;
             switch (scene)
             {
                 case MatchScene.Waiting:
+                    return Loadout.Bare;
                 case MatchScene.Checkup:
-                    return Loadout.Bare; // 점검 단계별 장착은 M4-05
+                    if (checkupStep >= (int)CheckupStep.GunBrief) return Loadout.Ranged;
+                    return checkupStep == (int)CheckupStep.ShieldDrill ? Loadout.Melee : Loadout.Bare;
                 case MatchScene.Entrance:
                 case MatchScene.DroneHunt:
                 case MatchScene.Approach:

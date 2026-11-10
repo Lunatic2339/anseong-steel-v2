@@ -98,6 +98,7 @@ namespace Anseong.UI
             if (remaining >= 0f && scene != MatchScene.Result) builder.Append("  <color=#aaaaaa>").Append(Mathf.CeilToInt(remaining)).Append("초</color>");
             builder.Append('\n');
             if (scene == MatchScene.Result) AppendResult(flow.Result);
+            else if (scene == MatchScene.Checkup) builder.Append("<color=#cccccc>").Append(CheckupHint((CheckupStep)flow.CheckupStep)).Append("</color>");
             else builder.Append("<color=#cccccc>").Append(Hint(scene)).Append("</color>");
             if (MatchFlowRules.IsFight(scene) && boss != null && director != null) AppendWeapon();
             if (Time.unscaledTime < lineUntil && lineText.Length > 0)
@@ -147,6 +148,20 @@ namespace Anseong.UI
                 case MatchScene.Result: return "장면 10 · 결과";
                 case MatchScene.Rebooting: return "기체 정지 · 재기동 중";
                 default: return scene.ToString();
+            }
+        }
+
+        /// <summary>기체 점검 단계별 할 일(M4-05).</summary>
+        public static string CheckupHint(CheckupStep step)
+        {
+            switch (step)
+            {
+                case CheckupStep.Connect: return "1-1 신경 연결: 정면으로 두 팔 뻗고 그립 → 편한 가드에서 그립";
+                case CheckupStep.JointTest: return "1-2 관절 시험: 철판에 좌우 번갈아 세 번 → 트리거";
+                case CheckupStep.ShieldDrill: return "1-3 검·방패: 오른쪽이 오는 쪽을 불러 주고, 왼팔 방패로 막기(3번)";
+                case CheckupStep.GunBrief: return "1-4 스캐너·포 장착: 왼팔이 찾고 오른팔이 쏜다";
+                case CheckupStep.Sortie: return "1-5 출격: 둘이 같이 스틱을 앞으로!";
+                default: return string.Empty;
             }
         }
 

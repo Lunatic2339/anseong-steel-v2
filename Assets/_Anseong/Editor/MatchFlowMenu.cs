@@ -47,6 +47,13 @@ namespace Anseong.EditorTools
             if (droneSerialized.FindProperty("shapeMaterial").objectReferenceValue == null)
                 droneSerialized.FindProperty("shapeMaterial").objectReferenceValue = CombatSetup.GetOrCreateUnlit(WeaponShapePath, Color.white);
             droneSerialized.ApplyModifiedProperties();
+            // M4-05: 기체 점검(같은 NetworkObject).
+            var checkup = server.GetComponent<CheckupDirector>();
+            if (checkup == null) checkup = Undo.AddComponent<CheckupDirector>(server.gameObject);
+            var checkupSerialized = new SerializedObject(checkup);
+            if (checkupSerialized.FindProperty("shapeMaterial").objectReferenceValue == null)
+                checkupSerialized.FindProperty("shapeMaterial").objectReferenceValue = CombatSetup.GetOrCreateUnlit(WeaponShapePath, Color.white);
+            checkupSerialized.ApplyModifiedProperties();
             var serialized = new SerializedObject(flow);
             serialized.FindProperty("combat").objectReferenceValue = server;
             serialized.ApplyModifiedProperties();

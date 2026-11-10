@@ -75,7 +75,10 @@ namespace Anseong.Flow
         public int CheckupStep => state.Value.CheckupStep;
 
         /// <summary>지금 두 팔 무기(M4-03). 모든 PC가 복제된 장면으로 같은 답을 낸다.</summary>
-        public Loadout Loadout => WeaponRules.For(Scene, DronesActive, ResumeScene);
+        public Loadout Loadout => WeaponRules.For(Scene, DronesActive, ResumeScene, CheckupStep);
+
+        /// <summary>기체 점검(M4-05)이 단계를 맡는다: 켜지면 점검 중 스틱 앞으로는 출격 단계에서만 인정(점검이 신호를 넣음).</summary>
+        public bool CheckupControlled { get; set; }
 
         bool dronesActive;
         int checkupStep;
@@ -184,7 +187,7 @@ namespace Anseong.Flow
             if (autoRestartAfterResult && rules.ResultExpired(now)) combat.RequestReset();
             HoldBoss();
             // M4-03: 무기를 든 동안은 잽·훅 구분 없이 번갈아 세 번이 연계.
-            if (combat.Authority != null) combat.Authority.Resolver.Combo.AnyKind = WeaponRules.For(rules.Scene, dronesActive, rules.ResumeScene) != Loadout.Bare;
+            if (combat.Authority != null) combat.Authority.Resolver.Combo.AnyKind = WeaponRules.For(rules.Scene, dronesActive, rules.ResumeScene, checkupStep) != Loadout.Bare;
             combat.Flush();
         }
 
@@ -217,7 +220,7 @@ namespace Anseong.Flow
             switch (e.Cue)
             {
                 case CombatCue.MoveStart:
-                    if ((MoveKind)(int)e.Amount == MoveKind.Approach) Signal(MatchSignal.CheckupDone);
+                    if (!CheckupControlled && (MoveKind)(int)e.Amount == MoveKind.Approach) Signal(MatchSignal.CheckupDone);
                     break;
                 // M4-02: 페이즈 전환 = 지금 차례 보스 무기 부서짐(보스 체력을 무기 셋이 30씩 나눠 가짐, BossWeaponRules).
                 case CombatCue.PhaseChanged: Signal(MatchSignal.BossWeaponBroken); break;
