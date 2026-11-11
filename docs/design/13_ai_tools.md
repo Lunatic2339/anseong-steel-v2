@@ -77,7 +77,7 @@ AI 결과물 때문에 새로 생기는 코드는 "칸"뿐이다. `07_milestones
 - 보스 클립 메뉴가 **FBX 원본도** 읽게(지금은 `.anim`만 읽음).
 - 배경음악 표: 장면 → BGM(오프닝·전투·맨손·엔딩), 바뀔 때 페이드. 비면 무음.
 - 영상 칸: 조종석 앞 큰 판에 `VideoPlayer`. 대기 중 `Video_Lobby` 반복, 판 시작 때 `Video_Opening`, 승리 뒤 `Video_Ending`(두 PC가 같은 때 시작, 둘 다 누르면 건너뛰기). 비면 바로 다음 장면. VR이라 화면 전체가 아니라 **조종석 안 화면**으로 보여 준다(멀미 없게).
-- 무기·드론·보스 무기 프리팹 칸은 이미 있음(`PlayerWeaponVisuals`, `BossWeaponVisuals`, `DroneDirector`). **철판 표적 칸은 없음**(`CheckupDirector`는 재질만) → 프리팹 칸 추가.
+- 무기·드론·보스 무기 프리팹 칸은 이미 있음(`PlayerWeaponVisuals`, `BossWeaponSet` 에셋 + `BossWeaponVisuals`, `DroneDirector`). 보스 포·검·방패 칸이 비면 우리 무기 프리팹을 빌려 `borrowedMaterial`(비면 보스 색)로 칠함(밑바탕 733af20). **철판 표적 칸은 없음**(`CheckupDirector`는 재질만) → 프리팹 칸 추가.
 - 사령관 대사 소리 칸은 이미 있음(`VO_Commander_NN` 이름으로 찾음).
 
 ## 6. 팀 회의에서 정할 것 (11/12 제안)

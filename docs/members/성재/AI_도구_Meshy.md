@@ -61,7 +61,7 @@ Meshy의 Image to 3D에 넣을 그림입니다. **3D로 만들기 좋은 그림*
 7. **Unity에서 확인**(PC-B): 빈 씬에 끌어다 놓고 ① 원점이 위 표 자리에 있는지(Move 도구 화살표 위치) ② 초록 화살표(+Y)·파랑 화살표(+Z)가 표 방향인지 ③ 삼각형 수·재질 수(메시 Inspector).
 8. **넘기기**: `sungjae` 브랜치 `Assets/_Anseong/Art/Weapons/<파일 이름>/`(보스 부품은 `Assets/_Anseong/Art/Boss/Weapons/<이름>/`)에 FBX + 텍스처 png. 같은 폴더 위 `SOURCES.md`에 `파일 / Meshy(플랜) / 날짜 / 성재 / 프롬프트`. `.blend`는 드라이브에만. 단톡방 `[올림] Weapon_Sword`.
 
-코드 담당이 `PlayerWeaponVisuals`(우리 무기 4칸), `DroneDirector`(드론 칸), `BossWeaponVisuals`(보스 핵·포탄 칸, 보스 포·검·방패는 우리 모델에 보스 색)에 넣고 헤드셋으로 봅니다. 철판 칸은 11/19 전에 코드로 만듭니다.
+코드 담당이 `PlayerWeaponVisuals`(우리 무기 4칸), `DroneDirector`(드론 칸), 보스 쪽(`BossWeaponSet` 에셋의 핵 부품 모델 칸에 `Boss_Core`, `BossWeaponVisuals`의 포탄 칸에 `Boss_FistShell`. 보스 포·검·방패 칸이 비면 우리 무기 프리팹을 빌려 보스 색으로 칠함)에 넣고 헤드셋으로 봅니다. 철판 칸은 11/19 전에 코드로 만듭니다.
 
 ## 잘 안 될 때
 - 얇은 부분(칼날)이 뭉개짐 → 프롬프트에 `thick, chunky, simple shapes` 추가, Polycount를 조금 올림.
