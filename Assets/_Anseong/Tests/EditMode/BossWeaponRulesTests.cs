@@ -43,5 +43,30 @@ namespace Anseong.Tests
             Assert.AreEqual(70f, BossWeaponRules.SegmentTop(BossWeapon.ChestArmor, T));
             Assert.AreEqual(40f, BossWeaponRules.SegmentTop(BossWeapon.Core, T));
         }
+
+        [Test]
+        public void Thresholds_PerWeaponDurability()
+        {
+            CollectionAssert.AreEqual(new[] { 70f, 40f, 10f }, BossWeaponRules.Thresholds(new[] { 30f, 30f, 30f }));
+            var t = BossWeaponRules.Thresholds(new[] { 25f, 35f, 30f });
+            Assert.AreEqual(75f, t[0], 1e-3f);
+            Assert.AreEqual(42f, t[1], 1e-3f); // 내구도는 33까지(35 → 33)
+            Assert.AreEqual(12f, t[2], 1e-3f);
+        }
+
+        [Test]
+        public void WeaponSet_DefaultIsCannonShieldCore()
+        {
+            var set = UnityEngine.ScriptableObject.CreateInstance<BossWeaponSet>();
+            Assert.AreEqual("팔뚝 포", set.At(0).name);
+            Assert.AreEqual(BossAttackKind.Charge, set.At(0).retaliation);
+            Assert.AreEqual("방패", set.At(1).name);
+            Assert.AreEqual(BossAttackKind.SlamBoth, set.At(1).retaliation);
+            Assert.AreEqual(2, set.At(1).parts.Length); // 방패 + 보스 검(같이 부서짐)
+            Assert.IsFalse(set.At(2).retaliate);
+            CollectionAssert.AreEqual(new[] { 70f, 40f, 10f }, set.Thresholds());
+            Assert.IsNull(set.At(3));
+            UnityEngine.Object.DestroyImmediate(set);
+        }
     }
 }

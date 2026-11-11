@@ -58,7 +58,7 @@ namespace Anseong.Boss
         float finisherRetreatSeconds = 2.5f;
 
         [Header("보스 무기·원거리 (M4-02)")]
-        [SerializeField, Tooltip("보스 무기가 부서지면 보복 공격(팔뚝 포 → 돌진, 가슴 장갑판 → 큰 내려찍기). 끄면 예전처럼 포효.")]
+        [SerializeField, Tooltip("보스 무기가 부서지면 보복 공격(무기 목록의 보복: 팔뚝 포 → 돌진, 방패 → 검 내려치기). 끄면 예전처럼 포효.")]
         bool retaliate = true;
         [SerializeField, Min(0.5f), Tooltip("접근 장면 주먹 포탄 사이 쉬는 시간 최소(초, 11 참고표 3.0).")]
         float rangedRestMin = 3f;
@@ -102,6 +102,16 @@ namespace Anseong.Boss
         public bool RangedAllowed { get; set; }
 
         float[] thresholds;
+
+        /// <summary>보스 무기 목록(페이즈 표에 넣은 것). 없으면 null(기본안).</summary>
+        public BossWeaponSet Weapons => table != null ? table.weaponSet : null;
+
+        /// <summary>무기 이름(목록에서, 없으면 기본안 이름).</summary>
+        public string WeaponName(BossWeapon weapon)
+        {
+            var w = Weapons != null ? Weapons.At((int)weapon) : null;
+            return w != null && !string.IsNullOrEmpty(w.name) ? w.name : BossWeaponRules.Name(weapon);
+        }
 
         /// <summary>페이즈 경계(%). 모든 PC가 같은 표에서 계산한다(보스 무기 표시용).</summary>
         public float[] Thresholds
@@ -244,9 +254,11 @@ namespace Anseong.Boss
             switch (phases.Update(now, hp, machine.IsAttacking || machine.State == BossState.Staggered))
             {
                 case PhaseStep.PhaseChanged:
-                    // M4-02: 무기를 잃은 보스의 보복(팔뚝 포 → 돌진, 가슴 장갑판 → 큰 내려찍기). 시작 못 하면 포효.
-                    var payback = phases.Phase == 2 ? BossAttackKind.Charge : BossAttackKind.SlamBoth;
-                    if (!retaliate || !server.TryBegin(payback)) machine.Hold(BossState.Roar, now, table != null ? table.roarSeconds : 2f);
+                    // M4-02: 무기를 잃은 보스의 보복(무기 목록에서: 기본 팔뚝 포 → 돌진, 둘째 → 큰 내려찍기). 시작 못 하면 포효.
+                    var broken = Weapons != null ? Weapons.At(phases.Phase - 2) : null;
+                    var payback = broken != null ? broken.retaliation : phases.Phase == 2 ? BossAttackKind.Charge : BossAttackKind.SlamBoth;
+                    var doPayback = retaliate && (broken == null || broken.retaliate);
+                    if (!doPayback || !server.TryBegin(payback)) machine.Hold(BossState.Roar, now, table != null ? table.roarSeconds : 2f);
                     picker.BeginPhase(phases.Phase);
                     var restore = table != null ? table.pilotRestorePercent : 60f;
                     if (restore > 0f) authority.Pilot.RestoreTo(restore);

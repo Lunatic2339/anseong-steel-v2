@@ -41,6 +41,10 @@ namespace Anseong.Combat
         /// <summary>오른팔 포 끝(M4-04).</summary>
         public Transform CannonTip => cannon != null ? cannon.transform : null;
         public Loadout Shown => shown;
+        /// <summary>보스가 같은 모델을 빌려 쓴다(11/11 보스 같은 무장). 비면 null.</summary>
+        public GameObject ShieldPrefab => shieldPrefab;
+        public GameObject SwordPrefab => swordPrefab;
+        public GameObject CannonPrefab => cannonPrefab;
 
         void Start()
         {

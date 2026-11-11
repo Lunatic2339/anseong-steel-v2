@@ -541,7 +541,7 @@ namespace Anseong.EditorTools
 
         const string WeaponShapePath = DebugFolder + "/BossWeaponShape.mat";
 
-        /// <summary>M4-02: 보스 무기(팔뚝 포·가슴 장갑판·핵)·머리 빛·주먹 포탄 겉모습. 뼈를 이름으로 찾아 채운다.</summary>
+        /// <summary>M4-02: 보스 무기(무기 목록 에셋: 팔뚝 포·방패·검·핵)·머리 빛·주먹 포탄 겉모습. 뼈를 이름으로 찾아 채운다.</summary>
         static string AddWeaponVisuals(Transform boss)
         {
             var visuals = boss.GetComponent<BossWeaponVisuals>();
@@ -556,6 +556,8 @@ namespace Anseong.EditorTools
             s.FindProperty("head").objectReferenceValue = Bone(RobotSandboxUtility.HeadBone);
             if (s.FindProperty("shapeMaterial").objectReferenceValue == null)
                 s.FindProperty("shapeMaterial").objectReferenceValue = GetOrCreateUnlit(WeaponShapePath, Color.white);
+            if (s.FindProperty("weaponSet").objectReferenceValue == null)
+                s.FindProperty("weaponSet").objectReferenceValue = BossAttackMenu.EnsureWeaponSet();
             s.ApplyModifiedPropertiesWithoutUndo();
             var missing = Bone(RobotSandboxUtility.HeadBone) == null ? " (뼈를 못 찾음)" : "";
             return "보스 무기 도형" + missing;

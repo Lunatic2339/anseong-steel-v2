@@ -114,7 +114,7 @@ namespace Anseong.UI
             var weapon = BossWeaponRules.Current(hp, boss.Thresholds);
             if (weapon == BossWeapon.None) return;
             var cracks = BossWeaponRules.CrackCount(hp, boss.Thresholds);
-            builder.Append("\n보스 ").Append(BossWeaponRules.Name(weapon)).Append(" 금 ");
+            builder.Append("\n보스 ").Append(boss.WeaponName(weapon)).Append(" 금 ");
             for (var i = 0; i < BossWeaponRules.Cracks; i++) builder.Append(i < cracks ? "■" : "□");
         }
 
@@ -141,7 +141,7 @@ namespace Anseong.UI
                 case MatchScene.Approach: return "장면 4 · 접근";
                 case MatchScene.FightCannon: return "근접전 · 목표: 보스 팔뚝 포";
                 case MatchScene.LostGun: return "장면 5 · 주포 상실";
-                case MatchScene.FightArmor: return "장면 6 · 목표: 보스 가슴 장갑판";
+                case MatchScene.FightArmor: return "장면 6 · 목표: 보스 방패";
                 case MatchScene.LostSword: return "장면 7 · 검·방패 상실";
                 case MatchScene.FightCore: return "장면 8 · 맨손 · 목표: 핵";
                 case MatchScene.Finisher: return "장면 9 · 필살기";
