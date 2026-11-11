@@ -544,7 +544,7 @@ GameObject:
   - component: {fileID: 6956456980238551851}
   - component: {fileID: 161608474780687862}
   m_Layer: 0
-  m_Name: Concrete_160x140
+  m_Name: Ground_OptionalPreviewOnly
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

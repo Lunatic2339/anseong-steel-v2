@@ -7,3 +7,7 @@ PlantBlock_B01_SteelworksYard.prefab을 씬에 배치합니다. 부지는 160 ×
 제강동과 굴뚝은 Painter에서 내보낸 1024×1024 텍스처 두 장을 사용합니다. RGB는 색상, 알파는 광택입니다.
 굴뚝 3기는 텍스처를 공유하며 원본 파괴 스크립트·물리 구성은 유지합니다.
 바닥은 A01의 콘크리트 텍스처를 재사용합니다.
+
+굴뚝 세 기만 따로 배치하려면 PlantBlock_B01_CoastalSmokestacks.prefab을 사용합니다.
+
+통합맵에 배치할 때 Ground_OptionalPreviewOnly만 끄면 맵의 공용 바닥이 보입니다. 도로·구획선·배치물은 이 바닥판에 종속되지 않습니다. 프리팹의 Y 기준은 맵의 바닥 높이에 맞춥니다.
