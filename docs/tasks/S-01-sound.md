@@ -84,7 +84,7 @@
 | 출격: 정비고 문 | `SFX_HangarDoor` | 거대한 철문이 끌리며 열림 | hangar door, large metal door opening | 3~5초, 1 | 2차 |
 | 출격: 경보 | `SFX_Siren` | 공습 경보 같은 사이렌 | air raid siren, alarm siren | 3초, 1 | 2차 |
 | 기체 점검 단계 완료 | `SFX_UI_Confirm` | 짧고 깔끔한 "띠링" | ui confirm sci-fi, positive beep | 0.3초, 1 | 2차 |
-| 결과 화면 | `BGM_Result` | 승리 느낌의 짧은 음악 | victory fanfare, win jingle | 10~20초, 1 | 2차 |
+| 결과 화면(엔딩) | `BGM_Ending` (11/11 이름 바꿈, Suno로 만듦) | 승리 느낌의 짧은 음악 | victory fanfare, win jingle | 10~20초, 1 | 2차 |
 | 사령관 대사 | `VO_Commander_01~10` | 아래 대사 10줄, 팀원 녹음 | (직접 녹음) | 줄당 1 | 2차 |
 
 배경음이 freesound에 없으면 무료 음악 사이트를 써도 된다. 그 사이트의 라이선스 페이지를 캡처해 SOURCES에 넣는다.

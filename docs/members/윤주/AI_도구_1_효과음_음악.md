@@ -45,7 +45,7 @@ S-01(효과음 모으기)을 그대로 이어 갑니다. 달라진 것은 **무�
 
 ## Suno 배경음악
 
-**꼭 지킬 것**: Suno는 유료 플랜(Pro·Premier)으로 만든 곡만 쓸 수 있고, **곡 화면의 다운로드 버튼으로 받은 파일만** 씁니다(화면 녹음·스트리밍 녹음 금지). 다운로드 횟수에 월 한도가 있다고 하니, 듣기는 웹에서 하고 **고른 곡만** 받습니다.
+**꼭 지킬 것**: 우리 플랜은 Suno **Pro**(한 달 구독)라 상업 사용이 됩니다. 구독이 끝나면 새로 받은 곡은 못 쓰니 **12/08 전에 다 받습니다**. Suno는 유료 플랜(Pro·Premier)으로 만든 곡만 쓸 수 있고, **곡 화면의 다운로드 버튼으로 받은 파일만** 씁니다(화면 녹음·스트리밍 녹음 금지). 다운로드 횟수에 월 한도가 있다고 하니, 듣기는 웹에서 하고 **고른 곡만** 받습니다.
 
 순서
 1. suno.com → **Create** → 가사 없는 곡으로(**Instrumental** 켜기).
@@ -55,10 +55,10 @@ S-01(효과음 모으기)을 그대로 이어 갑니다. 달라진 것은 **무�
 
 | 파일 이름 | 언제 | 예시 스타일 | 길이 |
 |---|---|---|---|
-| `BGM_Lobby` | 대기·기체 점검 | `ambient industrial, low drones, slow pulse, tense calm, instrumental` | 2~3분 |
+| `BGM_Opening` | 오프닝(대기·기체 점검) | `ambient industrial, low drones, slow pulse, tense calm, instrumental` | 2~3분 |
 | `BGM_Battle` | 드론 사냥~검·방패 근접전 | `epic orchestral industrial, heavy taiko drums, low brass, metallic percussion, 100 bpm, instrumental` | 3분 |
 | `BGM_Bare` | 무기 다 잃고 맨손 | `desperate heroic, pounding drums, rising strings, instrumental` | 2~3분 |
-| `BGM_Result` | 결과판 | `triumphant short brass theme, instrumental` | 1분 |
+| `BGM_Ending` | 엔딩(승리 뒤 결과판) | `triumphant short brass theme, instrumental` | 1분 |
 
 - 음악은 대사·효과음보다 작게 깔리니 **너무 바쁘지 않은 곡**이 좋습니다. "육중한 로봇" 느낌: 빠른 전자음보다 느리고 무거운 북.
 - 끝과 처음이 자연스럽게 이어지면 좋습니다(반복 재생). 아니면 코드 담당이 페이드로 잇습니다.
