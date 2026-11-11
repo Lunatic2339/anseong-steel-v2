@@ -10,6 +10,8 @@ Meshy 주 담당은 성재님이고, Meshy에 넣을 **컨셉 이미지도 Higgs
 
 ## 만들 것
 
+> **11/11 대본 변경**: 보스도 우리와 같은 무장(팔뚝 포·오른손 검·왼손 방패) + 가슴 핵, 가슴 장갑판은 없어짐. 보스 포·검·방패는 **성재님이 만든 우리 무기 모델을 그대로** 쓰고 색만 보스 색(검정·빨강·노랑 발광)으로 바꿉니다(코드 담당이 함). 그래서 우리 무기는 **보스 색을 입혀도 멋있게** 보이는 모양으로 만들어 주세요. 보스만 따로 만들지는 팀 회의에서 정할 것.
+
 | 마감 | 파일 이름 | 무엇 | 삼각형 | 원점 | 방향(Unity 기준) |
 |---|---|---|---|---|---|
 | **11/14 첫 시험** | `Weapon_Sword` | 오른손 큰 칼 | 8,000 이하 | 손잡이 쥐는 곳 | +Y = 칼끝 |
@@ -17,8 +19,6 @@ Meshy 주 담당은 성재님이고, Meshy에 넣을 **컨셉 이미지도 Higgs
 | 11/18 | `Weapon_Scanner` | 왼손 레이저 장치 | 8,000 | 손등 붙는 곳 | +Y = 렌즈 쪽 |
 | 11/18 | `Weapon_Cannon` | 오른 팔뚝 포 | 8,000 | 팔뚝 고정하는 곳 | +Y = 포구 |
 | 11/18 | `Drone` | 숨어서 쏘는 작은 드론 | 5,000 | 몸 가운데 | +Z = 렌즈(앞) |
-| 11/25 | `Boss_ArmCannon` | 보스 팔뚝 포 | 8,000 | 팔꿈치 쪽 끝 | +Y = 손 쪽 |
-| 11/25 | `Boss_ChestArmor` | 보스 가슴 장갑판 | 8,000 | 판 가운데 | +Z = 앞 |
 | 11/25 | `Boss_Core` | 가슴 핵(빛나는 구) | 3,000 | 가운데 | – |
 | 11/25 | `Boss_FistShell` | 주먹 포탄 | 2,000 | 가운데 | +Z = 날아가는 쪽 |
 | 11/25 | `Checkup_SteelPlate` | 정비고 철판 표적 | 1,000 | 바닥 가운데 | +Z = 앞 |
@@ -26,7 +26,7 @@ Meshy 주 담당은 성재님이고, Meshy에 넣을 **컨셉 이미지도 Higgs
 
 모양은 아래 "0. 컨셉 이미지"로 먼저 정합니다. 우리 무기는 흰·밝은 회색 + 파랑 + 하늘색 발광, 보스 쪽은 검정 + 빨강 + 노랑 발광([04 재질 슬롯](../../design/04_art_spec.md#공용-재질-슬롯-제안)).
 
-## 0. 컨셉 이미지 (Higgsfield, 11/14 4장 → 11/18 9개 확정)
+## 0. 컨셉 이미지 (Higgsfield, 11/14 4장 → 11/18 7개 확정)
 
 Meshy의 Image to 3D에 넣을 그림입니다. **3D로 만들기 좋은 그림**이어야 합니다.
 
@@ -41,9 +41,7 @@ Meshy의 Image to 3D에 넣을 그림입니다. **3D로 만들기 좋은 그림*
 | 검 | 오른손 큰 칼, 공장 절단기처럼 투박하게 | 우리 |
 | 포 | 오른 팔뚝에 붙는 포신 하나 | 우리 |
 | 드론 | 숨어서 쏘는 작은 비행 포대, 어두운 색, 붉은 렌즈 하나 | 보스 편 |
-| 팔뚝 포 | 보스 양 팔뚝에 붙는 굵은 포 | 보스 |
-| 가슴 장갑판 | 보스 가슴을 덮는 두꺼운 판(금이 가 떨어짐) | 보스 |
-| 핵 | 장갑판 아래 빛나는 구(노랑·주황) | 보스 |
+| 핵 | 보스 가슴에서 빛나는 붉은 구(맨손 장면의 목표) | 보스 |
 | 주먹 포탄 | 보스 주먹에서 날아오는 탄 | 보스 |
 
 예시 프롬프트: `heavy alien-built war machine part, angular black armor, red accents, yellow-orange emissive glow, worn dark metal, hard surface, no text, no logo, single object, arm-mounted heavy cannon, plain light grey background, three-quarter view`
@@ -63,7 +61,7 @@ Meshy의 Image to 3D에 넣을 그림입니다. **3D로 만들기 좋은 그림*
 7. **Unity에서 확인**(PC-B): 빈 씬에 끌어다 놓고 ① 원점이 위 표 자리에 있는지(Move 도구 화살표 위치) ② 초록 화살표(+Y)·파랑 화살표(+Z)가 표 방향인지 ③ 삼각형 수·재질 수(메시 Inspector).
 8. **넘기기**: `sungjae` 브랜치 `Assets/_Anseong/Art/Weapons/<파일 이름>/`(보스 부품은 `Assets/_Anseong/Art/Boss/Weapons/<이름>/`)에 FBX + 텍스처 png. 같은 폴더 위 `SOURCES.md`에 `파일 / Meshy(플랜) / 날짜 / 성재 / 프롬프트`. `.blend`는 드라이브에만. 단톡방 `[올림] Weapon_Sword`.
 
-코드 담당이 `PlayerWeaponVisuals`(우리 무기 4칸), `DroneDirector`(드론 칸), `BossWeaponVisuals`(보스 부품 4칸)에 넣고 헤드셋으로 봅니다. 철판 칸은 11/19 전에 코드로 만듭니다.
+코드 담당이 `PlayerWeaponVisuals`(우리 무기 4칸), `DroneDirector`(드론 칸), `BossWeaponVisuals`(보스 핵·포탄 칸, 보스 포·검·방패는 우리 모델에 보스 색)에 넣고 헤드셋으로 봅니다. 철판 칸은 11/19 전에 코드로 만듭니다.
 
 ## 잘 안 될 때
 - 얇은 부분(칼날)이 뭉개짐 → 프롬프트에 `thick, chunky, simple shapes` 추가, Polycount를 조금 올림.
