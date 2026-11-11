@@ -2,7 +2,7 @@
 
 [← 유진 처음으로](README.md) · 전체 도구 표: [13 AI 도구](../../design/13_ai_tools.md)
 
-Higgsfield는 글이나 사진을 넣으면 이미지·짧은 영상을 만드는 웹 도구입니다. 유진님은 **영상 세 가지**(게임 안 시네마틱, 대기 화면, 홍보)를 만듭니다. 컨셉 이미지는 Meshy에 바로 넣는 성재님이 맡습니다(선우 11/11). 같은 계정(Higgsfield **Plus**)을 성재님이 11/18까지 이미지에 쓰니, 영상은 **11/19부터** 만듭니다. 한 달 구독이라 **12/08 전에 모든 영상을 받아 둡니다**. 영상은 크레딧을 많이 쓰니 **낮은 설정으로 짧게 시험한 뒤** 만듭니다.
+Higgsfield는 글이나 사진을 넣으면 이미지·짧은 영상을 만드는 웹 도구입니다. 유진님은 **영상 네 가지**(이펙트 재료, 게임 안 시네마틱, 대기 화면, 홍보)를 만듭니다. 컨셉 이미지는 Meshy에 바로 넣는 성재님이 맡습니다(선우 11/11). 같은 계정(Higgsfield **Plus**)을 성재님이 11/18까지 이미지에 쓰니, 영상은 **11/19부터** 만듭니다. 한 달 구독이라 **12/08 전에 모든 영상을 받아 둡니다**. 영상은 크레딧을 많이 쓰니 **낮은 설정으로 짧게 시험한 뒤** 만듭니다.
 
 ## 공통
 
@@ -10,6 +10,27 @@ Higgsfield는 글이나 사진을 넣으면 이미지·짧은 영상을 만드�
 - 프롬프트 앞에 [스타일 한 줄](../../design/13_ai_tools.md#3-모두-지킬-것)을 붙입니다. 실제 게임·애니·영화 이름은 쓰지 않습니다.
 - 사람 얼굴 사진을 넣지 않습니다(팀원도 본인 허락 없이는 안 됨).
 - 다 만든 것은 드라이브 `안성제철_영상` 폴더 + `SOURCES` 문서에 `파일 / Higgsfield / 날짜 / 프롬프트` 한 줄.
+
+## ⓪ 이펙트 재료 영상 (11/19 시험 1개 → 11/25 6개)
+
+게임 안 이펙트(펀치 불꽃, 드론 폭발 등)는 Unity 파티클이라 AI가 바로 만들어 주지는 못합니다. 대신 **Higgsfield로 폭발·불꽃·연기를 짧은 영상으로 만들면**, 코드 담당이 그 영상을 그림 64장 묶음(플립북)으로 바꿔 파티클에 붙입니다. 진짜 같은 불·연기는 이 방법이 가장 빠릅니다.
+
+꼭 지킬 것(안 지키면 게임에 못 씀)
+- **배경은 완전한 검정**, 땅·하늘·건물 없이 효과만. 프롬프트에 `isolated on pure black background, no ground, no environment`.
+- **카메라 고정**(움직이면 안 됨), 효과가 화면 **가운데**에서 시작해 화면 밖으로 안 나가게.
+- 2~3초 안에 터지고 **다 사라져서 검정으로 끝남**. 글자·로고 없음.
+- MP4로 받아 드라이브 `안성제철_영상/VFX`에, 이름은 아래 표대로.
+
+| 파일 | 게임에서 | 프롬프트 예시 |
+|---|---|---|
+| `VFX_HitSpark.mp4` | 펀치·검 명중 불꽃 | `burst of bright orange metal sparks, isolated on pure black background, static camera, slow motion` |
+| `VFX_Explosion.mp4` | 드론 격추, 보스 무기 부서짐 | `fiery explosion with dark smoke, isolated on pure black background, static camera, centered` |
+| `VFX_Smoke.mp4` | 쓰러짐·박힘 먼지, 부서진 뒤 연기 | `thick grey smoke puff rising and fading, isolated on pure black background, static camera` |
+| `VFX_Thruster.mp4` | 팔꿈치 부스터 불꽃 | `blue-white rocket thruster flame jet, side view, isolated on pure black background, static camera` |
+| `VFX_MuzzleFlash.mp4` | 포 쏠 때 | `heavy cannon muzzle flash, short bright burst, isolated on pure black background, static camera` |
+| `VFX_Electric.mp4` | 해킹 잡음, 필살기 충전 | `crackling blue electric arcs, isolated on pure black background, static camera` |
+
+광선·레이저·예고 발광·드러날 때 외곽선은 영상이 아니라 코드(선·발광 재질)로 만듭니다. 11/19에 `VFX_HitSpark` 하나로 먼저 시험해 코드 담당이 게임에 붙여 보고, 되면 나머지를 만듭니다.
 
 ## ① 게임 안 시네마틱: 오프닝·엔딩 (1차 11/25, 확정 12/01)
 
@@ -41,7 +62,8 @@ Higgsfield는 글이나 사진을 넣으면 이미지·짧은 영상을 만드�
 ## 마감
 | 날짜 | 할 일 |
 |---|---|
-| 11/25 | 오프닝·엔딩 1차, 대기 화면 영상 시험 1개(10초) |
+| 11/19 | 이펙트 재료 `VFX_HitSpark` 시험 1개 |
+| 11/25 | 이펙트 재료 6개, 오프닝·엔딩 1차, 대기 화면 영상 시험 1개(10초) |
 | 12/01 | `Video_Opening.mp4`, `Video_Ending.mp4`, `Video_Lobby.mp4` |
 | 12/05 | 홍보 영상에 넣을 Higgsfield 장면 다 받기 |
 | 12/08 | 홍보 영상 편집 끝 |
