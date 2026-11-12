@@ -35,6 +35,12 @@ namespace Anseong.Flow
         [SerializeField, Range(0.2f, 1.5f), Tooltip("바닥 텍스처 대비 최소값(낮으면 무늬가 안 보인다).")]
         float groundContrastMin = 0.7f;
 
+        [Header("맵 건물 외벽 (11/13: 건물이 단색 상자로 보임)")]
+        [SerializeField, Tooltip("텍스처 없는 단색 건물 재질 대신 화면에서만 쓰는 외벽 재질(골강판·패널 이음매·창·때). 메뉴 Build M1 Main이 넣는다. 비우면 맵 그대로.")]
+        Material facadeMaterial;
+        [SerializeField, Min(1f), Tooltip("이 크기(m, 가장 긴 변)보다 큰 것만 외벽 재질로 바꾼다. 작은 소품은 그대로 둔다.")]
+        float facadeMinSize = 8f;
+
         [SerializeField, Tooltip("Main의 해. 맵 씬에 켜진 Directional Light가 있으면 이것을 끈다.")]
         Light mainLight;
 
@@ -87,8 +93,9 @@ namespace Anseong.Flow
             if (mapHasSun && mainLight != null) mainLight.enabled = false;
             if (useEnvironmentLighting) CopyLighting(scene);
             var grounds = TuneGround(scene);
+            var facades = ApplyFacade(scene);
             Loaded = true;
-            Debug.Log($"[EnvironmentLoader] 환경 '{scene.name}' 불러옴: 카메라 {cameras}개 끔, 기준 오브젝트 {hidden}개 숨김, 바닥 재질 칸 {grounds}개 조정, 맵 스크립트 {scripts}개 멈춤, 해 = {(mapHasSun ? "맵" : "Main")}.", this);
+            Debug.Log($"[EnvironmentLoader] 환경 '{scene.name}' 불러옴: 카메라 {cameras}개 끔, 기준 오브젝트 {hidden}개 숨김, 바닥 재질 칸 {grounds}개 조정, 외벽 재질 칸 {facades}개 교체, 맵 스크립트 {scripts}개 멈춤, 해 = {(mapHasSun ? "맵" : "Main")}.", this);
         }
 
         /// <summary>
@@ -156,6 +163,53 @@ namespace Anseong.Flow
                 }
             }
             return count;
+        }
+
+        const string PlainLitShader = "Universal Render Pipeline/Lit";
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int BaseMapId = Shader.PropertyToID("_BaseMap");
+        readonly System.Collections.Generic.Dictionary<Material, Material> facadeCopies = new System.Collections.Generic.Dictionary<Material, Material>();
+
+        /// <summary>
+        /// 큰 건물의 단색 재질(텍스처 없는 불투명 URP Lit, 발광 없음)을 외벽 재질 사본으로 바꾼다. 원래 색은 유지한다.
+        /// 재질 파일은 건드리지 않는다(사본은 판이 끝나면 지운다). 바꾼 재질 칸 수.
+        /// </summary>
+        int ApplyFacade(Scene scene)
+        {
+            if (facadeMaterial == null) return 0;
+            var count = 0;
+            foreach (var root in scene.GetRootGameObjects())
+            foreach (var r in root.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                var size = r.bounds.size;
+                if (Mathf.Max(size.x, size.y, size.z) < facadeMinSize) continue;
+                var materials = r.sharedMaterials;
+                var changed = false;
+                for (var i = 0; i < materials.Length; i++)
+                {
+                    var m = materials[i];
+                    if (m == null || m.shader == null || m.shader.name != PlainLitShader) continue;
+                    if (m.renderQueue >= 2500 || m.IsKeywordEnabled("_EMISSION")) continue;
+                    if (m.HasProperty(BaseMapId) && m.GetTexture(BaseMapId) != null) continue;
+                    if (!facadeCopies.TryGetValue(m, out var copy))
+                    {
+                        copy = new Material(facadeMaterial) { name = m.name + " (외벽)" };
+                        if (m.HasProperty(BaseColorId)) copy.SetColor(BaseColorId, m.GetColor(BaseColorId));
+                        facadeCopies[m] = copy;
+                    }
+                    materials[i] = copy;
+                    changed = true;
+                    count++;
+                }
+                if (changed) r.sharedMaterials = materials;
+            }
+            return count;
+        }
+
+        void OnDestroy()
+        {
+            foreach (var copy in facadeCopies.Values) if (copy != null) Destroy(copy);
+            facadeCopies.Clear();
         }
 
         /// <summary>이름에 숨길 조각이 든 오브젝트를 끈다(자식까지 내려가며, 끈 것 아래는 더 보지 않는다).</summary>

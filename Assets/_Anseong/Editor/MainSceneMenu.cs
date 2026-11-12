@@ -118,8 +118,24 @@ namespace Anseong.EditorTools
             var serialized = new SerializedObject(loader);
             serialized.FindProperty("environmentScene").stringValue = map != null ? map.name : string.Empty;
             serialized.FindProperty("mainLight").objectReferenceValue = sun;
+            serialized.FindProperty("facadeMaterial").objectReferenceValue = EnsureFacadeMaterial();
             serialized.ApplyModifiedProperties();
             return map != null ? $"{map.name}(Play하면 같이 불러옴)" : $"맵 씬이 없어 불러오지 않음({EnvironmentScenePath})";
+        }
+
+        const string FacadeMaterialPath = "Assets/_Anseong/Art/Environment/Facade/IndustrialFacade.mat";
+        const string FacadeShaderPath = "Assets/_Anseong/Art/Environment/Facade/IndustrialFacade.shader";
+
+        /// <summary>맵 건물 외벽 재질(EnvironmentLoader가 단색 건물 재질 대신 쓰는 원본). 없으면 만든다.</summary>
+        static Material EnsureFacadeMaterial()
+        {
+            var material = AssetDatabase.LoadAssetAtPath<Material>(FacadeMaterialPath);
+            if (material != null) return material;
+            var shader = AssetDatabase.LoadAssetAtPath<Shader>(FacadeShaderPath);
+            if (shader == null) return null;
+            material = new Material(shader);
+            AssetDatabase.CreateAsset(material, FacadeMaterialPath);
+            return material;
         }
 
         static string AddSessionRestart(Scene scene)

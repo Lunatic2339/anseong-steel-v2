@@ -335,7 +335,13 @@ namespace Anseong.EditorTools
             }
             var state = bossServer != null ? bossServer.Action.BossState : BossState.Rest;
             var fighting = scene == MatchScene.Checkup || scene == MatchScene.FightCannon || scene == MatchScene.FightArmor || scene == MatchScene.FightCore;
-            if (!fighting || state == BossState.Telegraph || state == BossState.Strike) return hand;
+            if (state == BossState.Telegraph || state == BossState.Strike) return hand;
+            // 평소에는 주먹을 가슴 아래 준비 자세로 내린다(가드를 계속 들고 있으면 거대한 주먹이 조종석 시야 위쪽을 가린다, 11/13). 가드는 예고·명중 때만.
+            var ready = head + new Vector3(sx * 0.2f, -0.42f, 0.3f);
+            var readyRotation = Quaternion.Euler(-35f, 0f, 0f);
+            hand.Position = ready;
+            hand.Rotation = readyRotation;
+            if (!fighting) return hand;
 
             // 잽: 0.18초 뻗기 → 0.5초 버티기(로봇 팔이 따라올 시간) → 0.25초 거두기. 왼손 먼저, 오른손은 반 주기 뒤.
             var phase = (since + (side == PilotSide.Right ? PunchPeriod * 0.5 : 0.0)) % PunchPeriod;
@@ -345,8 +351,8 @@ namespace Anseong.EditorTools
             else if (phase < 0.93) k = 1f - (float)((phase - 0.68) / 0.25);
             else k = 0f;
             k = Mathf.SmoothStep(0f, 1f, k);
-            hand.Position = Vector3.Lerp(guard, reach, k);
-            hand.Rotation = Quaternion.Slerp(GuardRotation, Quaternion.identity, Mathf.Clamp01(k * 2.5f));
+            hand.Position = Vector3.Lerp(ready, reach, k);
+            hand.Rotation = Quaternion.Slerp(readyRotation, Quaternion.identity, Mathf.Clamp01(k * 2.5f));
             return hand;
         }
 

@@ -365,7 +365,79 @@ namespace Anseong.EditorTools
             var panelZ = ConsoleZ - ConsoleSize.z * 0.15f;
             CreateBox(root.transform, "Panel L", new Vector3(0.7f, 0.02f, 0.16f), new Vector3(-1.15f, panelY, panelZ), amber);
             CreateBox(root.transform, "Panel R", new Vector3(0.7f, 0.02f, 0.16f), new Vector3(1.15f, panelY, panelZ), amber);
+            CreateCockpitDetail(root.transform, amber, strip);
             cockpitFrame = cockpitGlow = null;
+        }
+
+        /// <summary>
+        /// 앉은 눈높이(1.2 m)에서 보이는 조종석 디테일(11/13 자동 점검: 민무늬 콘솔 하나뿐이라 싸 보임).
+        /// 조종사 쪽으로 기운 계기판(자리마다 화면 3개 + 스위치 줄), 가운데 콘솔, 창 모서리 보강대, 머리 위 패널, 자리 옆 레버, 바닥 발판 줄.
+        /// 창 가운데(전투가 보이는 곳)는 가리지 않는다: 계기판 윗변은 콘솔 위 0.2 m 이내.
+        /// </summary>
+        static void CreateCockpitDetail(Transform root, Material amber, float strip)
+        {
+            var panel = CockpitMaterial("Cockpit_Panel", new Color(0.16f, 0.18f, 0.21f), Color.black, 0.7f, 0.55f);
+            var red = CockpitMaterial("Cockpit_GlowRed", new Color(0.06f, 0.02f, 0.02f), new Color(1f, 0.18f, 0.1f) * 1.8f, 0f, 0.6f);
+            var screen = CockpitMaterial("Cockpit_Screen", new Color(0.01f, 0.03f, 0.04f), new Color(0.1f, 0.55f, 0.7f) * 1.1f, 0f, 0.9f);
+
+            // 기운 계기판: 콘솔 뒤(조종사 쪽) 위 모서리에서 조종사 쪽으로 내려오는 판.
+            const float dashTilt = 38f;
+            var dashDepth = 0.42f;
+            var dashCenter = new Vector3(0f, ConsoleSize.y - 0.06f, ConsoleZ - ConsoleSize.z * 0.5f - dashDepth * 0.38f);
+            var dashRotation = Quaternion.Euler(-dashTilt, 0f, 0f);
+            var dash = CreateBox(root, "Dash", new Vector3(ConsoleSize.x, 0.03f, dashDepth), dashCenter, panel);
+            dash.localRotation = dashRotation;
+            foreach (var side in new[] { -1f, 1f })
+            {
+                var seatX = side * SeatSpacing * 0.5f;
+                var tag = side < 0f ? "L" : "R";
+                // 화면 3개: 가운데 큰 것(청록), 양옆 작은 것(주황·청록).
+                DashItem(root, $"Screen {tag} Main", dashCenter, dashRotation, new Vector3(seatX, 0.02f, 0.02f), new Vector3(0.46f, 0.012f, 0.26f), screen);
+                DashItem(root, $"Screen {tag} Out", dashCenter, dashRotation, new Vector3(seatX + side * 0.42f, 0.02f, 0.04f), new Vector3(0.24f, 0.012f, 0.2f), amber);
+                DashItem(root, $"Screen {tag} In", dashCenter, dashRotation, new Vector3(seatX - side * 0.42f, 0.02f, 0.04f), new Vector3(0.24f, 0.012f, 0.2f), screen);
+                // 화면 테두리(어두운 틀)와 아래 스위치 줄.
+                DashItem(root, $"Bezel {tag}", dashCenter, dashRotation, new Vector3(seatX, 0.012f, 0.03f), new Vector3(1.22f, 0.012f, 0.32f), cockpitFrame);
+                for (var i = 0; i < 7; i++)
+                {
+                    var material = i == 3 ? red : i % 2 == 0 ? cockpitGlow : amber;
+                    DashItem(root, $"Switch {tag} {i}", dashCenter, dashRotation, new Vector3(seatX + (i - 3) * 0.12f, 0.025f, -0.165f), new Vector3(0.05f, 0.02f, 0.03f), material);
+                }
+                // 자리 바깥쪽 레버(받침 + 손잡이 + 빨간 머리).
+                var leverX = seatX + side * 0.5f;
+                CreateBox(root, $"Lever Base {tag}", new Vector3(0.16f, 0.3f, 0.3f), new Vector3(leverX, 0.15f, 0.35f), panel);
+                var lever = CreateBox(root, $"Lever {tag}", new Vector3(0.03f, 0.3f, 0.03f), new Vector3(leverX, 0.42f, 0.4f));
+                lever.localRotation = Quaternion.Euler(18f, 0f, 0f);
+                CreateBox(root, $"Lever Knob {tag}", new Vector3(0.06f, 0.06f, 0.06f), new Vector3(leverX, 0.57f, 0.45f), red);
+                // 창 위 모서리 보강대(45°)와 아래 모서리 보강판.
+                var brace = CreateBox(root, $"Brace Top {tag}", new Vector3(0.5f, FrameThickness * 0.7f, FrameThickness * 0.7f),
+                    new Vector3(side * (WindowHalfWidth - 0.17f), WindowTop - 0.17f, WindowZ));
+                brace.localRotation = Quaternion.Euler(0f, 0f, side * 45f);
+                var foot = CreateBox(root, $"Brace Low {tag}", new Vector3(0.36f, FrameThickness * 0.7f, FrameThickness * 0.7f),
+                    new Vector3(side * (WindowHalfWidth - 0.12f), ConsoleSize.y + 0.12f, WindowZ));
+                foot.localRotation = Quaternion.Euler(0f, 0f, side * -45f);
+                // 옆 난간 위 작은 계기 상자.
+                CreateBox(root, $"Side Box {tag}", new Vector3(0.1f, 0.14f, 0.5f), new Vector3(side * (WindowHalfWidth - 0.09f), ConsoleSize.y * 0.9f + 0.07f, 0.75f), panel);
+                CreateBox(root, $"Side Light {tag}", new Vector3(0.012f, 0.05f, 0.36f), new Vector3(side * (WindowHalfWidth - 0.145f), ConsoleSize.y * 0.9f + 0.08f, 0.75f), side < 0f ? amber : cockpitGlow);
+            }
+            // 두 자리 사이 가운데 콘솔(낮게: 서로와 창을 가리지 않게).
+            CreateBox(root, "Center Console", new Vector3(0.34f, 0.42f, 0.9f), new Vector3(0f, 0.21f, 0.55f), panel);
+            CreateBox(root, "Center Top", new Vector3(0.26f, 0.012f, 0.6f), new Vector3(0f, 0.426f, 0.55f), screen);
+            CreateBox(root, "Center Stop", new Vector3(0.08f, 0.05f, 0.08f), new Vector3(0f, 0.45f, 0.2f), red);
+            // 머리 위 패널(창 윗변 바로 안쪽, 얇게) + 표시등 줄.
+            CreateBox(root, "Overhead", new Vector3(WindowHalfWidth * 1.3f, 0.06f, 0.5f), new Vector3(0f, WindowTop + 0.02f, WindowZ - 0.3f), panel);
+            for (var i = 0; i < 9; i++)
+                CreateBox(root, $"Overhead Light {i}", new Vector3(0.09f, 0.012f, 0.05f), new Vector3((i - 4) * 0.24f, WindowTop - 0.016f, WindowZ - 0.42f),
+                    i == 4 ? red : i % 3 == 0 ? amber : cockpitGlow);
+            // 바닥 발판 줄(미끄럼 방지 철판 느낌).
+            for (var i = 0; i < 6; i++)
+                CreateBox(root, $"Floor Tread {i}", new Vector3(FloorSize.x * 0.94f, 0.008f, 0.05f), new Vector3(0f, 0.004f, -0.7f + i * 0.3f), panel);
+        }
+
+        /// <summary>기운 계기판 면 위에 놓는 조각. offset은 계기판 기준(x = 좌우, y = 면에서 뜨는 높이, z = 위·아래).</summary>
+        static void DashItem(Transform root, string name, Vector3 dashCenter, Quaternion dashRotation, Vector3 offset, Vector3 size, Material material)
+        {
+            var item = CreateBox(root, name, size, dashCenter + dashRotation * offset, material);
+            item.localRotation = dashRotation;
         }
 
         static Material cockpitFrame, cockpitGlow;
@@ -397,7 +469,7 @@ namespace Anseong.EditorTools
             return material;
         }
 
-        static void CreateBox(Transform parent, string name, Vector3 size, Vector3 localPosition, Material material = null)
+        static Transform CreateBox(Transform parent, string name, Vector3 size, Vector3 localPosition, Material material = null)
         {
             var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
             box.name = name;
@@ -407,6 +479,7 @@ namespace Anseong.EditorTools
             box.transform.SetParent(parent, false);
             box.transform.localScale = size;
             box.transform.localPosition = localPosition;
+            return box.transform;
         }
 
         /// <summary>플레이어 재질 슬롯(RobotArtSettings)을 적용한다. 맞지 않는 재질은 모델 그대로 둔다.</summary>
