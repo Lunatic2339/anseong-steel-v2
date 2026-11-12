@@ -713,6 +713,8 @@ MonoBehaviour:
   approachSlack: 4
   walkSpeed: 6
   turnDegreesPerSecond: 30
+  attackStandOff: 7
+  standOffSpeed: 7
   knockbackMeters: 10
   knockbackSeconds: 1.5
   firstAttackDelay: 4
