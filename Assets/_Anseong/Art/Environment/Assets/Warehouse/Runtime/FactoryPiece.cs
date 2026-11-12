@@ -23,15 +23,23 @@ public sealed class FactoryPiece:MonoBehaviour {
  public void Dent(Vector3 push,bool detach,float wait){if(Damaged||!IsWallPanel)return;scheduled=true;SecondaryDamage=true;release=detach;direction=push.normalized;delay=wait;elapsed=0;angle=detach?38:22;PrepareBend();}
  public void PullInward(float wait){if(Damaged||!IsWallPanel)return;scheduled=true;InwardDragged=true;release=false;direction=transform.parent.TransformDirection(new Vector3(0,-.4f,1)).normalized;delay=wait;elapsed=0;angle=70;PrepareBend();}
  void PrepareBend(){var list=new List<Vector3>();var tris=new List<int>();var src=original.vertices;var ids=original.triangles;
-  for(int i=0;i<ids.Length;i+=3)Subdivide(Vector3.Scale(src[ids[i]],startScale),Vector3.Scale(src[ids[i+1]],startScale),Vector3.Scale(src[ids[i+2]],startScale),2,list,tris);
-  vertices=list.ToArray();bent=new Mesh{name="RuntimeFold_"+name};bent.SetVertices(list);bent.SetTriangles(tris,0);bent.RecalculateNormals();filter.sharedMesh=bent;transform.localScale=Vector3.one;
+  var uv=original.uv;var foldUV=uv.Length==src.Length?new List<Vector2>():null;
+  Vector2 UV(int i)=>foldUV==null?Vector2.zero:uv[i];
+  for(int i=0;i<ids.Length;i+=3)Subdivide(Vector3.Scale(src[ids[i]],startScale),Vector3.Scale(src[ids[i+1]],startScale),Vector3.Scale(src[ids[i+2]],startScale),UV(ids[i]),UV(ids[i+1]),UV(ids[i+2]),2,list,tris,foldUV);
+  vertices=list.ToArray();bent=new Mesh{name="RuntimeFold_"+name};bent.SetVertices(list);bent.SetTriangles(tris,0);if(foldUV!=null)bent.SetUVs(0,foldUV);bent.RecalculateNormals();filter.sharedMesh=bent;transform.localScale=Vector3.one;
   box.size=Vector3.Scale(box.size,startScale);box.center=Vector3.Scale(box.center,startScale);
   axis=(roof||startScale.z<startScale.x)?Vector3.right:Vector3.forward;
   var normal=roof?Vector3.up:(startScale.z<startScale.x?Vector3.forward:Vector3.right);
   float sign=Vector3.Dot(transform.InverseTransformDirection(direction),normal)>=0?1:-1;
   if(roof)sign=-sign;else if(axis==Vector3.forward)sign=-sign;axis*=sign;
  }
- static void Subdivide(Vector3 a,Vector3 b,Vector3 c,int depth,List<Vector3> v,List<int> t){if(depth==0){int n=v.Count;v.Add(a);v.Add(b);v.Add(c);t.Add(n);t.Add(n+1);t.Add(n+2);return;}var ab=(a+b)*.5f;var bc=(b+c)*.5f;var ca=(c+a)*.5f;Subdivide(a,ab,ca,depth-1,v,t);Subdivide(ab,b,bc,depth-1,v,t);Subdivide(ca,bc,c,depth-1,v,t);Subdivide(ab,bc,ca,depth-1,v,t);}
+ static void Subdivide(Vector3 a,Vector3 b,Vector3 c,Vector2 ua,Vector2 ub,Vector2 uc,int depth,List<Vector3> v,List<int> t,List<Vector2> u){
+  if(depth==0){int n=v.Count;v.Add(a);v.Add(b);v.Add(c);t.Add(n);t.Add(n+1);t.Add(n+2);if(u!=null){u.Add(ua);u.Add(ub);u.Add(uc);}return;}
+  var ab=(a+b)*.5f;var bc=(b+c)*.5f;var ca=(c+a)*.5f;
+  var uab=(ua+ub)*.5f;var ubc=(ub+uc)*.5f;var uca=(uc+ua)*.5f;
+  Subdivide(a,ab,ca,ua,uab,uca,depth-1,v,t,u);Subdivide(ab,b,bc,uab,ub,ubc,depth-1,v,t,u);
+  Subdivide(ca,bc,c,uca,ubc,uc,depth-1,v,t,u);Subdivide(ab,bc,ca,uab,ubc,uca,depth-1,v,t,u);
+ }
  Vector3 Fold(Vector3 v,float degrees){float coordinate=roof?v.z:v.y;return coordinate>0?Quaternion.AngleAxis(degrees,axis)*v:v;}
  void Update(){if(!scheduled||finished)return;elapsed+=Time.deltaTime;if(elapsed<delay)return;float t=Mathf.Clamp01((elapsed-delay)/duration);float smooth=t*t*(3-2*t);
   if(InwardDragged)transform.localPosition=startPosition+new Vector3(0,-3,6)*smooth;

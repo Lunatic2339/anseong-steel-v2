@@ -305,7 +305,7 @@ namespace Anseong.EditorTools
             hand.Grip = 1f;
 
             var scene = flow != null && flow.Running ? flow.Scene : MatchScene.Waiting;
-            if (scene == MatchScene.Approach || scene == MatchScene.Entrance) hand.Stick = new Vector2(0f, 1f);
+            // 걷지 않는다: 보스가 근접 거리(30 m)까지 걸어온다. 우리가 걸어 들어가면 26 m까지 붙어 두 로봇이 겹쳐 보인다.
             if (scene == MatchScene.DroneHunt && side == PilotSide.Right)
             {
                 hand.Position = reach;

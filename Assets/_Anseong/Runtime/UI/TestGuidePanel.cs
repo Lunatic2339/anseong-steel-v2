@@ -39,6 +39,9 @@ namespace Anseong.UI
         [SerializeField, Tooltip("한글을 쓰려고 시작할 때 이 OS 글꼴로 바꾼다(앞에서부터 있는 것). 비우면 TextMesh 글꼴 그대로.")]
         string[] osFontNames = { "Malgun Gothic", "맑은 고딕", "Arial" };
 
+        [SerializeField, Tooltip("보정이 끝나면 안내판을 숨긴다(11/12: 판 내내 화면 가운데를 덮는 개발용 글자가 가장 거슬림). 펀치 분류 수치를 보려면 끈다.")]
+        bool hideAfterCalibration = true;
+
         [SerializeField, Range(1, 10), Tooltip("최근 펀치를 몇 개 보여 줄지.")]
         int recentLines = 4;
 
@@ -239,7 +242,7 @@ namespace Anseong.UI
         bool HideUnderMenu()
         {
             if (textRenderer == null) textRenderer = text.GetComponent<MeshRenderer>();
-            var hide = tuningMenu != null && tuningMenu.IsOpen;
+            var hide = (tuningMenu != null && tuningMenu.IsOpen) || (hideAfterCalibration && calibration != null && calibration.IsComplete);
             if (textRenderer != null && textRenderer.enabled == hide) textRenderer.enabled = !hide;
             return hide;
         }

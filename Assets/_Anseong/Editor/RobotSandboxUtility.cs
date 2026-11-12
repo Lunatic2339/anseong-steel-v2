@@ -333,6 +333,8 @@ namespace Anseong.EditorTools
 
             var root = new GameObject("Cockpit Props");
             root.transform.SetParent(rig, false);
+            cockpitFrame = CockpitMaterial("Cockpit_Frame", new Color(0.07f, 0.08f, 0.09f), Color.black, 0.85f, 0.45f);
+            cockpitGlow = CockpitMaterial("Cockpit_Glow", new Color(0.02f, 0.05f, 0.06f), new Color(0.15f, 0.9f, 1f) * 2.2f, 0f, 0.6f);
 
             CreateBox(root.transform, "Floor", FloorSize, new Vector3(0f, -FloorSize.y * 0.5f, 0f));
             CreateBox(root.transform, "Seat Mark L", SeatMarkSize, new Vector3(-SeatSpacing * 0.5f, SeatMarkSize.y * 0.5f, 0f));
@@ -344,12 +346,52 @@ namespace Anseong.EditorTools
             CreateBox(root.transform, "Window Post R", postSize, new Vector3(WindowHalfWidth, WindowTop * 0.5f, WindowZ));
             CreateBox(root.transform, "Window Top", new Vector3(WindowHalfWidth * 2f + FrameThickness, FrameThickness, FrameThickness),
                 new Vector3(0f, WindowTop, WindowZ));
+
+            // 창틀 안쪽 가장자리와 콘솔 위에 가는 빛줄(조종석 계기 느낌). 회색 상자만 있으면 개발용 틀처럼 보인다(11/13 자동 점검).
+            var strip = FrameThickness * 0.18f;
+            var inset = FrameThickness * 0.5f + strip * 0.5f;
+            CreateBox(root.transform, "Glow Post L", new Vector3(strip, WindowTop - FrameThickness, strip), new Vector3(-WindowHalfWidth + inset, WindowTop * 0.5f, WindowZ - inset), cockpitGlow);
+            CreateBox(root.transform, "Glow Post R", new Vector3(strip, WindowTop - FrameThickness, strip), new Vector3(WindowHalfWidth - inset, WindowTop * 0.5f, WindowZ - inset), cockpitGlow);
+            CreateBox(root.transform, "Glow Top", new Vector3(WindowHalfWidth * 2f - FrameThickness, strip, strip), new Vector3(0f, WindowTop - inset, WindowZ - inset), cockpitGlow);
+            CreateBox(root.transform, "Glow Console", new Vector3(ConsoleSize.x * 0.9f, strip, strip), new Vector3(0f, ConsoleSize.y + strip * 0.5f, ConsoleZ - ConsoleSize.z * 0.5f + strip), cockpitGlow);
+            cockpitFrame = cockpitGlow = null;
         }
 
-        static void CreateBox(Transform parent, string name, Vector3 size, Vector3 localPosition)
+        static Material cockpitFrame, cockpitGlow;
+        const string CockpitMaterialFolder = "Assets/_Anseong/Art/Cockpit";
+
+        /// <summary>조종석 도형 재질(URP Lit). 있으면 값만 다시 맞춘다.</summary>
+        static Material CockpitMaterial(string name, Color baseColor, Color emission, float metallic, float smoothness)
+        {
+            if (!AssetDatabase.IsValidFolder(CockpitMaterialFolder)) AssetDatabase.CreateFolder(BossFolderParent, "Cockpit");
+            var path = $"{CockpitMaterialFolder}/{name}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Lit");
+                if (shader == null) return null;
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, path);
+            }
+            material.SetColor(BaseColorId, baseColor);
+            material.SetFloat(MetallicId, metallic);
+            material.SetFloat(SmoothnessId, smoothness);
+            if (emission.maxColorComponent > 0f)
+            {
+                material.EnableKeyword("_EMISSION");
+                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+                material.SetColor(EmissionColorId, emission);
+            }
+            EditorUtility.SetDirty(material);
+            return material;
+        }
+
+        static void CreateBox(Transform parent, string name, Vector3 size, Vector3 localPosition, Material material = null)
         {
             var box = GameObject.CreatePrimitive(PrimitiveType.Cube);
             box.name = name;
+            if (material == null) material = cockpitFrame;
+            if (material != null) box.GetComponent<Renderer>().sharedMaterial = material;
             Object.DestroyImmediate(box.GetComponent<Collider>());
             box.transform.SetParent(parent, false);
             box.transform.localScale = size;

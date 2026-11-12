@@ -159,12 +159,21 @@ namespace Anseong.EditorTools
                 if (current != null && !current.StartsWith(PrefabFolder)) continue; // 사람이 넣은 프리팹
                 entry.prefab = prefab;
                 entry.seconds = Mathf.Max(entry.seconds, Lifetime(entry.effectName));
+                if (sizes.TryGetValue(entry.effectName, out var size)) entry.scale = size;
                 filled++;
             }
             EditorUtility.SetDirty(set);
             AssetDatabase.SaveAssets();
             return $"[VfxBuilder] 파티클 프리팹 {made}개 만들고 효과 표 {filled}줄에 넣음({PrefabFolder}).";
         }
+
+        /// <summary>효과 크기(m, 프리팹 반지름 1에 곱함). 65 m 로봇 주먹이 5 m쯤이라 타격 불꽃도 그만큼 커야 보인다(11/13 자동 점검: 작아서 안 보임).</summary>
+        static readonly System.Collections.Generic.Dictionary<string, float> sizes = new System.Collections.Generic.Dictionary<string, float>
+        {
+            { "VFX_PunchSpark", 8f }, { "VFX_HookImpact", 13f }, { "VFX_BoostShock", 18f }, { "VFX_GuardSpark", 10f },
+            { "VFX_WeaponBreak", 25f }, { "VFX_DroneExplode", 10f }, { "VFX_MuzzleFlash", 6f }, { "VFX_ScanPing", 6f },
+            { "VFX_HackSparks", 3f }, { "VFX_MapDust", 40f }, { "VFX_BossExplode", 45f },
+        };
 
         static readonly System.Collections.Generic.Dictionary<string, float> lifetimes = new System.Collections.Generic.Dictionary<string, float>();
         static float Lifetime(string name) => lifetimes.TryGetValue(name, out var v) ? v : 1f;

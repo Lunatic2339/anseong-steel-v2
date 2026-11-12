@@ -48,3 +48,18 @@
 - StaffDormitory: 포스코 광양 기가타운 생활관 공개 사진과 POSCO A&C 주거 브로슈어를 형태 참고한 자체 제작 메시/재질. 사진 파일은 포함하지 않음. 출처 상세 StaffDormitory/ReferencesAndLayout.md.
 - RefinedFactoryRoads: 기존 도로 중심선을 유지한 자체 생성 정리 메시.
 
+
+- RearVisibilityTrim: 기존 자체 도로 메시의 경계 절단, 씬 배치 정리 기록. 외부 에셋 없음.
+
+
+- UnifiedSmoothRoads: 기존 자체 제작 도로를 기하 연산으로 합친 메시와 재생성 차선. Shapely는 외부 에셋이 아닌 오프라인 계산 도구로만 사용, Unity 런타임 의존성 없음.
+
+
+- CentrelineRoads: 직접 정의한 중심선과 일정 폭에서 생성한 도로/차선 메시. Shapely 오프라인 계산, 외부 에셋 미사용.
+
+
+- GroundSurface/IndustrialConcrete_Albedo.png: built-in Imagegen으로 생성한 반복 콘크리트 바닥 이미지. 자체 작성 경량 셰이더 및 공용 머티리얼. 생성 프롬프트는 GroundSurface/README.md에 기록. 외부 사이트 사진 미사용.
+
+
+- SurfaceZones: 기존 생성형콘크리트 텍스처를 공유하는 자체 재질6종과 용도별 바닥면, 기존ScreeningTrees24주 재사용. 외부 에셋 없음.
+

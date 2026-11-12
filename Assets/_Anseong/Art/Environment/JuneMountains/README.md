@@ -1,0 +1,2 @@
+# June mountain foliage
+Connected hinterland uses a texture-free four-colour foliage shader: dark foothills, mid green canopy, softly sunlit yellow-green patches, blue-green distance fade. Two world-space noise scales105m and22m blend colours without repeating texture tiles; height blend4–150m and distance haze2800–15500m. Existing mesh and material reused, zero added texture maps or trees. Canopy colours editable on JuneForest_Green.mat. Existing industrial paving, sand and water preserved. VR performance not measured.

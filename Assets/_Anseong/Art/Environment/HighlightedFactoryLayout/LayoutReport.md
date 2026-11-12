@@ -1,0 +1,3 @@
+# Highlighted L-shaped factory area
+
+Interpreted yellow annotation as left strip X-600..-215 Z-280..445 and rear area X-850..180 Z445..1750. Repacked 455 existing outer prefab instances with unchanged scales. Curved spine, diagonal links and straight service sections retain irregular road character. Buildings align with nearby road tangents or retain prior rotation. Bounds containment, facility separation and road clearance checked. Existing yard/container/harbor/ocean unchanged. Previous broad rear layout disabled, not duplicated. Original long elevated pipe rack mesh remains archived because it crossed new boundary. VR unverified.

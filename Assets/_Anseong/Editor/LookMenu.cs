@@ -39,23 +39,20 @@ namespace Anseong.EditorTools
                 profile = ScriptableObject.CreateInstance<VolumeProfile>();
                 AssetDatabase.CreateAsset(profile, ProfilePath);
                 created = true;
-
-                var bloom = Add<Bloom>(profile);
-                bloom.threshold.Override(1.0f);
-                bloom.intensity.Override(0.55f);
-                bloom.scatter.Override(0.62f);
-
-                var tone = Add<Tonemapping>(profile);
-                tone.mode.Override(TonemappingMode.Neutral);
-
-                var color = Add<ColorAdjustments>(profile);
-                color.postExposure.Override(0.1f);
-                color.contrast.Override(12f);
-                color.saturation.Override(-6f);
-
-                EditorUtility.SetDirty(profile);
-                AssetDatabase.SaveAssets();
             }
+            // 값은 실행할 때마다 다시 맞춘다(자동 점검 스크린샷을 보며 고친 값).
+            var bloom = GetOrAdd<Bloom>(profile);
+            bloom.threshold.Override(1.0f);
+            bloom.intensity.Override(0.55f);
+            bloom.scatter.Override(0.62f);
+            var tone = GetOrAdd<Tonemapping>(profile);
+            tone.mode.Override(TonemappingMode.Neutral);
+            var color = GetOrAdd<ColorAdjustments>(profile);
+            color.postExposure.Override(-0.05f);
+            color.contrast.Override(18f);
+            color.saturation.Override(4f);
+            EditorUtility.SetDirty(profile);
+            AssetDatabase.SaveAssets();
 
             var roots = scene.GetRootGameObjects();
             var volume = roots.SelectMany(r => r.GetComponentsInChildren<Volume>(true)).FirstOrDefault(v => v.isGlobal);
@@ -81,23 +78,24 @@ namespace Anseong.EditorTools
             }
 
             // 거리 안개(이 씬이 활성 씬일 때 쓰인다. Main이 활성 씬).
+            // 하늘이 파랗기 때문에 회색 안개는 하늘과 따로 논다 → 옅은 하늘빛 연무.
             var fog = "안개 그대로(활성 씬이 아님)";
-            if (SceneManager.GetActiveScene() == scene && !RenderSettings.fog)
+            if (SceneManager.GetActiveScene() == scene)
             {
                 RenderSettings.fog = true;
                 RenderSettings.fogMode = FogMode.ExponentialSquared;
-                RenderSettings.fogDensity = 0.0016f;
-                RenderSettings.fogColor = new Color(0.60f, 0.61f, 0.63f);
-                fog = "안개 켬(지수², 0.0016)";
+                RenderSettings.fogDensity = 0.0011f;
+                RenderSettings.fogColor = new Color(0.66f, 0.74f, 0.84f);
+                fog = "안개(지수², 0.0011, 하늘빛)";
             }
-            else if (RenderSettings.fog) fog = "안개 이미 켜짐(그대로)";
 
             EditorSceneManager.MarkSceneDirty(scene);
             return $"[LookMenu] 후처리 프로필 {(created ? "만듦" : "있음")}({ProfilePath}), XR 카메라 {cameras}대 후처리 켬, {fog}.";
         }
 
-        static T Add<T>(VolumeProfile profile) where T : VolumeComponent
+        static T GetOrAdd<T>(VolumeProfile profile) where T : VolumeComponent
         {
+            if (profile.TryGet<T>(out var existing)) return existing;
             var component = profile.Add<T>(true);
             component.name = typeof(T).Name;
             AssetDatabase.AddObjectToAsset(component, profile);
