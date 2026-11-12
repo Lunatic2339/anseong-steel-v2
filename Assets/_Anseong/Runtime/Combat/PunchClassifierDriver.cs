@@ -60,6 +60,8 @@ namespace Anseong.Combat
         [SerializeField] Color noneColor = new Color(0.55f, 0.55f, 0.55f);
         [SerializeField, Tooltip("동작이 없을 때 표시 색.")]
         Color idleColor = new Color(1f, 1f, 1f, 0.35f);
+        [SerializeField, Tooltip("주먹 위 분류 표시 구를 보인다(개발용). 조종석 시점에서 주먹 위 흰 조각으로 보여 기본은 끔(11/13). 분류 결과는 기록·안내판에 그대로 남는다.")]
+        bool showIndicators;
 
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         static readonly int ColorId = Shader.PropertyToID("_Color");
@@ -245,6 +247,8 @@ namespace Anseong.Combat
         void SetIndicator(int index, Color color)
         {
             if (index >= indicators.Length || indicators[index] == null || block == null) return;
+            if (indicators[index].enabled != showIndicators) indicators[index].enabled = showIndicators;
+            if (!showIndicators) return;
             indicators[index].GetPropertyBlock(block);
             block.SetColor(BaseColorId, color);
             block.SetColor(ColorId, color);
