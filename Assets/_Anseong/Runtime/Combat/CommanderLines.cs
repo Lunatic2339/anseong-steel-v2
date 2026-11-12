@@ -84,8 +84,8 @@ namespace Anseong.Combat
                 case FindAndShoot: return "그거다. 왼쪽이 찾고, 오른쪽이 쏜다.";
                 case DronesCleared: return "드론 전멸. 놈이 직접 온다!";
                 case TargetCannon: return "놈의 팔뚝 포를 부숴라!";
-                case TargetArmor: return "가슴 장갑을 뜯어내라!";
-                case TargetCore: return "핵이 드러났다! 주먹으로 부숴라!";
+                case TargetArmor: return "놈의 방패를 깨라!";
+                case TargetCore: return "놈도 맨손이다! 가슴 핵을 부숴라!";
                 default: return string.Empty;
             }
         }

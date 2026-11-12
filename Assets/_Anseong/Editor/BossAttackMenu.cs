@@ -106,16 +106,37 @@ namespace Anseong.EditorTools
 
         public static string PhaseTablePath => BossDataFolder + "/BossPhaseTable.asset";
 
-        /// <summary>페이즈 순서표(05 기본값). 없으면 만든다.</summary>
+        public static string WeaponSetPath => BossDataFolder + "/BossWeaponSet.asset";
+
+        /// <summary>M4-02: 보스 무기 목록(11/11 확정안: 팔뚝 포 → 방패·검 → 핵). 없으면 만든다. 있으면 건드리지 않는다.</summary>
+        public static BossWeaponSet EnsureWeaponSet()
+        {
+            var set = AssetDatabase.LoadAssetAtPath<BossWeaponSet>(WeaponSetPath);
+            if (set != null) return set;
+            set = ScriptableObject.CreateInstance<BossWeaponSet>();
+            AssetDatabase.CreateAsset(set, WeaponSetPath);
+            AssetDatabase.SaveAssets();
+            Debug.Log($"{LogPrefix} 보스 무기 목록 생성: {WeaponSetPath} (팔뚝 포 → 방패·검 → 핵)");
+            return set;
+        }
+
+        /// <summary>페이즈 순서표(05 기본값). 없으면 만든다. 무기 목록 칸이 비면 채운다.</summary>
         public static BossPhaseTable EnsurePhaseTable()
         {
             EnsureAttackAssets(out _);
             var table = AssetDatabase.LoadAssetAtPath<BossPhaseTable>(PhaseTablePath);
-            if (table != null) return table;
-            table = ScriptableObject.CreateInstance<BossPhaseTable>();
-            AssetDatabase.CreateAsset(table, PhaseTablePath);
+            if (table == null)
+            {
+                table = ScriptableObject.CreateInstance<BossPhaseTable>();
+                AssetDatabase.CreateAsset(table, PhaseTablePath);
+                Debug.Log($"{LogPrefix} 페이즈 순서표 생성: {PhaseTablePath} (05 제안값)");
+            }
+            if (table.weaponSet == null)
+            {
+                table.weaponSet = EnsureWeaponSet();
+                EditorUtility.SetDirty(table);
+            }
             AssetDatabase.SaveAssets();
-            Debug.Log($"{LogPrefix} 페이즈 순서표 생성: {PhaseTablePath} (05 제안값)");
             return table;
         }
 

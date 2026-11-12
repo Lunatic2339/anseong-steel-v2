@@ -22,7 +22,7 @@ namespace Anseong.Flow
         FightCannon,
         /// <summary>장면 5: 첫 상실(우리 포), 8초.</summary>
         LostGun,
-        /// <summary>장면 6: 검·방패만, 목표 = 보스 가슴 장갑판.</summary>
+        /// <summary>장면 6: 검·방패만, 목표 = 보스 방패(11/11 확정, 보스 검도 같이 부서짐).</summary>
         FightArmor,
         /// <summary>장면 7: 두 번째 상실(검·방패), 8초.</summary>
         LostSword,

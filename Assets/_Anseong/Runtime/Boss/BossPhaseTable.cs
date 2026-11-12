@@ -44,14 +44,18 @@ namespace Anseong.Boss
         [Tooltip("보스 무기로 페이즈를 나눈다(M4-02, 확정 사항 14). 켜면 아래 HP 경계 대신 무기 내구도로 경계를 만든다(30 → 70·40·10).")]
         public bool weaponPhases = true;
 
-        [Tooltip("보스 무기 하나의 내구도(최대 체력 대비 %, 대본 30). 팔뚝 포 → 가슴 장갑판 → 핵, 남은 체력은 필살기 몫.")]
+        [Tooltip("보스 무기 하나의 내구도(최대 체력 대비 %, 대본 30). 팔뚝 포 → 방패 → 핵, 남은 체력은 필살기 몫. 무기 목록(weaponSet)을 넣으면 그쪽 내구도를 씀.")]
         [Range(5f, 33f)] public float weaponDurability = 30f;
 
         [Tooltip("무기 페이즈를 끌 때만: 페이즈가 바뀌는 보스 HP(%): 1→2, 2→3, 3→무릎. 그 아래로는 한 번에 내려가지 않는다.")]
         public float[] thresholds = { 60f, 25f, 10f };
 
+        [Tooltip("보스 무기 목록(이름·부품·내구도·보복). 넣으면 경계는 그 내구도로, 비면 위 weaponDurability 하나로.")]
+        public BossWeaponSet weaponSet;
+
         /// <summary>지금 쓰는 페이즈 경계(%).</summary>
-        public float[] ActiveThresholds => weaponPhases ? BossWeaponRules.Thresholds(weaponDurability) : thresholds;
+        public float[] ActiveThresholds => !weaponPhases ? thresholds
+            : weaponSet != null ? weaponSet.Thresholds() : BossWeaponRules.Thresholds(weaponDurability);
 
         [Tooltip("페이즈 전환 포효 길이(초, 무적).")]
         [Min(0f)] public float roarSeconds = 2f;

@@ -2,14 +2,17 @@ using System;
 
 namespace Anseong.Boss
 {
-    /// <summary>보스 무기(10_game_scenario.md "보스 무기와 맞바꾸기"). 차례대로 부순다. 숫자는 끝에만 더한다.</summary>
+    /// <summary>
+    /// 보스 무기 차례(10_game_scenario.md "보스 무기와 맞바꾸기"). 실제 이름·부품·내구도·보복은 <see cref="BossWeaponSet"/> 에셋이 정한다.
+    /// 이름은 차례 번호일 뿐(11/11 확정안: 첫째 팔뚝 포, 둘째 방패·검, 셋째 핵). 숫자는 끝에만 더한다.
+    /// </summary>
     public enum BossWeapon : byte
     {
-        /// <summary>양 팔뚝 포(주먹 포탄을 쏘던 원통). 부서지면 보복 돌진 → 우리 포 상실.</summary>
+        /// <summary>첫째(양 팔뚝 포). 부서지면 보복 돌진 → 우리 포 상실.</summary>
         ArmCannon,
-        /// <summary>가슴 장갑판. 부서지면 보복 큰 내려찍기 → 우리 검·방패 상실, 핵이 드러남.</summary>
+        /// <summary>둘째(방패, 보스 검도 같이). 부서지면 검 내려치기 보복 → 검끼리 부딪혀 우리 검·방패도 상실, 핵이 드러남.</summary>
         ChestArmor,
-        /// <summary>가슴 핵. 부서지면 무릎 → 필살기.</summary>
+        /// <summary>셋째(가슴 핵). 부서지면 무릎 → 필살기.</summary>
         Core,
         /// <summary>다 부서짐.</summary>
         None,
@@ -31,6 +34,20 @@ namespace Anseong.Boss
         {
             var d = Math.Max(1f, Math.Min(33f, durability));
             return new[] { 100f - d, 100f - 2f * d, 100f - 3f * d };
+        }
+
+        /// <summary>무기마다 내구도가 다를 때: 차례로 뺀다(합이 99를 넘지 않게 자름).</summary>
+        public static float[] Thresholds(float[] durabilities)
+        {
+            var result = new float[WeaponCount];
+            var hp = 100f;
+            for (var i = 0; i < WeaponCount; i++)
+            {
+                var d = durabilities != null && i < durabilities.Length ? durabilities[i] : 30f;
+                hp -= Math.Max(1f, Math.Min(33f, d));
+                result[i] = Math.Max(1f, hp);
+            }
+            return result;
         }
 
         /// <summary>지금 차례 무기. 경계에 닿은 무기는 부서진 것으로 본다.</summary>
@@ -71,7 +88,7 @@ namespace Anseong.Boss
             switch (weapon)
             {
                 case BossWeapon.ArmCannon: return "팔뚝 포";
-                case BossWeapon.ChestArmor: return "가슴 장갑판";
+                case BossWeapon.ChestArmor: return "방패";
                 case BossWeapon.Core: return "핵";
                 default: return "없음";
             }

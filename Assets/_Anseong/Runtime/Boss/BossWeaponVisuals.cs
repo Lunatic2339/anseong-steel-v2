@@ -8,10 +8,11 @@ namespace Anseong.Boss
 {
     /// <summary>
     /// 보스 무기·머리 빛·주먹 포탄 겉모습(M4-02 프로토타입, 모든 PC). 규칙은 모르고 복제된 보스 체력만 보고 그린다.
-    /// - 무기 3개(양 팔뚝 포, 가슴 장갑판, 가슴 핵)를 보스 뼈에 단순 도형으로 붙인다. 금이 가면 색이 바뀌고, 부서지면 떼어 떨어뜨린다.
+    /// - 무기 3개를 <see cref="BossWeaponSet"/> 목록대로 보스 뼈에 붙인다(11/11 확정안: 팔뚝 포 → 왼손 방패·오른손 검 → 가슴 핵). 모델 칸이 비면 도형.
+    ///   금이 가면 색이 바뀌고, 부서지면 떼어 떨어뜨린다. 핵은 처음부터 붉게 빛난다.
     /// - 머리 빛: 기체 점검이 끝나면 켜지고, 장면이 바뀔 때(걸어오기·보복) 깜빡인다(보스는 소리치지 않고 빛으로 반응).
     /// - 주먹 포탄: 멀리서 좌/우 펀치를 시작하면 그 손에서 탄이 날아와 명중 순간에 닿는다.
-    /// 아트가 오면 도형 대신 프리팹 칸(<see cref="cannonPrefab"/> 등)에 넣는다. 메뉴 'Add Match Flow'가 보스에 붙이고 뼈를 채운다.
+    /// 아트가 오면 무기 목록 에셋(Data/Boss/BossWeaponSet.asset)의 부품 모델 칸에 넣는다. 보스 프리팹 메뉴가 붙이고 뼈를 채운다.
     /// </summary>
     public class BossWeaponVisuals : MonoBehaviour
     {
@@ -23,13 +24,14 @@ namespace Anseong.Boss
         [SerializeField, Tooltip("가슴 뼈(mixamorig:Spine2).")] Transform chest;
         [SerializeField] Transform head;
 
+        [Header("무기 목록 (비우면 페이즈 표의 것, 그것도 없으면 확정안)")]
+        [SerializeField, Tooltip("Data/Boss/BossWeaponSet.asset. 부품 모델 칸이 아트 자리.")]
+        BossWeaponSet weaponSet;
+
+        [SerializeField, Tooltip("우리 무기 모델을 빌려 쓸 때 덮을 보스 재질(비면 색만 칠함).")]
+        Material borrowedMaterial;
+
         [Header("아트 자리 (비우면 도형)")]
-        [SerializeField, Tooltip("팔뚝 포 모델(원점 = 팔꿈치 쪽 끝, +Y = 손 쪽). 비우면 원통.")]
-        GameObject cannonPrefab;
-        [SerializeField, Tooltip("가슴 장갑판 모델. 비우면 판.")]
-        GameObject armorPrefab;
-        [SerializeField, Tooltip("가슴 핵 모델. 비우면 구.")]
-        GameObject corePrefab;
         [SerializeField, Tooltip("주먹 포탄 모델. 비우면 구.")]
         GameObject shellPrefab;
         [SerializeField, Tooltip("도형에 쓸 재질(비우면 기본 재질에 색만).")]
@@ -141,7 +143,8 @@ namespace Anseong.Boss
             if (cracks != shownCracks && weapon != BossWeapon.None)
             {
                 shownCracks = cracks;
-                var color = cracks <= 0 ? (weapon == BossWeapon.Core ? coreColor : armorColor) : cracks == 1 ? crack1 : crack2;
+                var baseColor = Set().At((int)weapon) != null ? Set().At((int)weapon).color : armorColor;
+                var color = cracks <= 0 ? baseColor : cracks == 1 ? crack1 : crack2;
                 foreach (var p in parts[(int)weapon]) Tint(p, color);
             }
         }
@@ -154,37 +157,101 @@ namespace Anseong.Boss
                 parts[i].Clear();
             }
             shown = BossWeapon.ArmCannon;
-            if (leftForeArm != null && leftHand != null) parts[0].Add(Cannon(leftForeArm, leftHand));
-            if (rightForeArm != null && rightHand != null) parts[0].Add(Cannon(rightForeArm, rightHand));
-            if (chest != null)
+            var set = Set();
+            for (var w = 0; w < parts.Length; w++)
             {
-                var forward = transform.forward;
-                var plate = Make(armorPrefab, PrimitiveType.Cube, "Boss Weapon · Chest Armor");
-                plate.transform.SetPositionAndRotation(chest.position + forward * size * 0.35f, transform.rotation);
-                plate.transform.SetParent(chest, true);
-                SetWorldSize(plate.transform, new Vector3(size * 1.3f, size * 1.1f, size * 0.2f));
-                parts[1].Add(plate);
-                Tint(plate, armorColor);
-
-                var core = Make(corePrefab, PrimitiveType.Sphere, "Boss Weapon · Core");
-                core.transform.SetPositionAndRotation(chest.position + forward * size * 0.2f, transform.rotation);
-                core.transform.SetParent(chest, true);
-                SetWorldSize(core.transform, Vector3.one * size * 0.45f);
-                parts[2].Add(core);
-                Tint(core, coreColor);
+                var weapon = set.At(w);
+                if (weapon == null || weapon.parts == null) continue;
+                foreach (var part in weapon.parts)
+                {
+                    var go = Attach(part);
+                    if (go == null) continue;
+                    parts[w].Add(go);
+                    Tint(go, weapon.color);
+                }
             }
         }
 
-        GameObject Cannon(Transform foreArm, Transform hand)
+        BossWeaponSet fallback;
+
+        BossWeaponSet Set()
         {
-            var go = Make(cannonPrefab, PrimitiveType.Cylinder, "Boss Weapon · Arm Cannon");
-            var along = hand.position - foreArm.position;
-            var length = Mathf.Max(0.1f, along.magnitude);
-            go.transform.SetPositionAndRotation(foreArm.position + along * 0.5f, Quaternion.FromToRotation(Vector3.up, along.normalized));
-            go.transform.SetParent(foreArm, true);
-            // 원통은 높이 2라 절반으로.
-            SetWorldSize(go.transform, new Vector3(length * 0.35f, length * 0.45f, length * 0.35f));
-            Tint(go, armorColor);
+            if (weaponSet != null) return weaponSet;
+            if (brain != null && brain.Weapons != null) return brain.Weapons;
+            if (fallback == null) fallback = ScriptableObject.CreateInstance<BossWeaponSet>();
+            return fallback;
+        }
+
+        PlayerWeaponVisuals player;
+
+        GameObject Borrowed(BossWeaponSet.PlayerModel model)
+        {
+            if (model == BossWeaponSet.PlayerModel.None) return null;
+            if (player == null) player = FindAnyObjectByType<PlayerWeaponVisuals>();
+            if (player == null) return null;
+            switch (model)
+            {
+                case BossWeaponSet.PlayerModel.Cannon: return player.CannonPrefab;
+                case BossWeaponSet.PlayerModel.Sword: return player.SwordPrefab;
+                default: return player.ShieldPrefab;
+            }
+        }
+
+        Transform BoneOf(BossBone bone)
+        {
+            switch (bone)
+            {
+                case BossBone.LeftForeArm: return leftForeArm;
+                case BossBone.RightForeArm: return rightForeArm;
+                case BossBone.LeftHand: return leftHand;
+                case BossBone.RightHand: return rightHand;
+                default: return chest;
+            }
+        }
+
+        /// <summary>부품 하나를 뼈에 붙인다. 크기 배수: 팔뚝을 따라 붙이면 팔뚝 길이, 그 밖은 가슴~머리 거리.</summary>
+        GameObject Attach(BossWeaponSet.Part part)
+        {
+            var bone = BoneOf(part.bone);
+            if (bone == null) return null;
+            var prefab = part.prefab != null ? part.prefab : Borrowed(part.borrow);
+            var go = Make(prefab, part.shape, "Boss Weapon · " + part.label);
+            if (part.prefab == null && prefab != null && borrowedMaterial != null)
+                foreach (var r in go.GetComponentsInChildren<Renderer>())
+                {
+                    var mats = r.sharedMaterials;
+                    for (var m = 0; m < mats.Length; m++) mats[m] = borrowedMaterial;
+                    r.sharedMaterials = mats;
+                }
+            switch (part.placement)
+            {
+                case BossWeaponSet.Placement.AlongForeArm:
+                {
+                    var hand = part.bone == BossBone.LeftForeArm ? leftHand : part.bone == BossBone.RightForeArm ? rightHand : null;
+                    var along = hand != null ? hand.position - bone.position : bone.up * size * 0.5f;
+                    var length = Mathf.Max(0.1f, along.magnitude);
+                    go.transform.SetPositionAndRotation(bone.position + along * 0.5f, Quaternion.FromToRotation(Vector3.up, along.normalized));
+                    go.transform.SetParent(bone, true);
+                    if (prefab == null) SetWorldSize(go.transform, part.size * length);
+                    else go.transform.localScale = prefab.transform.localScale; // 우리 로봇과 같은 뼈 크기라 손 뼈 기준 그대로
+                    break;
+                }
+                case BossWeaponSet.Placement.InHand:
+                {
+                    var unit = bone.parent != null ? Mathf.Max(0.1f, Vector3.Distance(bone.position, bone.parent.position)) : size * 0.3f;
+                    go.transform.SetParent(bone, false);
+                    go.transform.localRotation = Quaternion.identity;
+                    go.transform.position = bone.position + bone.up * unit * part.push;
+                    if (prefab == null) SetWorldSize(go.transform, part.size * unit);
+                    break;
+                }
+                default:
+                    go.transform.SetPositionAndRotation(bone.position + transform.forward * size * part.push, transform.rotation);
+                    go.transform.SetParent(bone, true);
+                    if (prefab == null) SetWorldSize(go.transform, part.size * size);
+                    else go.transform.localScale = prefab.transform.localScale;
+                    break;
+            }
             return go;
         }
 
