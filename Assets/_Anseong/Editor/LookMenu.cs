@@ -78,6 +78,17 @@ namespace Anseong.EditorTools
             }
 
             // 거리 안개(이 씬이 활성 씬일 때 쓰인다. Main이 활성 씬).
+            // 컨트롤러 추적 확인용 흰 상자(TrackedPoseProbe)는 조종석 시점에서 주먹 위에 흰 조각으로 보인다 → 그림만 끈다(추적 기록은 그대로).
+            var probes = 0;
+            foreach (var probe in roots.SelectMany(r => r.GetComponentsInChildren<Anseong.Pilot.TrackedPoseProbe>(true)))
+                foreach (var renderer in probe.GetComponentsInChildren<MeshRenderer>(true))
+                {
+                    if (!renderer.enabled) continue;
+                    renderer.enabled = false;
+                    EditorUtility.SetDirty(renderer);
+                    probes++;
+                }
+
             // 하늘이 파랗기 때문에 회색 안개는 하늘과 따로 논다 → 옅은 하늘빛 연무.
             var fog = "안개 그대로(활성 씬이 아님)";
             if (SceneManager.GetActiveScene() == scene)
@@ -90,7 +101,7 @@ namespace Anseong.EditorTools
             }
 
             EditorSceneManager.MarkSceneDirty(scene);
-            return $"[LookMenu] 후처리 프로필 {(created ? "만듦" : "있음")}({ProfilePath}), XR 카메라 {cameras}대 후처리 켬, {fog}.";
+            return $"[LookMenu] 후처리 프로필 {(created ? "만듦" : "있음")}({ProfilePath}), XR 카메라 {cameras}대 후처리 켬, 추적 확인 상자 {probes}개 숨김, {fog}.";
         }
 
         static T GetOrAdd<T>(VolumeProfile profile) where T : VolumeComponent

@@ -346,13 +346,22 @@ namespace Anseong.EditorTools
             send.Invoke(flow, new[] { Enum.ToObject(command, value) });
         }
 
-        /// <summary>헤드셋이 없으면 XR 카메라가 바닥(0)에 있다 → 앉은 눈높이로 올려 조종사 시점을 흉내 낸다.</summary>
+        const float SeatedEyeHeight = 1.2f;
+
+        /// <summary>
+        /// 헤드셋이 없으면 XR 카메라가 추적 원점(0)에 있다 → 앉은 눈높이로 맞춰 조종사 시점을 흉내 낸다.
+        /// Camera Offset에 높이가 들어 있으면(기기 기준 원점일 때 XR Origin이 넣는 값) 그만큼 빼서, XR Origin 바닥에서 눈까지가 앉은 키가 되게 한다
+        /// (안 빼면 눈이 창틀 높이까지 올라가 창틀·팔이 화면을 가린다, 11/13).
+        /// </summary>
         static void LiftHeadIfNoHeadset()
         {
             var origin = UnityEngine.Object.FindAnyObjectByType<XROrigin>();
             if (origin == null || origin.Camera == null) return;
             var cam = origin.Camera.transform;
-            if (cam.localPosition.sqrMagnitude < 1e-4f) cam.localPosition = new Vector3(0f, 1.25f, 0f);
+            if (cam.localPosition.sqrMagnitude >= 1e-4f) return;
+            var offset = origin.CameraFloorOffsetObject != null ? origin.transform.InverseTransformPoint(origin.CameraFloorOffsetObject.transform.position).y : 0f;
+            cam.localPosition = new Vector3(0f, SeatedEyeHeight - offset, 0f);
+            report.AppendLine($"헤드셋 없음: 눈높이 {SeatedEyeHeight:F2} m로 맞춤(Camera Offset 높이 {offset:F2} m)");
         }
 
         static void Shot(string label, double t)

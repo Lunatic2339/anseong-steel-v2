@@ -377,10 +377,10 @@ namespace Anseong.Boss
                 standOff = 0f;
                 return;
             }
-            if (player != null && machine.State != BossState.Kneel && machine.State != BossState.Defeated)
+            if (player != null)
             {
-                // 공격 중엔 조금 물러서서, 끝나면 제자리로(위치에 더했다 뺀다: 걷기·회전 계산과 따로).
-                var want = machine.IsAttacking ? attackStandOff : 0f;
+                // 예고·명중 동안만 조금 물러서고, 회복부터 제자리로(빈틈에 우리 주먹이 닿게. 위치에 더했다 뺀다: 걷기·회전 계산과 따로).
+                var want = machine.State == BossState.Telegraph || machine.State == BossState.Strike ? attackStandOff : 0f;
                 var next = Mathf.MoveTowards(standOff, want, standOffSpeed * dt);
                 if (!Mathf.Approximately(next, standOff))
                 {
