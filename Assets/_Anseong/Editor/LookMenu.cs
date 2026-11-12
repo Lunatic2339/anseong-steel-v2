@@ -42,13 +42,13 @@ namespace Anseong.EditorTools
             }
             // 값은 실행할 때마다 다시 맞춘다(자동 점검 스크린샷을 보며 고친 값).
             var bloom = GetOrAdd<Bloom>(profile);
-            bloom.threshold.Override(1.0f);
-            bloom.intensity.Override(0.55f);
+            bloom.threshold.Override(1.15f);
+            bloom.intensity.Override(0.4f);
             bloom.scatter.Override(0.62f);
             var tone = GetOrAdd<Tonemapping>(profile);
             tone.mode.Override(TonemappingMode.Neutral);
             var color = GetOrAdd<ColorAdjustments>(profile);
-            color.postExposure.Override(-0.05f);
+            color.postExposure.Override(-0.35f);
             color.contrast.Override(18f);
             color.saturation.Override(4f);
             EditorUtility.SetDirty(profile);

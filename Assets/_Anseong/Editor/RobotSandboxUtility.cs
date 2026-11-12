@@ -49,7 +49,7 @@ namespace Anseong.EditorTools
         const float WindowZ = 1.25f;
         const float WindowTop = 2.4f;
         const float WindowHalfWidth = 1.85f;
-        const float FrameThickness = 0.12f;
+        const float FrameThickness = 0.07f;   // 11/13: 0.12는 시야를 12% 막아 판을 붙여 놓은 것처럼 보임
 
         /// <summary>
         /// 렌더러 bounds 높이를 재서 robot을 targetHeight로 균일 확대하고 발을 groundY에 맞춘다.
@@ -348,7 +348,7 @@ namespace Anseong.EditorTools
                 new Vector3(0f, WindowTop, WindowZ));
 
             // 창틀 안쪽 가장자리와 콘솔 위에 가는 빛줄(조종석 계기 느낌). 회색 상자만 있으면 개발용 틀처럼 보인다(11/13 자동 점검).
-            var strip = FrameThickness * 0.18f;
+            var strip = FrameThickness * 0.4f;
             var inset = FrameThickness * 0.5f + strip * 0.5f;
             CreateBox(root.transform, "Glow Post L", new Vector3(strip, WindowTop - FrameThickness, strip), new Vector3(-WindowHalfWidth + inset, WindowTop * 0.5f, WindowZ - inset), cockpitGlow);
             CreateBox(root.transform, "Glow Post R", new Vector3(strip, WindowTop - FrameThickness, strip), new Vector3(WindowHalfWidth - inset, WindowTop * 0.5f, WindowZ - inset), cockpitGlow);

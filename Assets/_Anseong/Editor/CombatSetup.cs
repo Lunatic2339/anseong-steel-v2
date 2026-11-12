@@ -565,23 +565,26 @@ namespace Anseong.EditorTools
 
         const string TelegraphMarkerPath = DebugFolder + "/BossTelegraphMarker.mat";
         // 공격 쪽 표시 구(보스 루트 기준 m): 가슴 높이, 좌우로 벌리고 조종사 쪽으로 조금 앞. 보스 몸통 반지름 7.8 m 밖.
-        const float MarkerHeight = 42f, MarkerSide = 14f, MarkerForward = 6f, MarkerSize = 7f;
+        const float MarkerHeight = 42f, MarkerSide = 14f, MarkerForward = 9f, MarkerSize = 12f;
 
         /// <summary>M2-05 보강: 막아야 할 쪽을 보여 주는 큰 구 두 개(조종사 왼팔 쪽 = 보스 기준 오른쪽).</summary>
         static void AddTelegraphMarkers(Transform boss, BossTelegraphTint tint)
         {
-            var material = GetOrCreateUnlit(TelegraphMarkerPath, Color.white);
+            // 단색 구는 평면 공처럼 싸 보인다(11/13 자동 점검) → 조종사를 향한 빛 고리 판. 고리 재질을 못 만들면 예전 단색 구.
+            var ring = Anseong.EditorTools.VfxBuilder.RingMaterial();
+            var material = ring != null ? ring : GetOrCreateUnlit(TelegraphMarkerPath, Color.white);
             Renderer Marker(string name, float side)
             {
                 var old = boss.Find(name);
                 if (old != null) Object.DestroyImmediate(old.gameObject);
-                var sphere = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+                var sphere = GameObject.CreatePrimitive(ring != null ? PrimitiveType.Quad : PrimitiveType.Sphere);
                 sphere.name = name;
                 Object.DestroyImmediate(sphere.GetComponent<Collider>());
                 sphere.transform.SetParent(boss, false);
                 var scale = Mathf.Max(1e-6f, boss.lossyScale.x);
                 sphere.transform.position = boss.position + boss.up * MarkerHeight + boss.right * side + boss.forward * MarkerForward;
                 sphere.transform.localScale = Vector3.one * (MarkerSize / scale);
+                if (ring != null) sphere.transform.rotation = Quaternion.LookRotation(-boss.forward, boss.up);
                 var renderer = sphere.GetComponent<MeshRenderer>();
                 renderer.sharedMaterial = material;
                 renderer.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;

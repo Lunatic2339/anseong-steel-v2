@@ -22,6 +22,9 @@ namespace Anseong.Flow
         [SerializeField, Tooltip("맵 씬에서 숨길 오브젝트 이름 조각. 맵 작업용 크기 기준 로봇(…ScaleOnly…)이 전투 중에 서 있지 않게 한다.")]
         string[] hideNameContains = { "ScaleOnly" };
 
+        [SerializeField, Tooltip("맵 씬의 조명 설정(하늘·환경광·반사)을 가져와 쓴다. 맵 재질은 맵 씬의 조명에 맞춰 만든 것이라 Main 조명으로 그리면 바닥이 하얗게 날아간다(11/13 자동 점검). 안개는 Main 것을 유지.")]
+        bool useEnvironmentLighting = true;
+
         [SerializeField, Tooltip("Main의 해. 맵 씬에 켜진 Directional Light가 있으면 이것을 끈다.")]
         Light mainLight;
 
@@ -72,8 +75,46 @@ namespace Anseong.Flow
                     if (light.type == LightType.Directional && light.enabled && light.gameObject.activeInHierarchy) mapHasSun = true;
             }
             if (mapHasSun && mainLight != null) mainLight.enabled = false;
+            if (useEnvironmentLighting) CopyLighting(scene);
             Loaded = true;
             Debug.Log($"[EnvironmentLoader] 환경 '{scene.name}' 불러옴: 카메라 {cameras}개 끔, 기준 오브젝트 {hidden}개 숨김, 맵 스크립트 {scripts}개 멈춤, 해 = {(mapHasSun ? "맵" : "Main")}.", this);
+        }
+
+        /// <summary>
+        /// 조명 설정(RenderSettings)은 활성 씬 것만 쓰인다. 맵 씬을 잠깐 활성으로 바꿔 값을 읽고, 되돌린 뒤 Main에 적용한다
+        /// (활성 씬을 맵으로 두면 새로 만드는 오브젝트가 맵 씬에 들어가므로 되돌린다).
+        /// </summary>
+        void CopyLighting(Scene environment)
+        {
+            var main = SceneManager.GetActiveScene();
+            if (main == environment || !SceneManager.SetActiveScene(environment)) return;
+            var skybox = RenderSettings.skybox;
+            var sun = RenderSettings.sun;
+            var mode = RenderSettings.ambientMode;
+            var light = RenderSettings.ambientLight;
+            var sky = RenderSettings.ambientSkyColor;
+            var equator = RenderSettings.ambientEquatorColor;
+            var ground = RenderSettings.ambientGroundColor;
+            var intensity = RenderSettings.ambientIntensity;
+            var reflectionMode = RenderSettings.defaultReflectionMode;
+            var reflection = RenderSettings.customReflectionTexture;
+            var reflectionIntensity = RenderSettings.reflectionIntensity;
+            var shadow = RenderSettings.subtractiveShadowColor;
+            SceneManager.SetActiveScene(main);
+
+            RenderSettings.skybox = skybox;
+            if (sun != null) RenderSettings.sun = sun;
+            RenderSettings.ambientMode = mode;
+            RenderSettings.ambientLight = light;
+            RenderSettings.ambientSkyColor = sky;
+            RenderSettings.ambientEquatorColor = equator;
+            RenderSettings.ambientGroundColor = ground;
+            RenderSettings.ambientIntensity = intensity;
+            RenderSettings.defaultReflectionMode = reflectionMode;
+            if (reflection != null) RenderSettings.customReflectionTexture = reflection;
+            RenderSettings.reflectionIntensity = reflectionIntensity;
+            RenderSettings.subtractiveShadowColor = shadow;
+            DynamicGI.UpdateEnvironment();
         }
 
         /// <summary>이름에 숨길 조각이 든 오브젝트를 끈다(자식까지 내려가며, 끈 것 아래는 더 보지 않는다).</summary>

@@ -29,7 +29,16 @@ namespace Anseong.EditorTools
         {
             var set = AssetDatabase.LoadAssetAtPath<CombatEffectSet>(EffectSetPath);
             if (set == null) return "[VfxBuilder] 효과 표가 없습니다. 'Anseong → Setup → Build M1 Main'을 먼저 실행하세요.";
+            if (!EnsureMaterials()) return "[VfxBuilder] URP 파티클 셰이더를 찾지 못했습니다.";
+            return BuildPrefabs(set);
+        }
+
+        /// <summary>텍스처·재질을 만든다(있으면 값만 다시 맞춤).</summary>
+        static bool EnsureMaterials()
+        {
+            if (!AssetDatabase.IsValidFolder(Root)) AssetDatabase.CreateFolder("Assets/_Anseong/Art", "VFX");
             EnsureFolder(Root, "Textures");
+
             EnsureFolder(Root, "Materials");
             EnsureFolder(Root, "Prefabs");
 
@@ -48,11 +57,20 @@ namespace Anseong.EditorTools
             var spark = Tex("VFX_Spark", (u, v) => Mathf.Pow(Mathf.Clamp01(1f - Mathf.Abs(v) * 3.2f), 1.5f) * Mathf.Clamp01(1f - Mathf.Abs(u)));
 
             var shader = Shader.Find("Universal Render Pipeline/Particles/Unlit");
-            if (shader == null) return "[VfxBuilder] URP 파티클 셰이더를 찾지 못했습니다.";
+            if (shader == null) return false;
             glowAdd = Mat("VFX_Glow_Add", shader, glow, true);
             ringAdd = Mat("VFX_Ring_Add", shader, ring, true);
             sparkAdd = Mat("VFX_Spark_Add", shader, spark, true);
             smokeBlend = Mat("VFX_Smoke_Blend", shader, smoke, false);
+            AssetDatabase.SaveAssets();
+            return true;
+        }
+
+        /// <summary>빛 고리 재질(더하기 섞기, 양면). 보스 예고 표시 같은 판에 쓴다. 못 만들면 null.</summary>
+        internal static Material RingMaterial() => EnsureMaterials() ? ringAdd : null;
+
+        static string BuildPrefabs(CombatEffectSet set)
+        {
 
             var orange = new Color(1f, 0.62f, 0.22f);
             var yellow = new Color(1f, 0.9f, 0.55f);
@@ -399,6 +417,7 @@ namespace Anseong.EditorTools
             material.SetFloat("_SrcBlendAlpha", (float)BlendMode.One);
             material.SetFloat("_DstBlendAlpha", (float)(additive ? BlendMode.One : BlendMode.OneMinusSrcAlpha));
             material.SetFloat("_ZWrite", 0f);
+            material.SetFloat("_Cull", 0f);
             material.EnableKeyword("_SURFACE_TYPE_TRANSPARENT");
             material.SetOverrideTag("RenderType", "Transparent");
             material.renderQueue = (int)RenderQueue.Transparent;
