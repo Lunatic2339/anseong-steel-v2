@@ -367,20 +367,57 @@ namespace Anseong.EditorTools
 
         /// <summary>
         /// 보스 재질. 보스 재질 슬롯(RobotArtSettings)과 이름이 맞는 재질은 그 슬롯 재질로,
-        /// 나머지는 보스 단색(Boss_Tint)으로 바꾼다. 슬롯이 비어 있으면 전부 Boss_Tint.
+        /// 나머지는 모델 재질을 복사해 보스 색을 곱한 재질(Art/Boss/Materials, 텍스처·노멀 그대로)로 바꾼다.
+        /// 단색으로 덮으면 장난감처럼 보여서(11/12 자동 점검) 무늬를 살린다. 복사할 수 없으면 Boss_Tint.
         /// </summary>
         public static void TintBoss(Transform boss)
         {
             var renderers = boss.GetComponentsInChildren<Renderer>(true);
             var slots = RobotArtSettings.Load().BossSlotMaterials;
             var tint = GetOrCreateBossTint(renderers);
-            var replaced = ApplySlotMaterials(renderers, slots, tint);
+            var replaced = ApplySlotMaterials(renderers, slots, source => GetOrCreateBossCopy(source) ?? tint);
             if (slots.Length > 0)
-                Debug.Log($"[RobotSandboxUtility] 보스 재질 슬롯 적용: {replaced}칸, 나머지는 {(tint != null ? tint.name : "모델 재질")}", boss);
+                Debug.Log($"[RobotSandboxUtility] 보스 재질 슬롯 적용: {replaced}칸, 나머지는 보스 색을 곱한 복사 재질", boss);
         }
 
-        /// <summary>렌더러 재질 칸마다 이름이 맞는 슬롯 재질로 바꾸고, 맞지 않으면 fallback(없으면 그대로). 슬롯으로 바꾼 칸 수를 돌려준다.</summary>
-        static int ApplySlotMaterials(Renderer[] renderers, RobotArtSettings.SlotMaterial[] slots, Material fallback)
+        const string BossMaterialFolder = "Assets/_Anseong/Art/Boss/Materials";
+        /// <summary>모델 재질 색에 곱하는 보스 색(검붉은 강철). 텍스처는 그대로라 판금 무늬가 남는다.</summary>
+        static readonly Color BossMultiply = new Color(0.62f, 0.2f, 0.17f);
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness");
+        static readonly int MetallicId = Shader.PropertyToID("_Metallic");
+        static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
+
+        /// <summary>모델 재질 하나를 복사해 보스 색을 곱한 재질. 이미 있으면 색만 다시 맞춘다.</summary>
+        static Material GetOrCreateBossCopy(Material source)
+        {
+            if (source == null || source.shader == null) return null;
+            if (!AssetDatabase.IsValidFolder(BossMaterialFolder))
+                AssetDatabase.CreateFolder($"{BossFolderParent}/{BossFolderName}", "Materials");
+            var safe = string.Concat(source.name.Select(c => char.IsLetterOrDigit(c) || c == '_' || c == '-' ? c : '_'));
+            var path = $"{BossMaterialFolder}/Boss_{safe}.mat";
+            var copy = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (copy == source) return copy;
+            if (copy == null)
+            {
+                copy = new Material(source) { name = $"Boss_{safe}" };
+                AssetDatabase.CreateAsset(copy, path);
+            }
+            var baseColor = source.HasProperty(BaseColorId) ? source.GetColor(BaseColorId) : Color.white;
+            var tinted = new Color(baseColor.r * BossMultiply.r, baseColor.g * BossMultiply.g, baseColor.b * BossMultiply.b, baseColor.a);
+            if (copy.HasProperty(BaseColorId)) copy.SetColor(BaseColorId, tinted);
+            if (copy.HasProperty(MetallicId)) copy.SetFloat(MetallicId, Mathf.Max(source.GetFloat(MetallicId), 0.55f));
+            if (copy.HasProperty(SmoothnessId)) copy.SetFloat(SmoothnessId, Mathf.Clamp(source.GetFloat(SmoothnessId), 0.35f, 0.6f));
+            // 예고 빛(BossTelegraphTint)이 emission을 덮어쓰므로 키워드를 켜 둔다(평소엔 검정 = 안 빛남).
+            copy.EnableKeyword("_EMISSION");
+            copy.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            if (copy.HasProperty(EmissionColorId) && !source.IsKeywordEnabled("_EMISSION")) copy.SetColor(EmissionColorId, Color.black);
+            EditorUtility.SetDirty(copy);
+            return copy;
+        }
+
+        /// <summary>렌더러 재질 칸마다 이름이 맞는 슬롯 재질로 바꾸고, 맞지 않으면 fallback이 돌려준 재질(null이면 그대로). 슬롯으로 바꾼 칸 수를 돌려준다.</summary>
+        static int ApplySlotMaterials(Renderer[] renderers, RobotArtSettings.SlotMaterial[] slots, System.Func<Material, Material> fallback)
         {
             var slotNames = slots.Select(s => s.material != null ? s.slot : null).ToArray();
             var replaced = 0;
@@ -397,7 +434,10 @@ namespace Anseong.EditorTools
                     }
                     else if (fallback != null)
                     {
-                        materials[i] = fallback;
+                        // 이미 보스 복사 재질이면(다시 돌린 경우) 그대로.
+                        if (materials[i] != null && AssetDatabase.GetAssetPath(materials[i]).StartsWith(BossMaterialFolder)) continue;
+                        var swap = fallback(materials[i]);
+                        if (swap != null) materials[i] = swap;
                     }
                 }
                 r.sharedMaterials = materials;

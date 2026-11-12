@@ -41,6 +41,11 @@ namespace Anseong.EditorTools
                 log.Append(ok ? "✓ " : "✗ ").Append(step).Append(" / ");
                 if (!ok) Debug.LogWarning($"[FullGameMenu] 메뉴를 찾지 못했거나 실패: {step}");
             }
+            // 이펙트 파티클(효과 표가 만들어진 뒤).
+            Debug.Log(VfxBuilder.BuildAll());
+            log.Append("✓ Build Combat VFX / ");
+            Debug.Log(LookMenu.Apply(UnityEngine.SceneManagement.SceneManager.GetActiveScene()));
+            log.Append("✓ Apply Battle Look / ");
             log.Append("끝. 콘솔의 각 메뉴 줄을 확인하고 Ctrl+S로 Main을 저장하세요.");
             Debug.Log(log.ToString());
         }

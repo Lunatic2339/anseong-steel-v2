@@ -11,6 +11,7 @@ using Unity.XR.CoreUtils;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
+using UnityEngine.Rendering.Universal;
 
 namespace Anseong.EditorTools
 {
@@ -19,7 +20,8 @@ namespace Anseong.EditorTools
     /// Main을 열고 Play → 1인 양팔로 시작 → 장면마다 몇 초 머물며 세 시점(조종사·뒤에서·옆에서)으로 PNG를 찍고
     /// 운영자 "다음 장면"으로 넘긴다(싸움 장면은 보스 무기가 부서짐) → 필살기 준비를 대신 보내 결과판까지.
     /// 결과: 프로젝트 폴더 Logs/Playtest/ 아래 PNG + report.txt(장면 지나간 시각, 오류·예외 로그).
-    /// **손 입력은 없다**: 판 흐름·연출·화면 구성이 끝까지 도는지만 본다. 조작감·VR 동작은 사람이 헤드셋으로 확인한다.
+    /// 손 입력은 봇이 대신 넣는다(PilotHandInput.DevOverride): 보정 2단계 → 보스가 예고하면 가드, 아니면 좌우 번갈아 잽,
+    /// 접근 장면은 스틱 앞으로, 드론 장면은 오른손 방아쇠. 판 흐름·연출·화면 구성을 보는 용도이고 조작감·VR 동작은 사람이 헤드셋으로 확인한다.
     /// 메뉴 'Anseong → Test → Auto Playtest (스크린샷)' 또는 명령줄
     /// Unity.exe -projectPath ... -executeMethod Anseong.EditorTools.AutoPlaytest.RunBatch (끝나면 스스로 종료).
     /// </summary>
@@ -27,9 +29,11 @@ namespace Anseong.EditorTools
     {
         const string MainScenePath = "Assets/_Anseong/Scenes/Main.unity";
         const float StartDelay = 3f;
-        const float Dwell = 5f;          // 장면마다 머무는 시간
-        const float ShotEvery = 2.5f;    // 머무는 동안 찍는 간격
-        const float Timeout = 420f;
+        const float Dwell = 6f;          // 장면마다 머무는 시간
+        const float FightDwell = 26f;    // 싸움 장면(봇이 치고 막는 것을 본다)
+        const float CheckupDwell = 16f;  // 점검(보정 + 철판 치기)
+        const float ShotEvery = 3f;      // 머무는 동안 찍는 간격
+        const float Timeout = 600f;
         const int Width = 1920, Height = 1080;
 
         static bool running, exitWhenDone, begun, finishing;
@@ -42,6 +46,11 @@ namespace Anseong.EditorTools
         static int errorCount;
         static EnterPlayModeOptions savedOptions;
         static bool savedOptionsEnabled;
+        static PilotCalibrationFlow calibration;
+        static BossServer bossServer;
+        static Transform trackingSpace, headTransform;
+        static double calibratedAt;
+        static CalibrationStage lastStage;
         static MatchFlow flow;
         static SessionBootstrap session;
         static CombatServer combat;
@@ -147,6 +156,7 @@ namespace Anseong.EditorTools
                     report.AppendLine($"{t:F1}s 1인 양팔 시작: {(ok ? "됨" : "실패 " + session.Problem)}");
                 }
                 LiftHeadIfNoHeadset();
+                StartBot();
                 Shot("00_start", t);
                 return;
             }
@@ -163,7 +173,7 @@ namespace Anseong.EditorTools
                 sceneEnter = now;
                 lastShot = 0;
                 visited.Add(scene);
-                report.AppendLine($"{t:F1}s 장면 → {scene}");
+                report.AppendLine($"{t:F1}s 장면 → {scene}{Situation()}");
             }
             var inScene = now - sceneEnter;
             if (now - lastShot >= ShotEvery && inScene >= 1.0)
@@ -178,6 +188,11 @@ namespace Anseong.EditorTools
                 combat.SubmitFinisherReady(PilotSide.Left, true);
                 combat.SubmitFinisherReady(PilotSide.Right, true);
             }
+            if (calibration != null && calibration.Stage != lastStage)
+            {
+                lastStage = calibration.Stage;
+                report.AppendLine($"{t:F1}s 보정 단계 → {lastStage}");
+            }
             if (scene == MatchScene.Result)
             {
                 if (inScene >= Dwell)
@@ -189,11 +204,130 @@ namespace Anseong.EditorTools
             }
             // 시간으로 넘어가는 장면은 기다리고, 나머지는 머문 뒤 "다음 장면".
             var timed = flow.Remaining >= 0f;
-            if (!timed && scene != MatchScene.Finisher && inScene >= Dwell && now - lastNext >= 2.0)
+            var dwell = scene == MatchScene.FightCannon || scene == MatchScene.FightArmor || scene == MatchScene.FightCore ? FightDwell
+                : scene == MatchScene.Checkup ? CheckupDwell : Dwell;
+            if (!timed && scene != MatchScene.Finisher && inScene >= dwell && now - lastNext >= 2.0)
             {
                 lastNext = now;
                 Next();
             }
+        }
+
+        /// <summary>보고서용: 보스 거리·HP·상태.</summary>
+        static string Situation()
+        {
+            var brain = UnityEngine.Object.FindAnyObjectByType<BossBrain>();
+            var seat = UnityEngine.Object.FindAnyObjectByType<CockpitSeat>();
+            if (brain == null || seat == null) return string.Empty;
+            var text = $" (보스 거리 {Vector3.Distance(brain.transform.position, seat.transform.root.position):F0} m";
+            if (combat != null && combat.Authority != null)
+            {
+                var hp = combat.Authority.Resolver.Boss;
+                text += $", 보스 HP {hp.Current:F0}/{hp.Max:F0}";
+            }
+            if (bossServer != null) text += $", 보스 상태 {bossServer.Action.BossState}";
+            return text + ")";
+        }
+
+        // ── 손 입력 봇 ──────────────────────────────────────────────
+        static void StartBot()
+        {
+            calibration = UnityEngine.Object.FindAnyObjectByType<PilotCalibrationFlow>();
+            bossServer = UnityEngine.Object.FindAnyObjectByType<BossServer>();
+            var origin = UnityEngine.Object.FindAnyObjectByType<XROrigin>();
+            if (origin == null || origin.Camera == null || calibration == null)
+            {
+                report.AppendLine("손 입력 봇: XR Origin 또는 보정 컴포넌트가 없어 손 입력 없이 돈다.");
+                return;
+            }
+            headTransform = origin.Camera.transform;
+            trackingSpace = origin.CameraFloorOffsetObject != null ? origin.CameraFloorOffsetObject.transform : headTransform.parent;
+            calibratedAt = -1;
+            lastStage = calibration.Stage;
+            PilotHandInput.DevOverride = BotHand;
+            report.AppendLine("손 입력 봇 켬(보정 → 가드·잽).");
+        }
+
+        static void StopBot()
+        {
+            PilotHandInput.DevOverride = null;
+            calibration = null;
+            bossServer = null;
+            trackingSpace = headTransform = null;
+        }
+
+        static Vector3 HeadLocal()
+        {
+            if (headTransform == null) return new Vector3(0f, 1.25f, 0f);
+            return trackingSpace != null ? trackingSpace.InverseTransformPoint(headTransform.position) : headTransform.localPosition;
+        }
+
+        static readonly Quaternion GuardRotation = Quaternion.Euler(-78f, 0f, 0f);
+        const double PunchPeriod = 2.6;   // 두 손이 한 번씩 치는 주기(손마다 1.3초 간격)
+
+        static PilotHandInput.DevHand? BotHand(PilotSide side)
+        {
+            if (calibration == null) return null;
+            var time = Time.timeAsDouble;
+            var head = HeadLocal();
+            var sx = side == PilotSide.Left ? -1f : 1f;
+            var reach = head + new Vector3(sx * 0.20f, -0.25f, 0.62f);
+            var guard = head + new Vector3(sx * 0.14f, -0.12f, 0.28f);
+            var hand = new PilotHandInput.DevHand { Position = guard, Rotation = GuardRotation };
+            // 0.5초 쥐고 0.5초 놓기(보정 저장용 박자).
+            var pulse = time % 1.0 < 0.5;
+
+            switch (calibration.Stage)
+            {
+                case CalibrationStage.NotStarted:
+                    return hand;
+                case CalibrationStage.Shoulder:
+                    hand.Position = head + new Vector3(sx * 0.2f, -0.75f, 0.05f);
+                    hand.Rotation = Quaternion.Euler(80f, 0f, 0f);
+                    hand.Grip = pulse ? 1f : 0f;
+                    return hand;
+                case CalibrationStage.Reach:
+                    hand.Position = reach;
+                    hand.Rotation = Quaternion.identity;
+                    hand.Grip = pulse ? 1f : 0f;
+                    calibratedAt = -1;
+                    return hand;
+                case CalibrationStage.Guard:
+                    hand.Grip = pulse ? 1f : 0f;
+                    calibratedAt = -1;
+                    return hand;
+            }
+
+            // 보정 끝: 한 번 놓았다가 계속 쥔다.
+            if (calibratedAt < 0) calibratedAt = time;
+            var since = time - calibratedAt;
+            if (since < 0.8) return hand;
+            hand.Grip = 1f;
+
+            var scene = flow != null && flow.Running ? flow.Scene : MatchScene.Waiting;
+            if (scene == MatchScene.Approach || scene == MatchScene.Entrance) hand.Stick = new Vector2(0f, 1f);
+            if (scene == MatchScene.DroneHunt && side == PilotSide.Right)
+            {
+                hand.Position = reach;
+                hand.Rotation = Quaternion.identity;
+                hand.Trigger = time % 0.8 < 0.4 ? 1f : 0f;
+                return hand;
+            }
+            var state = bossServer != null ? bossServer.Action.BossState : BossState.Rest;
+            var fighting = scene == MatchScene.Checkup || scene == MatchScene.FightCannon || scene == MatchScene.FightArmor || scene == MatchScene.FightCore;
+            if (!fighting || state == BossState.Telegraph || state == BossState.Strike) return hand;
+
+            // 잽: 0.18초 뻗기 → 0.5초 버티기(로봇 팔이 따라올 시간) → 0.25초 거두기. 왼손 먼저, 오른손은 반 주기 뒤.
+            var phase = (since + (side == PilotSide.Right ? PunchPeriod * 0.5 : 0.0)) % PunchPeriod;
+            float k;
+            if (phase < 0.18) k = (float)(phase / 0.18);
+            else if (phase < 0.68) k = 1f;
+            else if (phase < 0.93) k = 1f - (float)((phase - 0.68) / 0.25);
+            else k = 0f;
+            k = Mathf.SmoothStep(0f, 1f, k);
+            hand.Position = Vector3.Lerp(guard, reach, k);
+            hand.Rotation = Quaternion.Slerp(GuardRotation, Quaternion.identity, Mathf.Clamp01(k * 2.5f));
+            return hand;
         }
 
         static void Next()
@@ -241,7 +375,8 @@ namespace Anseong.EditorTools
             // 2) 뒤에서(우리 로봇 어깨 너머)
             var back = player.position - player.forward * 55f + player.right * 28f + Vector3.up * 62f;
             Capture(back, Quaternion.LookRotation(focus - back), 50f, prefix + "_chase");
-            // 3) 옆에서(두 로봇이 한 화면에)
+            // 3) 옆에서(두 로봇이 한 화면에). 두 번에 한 번만.
+            if (shotIndex % 2 == 0) return;
             var distance = boss != null ? Vector3.Distance(player.position, boss.position) : 80f;
             var side = focus + player.right * Mathf.Max(110f, distance * 0.95f) + Vector3.up * 8f;
             Capture(side, Quaternion.LookRotation(focus - side), 50f, prefix + "_side");
@@ -256,6 +391,8 @@ namespace Anseong.EditorTools
             shotCamera.stereoTargetEye = StereoTargetEyeMask.None;
             shotCamera.enabled = false;
             shotCamera.nearClipPlane = 0.05f;
+            // 후처리(블룸·톤)도 같이 찍는다.
+            shotCamera.GetUniversalAdditionalCameraData().renderPostProcessing = true;
             target = new RenderTexture(Width, Height, 24, RenderTextureFormat.ARGB32) { antiAliasing = 4 };
             readback = new Texture2D(Width, Height, TextureFormat.RGB24, false);
         }
@@ -284,11 +421,12 @@ namespace Anseong.EditorTools
             foreach (var s in all)
                 if (!visited.Contains(s) && s != MatchScene.Rebooting && s != MatchScene.Opening && s != MatchScene.Ending) missed.Add(s.ToString());
             report.AppendLine("지나간 장면 " + visited.Count + "개. 안 지나간 장면: " + (missed.Count > 0 ? string.Join(", ", missed) : "없음"));
-            report.AppendLine("오류·예외 로그 " + errorCount + "개, 스크린샷 " + shotIndex * 3 + "장");
+            report.AppendLine("오류·예외 로그 " + errorCount + "개, 스크린샷 " + Directory.GetFiles(outDir, "*.png").Length + "장");
             File.WriteAllText(Path.Combine(outDir, "report.txt"), report.ToString(), Encoding.UTF8);
             if (shotCamera != null) UnityEngine.Object.DestroyImmediate(shotCamera.gameObject);
             if (target != null) target.Release();
             shotCamera = null;
+            StopBot();
             flow = null;
             combat = null;
             session = null;

@@ -7,7 +7,9 @@
         "Unity.Netcode.Runtime",
         "Unity.Networking.Transport",
         "Unity.XR.CoreUtils",
-        "Unity.XR.Interaction.Toolkit"
+        "Unity.XR.Interaction.Toolkit",
+        "Unity.RenderPipelines.Core.Runtime",
+        "Unity.RenderPipelines.Universal.Runtime"
     ],
     "includePlatforms": [
         "Editor"

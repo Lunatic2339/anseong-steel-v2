@@ -19,6 +19,9 @@ namespace Anseong.Flow
         [SerializeField, Tooltip("맵 씬의 스크립트(부서지는 건물·굴뚝 등)를 멈춘다. 맵 조각 수천 개가 매 프레임 도는 비용을 없앤다. 부서짐은 M5에서 켠다.")]
         bool freezeEnvironmentScripts = true;
 
+        [SerializeField, Tooltip("맵 씬에서 숨길 오브젝트 이름 조각. 맵 작업용 크기 기준 로봇(…ScaleOnly…)이 전투 중에 서 있지 않게 한다.")]
+        string[] hideNameContains = { "ScaleOnly" };
+
         [SerializeField, Tooltip("Main의 해. 맵 씬에 켜진 Directional Light가 있으면 이것을 끈다.")]
         Light mainLight;
 
@@ -46,10 +49,11 @@ namespace Anseong.Flow
         void Prepare(Scene scene)
         {
             if (!scene.IsValid() || !scene.isLoaded) return;
-            int cameras = 0, scripts = 0;
+            int cameras = 0, scripts = 0, hidden = 0;
             var mapHasSun = false;
             foreach (var root in scene.GetRootGameObjects())
             {
+                hidden += HideByName(root.transform);
                 if (disableEnvironmentCameras)
                 {
                     foreach (var c in root.GetComponentsInChildren<Camera>(true)) { c.enabled = false; cameras++; }
@@ -69,7 +73,23 @@ namespace Anseong.Flow
             }
             if (mapHasSun && mainLight != null) mainLight.enabled = false;
             Loaded = true;
-            Debug.Log($"[EnvironmentLoader] 환경 '{scene.name}' 불러옴: 카메라 {cameras}개 끔, 맵 스크립트 {scripts}개 멈춤, 해 = {(mapHasSun ? "맵" : "Main")}.", this);
+            Debug.Log($"[EnvironmentLoader] 환경 '{scene.name}' 불러옴: 카메라 {cameras}개 끔, 기준 오브젝트 {hidden}개 숨김, 맵 스크립트 {scripts}개 멈춤, 해 = {(mapHasSun ? "맵" : "Main")}.", this);
+        }
+
+        /// <summary>이름에 숨길 조각이 든 오브젝트를 끈다(자식까지 내려가며, 끈 것 아래는 더 보지 않는다).</summary>
+        int HideByName(Transform t)
+        {
+            if (hideNameContains == null || hideNameContains.Length == 0) return 0;
+            foreach (var piece in hideNameContains)
+            {
+                if (string.IsNullOrEmpty(piece) || t.name.IndexOf(piece, System.StringComparison.OrdinalIgnoreCase) < 0) continue;
+                if (!t.gameObject.activeSelf) return 0;
+                t.gameObject.SetActive(false);
+                return 1;
+            }
+            var count = 0;
+            for (var i = 0; i < t.childCount; i++) count += HideByName(t.GetChild(i));
+            return count;
         }
     }
 }

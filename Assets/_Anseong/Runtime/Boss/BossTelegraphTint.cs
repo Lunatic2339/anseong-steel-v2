@@ -28,6 +28,9 @@ namespace Anseong.Boss
         [SerializeField, Range(0f, 1f), Tooltip("가장 셀 때 섞는 정도.")]
         float strength = 0.7f;
 
+        [SerializeField, Range(0f, 4f), Tooltip("예고 빛 세기(보스 재질 emission에 곱함).")]
+        float glow = 1.6f;
+
         [Header("공격 쪽 표시(임시)")]
         [SerializeField, Tooltip("막아야 할 쪽을 큰 구로 보여 준다. 진짜 보스 애니가 들어오면 끈다.")]
         bool markers = true;
@@ -114,8 +117,8 @@ namespace Anseong.Boss
                     continue;
                 }
                 r.GetPropertyBlock(block);
-                block.SetColor(BaseColorId, Color.Lerp(Color.white, color, k));
-                block.SetColor(EmissionId, color * k);
+                // 몸 색은 건드리지 않고 빛(emission)만 얹는다. 몸 색을 덮으면 재질 무늬가 사라져 장난감처럼 보인다.
+                block.SetColor(EmissionId, color * (k * glow));
                 r.SetPropertyBlock(block);
             }
         }

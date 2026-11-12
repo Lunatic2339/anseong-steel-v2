@@ -148,6 +148,20 @@ namespace Anseong.Pilot
             return HandBusy(hand);
         }
 
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+        /// <summary>자동 점검용 손 입력 한 프레임(트래킹 공간).</summary>
+        public struct DevHand
+        {
+            public Vector3 Position;
+            public Quaternion Rotation;
+            public float Grip, Trigger;
+            public Vector2 Stick;
+        }
+
+        /// <summary>자동 점검이 넣는 손 입력. null을 돌려주면 그 손은 실제 장치를 읽는다. 점검이 끝나면 null로 되돌린다.</summary>
+        public static Func<PilotSide, DevHand?> DevOverride;
+#endif
+
         PilotHandSample Read(PilotSide side, HandActions actions, PilotHandSample previous, AttackIntentGate gate, double now)
         {
             var sample = previous;
@@ -166,6 +180,19 @@ namespace Anseong.Pilot
             sample.Grip = ReadOn(actions.grip, device, 0f);
             sample.Trigger = ReadOn(actions.trigger, device, 0f);
             sample.Stick = ReadOn(actions.stick, device, Vector2.zero);
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+            // 자동 점검(Editor/AutoPlaytest): 헤드셋 없이 손 입력을 대신 넣는다.
+            var bot = DevOverride?.Invoke(side);
+            if (bot.HasValue)
+            {
+                sample.Tracked = true;
+                sample.Position = bot.Value.Position;
+                sample.Rotation = bot.Value.Rotation;
+                sample.Grip = bot.Value.Grip;
+                sample.Trigger = bot.Value.Trigger;
+                sample.Stick = bot.Value.Stick;
+            }
+#endif
             sample.GripHeld = previous.GripHeld ? sample.Grip > gripReleaseThreshold : sample.Grip >= gripPressThreshold;
             sample.AttackIntent = gate.Update(sample.Tracked, sample.GripHeld, now);
             return sample;
