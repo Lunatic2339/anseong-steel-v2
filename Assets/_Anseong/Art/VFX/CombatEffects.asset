@@ -18,10 +18,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 1
-    prefab: {fileID: 0}
+    prefab: {fileID: 4264036275687972051, guid: 6eb2aa5cc3b08d945b2b63f1a0beaad5, type: 3}
     anchor: 0
     lift: 0
-    seconds: 0.4
+    seconds: 1.2
     scale: 3
     color: {r: 1, g: 0.8, b: 0.4, a: 1}
   - effectName: VFX_HookImpact
@@ -29,10 +29,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 2
-    prefab: {fileID: 0}
+    prefab: {fileID: 3434112158791010354, guid: 8ae6634977941054cb1cc5580c5dfa2b, type: 3}
     anchor: 0
     lift: 0
-    seconds: 0.5
+    seconds: 1.6
     scale: 6
     color: {r: 1, g: 0.55, b: 0.2, a: 1}
   - effectName: VFX_HookImpact
@@ -40,10 +40,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 3
-    prefab: {fileID: 0}
+    prefab: {fileID: 3434112158791010354, guid: 8ae6634977941054cb1cc5580c5dfa2b, type: 3}
     anchor: 0
     lift: 0
-    seconds: 0.5
+    seconds: 1.6
     scale: 6
     color: {r: 1, g: 0.55, b: 0.2, a: 1}
   - effectName: VFX_BoostShock
@@ -51,10 +51,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 0
-    prefab: {fileID: 0}
+    prefab: {fileID: 6950045662632084947, guid: b45fa8cb325c5644db3faf2bc0696e13, type: 3}
     anchor: 0
     lift: 0
-    seconds: 0.8
+    seconds: 1.4
     scale: 14
     color: {r: 0.5, g: 0.8, b: 1, a: 1}
   - effectName: VFX_GuardSpark
@@ -62,10 +62,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 0
-    prefab: {fileID: 0}
+    prefab: {fileID: 2487634048455577079, guid: 597550e528b839242ae9c02e4601de21, type: 3}
     anchor: 2
     lift: 0
-    seconds: 0.3
+    seconds: 1
     scale: 4
     color: {r: 0.4, g: 0.6, b: 1, a: 1}
   - effectName: VFX_WeaponBreak
@@ -73,10 +73,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 0
-    prefab: {fileID: 0}
+    prefab: {fileID: 3435320062266475815, guid: 74e98576049159f4bbd34de9f1a5ba12, type: 3}
     anchor: 1
     lift: 30
-    seconds: 1.2
+    seconds: 3.2
     scale: 25
     color: {r: 1, g: 1, b: 1, a: 1}
   - effectName: VFX_DroneExplode
@@ -84,10 +84,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 0
-    prefab: {fileID: 0}
+    prefab: {fileID: 1214332838865451643, guid: 79e4ba88e67402e44a2f0f49768f7f7a, type: 3}
     anchor: 0
     lift: 0
-    seconds: 0.8
+    seconds: 2.2
     scale: 8
     color: {r: 1, g: 0.45, b: 0.1, a: 1}
   - effectName: VFX_MuzzleFlash
@@ -95,10 +95,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 0
-    prefab: {fileID: 0}
+    prefab: {fileID: 2083504340762934427, guid: 0f59dcc1417079f408ca45a818801a02, type: 3}
     anchor: 0
     lift: 0
-    seconds: 0.2
+    seconds: 0.6
     scale: 3
     color: {r: 1, g: 0.95, b: 0.5, a: 1}
   - effectName: VFX_ScanPing
@@ -106,10 +106,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 0
-    prefab: {fileID: 0}
+    prefab: {fileID: 5939743093195364191, guid: b2a66166035ca5340954180f0dfcbb2d, type: 3}
     anchor: 0
     lift: 0
-    seconds: 0.5
+    seconds: 1.2
     scale: 5
     color: {r: 0.2, g: 1, b: 0.6, a: 1}
   - effectName: VFX_HackSparks
@@ -117,10 +117,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 0
-    prefab: {fileID: 0}
+    prefab: {fileID: 7668635637065861693, guid: ce8cae3091bbc4f4a8186710cdd8c4f8, type: 3}
     anchor: 2
     lift: 0
-    seconds: 1
+    seconds: 1.6
     scale: 2
     color: {r: 0.8, g: 0.2, b: 1, a: 1}
   - effectName: VFX_MapDust
@@ -128,10 +128,10 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 0
-    prefab: {fileID: 0}
+    prefab: {fileID: 8807763067346097136, guid: c3bae79324beb064b8f6ffca37f662b3, type: 3}
     anchor: 0
     lift: 0
-    seconds: 2
+    seconds: 4.5
     scale: 40
     color: {r: 0.6, g: 0.55, b: 0.5, a: 1}
   - effectName: VFX_BossExplode
@@ -139,9 +139,9 @@ MonoBehaviour:
     matchCode: 0
     code: 0
     kind: 0
-    prefab: {fileID: 0}
+    prefab: {fileID: 3375663047092516740, guid: a40ff4cd5c8ce1443ad04cb3411d6029, type: 3}
     anchor: 1
     lift: 30
-    seconds: 2.5
+    seconds: 5
     scale: 60
     color: {r: 1, g: 0.5, b: 0.15, a: 1}
