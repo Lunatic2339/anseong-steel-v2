@@ -18,6 +18,19 @@ namespace Anseong.EditorTools
             "Anseong/Setup/Add Exoskeleton Links",
         };
 
+        /// <summary>
+        /// 명령줄용: Unity.exe -batchmode -projectPath ... -executeMethod Anseong.EditorTools.FullGameMenu.BuildAndSaveBatch -quit
+        /// 조립한 뒤 열린 씬과 에셋을 저장한다(사람이 Ctrl+S 누를 수 없으므로).
+        /// </summary>
+        public static void BuildAndSaveBatch()
+        {
+            AssetDatabase.Refresh();
+            BuildFullGame();
+            UnityEditor.SceneManagement.EditorSceneManager.SaveOpenScenes();
+            AssetDatabase.SaveAssets();
+            Debug.Log("[FullGameMenu] 저장 끝(batch).");
+        }
+
         [MenuItem("Anseong/Build Full Game (한 번에)", priority = -100)]
         static void BuildFullGame()
         {
