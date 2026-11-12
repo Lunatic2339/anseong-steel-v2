@@ -36,6 +36,16 @@ namespace Anseong.EditorTools
         const float Timeout = 600f;
         const int Width = 1920, Height = 1080;
 
+        // 영상용 연속 장면(명령줄에 -anseongRecord를 붙이면): 두 로봇을 도는 카메라로 초당 12장 JPG → Logs/Playtest/video/. ffmpeg로 묶는다.
+        const float RecordFps = 12f;
+        const int RecordWidth = 1280, RecordHeight = 720;
+        static bool recording;
+        static double lastFrame;
+        static int frameIndex;
+        static RenderTexture recordTarget;
+        static Texture2D recordReadback;
+        static string videoDir;
+
         static bool running, exitWhenDone, begun, finishing;
         static double playStart, sceneEnter, lastShot, lastNext;
         static MatchScene lastScene;
@@ -73,6 +83,11 @@ namespace Anseong.EditorTools
             if (Directory.Exists(outDir))
                 foreach (var f in Directory.GetFiles(outDir)) File.Delete(f);
             Directory.CreateDirectory(outDir);
+            recording = Array.IndexOf(Environment.GetCommandLineArgs(), "-anseongRecord") >= 0;
+            frameIndex = 0;
+            videoDir = Path.Combine(outDir, "video");
+            if (Directory.Exists(videoDir)) Directory.Delete(videoDir, true);
+            if (recording) Directory.CreateDirectory(videoDir);
             report = new StringBuilder();
             report.AppendLine("자동 점검 " + DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss") + " / 그래픽: " + SystemInfo.graphicsDeviceName);
             errorCount = 0;
@@ -174,6 +189,11 @@ namespace Anseong.EditorTools
                 lastShot = 0;
                 visited.Add(scene);
                 report.AppendLine($"{t:F1}s 장면 → {scene}{Situation()}");
+            }
+            if (recording && now - lastFrame >= 1.0 / RecordFps)
+            {
+                lastFrame = now;
+                RecordFrame(t);
             }
             var inScene = now - sceneEnter;
             if (now - lastShot >= ShotEvery && inScene >= 1.0)
@@ -391,6 +411,43 @@ namespace Anseong.EditorTools
             Capture(side, Quaternion.LookRotation(focus - side), 50f, prefix + "_side");
         }
 
+        /// <summary>영상 한 장: 두 로봇 가운데를 보며 천천히 도는 카메라(우리 로봇 뒤 오른쪽에서 옆까지 왔다 갔다).</summary>
+        static void RecordFrame(double t)
+        {
+            var origin = UnityEngine.Object.FindAnyObjectByType<XROrigin>();
+            var main = origin != null && origin.Camera != null ? origin.Camera : Camera.main;
+            if (main == null) return;
+            EnsureCamera(main);
+            if (recordTarget == null)
+            {
+                recordTarget = new RenderTexture(RecordWidth, RecordHeight, 24, RenderTextureFormat.ARGB32) { antiAliasing = 2 };
+                recordReadback = new Texture2D(RecordWidth, RecordHeight, TextureFormat.RGB24, false);
+            }
+            var seat = UnityEngine.Object.FindAnyObjectByType<CockpitSeat>();
+            var player = seat != null ? seat.transform.root : main.transform.root;
+            var bossBrain = UnityEngine.Object.FindAnyObjectByType<BossBrain>();
+            var boss = bossBrain != null ? bossBrain.transform : null;
+            var distance = boss != null ? Vector3.Distance(player.position, boss.position) : 60f;
+            var focus = (boss != null ? Vector3.Lerp(player.position, boss.position, 0.5f) : player.position + player.forward * 30f) + Vector3.up * 36f;
+            // 뒤쪽 오른편(150°)에서 옆(80°) 사이를 느리게 오간다. 0° = 우리 로봇 정면 방향.
+            var angle = Mathf.Lerp(80f, 150f, 0.5f + 0.5f * Mathf.Sin((float)t * 0.12f));
+            var radius = Mathf.Max(85f, distance * 0.5f + 70f);
+            var direction = Quaternion.AngleAxis(angle, Vector3.up) * player.forward;
+            var position = focus + direction * radius + Vector3.up * 14f;
+            shotCamera.transform.SetPositionAndRotation(position, Quaternion.LookRotation(focus - position));
+            shotCamera.fieldOfView = 48f;
+            shotCamera.targetTexture = recordTarget;
+            shotCamera.Render();
+            var previous = RenderTexture.active;
+            RenderTexture.active = recordTarget;
+            recordReadback.ReadPixels(new Rect(0, 0, RecordWidth, RecordHeight), 0, 0);
+            recordReadback.Apply(false);
+            RenderTexture.active = previous;
+            shotCamera.targetTexture = null;
+            frameIndex++;
+            File.WriteAllBytes(Path.Combine(videoDir, $"f{frameIndex:00000}.jpg"), recordReadback.EncodeToJPG(82));
+        }
+
         static void EnsureCamera(Camera main)
         {
             if (shotCamera != null) return;
@@ -434,6 +491,9 @@ namespace Anseong.EditorTools
             File.WriteAllText(Path.Combine(outDir, "report.txt"), report.ToString(), Encoding.UTF8);
             if (shotCamera != null) UnityEngine.Object.DestroyImmediate(shotCamera.gameObject);
             if (target != null) target.Release();
+            if (recordTarget != null) recordTarget.Release();
+            recordTarget = null;
+            if (recording) report.AppendLine($"영상 장면 {frameIndex}장({RecordFps}fps) → {videoDir}. 묶기: ffmpeg -framerate {RecordFps} -i f%05d.jpg -c:v libx264 -pix_fmt yuv420p out.mp4");
             shotCamera = null;
             StopBot();
             flow = null;
