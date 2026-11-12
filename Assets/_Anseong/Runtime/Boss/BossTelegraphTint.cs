@@ -72,7 +72,7 @@ namespace Anseong.Boss
                     var level = Mathf.RoundToInt(e.Amount);
                     color = level >= 2 ? unblockable : level == 1 ? heavy : normal;
                     // 명중 순간까지(정확한 길이는 몰라도 강·가드 불가가 길다). 명중 순간 이벤트가 오면 끈다.
-                    until = Time.time + (level >= 2 ? 2.0f : level == 1 ? 1.8f : 1.2f);
+                    until = Time.time + (e.Damage > 0f ? e.Damage : level >= 2 ? 2.0f : level == 1 ? 1.8f : 1.2f);
                     MarkSides((BossAttackKind)e.Code, e.Side);
                     break;
                 case CombatCue.BossStrike:

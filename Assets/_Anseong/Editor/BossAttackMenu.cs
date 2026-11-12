@@ -131,6 +131,22 @@ namespace Anseong.EditorTools
                 AssetDatabase.CreateAsset(table, PhaseTablePath);
                 Debug.Log($"{LogPrefix} 페이즈 순서표 생성: {PhaseTablePath} (05 제안값)");
             }
+            // 11/12 연속기: 옛 표(연속기 칸이 전부 빈 것)에는 기본 연속기를 채운다. 하나라도 손댄 표는 그대로 둔다.
+            if (table.phases != null && table.phases.All(ph => ph == null || ph.chains == null || ph.chains.Length == 0))
+            {
+                var defaults = BossPhaseTable.DefaultPhases();
+                for (var i = 0; i < table.phases.Length && i < defaults.Length; i++)
+                {
+                    if (table.phases[i] == null) continue;
+                    table.phases[i].chains = defaults[i].chains;
+                    table.phases[i].chainChance = defaults[i].chainChance;
+                    table.phases[i].chainChancePerCrack = defaults[i].chainChancePerCrack;
+                    table.phases[i].restCutPerCrack = defaults[i].restCutPerCrack;
+                    table.phases[i].singlesFirst = defaults[i].singlesFirst;
+                }
+                EditorUtility.SetDirty(table);
+                Debug.Log($"{LogPrefix} 페이즈 순서표에 기본 연속기를 채움(페이즈마다 9~10개)");
+            }
             if (table.weaponSet == null)
             {
                 table.weaponSet = EnsureWeaponSet();

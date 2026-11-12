@@ -33,6 +33,7 @@ namespace Anseong.Boss
             phase = Math.Max(1, value);
             inPhase = 0;
             comboShown = false;
+            lastChain = null;
         }
 
         public void Reset()
@@ -41,13 +42,68 @@ namespace Anseong.Boss
             BeginPhase(1);
         }
 
-        /// <summary>쉬는 시간(초).</summary>
-        public float RestSeconds()
+        /// <summary>쉬는 시간(초). 금이 갈수록 짧아진다(뒤로 갈수록 거세게).</summary>
+        public float RestSeconds(int cracks = 0)
         {
             var e = Entry;
             var min = Math.Min(e.restMin, e.restMax);
             var max = Math.Max(e.restMin, e.restMax);
-            return (float)(min + random.NextDouble() * (max - min));
+            var cut = Math.Max(0.4f, 1f - e.restCutPerCrack * Math.Max(0, cracks));
+            return (float)(min + random.NextDouble() * (max - min)) * cut;
+        }
+
+        readonly List<BossAttackKind> pattern = new List<BossAttackKind>(6);
+        readonly List<BossChain> chainCandidates = new List<BossChain>(12);
+        BossChain lastChain;
+
+        /// <summary>
+        /// 다음 패턴: 단발 하나 또는 연속기(기술 여러 개, 11/12). 페이즈 처음 몇 번은 단발만(기본기 먼저),
+        /// 그 뒤 확률로 연속기. 금이 갈수록 확률이 오르고 더 긴 연속기가 풀린다. 같은 연속기는 연달아 안 나온다.
+        /// 돌려준 목록은 다음 호출 때 다시 쓰이므로 바로 쓴다.
+        /// </summary>
+        public IReadOnlyList<BossAttackKind> NextPattern(int cracks = 0)
+        {
+            pattern.Clear();
+            var e = Entry;
+            var chain = inPhase >= Math.Max(1, e.singlesFirst) ? PickChain(e, Math.Max(0, cracks)) : null;
+            if (chain == null)
+            {
+                lastChain = null;
+                pattern.Add(Next());
+                return pattern;
+            }
+            lastChain = chain;
+            inPhase++;
+            foreach (var kind in chain.attacks)
+            {
+                pattern.Add(kind);
+                history.Add(kind);
+                if (kind == BossAttackKind.AlternatingCombo) comboShown = true;
+            }
+            return pattern;
+        }
+
+        BossChain PickChain(BossPhaseEntry e, int cracks)
+        {
+            if (e.chains == null || e.chains.Length == 0) return null;
+            var chance = e.chainChance + e.chainChancePerCrack * cracks;
+            if (random.NextDouble() >= chance) return null;
+            chainCandidates.Clear();
+            var total = 0f;
+            foreach (var c in e.chains)
+            {
+                if (c == null || c.attacks == null || c.attacks.Length < 2 || c.weight <= 0f || c.minCracks > cracks || c == lastChain) continue;
+                chainCandidates.Add(c);
+                total += c.weight;
+            }
+            if (chainCandidates.Count == 0) return null;
+            var roll = random.NextDouble() * total;
+            foreach (var c in chainCandidates)
+            {
+                roll -= c.weight;
+                if (roll < 0) return c;
+            }
+            return chainCandidates[chainCandidates.Count - 1];
         }
 
         public BossAttackKind Next()

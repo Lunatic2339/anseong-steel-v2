@@ -287,11 +287,12 @@ namespace Anseong.Boss
 
             if (autoAttack && !AttacksHeld && machine.IsResting && now >= nextAttackAt && !authority.Pilot.IsDefeated && InReach())
             {
-                var kind = picker.Next();
-                if (server.TryBegin(kind))
+                var pattern = picker.NextPattern(BossWeaponRules.CrackCount(hp, Thresholds));
+                if (server.TryBeginChain(pattern))
                 {
                     stats.AttackStarted();
-                    if (seen.Add(kind)) FirstSight(kind, now);
+                    foreach (var kind in pattern)
+                        if (seen.Add(kind)) FirstSight(kind, now);
                 }
             }
             server.Combat.Flush();
@@ -423,9 +424,18 @@ namespace Anseong.Boss
                     }
                     break;
                 case BossEventType.OpeningEnded:
-                    if (picker != null) nextAttackAt = e.Time + picker.RestSeconds();
+                    if (picker != null) nextAttackAt = e.Time + picker.RestSeconds(CurrentCracks());
                     break;
             }
+        }
+
+        /// <summary>지금 차례 보스 무기에 간 금 수(0~2).</summary>
+        int CurrentCracks()
+        {
+            if (server == null || server.Combat == null || server.Combat.Authority == null) return 0;
+            var boss = server.Combat.Authority.Resolver.Boss;
+            var hp = boss.Max > 0f ? boss.Current / boss.Max * 100f : 0f;
+            return BossWeaponRules.CrackCount(hp, Thresholds);
         }
 
         void OnCue(CombatEvent e)

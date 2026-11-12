@@ -18,12 +18,14 @@ namespace Anseong.Boss
         public byte State;
         public byte Attack;
         public double Start;
+        /// <summary>연속기 뒤쪽 기술: 클립을 이만큼(초) 앞당겨 튼다(준비 동작 건너뜀).</summary>
+        public float Lead;
 
         public BossState BossState => (BossState)State;
         public bool HasAttack => Attack != NoAttack;
         public BossAttackKind AttackKind => (BossAttackKind)Attack;
 
-        public bool Equals(BossAction other) => State == other.State && Attack == other.Attack && Start.Equals(other.Start);
+        public bool Equals(BossAction other) => State == other.State && Attack == other.Attack && Start.Equals(other.Start) && Lead.Equals(other.Lead);
         public override bool Equals(object obj) => obj is BossAction other && Equals(other);
         public override int GetHashCode() => (State << 8 | Attack) ^ Start.GetHashCode();
     }
@@ -114,6 +116,47 @@ namespace Anseong.Boss
         {
             if (!IsServer || !bound || combat.Authority.Pilot.IsDefeated) return false;
             if (!machine.Begin(SpecOf(kind), Now, bossEvents)) return false;
+            Publish();
+            return true;
+        }
+
+        [Header("연속기 (11/12)")]
+        [SerializeField, Range(0.3f, 1f), Tooltip("연속기 둘째 기술부터 예고를 이 비율로 줄인다(준비 동작을 그만큼 건너뛰어 '와바박' 이어 침). 1 = 그대로.")]
+        float chainTelegraphFactor = 0.62f;
+        [SerializeField, Min(0.4f), Tooltip("줄여도 이보다 짧아지지 않는 예고(초). 막을 시간은 남긴다.")]
+        float chainMinTelegraph = 0.75f;
+        [SerializeField, Range(0.3f, 1f), Tooltip("연속기 둘째 기술부터 실패 피해 비율(연속으로 맞아도 한 번에 무너지지 않게).")]
+        float chainDamageFactor = 0.75f;
+        [SerializeField, Min(0f), Tooltip("연속기에서 다음 기술로 넘어가기 전 회복(초).")]
+        float chainLinkRecovery = 0.3f;
+        [SerializeField, Min(0f), Tooltip("연속기를 전부 막으면 기술 하나마다 더 주는 빈틈(초).")]
+        float chainOpeningBonus = 0.5f;
+
+        readonly List<BossAttackSpec> chainSpecs = new List<BossAttackSpec>(6);
+
+        /// <summary>서버: 연속기 시작(쉬는 중일 때만). 기술을 빈틈 없이 이어 치고 빈틈은 마지막 뒤에만.</summary>
+        public bool TryBeginChain(IReadOnlyList<BossAttackKind> kinds)
+        {
+            if (kinds == null || kinds.Count == 0) return false;
+            if (kinds.Count == 1) return TryBegin(kinds[0]);
+            if (!IsServer || !bound || combat.Authority.Pilot.IsDefeated) return false;
+            chainSpecs.Clear();
+            for (var i = 0; i < kinds.Count; i++)
+            {
+                var spec = SpecOf(kinds[i]);
+                if (i > 0)
+                {
+                    spec = spec.Clone();
+                    var shortened = Mathf.Max(Mathf.Min(spec.telegraphSeconds, chainMinTelegraph), spec.telegraphSeconds * chainTelegraphFactor);
+                    spec.clipLead = spec.telegraphSeconds - shortened;
+                    spec.telegraphSeconds = shortened;
+                    spec.failDamage *= chainDamageFactor;
+                }
+                chainSpecs.Add(spec);
+            }
+            machine.ChainLinkRecovery = chainLinkRecovery;
+            machine.ChainOpeningBonus = chainOpeningBonus;
+            if (!machine.BeginChain(chainSpecs, Now, bossEvents)) return false;
             Publish();
             return true;
         }
@@ -221,6 +264,8 @@ namespace Anseong.Boss
                         cue.Amount = (int)SpecOf(e.Attack).level;
                         // 안내 글자용 타 수(M2-06, 연타 "4번").
                         cue.ComboStep = SpecOf(e.Attack).HitCount;
+                        // 연속기: 예고 길이(줄어든 값)를 같이 보낸다(표시가 명중 순간에 맞게).
+                        cue.Damage = e.Seconds;
                         break;
                     case BossEventType.OpeningStarted:
                         cue.Cue = CombatCue.BossOpening;
@@ -239,6 +284,7 @@ namespace Anseong.Boss
                 State = (byte)machine.State,
                 Attack = machine.HasAttack && machine.IsAttacking ? (byte)machine.Attack.kind : BossAction.NoAttack,
                 Start = machine.IsAttacking ? machine.AttackStart : machine.StateStart,
+                Lead = machine.HasAttack && machine.IsAttacking ? machine.Attack.clipLead : 0f,
             };
             if (!action.Value.Equals(next)) action.Value = next;
         }

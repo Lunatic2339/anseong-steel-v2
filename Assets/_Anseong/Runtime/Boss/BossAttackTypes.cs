@@ -103,6 +103,9 @@ namespace Anseong.Boss
         [Tooltip("대응 성공 시 빈틈 앞 경직(초). 내려찍기 양팔 가드 0.8, 돌진 회피 후 휘청.")]
         [Min(0f)] public float staggerOnSuccess;
 
+        /// <summary>연속기 뒤쪽 기술: 준비 동작을 이만큼(초) 건너뛰고 시작한다(클립을 그만큼 앞당겨 재생). 에셋에 저장하지 않는다.</summary>
+        [System.NonSerialized] public float clipLead;
+
         public int HitCount => Mathf.Max(1, hits);
         public double StrikeTime(int hit) => telegraphSeconds + Mathf.Clamp(hit, 0, HitCount - 1) * hitIntervalSeconds;
         public double EndTime => StrikeTime(HitCount - 1) + recoverySeconds;

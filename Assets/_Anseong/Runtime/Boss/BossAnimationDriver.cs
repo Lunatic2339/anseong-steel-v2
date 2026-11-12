@@ -87,7 +87,7 @@ namespace Anseong.Boss
                 hash = Animator.StringToHash(LayerPrefix + idleState);
                 if (!animator.HasState(0, hash)) return;
             }
-            var elapsed = action.BossState == BossState.Rest || action.BossState == BossState.Opening ? 0f : Mathf.Max(0f, (float)(server.Now - action.Start));
+            var elapsed = action.BossState == BossState.Rest || action.BossState == BossState.Opening ? 0f : Mathf.Max(0f, (float)(server.Now - action.Start)) + action.Lead;
             animator.CrossFadeInFixedTime(hash, fade, 0, elapsed);
         }
 

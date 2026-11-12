@@ -16,6 +16,26 @@ namespace Anseong.Boss
         }
     }
 
+    /// <summary>연속기 하나: 기술을 빈틈 없이 이어 친다(11/12). 빈틈은 마지막 기술 뒤에만.</summary>
+    [Serializable]
+    public class BossChain
+    {
+        [Tooltip("이어 치는 기술(2~5개).")]
+        public BossAttackKind[] attacks = new BossAttackKind[0];
+        [Tooltip("고르는 비율.")]
+        [Min(0f)] public float weight = 1f;
+        [Tooltip("이 무기에 금이 이만큼 간 뒤부터 나온다(0 = 처음부터, 1·2 = 금 1·2개 뒤). 뒤로 갈수록 거세지게.")]
+        [Range(0, 2)] public int minCracks;
+
+        public BossChain() { }
+        public BossChain(float weight, int minCracks, params BossAttackKind[] attacks)
+        {
+            this.weight = weight;
+            this.minCracks = minCracks;
+            this.attacks = attacks;
+        }
+    }
+
     [Serializable]
     public class BossPhaseEntry
     {
@@ -29,6 +49,18 @@ namespace Anseong.Boss
         [Min(0f)] public float restMax = 3.5f;
         [Tooltip("이 페이즈 시작 뒤 이 횟수 안에 좌우 연타를 한 번 보여준다(0 = 규칙 없음). 05: 2페이즈 3.")]
         [Min(0)] public int showComboWithin;
+
+        [Header("연속기 (11/12)")]
+        [Tooltip("연속기 목록. 비면 단발만.")]
+        public BossChain[] chains = new BossChain[0];
+        [Tooltip("공격을 고를 때 연속기가 나올 확률(금 0개일 때).")]
+        [Range(0f, 1f)] public float chainChance;
+        [Tooltip("금 하나마다 연속기 확률이 이만큼 오른다.")]
+        [Range(0f, 0.5f)] public float chainChancePerCrack = 0.15f;
+        [Tooltip("금 하나마다 쉬는 시간이 이 비율만큼 줄어든다(0.12 = 금 2개면 24% 짧게).")]
+        [Range(0f, 0.4f)] public float restCutPerCrack = 0.12f;
+        [Tooltip("이 페이즈에서 단발만 나오는 처음 공격 수(기본기를 먼저 보여 준다).")]
+        [Min(0)] public int singlesFirst = 2;
     }
 
     /// <summary>
@@ -71,11 +103,38 @@ namespace Anseong.Boss
             new BossPhaseEntry
             {
                 firstAttack = BossAttackKind.PunchRight, restMin = 2.5f, restMax = 3.5f,
+                chainChance = 0.3f, singlesFirst = 3,
+                chains = new[]
+                {
+                    new BossChain(3f, 0, BossAttackKind.PunchLeft, BossAttackKind.PunchRight),
+                    new BossChain(3f, 0, BossAttackKind.PunchRight, BossAttackKind.PunchLeft),
+                    new BossChain(2f, 0, BossAttackKind.PunchLeft, BossAttackKind.PunchLeft),
+                    new BossChain(2f, 0, BossAttackKind.PunchRight, BossAttackKind.PunchRight),
+                    new BossChain(2f, 1, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.PunchRight),
+                    new BossChain(2f, 1, BossAttackKind.PunchLeft, BossAttackKind.PunchRight, BossAttackKind.PunchLeft),
+                    new BossChain(2f, 1, BossAttackKind.PunchLeft, BossAttackKind.PunchLeft, BossAttackKind.PunchRight),
+                    new BossChain(2f, 2, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.SlamBoth),
+                    new BossChain(1f, 2, BossAttackKind.PunchLeft, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.PunchRight),
+                },
                 weights = new[] { new AttackWeight(BossAttackKind.PunchLeft, 50f), new AttackWeight(BossAttackKind.PunchRight, 50f) },
             },
             new BossPhaseEntry
             {
                 firstAttack = BossAttackKind.SlamBoth, restMin = 2f, restMax = 3f, showComboWithin = 3,
+                chainChance = 0.45f, singlesFirst = 2,
+                chains = new[]
+                {
+                    new BossChain(3f, 0, BossAttackKind.PunchLeft, BossAttackKind.PunchRight, BossAttackKind.SlamBoth),
+                    new BossChain(3f, 0, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.SlamBoth),
+                    new BossChain(2f, 0, BossAttackKind.SlamBoth, BossAttackKind.PunchLeft),
+                    new BossChain(2f, 0, BossAttackKind.SlamBoth, BossAttackKind.PunchRight),
+                    new BossChain(2f, 0, BossAttackKind.PunchRight, BossAttackKind.PunchRight, BossAttackKind.PunchLeft),
+                    new BossChain(2f, 1, BossAttackKind.AlternatingCombo, BossAttackKind.SlamBoth),
+                    new BossChain(2f, 1, BossAttackKind.SlamBoth, BossAttackKind.SlamBoth),
+                    new BossChain(2f, 1, BossAttackKind.PunchLeft, BossAttackKind.SlamBoth, BossAttackKind.PunchRight),
+                    new BossChain(2f, 2, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.AlternatingCombo),
+                    new BossChain(1f, 2, BossAttackKind.SlamBoth, BossAttackKind.AlternatingCombo, BossAttackKind.SlamBoth),
+                },
                 weights = new[]
                 {
                     new AttackWeight(BossAttackKind.PunchLeft, 25f), new AttackWeight(BossAttackKind.PunchRight, 25f),
@@ -85,6 +144,20 @@ namespace Anseong.Boss
             new BossPhaseEntry
             {
                 firstAttack = BossAttackKind.Charge, restMin = 1.5f, restMax = 2.5f,
+                chainChance = 0.55f, singlesFirst = 1,
+                chains = new[]
+                {
+                    new BossChain(3f, 0, BossAttackKind.PunchLeft, BossAttackKind.PunchRight, BossAttackKind.Charge),
+                    new BossChain(3f, 0, BossAttackKind.Charge, BossAttackKind.SlamBoth),
+                    new BossChain(2f, 0, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.SlamBoth),
+                    new BossChain(2f, 0, BossAttackKind.SlamBoth, BossAttackKind.PunchLeft, BossAttackKind.PunchRight),
+                    new BossChain(2f, 1, BossAttackKind.AlternatingCombo, BossAttackKind.Charge),
+                    new BossChain(2f, 1, BossAttackKind.SlamBoth, BossAttackKind.Charge),
+                    new BossChain(2f, 1, BossAttackKind.PunchLeft, BossAttackKind.PunchLeft, BossAttackKind.PunchRight, BossAttackKind.SlamBoth),
+                    new BossChain(2f, 2, BossAttackKind.Charge, BossAttackKind.AlternatingCombo, BossAttackKind.SlamBoth),
+                    new BossChain(2f, 2, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.SlamBoth, BossAttackKind.Charge),
+                    new BossChain(1f, 2, BossAttackKind.AlternatingCombo, BossAttackKind.SlamBoth, BossAttackKind.Charge),
+                },
                 weights = new[]
                 {
                     new AttackWeight(BossAttackKind.PunchLeft, 17.5f), new AttackWeight(BossAttackKind.PunchRight, 17.5f),

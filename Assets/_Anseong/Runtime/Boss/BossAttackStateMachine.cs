@@ -40,7 +40,20 @@ namespace Anseong.Boss
     public sealed class BossAttackStateMachine
     {
         BossAttackSpec attack;
+        readonly List<BossAttackSpec> chain = new List<BossAttackSpec>(6);
+        int link;
+        bool chainOk;
         int nextHit, succeeded;
+
+        /// <summary>연속기에서 다음 기술로 넘어갈 때 앞 기술 회복을 이만큼(초)만 기다린다(빈틈 없이 이어 침).</summary>
+        public float ChainLinkRecovery = 0.3f;
+        /// <summary>연속기를 전부 막으면 기술 하나마다 빈틈을 이만큼(초) 더 준다(길게 버틴 보상).</summary>
+        public float ChainOpeningBonus = 0.5f;
+
+        /// <summary>지금 연속기의 기술 수(단발이면 1).</summary>
+        public int ChainLength => chain.Count;
+        /// <summary>연속기에서 지금 몇 번째 기술(0부터).</summary>
+        public int ChainLink => link;
         double stateEnd, holdUntil;
         float pendingOpening;
 
@@ -66,6 +79,30 @@ namespace Anseong.Boss
         public bool Begin(BossAttackSpec spec, double now, List<BossEvent> events)
         {
             if (spec == null || State != BossState.Rest) return false;
+            chain.Clear();
+            chain.Add(spec);
+            return StartChain(now, events);
+        }
+
+        /// <summary>
+        /// 연속기: 기술 여러 개를 빈틈 없이 이어 친다(선우 11/12 "보스 패턴이 와바박"). 빈틈은 마지막 기술 뒤에만.
+        /// 전부 막아야 성공 빈틈(+ 기술 수만큼 보너스), 하나라도 맞으면 실패 빈틈.
+        /// </summary>
+        public bool BeginChain(IReadOnlyList<BossAttackSpec> specs, double now, List<BossEvent> events)
+        {
+            if (specs == null || specs.Count == 0 || State != BossState.Rest) return false;
+            chain.Clear();
+            for (var i = 0; i < specs.Count; i++)
+                if (specs[i] != null) chain.Add(specs[i]);
+            if (chain.Count == 0) return false;
+            return StartChain(now, events);
+        }
+
+        bool StartChain(double now, List<BossEvent> events)
+        {
+            var spec = chain[0];
+            link = 0;
+            chainOk = true;
             attack = spec;
             nextHit = 0;
             succeeded = 0;
@@ -81,8 +118,8 @@ namespace Anseong.Boss
             if (success) succeeded++;
         }
 
-        /// <summary>모든 타를 막았는지(연타 4타 모두).</summary>
-        public bool AllSucceeded => attack != null && succeeded >= attack.HitCount;
+        /// <summary>모든 타를 막았는지(연타 4타 모두, 연속기는 지금까지 기술 전부).</summary>
+        public bool AllSucceeded => attack != null && chainOk && succeeded >= attack.HitCount;
 
         public void Update(double now, bool comboActive, List<BossEvent> events)
         {
@@ -118,10 +155,25 @@ namespace Anseong.Boss
                 }
                 case BossState.Recovery:
                 {
-                    var end = AttackStart + attack.EndTime;
+                    var last = link >= chain.Count - 1;
+                    var end = AttackStart + attack.StrikeTime(attack.HitCount - 1)
+                        + (last ? attack.recoverySeconds : System.Math.Min(attack.recoverySeconds, ChainLinkRecovery));
                     if (now < end) return false;
+                    if (!last)
+                    {
+                        // 연속기: 빈틈 없이 다음 기술 예고로.
+                        if (succeeded < attack.HitCount) chainOk = false;
+                        link++;
+                        attack = chain[link];
+                        nextHit = 0;
+                        succeeded = 0;
+                        AttackStart = end;
+                        Enter(BossState.Telegraph, end);
+                        Add(events, new BossEvent { Type = BossEventType.AttackStarted, Attack = attack.kind, Side = attack.firstSide, Time = end, Seconds = attack.telegraphSeconds, Hit = link });
+                        return true;
+                    }
                     var success = AllSucceeded;
-                    pendingOpening = success ? attack.openingOnSuccess : attack.openingOnFail;
+                    pendingOpening = success ? attack.openingOnSuccess + ChainOpeningBonus * (chain.Count - 1) : attack.openingOnFail;
                     var stagger = success ? attack.staggerOnSuccess : 0f;
                     if (stagger > 0f) BeginStagger(stagger, end, events);
                     else BeginOpening(pendingOpening, end, events);
@@ -189,6 +241,9 @@ namespace Anseong.Boss
         public void Reset()
         {
             attack = null;
+            chain.Clear();
+            link = 0;
+            chainOk = true;
             nextHit = succeeded = 0;
             pendingOpening = 0f;
             State = BossState.Rest;
