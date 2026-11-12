@@ -41,7 +41,7 @@ namespace Anseong.EditorTools
             new Spec { Name = "Weapon_Shield", Align = Align.ThinnestForward, Size = 1.5f, InHand = true },
             new Spec { Name = "Weapon_Cannon", Align = Align.LongestUp, Size = 1.1f, InHand = true, FlipWideEndDown = true },
             new Spec { Name = "Weapon_Scanner", Align = Align.LongestUp, Size = 0.8f, InHand = true, FlipWideEndDown = true },
-            new Spec { Name = "Drone", Align = Align.None, Size = 1f }   // DroneDirector가 droneSize(m)를 곱한다,
+            new Spec { Name = "Drone", Align = Align.None, Size = 1f },   // DroneDirector가 droneSize(m)를 곱한다
             new Spec { Name = "Checkup_SteelPlate", Align = Align.ThinnestForward, Origin = Origin.Bottom, Size = 10f },
             new Spec { Name = "Boss_FistShell", Align = Align.None, Size = 1f },
         };

@@ -22,7 +22,7 @@ MonoBehaviour:
     anchor: 0
     lift: 0
     seconds: 1.2
-    scale: 3
+    scale: 8
     color: {r: 1, g: 0.8, b: 0.4, a: 1}
   - effectName: VFX_HookImpact
     cue: 3
@@ -33,7 +33,7 @@ MonoBehaviour:
     anchor: 0
     lift: 0
     seconds: 1.6
-    scale: 6
+    scale: 13
     color: {r: 1, g: 0.55, b: 0.2, a: 1}
   - effectName: VFX_HookImpact
     cue: 3
@@ -44,7 +44,7 @@ MonoBehaviour:
     anchor: 0
     lift: 0
     seconds: 1.6
-    scale: 6
+    scale: 13
     color: {r: 1, g: 0.55, b: 0.2, a: 1}
   - effectName: VFX_BoostShock
     cue: 8
@@ -55,7 +55,7 @@ MonoBehaviour:
     anchor: 0
     lift: 0
     seconds: 1.4
-    scale: 14
+    scale: 18
     color: {r: 0.5, g: 0.8, b: 1, a: 1}
   - effectName: VFX_GuardSpark
     cue: 15
@@ -66,7 +66,7 @@ MonoBehaviour:
     anchor: 2
     lift: 0
     seconds: 1
-    scale: 4
+    scale: 10
     color: {r: 0.4, g: 0.6, b: 1, a: 1}
   - effectName: VFX_WeaponBreak
     cue: 21
@@ -88,7 +88,7 @@ MonoBehaviour:
     anchor: 0
     lift: 0
     seconds: 2.2
-    scale: 8
+    scale: 10
     color: {r: 1, g: 0.45, b: 0.1, a: 1}
   - effectName: VFX_MuzzleFlash
     cue: 35
@@ -99,7 +99,7 @@ MonoBehaviour:
     anchor: 0
     lift: 0
     seconds: 0.6
-    scale: 3
+    scale: 6
     color: {r: 1, g: 0.95, b: 0.5, a: 1}
   - effectName: VFX_ScanPing
     cue: 32
@@ -110,7 +110,7 @@ MonoBehaviour:
     anchor: 0
     lift: 0
     seconds: 1.2
-    scale: 5
+    scale: 6
     color: {r: 0.2, g: 1, b: 0.6, a: 1}
   - effectName: VFX_HackSparks
     cue: 36
@@ -121,7 +121,7 @@ MonoBehaviour:
     anchor: 2
     lift: 0
     seconds: 1.6
-    scale: 2
+    scale: 3
     color: {r: 0.8, g: 0.2, b: 1, a: 1}
   - effectName: VFX_MapDust
     cue: 39
@@ -143,5 +143,5 @@ MonoBehaviour:
     anchor: 1
     lift: 30
     seconds: 5
-    scale: 60
+    scale: 45
     color: {r: 1, g: 0.5, b: 0.15, a: 1}
