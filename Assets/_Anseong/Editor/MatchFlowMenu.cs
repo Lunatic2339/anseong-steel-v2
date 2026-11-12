@@ -71,8 +71,9 @@ namespace Anseong.EditorTools
             var panel = AddPanel(roots, flow);
             var weapons = AddPlayerWeapons(roots);
             var hud = AddHud(roots);
+            var models = AiModelFit.Apply(scene.GetRootGameObjects());
             EditorSceneManager.MarkSceneDirty(scene);
-            return $"판 흐름({(made ? "새로 붙임" : "있던 것 다시 연결")}), 글자판: {panel}, 우리 무기: {weapons}, HUD: {hud}, 연출: {effects}, 음악·영상: {media}";
+            return $"판 흐름({(made ? "새로 붙임" : "있던 것 다시 연결")}), 글자판: {panel}, 우리 무기: {weapons}, HUD: {hud}, 연출: {effects}, 음악·영상: {media}, {models}";
         }
 
         const string MediaSetPath = "Assets/_Anseong/Audio/MatchMedia.asset";
