@@ -335,7 +335,11 @@ namespace Anseong.EditorTools
             }
             var state = bossServer != null ? bossServer.Action.BossState : BossState.Rest;
             var fighting = scene == MatchScene.Checkup || scene == MatchScene.FightCannon || scene == MatchScene.FightArmor || scene == MatchScene.FightCore;
-            if (state == BossState.Telegraph || state == BossState.Strike) return hand;
+            if (state == BossState.Telegraph || state == BossState.Strike)
+            {
+                Defend(ref hand, side, head, time);
+                return hand;
+            }
             // 평소에는 주먹을 가슴 아래 준비 자세로 내린다(가드를 계속 들고 있으면 거대한 주먹이 조종석 시야 위쪽을 가린다, 11/13). 가드는 예고·명중 때만.
             var ready = head + new Vector3(sx * 0.2f, -0.42f, 0.3f);
             var readyRotation = Quaternion.Euler(-35f, 0f, 0f);
@@ -354,6 +358,28 @@ namespace Anseong.EditorTools
             hand.Position = Vector3.Lerp(ready, reach, k);
             hand.Rotation = Quaternion.Slerp(readyRotation, Quaternion.identity, Mathf.Clamp01(k * 2.5f));
             return hand;
+        }
+
+        /// <summary>
+        /// 예고·명중 동안의 대응: 가드 기술은 가드(왼팔 방패는 들어오는 쪽 얼굴 앞으로 옮김), 회피 기술은 두 스틱을 같이 옆으로 짧게 반복해 민다
+        /// (회피는 명중 0.6초 안에 새로 민 것만 인정되므로 0.4초마다 다시 민다).
+        /// </summary>
+        static void Defend(ref PilotHandInput.DevHand hand, PilotSide side, Vector3 head, double time)
+        {
+            var action = bossServer.Action;
+            if (!action.HasAttack) return;
+            var spec = bossServer.Machine != null && bossServer.Machine.Attack != null ? bossServer.Machine.Attack : BossAttackSpec.Default(action.AttackKind);
+            if (spec == null) return;
+            if (spec.counter == BossCounter.Dodge)
+            {
+                hand.Stick = time % 0.4 < 0.25 ? new Vector2(1f, 0f) : Vector2.zero;
+                return;
+            }
+            if (side != PilotSide.Left || spec.counter == BossCounter.BothGuard) return;
+            var elapsed = bossServer.Now - action.Start + action.Lead;
+            var upcoming = elapsed < spec.telegraphSeconds ? 0
+                : Mathf.Clamp((int)((elapsed - spec.telegraphSeconds) / Mathf.Max(0.05f, spec.hitIntervalSeconds)) + 1, 0, spec.HitCount - 1);
+            if (spec.SideOf(upcoming) == PilotSide.Right) hand.Position = head + new Vector3(0.07f, -0.12f, 0.28f);
         }
 
         static void Next()

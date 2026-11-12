@@ -130,11 +130,27 @@ namespace Anseong.EditorTools
         static Material EnsureFacadeMaterial()
         {
             var material = AssetDatabase.LoadAssetAtPath<Material>(FacadeMaterialPath);
-            if (material != null) return material;
-            var shader = AssetDatabase.LoadAssetAtPath<Shader>(FacadeShaderPath);
-            if (shader == null) return null;
-            material = new Material(shader);
-            AssetDatabase.CreateAsset(material, FacadeMaterialPath);
+            if (material == null)
+            {
+                var shader = AssetDatabase.LoadAssetAtPath<Shader>(FacadeShaderPath);
+                if (shader == null) return null;
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, FacadeMaterialPath);
+            }
+            // 65 m 로봇 눈높이·수백 m 거리에서 보이게 크게 잡는다(11/13 run10: 9×5 m 패널·1 m 골은 거의 안 보였다).
+            material.SetFloat("_RibSize", 3f);
+            material.SetFloat("_RibStrength", 0.14f);
+            material.SetFloat("_PanelWidth", 22f);
+            material.SetFloat("_PanelHeight", 11f);
+            material.SetFloat("_SeamStrength", 0.6f);
+            material.SetFloat("_PanelVariation", 0.24f);
+            material.SetFloat("_StreakStrength", 0.3f);
+            material.SetFloat("_GrimeHeight", 14f);
+            material.SetFloat("_GrimeStrength", 0.4f);
+            material.SetFloat("_StainStrength", 0.35f);
+            material.SetFloat("_WindowStrength", 0.85f);
+            material.SetFloat("_WindowRatio", 0.5f);
+            EditorUtility.SetDirty(material);
             return material;
         }
 

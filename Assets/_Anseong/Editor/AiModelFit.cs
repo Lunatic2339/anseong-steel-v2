@@ -251,7 +251,8 @@ namespace Anseong.EditorTools
                 AssetDatabase.CreateAsset(material, path);
             }
             material.SetTexture("_BaseMap", baseMap);
-            material.SetColor("_BaseColor", Color.white);
+            // 손에 드는 무기는 흰 Meshy 색 그대로면 본체(회색 강철)와 따로 놀아 장난감처럼 보인다(11/13 자동 점검) → 어두운 강철빛으로 누른다.
+            material.SetColor("_BaseColor", name.StartsWith("Weapon_") ? new Color(0.5f, 0.52f, 0.56f) : Color.white);
             var normalPath = $"{folder}/{name}_Normal.png";
             if (File.Exists(normalPath))
             {

@@ -62,7 +62,7 @@ half4 frag(V i) : SV_Target
     half3 albedo = _BaseColor.rgb;
 
     float ribSize = max(0.1, _RibSize);
-    float ribFade = 1 - saturate(fwidth(h / ribSize) * 3);
+    float ribFade = 1 - saturate(fwidth(h / ribSize) * 1.5);
     albedo *= 1 + sin(h * 6.2831853 / ribSize) * _RibStrength * ribFade * wall;
 
     float2 size = float2(max(1, _PanelWidth), max(1, _PanelHeight));
@@ -70,8 +70,8 @@ half4 frag(V i) : SV_Target
     float2 edge = min(frac(panel), 1 - frac(panel)) * size;
     float d = min(edge.x, edge.y);
     float aa = max(fwidth(d), 0.01);
-    float seam = 1 - smoothstep(0.07 - aa, 0.07 + aa, d);
-    float panelFade = 1 - saturate(max(fwidth(panel.x), fwidth(panel.y)) * 6);
+    float seam = 1 - smoothstep(0.22 - aa, 0.22 + aa, d);
+    float panelFade = 1 - saturate(max(fwidth(panel.x), fwidth(panel.y)) * 2.5);
     albedo *= 1 - seam * _SeamStrength * panelFade * wall;
     albedo *= 1 + (hash(floor(panel)) - 0.5) * _PanelVariation * panelFade * wall;
 
@@ -79,14 +79,14 @@ half4 frag(V i) : SV_Target
     float2 pf = frac(panel);
     float2 wd = min(pf - float2(0.14, 0.52), float2(0.86, 0.82) - pf) * size;
     float waa = max(fwidth(wd.x) + fwidth(wd.y), 0.02);
-    float window = smoothstep(-waa, waa, min(wd.x, wd.y)) * step(1 - _WindowRatio, hash(floor(panel) + 17.3)) * step(4, y) * panelFade * wall * _WindowStrength;
+    float window = smoothstep(-waa, waa, min(wd.x, wd.y)) * step(1 - _WindowRatio, hash(floor(panel) + 17.3)) * step(6, y) * panelFade * wall * _WindowStrength;
     albedo = lerp(albedo, half3(0.07, 0.10, 0.13), window);
 
-    float streak = noise(float2(h * 0.45, y * 0.05));
+    float streak = noise(float2(h * 0.18, y * 0.02));
     float low = saturate(1 - y / max(0.5, _GrimeHeight));
     albedo *= 1 - (streak * _StreakStrength + low * low * _GrimeStrength) * wall;
 
-    float stain = noise(i.world.xz / 16) * 0.65 + noise(i.world.xz / 4.5) * 0.35;
+    float stain = noise(i.world.xz / 40) * 0.65 + noise(i.world.xz / 11) * 0.35;
     albedo *= 1 + (stain - 0.5) * _StainStrength * (1 - wall);
 
     Light sun = GetMainLight(TransformWorldToShadowCoord(i.world));

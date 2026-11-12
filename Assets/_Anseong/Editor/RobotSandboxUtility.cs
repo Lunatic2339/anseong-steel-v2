@@ -378,7 +378,7 @@ namespace Anseong.EditorTools
         {
             var panel = CockpitMaterial("Cockpit_Panel", new Color(0.16f, 0.18f, 0.21f), Color.black, 0.7f, 0.55f);
             var red = CockpitMaterial("Cockpit_GlowRed", new Color(0.06f, 0.02f, 0.02f), new Color(1f, 0.18f, 0.1f) * 1.8f, 0f, 0.6f);
-            var screen = CockpitMaterial("Cockpit_Screen", new Color(0.01f, 0.03f, 0.04f), new Color(0.1f, 0.55f, 0.7f) * 1.1f, 0f, 0.9f);
+            var screen = CockpitMaterial("Cockpit_Screen", new Color(0.01f, 0.03f, 0.04f), new Color(0.08f, 0.3f, 0.4f) * 1.2f, 0f, 0.9f);
 
             // 기운 계기판: 콘솔 뒤(조종사 쪽) 위 모서리에서 조종사 쪽으로 내려오는 판.
             const float dashTilt = 38f;
@@ -393,8 +393,18 @@ namespace Anseong.EditorTools
                 var tag = side < 0f ? "L" : "R";
                 // 화면 3개: 가운데 큰 것(청록), 양옆 작은 것(주황·청록).
                 DashItem(root, $"Screen {tag} Main", dashCenter, dashRotation, new Vector3(seatX, 0.02f, 0.02f), new Vector3(0.46f, 0.012f, 0.26f), screen);
-                DashItem(root, $"Screen {tag} Out", dashCenter, dashRotation, new Vector3(seatX + side * 0.42f, 0.02f, 0.04f), new Vector3(0.24f, 0.012f, 0.2f), amber);
+                DashItem(root, $"Screen {tag} Out", dashCenter, dashRotation, new Vector3(seatX + side * 0.42f, 0.02f, 0.04f), new Vector3(0.24f, 0.012f, 0.2f), screen);
                 DashItem(root, $"Screen {tag} In", dashCenter, dashRotation, new Vector3(seatX - side * 0.42f, 0.02f, 0.04f), new Vector3(0.24f, 0.012f, 0.2f), screen);
+                // 큰 화면 위 밝은 표시: 막대 그래프 5개 + 가로 기준선(어두운 화면만 있으면 꺼진 것처럼 보인다, 11/13 run10).
+                for (var i = 0; i < 5; i++)
+                {
+                    var height = 0.05f + 0.035f * ((i * 3 + (side < 0f ? 1 : 2)) % 5);
+                    DashItem(root, $"Bar {tag} {i}", dashCenter, dashRotation, new Vector3(seatX - 0.16f + i * 0.045f, 0.028f, -0.09f + height * 0.5f), new Vector3(0.028f, 0.006f, height), i == 4 ? amber : cockpitGlow);
+                }
+                DashItem(root, $"Line {tag}", dashCenter, dashRotation, new Vector3(seatX + 0.11f, 0.028f, 0.03f), new Vector3(0.16f, 0.006f, 0.012f), cockpitGlow);
+                DashItem(root, $"Line {tag} 2", dashCenter, dashRotation, new Vector3(seatX + 0.11f, 0.028f, -0.03f), new Vector3(0.1f, 0.006f, 0.012f), amber);
+                DashItem(root, $"Mark {tag} Out", dashCenter, dashRotation, new Vector3(seatX + side * 0.42f, 0.028f, 0.04f), new Vector3(0.14f, 0.006f, 0.014f), red);
+                DashItem(root, $"Mark {tag} In", dashCenter, dashRotation, new Vector3(seatX - side * 0.42f, 0.028f, 0.04f), new Vector3(0.014f, 0.006f, 0.12f), cockpitGlow);
                 // 화면 테두리(어두운 틀)와 아래 스위치 줄.
                 DashItem(root, $"Bezel {tag}", dashCenter, dashRotation, new Vector3(seatX, 0.012f, 0.03f), new Vector3(1.22f, 0.012f, 0.32f), cockpitFrame);
                 for (var i = 0; i < 7; i++)

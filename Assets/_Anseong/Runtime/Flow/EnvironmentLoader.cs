@@ -29,9 +29,9 @@ namespace Anseong.Flow
         [SerializeField, Range(0.2f, 1.5f), Tooltip("맵 바닥 재질(밝기 값이 있는 맵 전용 셰이더)의 밝기에 곱한다. 재질 파일은 건드리지 않고 화면에서만 덮는다. 1 = 맵 그대로.")]
         float groundBrightness = 0.5f;
         [SerializeField, Range(0f, 0.3f), Tooltip("바닥 판 줄눈 세기 최소값(맵 값이 더 크면 그대로).")]
-        float groundJointMin = 0.14f;
+        float groundJointMin = 0.24f;
         [SerializeField, Range(0f, 0.3f), Tooltip("바닥 얼룩(넓은 먼지 무늬) 세기 최소값.")]
-        float groundDustMin = 0.16f;
+        float groundDustMin = 0.26f;
         [SerializeField, Range(0.2f, 1.5f), Tooltip("바닥 텍스처 대비 최소값(낮으면 무늬가 안 보인다).")]
         float groundContrastMin = 0.7f;
 
