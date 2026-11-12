@@ -1,0 +1,24 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: d9f5ce8f490eb4f4bb8d3146a3e229ad, type: 3}
+  m_Name: MatchMedia
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Flow.MatchMediaSet
+  opening: {fileID: 8300000, guid: 6f63f5dd5b7e20245b3ef3ffb55b48c6, type: 3}
+  battle: {fileID: 8300000, guid: ff8dde9af478d8345a94aa1333a96312, type: 3}
+  bare: {fileID: 8300000, guid: 64b0b85ae5325f148ac12bb79e49e147, type: 3}
+  ending: {fileID: 8300000, guid: 3aea7b9715c8233469aca01cdb271610, type: 3}
+  musicVolume: 0.35
+  crossfadeSeconds: 2
+  lobby: {fileID: 0}
+  openingVideo: {fileID: 0}
+  endingVideo: {fileID: 0}
+  videoVolume: 0.6

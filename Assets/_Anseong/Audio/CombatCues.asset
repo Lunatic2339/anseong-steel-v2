@@ -16,7 +16,8 @@ MonoBehaviour:
   - cue: 0
     kind: 0
     soundName: SFX_GripLock
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 7e11f2e48aac36846bc780f102c0e125, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -31,7 +32,8 @@ MonoBehaviour:
   - cue: 1
     kind: 0
     soundName: SFX_GripRelease
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: b6d7d9b9abdf4d54fbf48e7f829c781b, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -46,7 +48,8 @@ MonoBehaviour:
   - cue: 2
     kind: 1
     soundName: SFX_JabLaunch
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: b71739f3c2441c14ea50b92c6f1c3528, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -61,7 +64,8 @@ MonoBehaviour:
   - cue: 2
     kind: 2
     soundName: SFX_HookSwing
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: f7ad2edcfd6853c41ae039e1c6632dd3, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -76,7 +80,8 @@ MonoBehaviour:
   - cue: 2
     kind: 3
     soundName: SFX_HookSwing
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: f7ad2edcfd6853c41ae039e1c6632dd3, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -91,7 +96,8 @@ MonoBehaviour:
   - cue: 3
     kind: 1
     soundName: SFX_PunchHit
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 38ab43a09f0ecaf4bb76dbb94c91b5d0, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -106,7 +112,8 @@ MonoBehaviour:
   - cue: 3
     kind: 2
     soundName: SFX_HookHit
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: f8ab7babd1a8f574182cd338046d5e8c, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -121,7 +128,8 @@ MonoBehaviour:
   - cue: 3
     kind: 3
     soundName: SFX_HookHit
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: f8ab7babd1a8f574182cd338046d5e8c, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -136,7 +144,8 @@ MonoBehaviour:
   - cue: 3
     kind: 2
     soundName: SFX_BossStagger
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: bfd4087cfec10c84a88ef673b6feb851, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -151,7 +160,8 @@ MonoBehaviour:
   - cue: 4
     kind: 0
     soundName: SFX_PunchWhoosh
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 104df623494882446bd9625e1d9a19a5, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -166,7 +176,8 @@ MonoBehaviour:
   - cue: 5
     kind: 0
     soundName: SFX_ComboStep
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 810012bf4cce15042a692be9064d4de2, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0.05
@@ -181,7 +192,8 @@ MonoBehaviour:
   - cue: 7
     kind: 0
     soundName: SFX_BoostReady
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: f8013712c9ee16d498b790bc4a2bbb42, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0.05
@@ -196,7 +208,8 @@ MonoBehaviour:
   - cue: 8
     kind: 0
     soundName: SFX_Boost
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 14c589ba36ce13f4c865f81e86f0a483, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -211,7 +224,8 @@ MonoBehaviour:
   - cue: 8
     kind: 0
     soundName: SFX_BoostHit
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 1e04f0d200c075e428c6caceabc01e6d, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -226,7 +240,8 @@ MonoBehaviour:
   - cue: 11
     kind: 0
     soundName: SFX_Guard
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: fdc0e1969410d3d46b51929eb1b40650, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -241,7 +256,8 @@ MonoBehaviour:
   - cue: 12
     kind: 0
     soundName: SFX_WarnNormal
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: bde869e372d2af148ad1aa4ce8d9c201, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0.05
@@ -256,7 +272,8 @@ MonoBehaviour:
   - cue: 12
     kind: 0
     soundName: SFX_WarnHeavy
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 57df910ad14cd7949baeab8b8e8732b1, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0.05
@@ -271,7 +288,8 @@ MonoBehaviour:
   - cue: 12
     kind: 0
     soundName: SFX_Siren
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 8a2e015ed9409f74bbbaafe6d7ef56a8, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0.05
@@ -286,7 +304,8 @@ MonoBehaviour:
   - cue: 13
     kind: 0
     soundName: SFX_BossSwing
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: bb4d8eb08dba86f4fad4cd0b4f435713, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -301,7 +320,8 @@ MonoBehaviour:
   - cue: 15
     kind: 0
     soundName: SFX_Guard
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: fdc0e1969410d3d46b51929eb1b40650, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -316,7 +336,8 @@ MonoBehaviour:
   - cue: 16
     kind: 0
     soundName: SFX_GuardStrain
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: bd6c763f8166bae4983540a47546e26c, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -331,7 +352,8 @@ MonoBehaviour:
   - cue: 17
     kind: 0
     soundName: SFX_DodgeSlide
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: a13b0e8cb52717b4090ea37c5e6020ad, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -346,7 +368,8 @@ MonoBehaviour:
   - cue: 18
     kind: 0
     soundName: SFX_DodgeBurst
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 563efb9f494bf9e49ad0d556b63e9639, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0.05
@@ -361,7 +384,8 @@ MonoBehaviour:
   - cue: 19
     kind: 0
     soundName: SFX_RobotHit
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: e12bead8e53f3c645b6cb914035c9806, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -376,7 +400,8 @@ MonoBehaviour:
   - cue: 20
     kind: 0
     soundName: SFX_AlarmLowHP
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 03dc8802711698d4b8193f855857947e, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0.05
@@ -391,7 +416,8 @@ MonoBehaviour:
   - cue: 21
     kind: 0
     soundName: SFX_BossRoar
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: b3bb311f2f6792b419400778ac35d0ad, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -406,7 +432,8 @@ MonoBehaviour:
   - cue: 24
     kind: 0
     soundName: SFX_BossKnockback
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 1b90ab096f6587142a1413e01fb95849, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -421,7 +448,8 @@ MonoBehaviour:
   - cue: 25
     kind: 0
     soundName: SFX_BeamCharge
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: dc89ccee9a2740840baefee8bb15ca2a, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0.05
@@ -436,7 +464,8 @@ MonoBehaviour:
   - cue: 26
     kind: 0
     soundName: SFX_GripRelease
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: b6d7d9b9abdf4d54fbf48e7f829c781b, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -451,7 +480,8 @@ MonoBehaviour:
   - cue: 27
     kind: 0
     soundName: SFX_BeamFire
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 228ef6b224d2e6543ae512acc05c7b1b, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0.05
@@ -466,7 +496,8 @@ MonoBehaviour:
   - cue: 10
     kind: 0
     soundName: SFX_BossDown
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 2005119c2ff72524dbd39b2d76cd8fc2, type: 3}
     volume: 1
     pitch: 0.75
     pitchJitter: 0.05
@@ -481,7 +512,8 @@ MonoBehaviour:
   - cue: 23
     kind: 0
     soundName: VO_Commander_07
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: e9a40973d8532ab47a4bfd649b0acbe9, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0
@@ -496,7 +528,8 @@ MonoBehaviour:
   - cue: 23
     kind: 0
     soundName: VO_Commander_08
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: cb2663d07305de7408c5c0ed30f92245, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0
@@ -511,7 +544,8 @@ MonoBehaviour:
   - cue: 23
     kind: 0
     soundName: VO_Commander_09
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 22eda7bad4761314f9a5642d95b98dd4, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0
@@ -526,7 +560,8 @@ MonoBehaviour:
   - cue: 23
     kind: 0
     soundName: VO_Commander_10
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 4e56c4501ccf45949a71a19e5901f841, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0
@@ -541,7 +576,8 @@ MonoBehaviour:
   - cue: 23
     kind: 0
     soundName: VO_Commander_11
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: e377ee0710b189c4a8c1e540018c0fdf, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0
@@ -571,7 +607,8 @@ MonoBehaviour:
   - cue: 23
     kind: 0
     soundName: VO_Commander_13
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 5e435d8c7cd1300458f1a988342206f7, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0
@@ -616,7 +653,8 @@ MonoBehaviour:
   - cue: 23
     kind: 0
     soundName: VO_Commander_16
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: 93b7d30db9722a740b3d50dec7b9927f, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0
@@ -631,7 +669,8 @@ MonoBehaviour:
   - cue: 29
     kind: 0
     soundName: SFX_MoveConfirm
-    clips: []
+    clips:
+    - {fileID: 8300000, guid: f32a7c01e2f8a6d4c97adf125e1ee8e7, type: 3}
     volume: 1
     pitch: 1
     pitchJitter: 0.05
@@ -641,5 +680,597 @@ MonoBehaviour:
     hapticSeconds: 0
     matchCode: 0
     code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 31
+    kind: 0
+    soundName: SFX_DroneShot
+    clips:
+    - {fileID: 8300000, guid: 8644d23564c64064ea7bbc55cc7c4018, type: 3}
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 32
+    kind: 0
+    soundName: SFX_ScanFound
+    clips:
+    - {fileID: 8300000, guid: f074dce0fd20d4c45b6dd84ad856035c, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0.3
+    hapticSeconds: 0.05
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 33
+    kind: 0
+    soundName: SFX_ScanLost
+    clips:
+    - {fileID: 8300000, guid: 60d021a519f197b4f9366db67a6bdc1d, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 34
+    kind: 0
+    soundName: SFX_DroneExplode
+    clips:
+    - {fileID: 8300000, guid: 413d93d881f96744fbdd43845c152fcc, type: 3}
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 35
+    kind: 0
+    soundName: SFX_CannonFire
+    clips:
+    - {fileID: 8300000, guid: 056adb343651f73418ff5f24acf2d696, type: 3}
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0.9
+    hapticSeconds: 0.15
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 36
+    kind: 0
+    soundName: SFX_HackNoise
+    clips:
+    - {fileID: 8300000, guid: c53c640f4bdd6e64c8056ed1d2620114, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 37
+    kind: 0
+    soundName: SFX_HackClear
+    clips:
+    - {fileID: 8300000, guid: 9ca36833d68f4054d807ca09ca8fcd22, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 38
+    kind: 0
+    soundName: SFX_EquipClank
+    clips:
+    - {fileID: 8300000, guid: 85c3497df8d1c854b8980bbf8b4beda3, type: 3}
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 39
+    kind: 0
+    soundName: SFX_MapImpact
+    clips:
+    - {fileID: 8300000, guid: 8b7a35328d2646940be22ed58d5b1e2f, type: 3}
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 30
+    kind: 0
+    soundName: SFX_SceneSting
+    clips:
+    - {fileID: 8300000, guid: c4ade2ac87a0289428bc757adf21c98f, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_01
+    clips:
+    - {fileID: 8300000, guid: 8680396c21759b94e8c62c9d00ac2203, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 1
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_02
+    clips:
+    - {fileID: 8300000, guid: e804554ae410bcf4b9d3dd9ac1661be0, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 2
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_03
+    clips:
+    - {fileID: 8300000, guid: 46d90e5aa530f31429cbd0b869546f3d, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 3
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_04
+    clips:
+    - {fileID: 8300000, guid: 9bf80618ebd99a64d8395f961a80c75e, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 4
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_06
+    clips:
+    - {fileID: 8300000, guid: f8e00707a8c07cf4aacc80a851ab019b, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 6
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_18
+    clips:
+    - {fileID: 8300000, guid: 427907ae78da13a4b98ec0751e970ce0, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 18
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_20
+    clips:
+    - {fileID: 8300000, guid: a86744f94b4eff14fa240fddbcfe1805, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 20
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_23
+    clips:
+    - {fileID: 8300000, guid: 1e9c4df68b1b7f44492569f99f7371b5, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 23
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_25
+    clips:
+    - {fileID: 8300000, guid: 4802f658b7e34e8459b0f340e277419a, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 25
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_26
+    clips:
+    - {fileID: 8300000, guid: 94be6c8db396dc441a9c364514b8e9a1, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 26
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_30
+    clips:
+    - {fileID: 8300000, guid: c8cffa84a0b802343b3efa9302c1a9de, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 30
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_31
+    clips:
+    - {fileID: 8300000, guid: 7ef1aed9589f57c43b9daf407aa50c74, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 31
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_33
+    clips:
+    - {fileID: 8300000, guid: 171baf1ed79bae044ae3756b5dca8f2a, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 33
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_34
+    clips:
+    - {fileID: 8300000, guid: f17cb84241c0f2e428b60792151762e3, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 34
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_35
+    clips:
+    - {fileID: 8300000, guid: 4c7a98f5b31db9e4ebd6887a34b40253, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 35
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_36
+    clips:
+    - {fileID: 8300000, guid: b1e6121f98643e541a0361e35c0a9b45, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 36
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_37
+    clips:
+    - {fileID: 8300000, guid: b03469a615ee07544af3f630c3f7f3ce, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 37
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_38
+    clips:
+    - {fileID: 8300000, guid: e3b3d875e08567e42bdab7d58e51c80f, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 38
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_39
+    clips:
+    - {fileID: 8300000, guid: b021ea897b8669b4a9026b34bc9d7535, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 39
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_42
+    clips:
+    - {fileID: 8300000, guid: 40242668098fb0d4a92e55ee7810475f, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 42
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_43
+    clips:
+    - {fileID: 8300000, guid: 7cbb7e8a0bfe3b5449255edfa97047c4, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 43
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_44
+    clips:
+    - {fileID: 8300000, guid: 7c03af3ff2d6b124aaefca7ac3ee1997, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 44
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_45
+    clips:
+    - {fileID: 8300000, guid: 78f7cf49dbbc77b4f8134d7c026b7f9b, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 45
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_46
+    clips:
+    - {fileID: 8300000, guid: 9fcffc8d58c2ace40a169e332a64b990, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 46
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_47
+    clips:
+    - {fileID: 8300000, guid: 6930a4b32ba46a04f9bddec9321d9af8, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 47
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_48
+    clips:
+    - {fileID: 8300000, guid: 29f3c8b058448144e9c0c5760446160c, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 48
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_49
+    clips:
+    - {fileID: 8300000, guid: 9fc6490acb3dd4c4e803c76a88ac5c7a, type: 3}
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 49
     matchAmount: 0
     amount: 0

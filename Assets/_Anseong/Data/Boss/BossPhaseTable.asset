@@ -50,10 +50,13 @@ MonoBehaviour:
     restMin: 1.5
     restMax: 2.5
     showComboWithin: 0
+  weaponPhases: 1
+  weaponDurability: 30
   thresholds:
   - 60
   - 25
   - 10
+  weaponSet: {fileID: 11400000, guid: c6a2384a07f2d024f9f59934f275f715, type: 2}
   roarSeconds: 2
   pilotRestorePercent: 60
   seed: 0
