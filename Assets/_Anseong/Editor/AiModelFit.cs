@@ -44,6 +44,15 @@ namespace Anseong.EditorTools
             new Spec { Name = "Drone", Align = Align.None, Size = 1f },   // DroneDirector가 droneSize(m)를 곱한다
             new Spec { Name = "Checkup_SteelPlate", Align = Align.ThinnestForward, Origin = Origin.Bottom, Size = 10f },
             new Spec { Name = "Boss_FistShell", Align = Align.None, Size = 1f },
+            // 보스 전용 장식(BossDressing이 가슴~머리 거리 배수로 키운다)과 전투장 둘레 구조물(SceneryDressing이 m로 키운다): 가장 긴 쪽 1 m.
+            new Spec { Name = "Boss_Crest", Align = Align.None, Size = 1f },
+            new Spec { Name = "Boss_Pauldron", Align = Align.None, Size = 1f },
+            new Spec { Name = "Boss_BackSpines", Align = Align.None, Size = 1f },
+            new Spec { Name = "Boss_CoreHousing", Align = Align.ThinnestForward, Size = 1f },
+            new Spec { Name = "Scenery_BlastFurnace", Align = Align.None, Origin = Origin.Bottom, Size = 1f },
+            new Spec { Name = "Scenery_GantryCrane", Align = Align.None, Origin = Origin.Bottom, Size = 1f },
+            new Spec { Name = "Scenery_GasHolder", Align = Align.None, Origin = Origin.Bottom, Size = 1f },
+            new Spec { Name = "Scenery_Chimney", Align = Align.LongestUp, Origin = Origin.Bottom, Size = 1f },
         };
 
         [MenuItem("Anseong/Art/Fit AI Models (Meshy → 칸)")]
@@ -99,8 +108,110 @@ namespace Anseong.EditorTools
                 Set(s, "shellPrefab", prefabs, "Boss_FistShell");
                 s.ApplyModifiedProperties();
             }
+            if (bossWeapons != null) notes.Add(DressBoss(bossWeapons, prefabs));
+            if (roots.Length > 0) notes.Add(DressScenery(roots, prefabs));
             AssetDatabase.SaveAssets();
             return "AI 모델: " + string.Join(", ", notes);
+        }
+
+        // ── 보스 장식: 자리·크기는 가슴~머리 거리 배수(보스 기준 x 오른쪽, y 위, z 앞). 캡처를 보며 여기 숫자를 고친다. ──
+        struct Dress
+        {
+            public string Label, Model, Bone;
+            public Vector3 Offset, Euler;
+            public float Size;
+            public bool Mirror;
+        }
+
+        static readonly Dress[] BossDress =
+        {
+            new Dress { Label = "Crest", Model = "Boss_Crest", Bone = RobotSandboxUtility.HeadBone, Offset = new Vector3(0f, 0.75f, 0f), Size = 1.7f },
+            new Dress { Label = "Pauldron R", Model = "Boss_Pauldron", Bone = RobotSandboxUtility.RightPrefix + "Arm", Offset = new Vector3(0.25f, 0.45f, 0f), Size = 1.9f },
+            new Dress { Label = "Pauldron L", Model = "Boss_Pauldron", Bone = RobotSandboxUtility.LeftPrefix + "Arm", Offset = new Vector3(-0.25f, 0.45f, 0f), Size = 1.9f, Mirror = true },
+            new Dress { Label = "Back Spines", Model = "Boss_BackSpines", Bone = "mixamorig:Spine2", Offset = new Vector3(0f, 0.5f, -0.9f), Size = 3f },
+            new Dress { Label = "Core Housing", Model = "Boss_CoreHousing", Bone = "mixamorig:Spine2", Offset = new Vector3(0f, 0f, 0.62f), Size = 1.15f },
+        };
+
+        static string DressBoss(BossWeaponVisuals visuals, Dictionary<string, GameObject> prefabs)
+        {
+            var boss = visuals.transform;
+            var dressing = boss.GetComponent<BossDressing>();
+            if (dressing == null) dressing = boss.gameObject.AddComponent<BossDressing>();
+            var from = new SerializedObject(visuals);
+            var s = new SerializedObject(dressing);
+            s.FindProperty("chest").objectReferenceValue = from.FindProperty("chest").objectReferenceValue;
+            s.FindProperty("head").objectReferenceValue = from.FindProperty("head").objectReferenceValue;
+            var list = s.FindProperty("pieces");
+            list.arraySize = BossDress.Length;
+            var filled = 0;
+            for (var i = 0; i < BossDress.Length; i++)
+            {
+                var d = BossDress[i];
+                var e = list.GetArrayElementAtIndex(i);
+                prefabs.TryGetValue(d.Model, out var prefab);
+                var bone = RobotSandboxUtility.FindBone(boss, d.Bone);
+                e.FindPropertyRelative("label").stringValue = d.Label;
+                e.FindPropertyRelative("bone").objectReferenceValue = bone;
+                e.FindPropertyRelative("prefab").objectReferenceValue = prefab;
+                e.FindPropertyRelative("offset").vector3Value = d.Offset;
+                e.FindPropertyRelative("euler").vector3Value = d.Euler;
+                e.FindPropertyRelative("size").floatValue = d.Size;
+                e.FindPropertyRelative("mirror").boolValue = d.Mirror;
+                if (prefab != null && bone != null) filled++;
+            }
+            s.ApplyModifiedPropertiesWithoutUndo();
+            return $"보스 장식 {filled}/{BossDress.Length}";
+        }
+
+        // ── 전투장 둘레 구조물: 자리(m, 씬 원점 기준. 우리 로봇이 원점에서 +Z를 본다), 세로축 회전, 가장 긴 쪽 크기(m). ──
+        struct Scenery
+        {
+            public string Label, Model;
+            public Vector3 Position;
+            public float Yaw, Size;
+        }
+
+        static readonly Scenery[] SceneryTable =
+        {
+            new Scenery { Label = "Blast Furnace A", Model = "Scenery_BlastFurnace", Position = new Vector3(-230f, 0f, 340f), Yaw = 20f, Size = 150f },
+            new Scenery { Label = "Blast Furnace B", Model = "Scenery_BlastFurnace", Position = new Vector3(150f, 0f, 500f), Yaw = 200f, Size = 130f },
+            new Scenery { Label = "Chimney A", Model = "Scenery_Chimney", Position = new Vector3(250f, 0f, 380f), Size = 170f },
+            new Scenery { Label = "Chimney B", Model = "Scenery_Chimney", Position = new Vector3(-90f, 0f, 520f), Yaw = 90f, Size = 140f },
+            new Scenery { Label = "Gantry Crane A", Model = "Scenery_GantryCrane", Position = new Vector3(310f, 0f, 150f), Yaw = 70f, Size = 110f },
+            new Scenery { Label = "Gantry Crane B", Model = "Scenery_GantryCrane", Position = new Vector3(-300f, 0f, -40f), Yaw = -60f, Size = 100f },
+            new Scenery { Label = "Gas Holder A", Model = "Scenery_GasHolder", Position = new Vector3(-340f, 0f, 150f), Size = 90f },
+            new Scenery { Label = "Gas Holder B", Model = "Scenery_GasHolder", Position = new Vector3(380f, 0f, 330f), Yaw = 45f, Size = 80f },
+        };
+
+        const string SceneryRootName = "Scenery (AI)";
+
+        static string DressScenery(GameObject[] roots, Dictionary<string, GameObject> prefabs)
+        {
+            var dressing = roots.SelectMany(r => r.GetComponentsInChildren<SceneryDressing>(true)).FirstOrDefault();
+            if (dressing == null)
+            {
+                var go = new GameObject(SceneryRootName);
+                UnityEngine.SceneManagement.SceneManager.MoveGameObjectToScene(go, roots[0].scene);
+                dressing = go.AddComponent<SceneryDressing>();
+            }
+            var s = new SerializedObject(dressing);
+            var list = s.FindProperty("pieces");
+            list.arraySize = SceneryTable.Length;
+            var filled = 0;
+            for (var i = 0; i < SceneryTable.Length; i++)
+            {
+                var d = SceneryTable[i];
+                var e = list.GetArrayElementAtIndex(i);
+                prefabs.TryGetValue(d.Model, out var prefab);
+                e.FindPropertyRelative("label").stringValue = d.Label;
+                e.FindPropertyRelative("prefab").objectReferenceValue = prefab;
+                e.FindPropertyRelative("position").vector3Value = d.Position;
+                e.FindPropertyRelative("yaw").floatValue = d.Yaw;
+                e.FindPropertyRelative("size").floatValue = d.Size;
+                if (prefab != null) filled++;
+            }
+            s.ApplyModifiedPropertiesWithoutUndo();
+            return $"둘레 구조물 {filled}/{SceneryTable.Length}";
         }
 
         static void Set(SerializedObject s, string property, Dictionary<string, GameObject> prefabs, string name)

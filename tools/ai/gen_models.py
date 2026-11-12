@@ -28,6 +28,16 @@ MODELS = [
     ("Drone", 5000, "A small hostile combat drone, compact angular body with one big front lens eye and a single gun barrel, four short stubby thruster pods, no propellers. " + BOSS),
     ("Checkup_SteelPlate", 1000, "A thick rectangular steel armor test plate standing upright on a simple welded frame base, scratched bare steel with yellow hazard stripes at the edges, industrial, hard surface, no text, no logo"),
     ("Boss_FistShell", 2000, "A blunt heavy artillery shell shaped like a short thick bullet, glowing hot orange tip. " + BOSS),
+    # 보스 전용 장식(우리 로봇과 같은 본체 모델이라 실루엣을 다르게)
+    ("Boss_Crest", 6000, "A menacing giant mecha head crest ornament seen from the front, a wide V-shaped crown of two long swept-back blade horns joined by a thick armored center plate with one glowing slit, symmetric, no head, no body. " + BOSS),
+    ("Boss_Pauldron", 6000, "A single huge mecha shoulder armor pauldron, layered overlapping angular plates sweeping outward to the right with three thick blunt spikes on top, hollow underneath, no arm, no body. " + BOSS),
+    ("Boss_BackSpines", 6000, "A giant mecha back-mounted unit seen from behind, a central armored block with four long thick exhaust spikes fanned out upward like a claw, glowing vents, symmetric, no body. " + BOSS),
+    ("Boss_CoreHousing", 5000, "A thick circular reactor housing ring seen from the front, heavy bolted armored collar with eight clamps around a large empty round hole in the middle, flat disc shape, symmetric. " + BOSS),
+    # 전투장 둘레 제철소 구조물(멀리서 보이는 큰 실루엣)
+    ("Scenery_BlastFurnace", 12000, "A huge steel mill blast furnace complex, tall tapered furnace tower wrapped in thick pipes and walkways, inclined skip conveyor, round hot-blast stoves beside it, rusty weathered steel and soot, realistic industrial, full structure standing on the ground, no text, no logo"),
+    ("Scenery_GantryCrane", 10000, "A huge industrial harbor gantry crane, tall steel lattice frame on four legs with a long horizontal boom and operator cabin, weathered yellow and grey paint with rust, realistic, full structure standing on the ground, no text, no logo"),
+    ("Scenery_GasHolder", 8000, "A huge cylindrical industrial gas holder storage tank, riveted steel plates, external spiral staircase and ring walkways, domed top, weathered grey-green paint with rust streaks, realistic, standing on the ground, no text, no logo"),
+    ("Scenery_Chimney", 6000, "A very tall industrial factory chimney smokestack, round tapered concrete and steel stack with red and white warning bands near the top, service ladder and ring platforms, weathered, realistic, standing on the ground, no text, no logo"),
 ]
 
 
