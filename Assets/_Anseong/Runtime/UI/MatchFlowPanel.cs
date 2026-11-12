@@ -147,6 +147,8 @@ namespace Anseong.UI
                 case MatchScene.Finisher: return "장면 9 · 필살기";
                 case MatchScene.Result: return "장면 10 · 결과";
                 case MatchScene.Rebooting: return "기체 정지 · 재기동 중";
+                case MatchScene.Opening: return "오프닝";
+                case MatchScene.Ending: return "엔딩";
                 default: return scene.ToString();
             }
         }
@@ -171,17 +173,19 @@ namespace Anseong.UI
             switch (scene)
             {
                 case MatchScene.Waiting: return "조종사 접속을 기다리는 중";
-                case MatchScene.Checkup: return "보정을 마치고 둘이 같이 스틱을 앞으로 → 출격\n(철판·공 막기·무장 달기는 M4-05)";
+                case MatchScene.Checkup: return "보정 → 철판 → 공 막기 → 무장 → 둘이 같이 스틱을 앞으로";
                 case MatchScene.Entrance: return "마당 끝 120m에 보스, 머리에 붉은 빛";
-                case MatchScene.DroneHunt: return "드론 자리(M4-04). 지금은 시간이 지나면 넘어감";
+                case MatchScene.DroneHunt: return "왼손 스캐너로 훑어 드론을 찾고, 오른손 트리거로 쏴라";
                 case MatchScene.Approach: return "주먹 포탄을 막으며 둘이 같이 스틱을 앞으로";
                 case MatchScene.FightCannon:
                 case MatchScene.FightArmor:
                 case MatchScene.FightCore: return "막고 → 빈틈에 번갈아 세 번 + 트리거";
                 case MatchScene.LostGun:
-                case MatchScene.LostSword: return "보스 보복(무기 떼어 내기는 M4-03)";
+                case MatchScene.LostSword: return "보스 보복! 막거나 피하라";
                 case MatchScene.Finisher: return "둘이 함께 정면으로 팔을 뻗고 버튼을 모두 눌러라";
                 case MatchScene.Rebooting: return "잠시 뒤 이 구간 처음부터(한 판에 한 번)";
+                case MatchScene.Opening:
+                case MatchScene.Ending: return "앞 화면 영상";
                 default: return string.Empty;
             }
         }

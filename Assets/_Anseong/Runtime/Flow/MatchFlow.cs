@@ -56,6 +56,9 @@ namespace Anseong.Flow
         [SerializeField, Tooltip("결과판 시간이 지나면 저절로 처음부터(전시 운영 편의, 기본 끔: 운영자가 재시작).")]
         bool autoRestartAfterResult;
 
+        [SerializeField, Tooltip("M4-08 배경음악·영상 표. 오프닝·엔딩 영상이 있으면 그 길이만큼 오프닝·엔딩 장면을 둔다(비면 장면 없음).")]
+        MatchMediaSet media;
+
         readonly NetworkVariable<MatchFlowState> state = new NetworkVariable<MatchFlowState>();
         MatchFlowRules rules;
         MatchFlowRules timing; // 모든 PC: 장면 길이만 읽는다
@@ -130,6 +133,12 @@ namespace Anseong.Flow
             if (boss == null) boss = FindAnyObjectByType<BossBrain>();
             session = FindAnyObjectByType<SessionBootstrap>();
             state.OnValueChanged += OnState;
+            // 모든 PC: 남은 시간 표시도 같은 길이를 쓰게.
+            if (media != null)
+            {
+                settings.openingSeconds = MatchMediaSet.Seconds(media.openingVideo);
+                settings.endingSeconds = MatchMediaSet.Seconds(media.endingVideo);
+            }
             if (IsServer)
             {
                 rules = new MatchFlowRules(settings);

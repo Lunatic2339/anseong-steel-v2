@@ -26,6 +26,16 @@ namespace Anseong.Combat
         [SerializeField, Min(1f), Tooltip("3D 소리가 들리지 않게 되는 거리(m).")]
         float maxDistance = 600f;
 
+        [Header("사령관 대사 (M4-08)")]
+        [SerializeField, Range(0f, 1f), Tooltip("사령관 대사 크기(표의 줄 크기에 곱함). 배경음악보다 크게.")]
+        float commanderVolume = 1f;
+
+        [SerializeField, Tooltip("무전 효과(낮은음·높은음 깎고 살짝 찌그러뜨림). 사령관 목소리가 무전기에서 나오는 것처럼.")]
+        bool radioEffect = true;
+
+        [SerializeField, Range(0f, 0.9f), Tooltip("무전 찌그러짐 정도.")]
+        float radioDistortion = 0.35f;
+
         [SerializeField, Tooltip("컨트롤러 진동을 쓴다.")]
         bool haptics = true;
 
@@ -60,7 +70,28 @@ namespace Anseong.Combat
                 source.maxDistance = maxDistance;
                 sources[i] = source;
             }
+            BuildCommanderVoice();
             director.Cue += OnCue;
+        }
+
+        AudioSource commanderVoice;
+
+        /// <summary>사령관 대사 전용 소리: 겹치지 않게 하나, 무전 효과 필터.</summary>
+        void BuildCommanderVoice()
+        {
+            var go = new GameObject("CommanderVoice");
+            go.transform.SetParent(transform, false);
+            commanderVoice = go.AddComponent<AudioSource>();
+            commanderVoice.playOnAwake = false;
+            commanderVoice.spatialBlend = 0f;
+            commanderVoice.priority = 0;
+            var high = go.AddComponent<AudioHighPassFilter>();
+            high.cutoffFrequency = 350f;
+            var low = go.AddComponent<AudioLowPassFilter>();
+            low.cutoffFrequency = 3800f;
+            var distortion = go.AddComponent<AudioDistortionFilter>();
+            distortion.distortionLevel = radioDistortion;
+            high.enabled = low.enabled = distortion.enabled = radioEffect;
         }
 
         void OnDestroy()
@@ -95,6 +126,16 @@ namespace Anseong.Combat
             var slot = index % clipCursor.Length;
             var clip = entry.clips[clipCursor[slot]++ % entry.clips.Length];
             if (clip == null) return;
+            if (entry.cue == CombatCue.CommanderLine && commanderVoice != null)
+            {
+                // 새 대사가 오면 앞 대사를 끊는다(무전은 한 번에 한 줄).
+                commanderVoice.Stop();
+                commanderVoice.clip = clip;
+                commanderVoice.volume = entry.volume * commanderVolume;
+                commanderVoice.pitch = 1f;
+                commanderVoice.Play();
+                return;
+            }
             var source = sources[nextVoice];
             nextVoice = (nextVoice + 1) % sources.Length;
             source.spatialBlend = entry.atHitPoint ? 1f : 0f;

@@ -34,6 +34,10 @@ namespace Anseong.Flow
         Result,
         /// <summary>패배 → 기체 재기동(그 구간 처음부터 1회).</summary>
         Rebooting,
+        /// <summary>M4-08: 판 시작 오프닝 영상(조종석 앞 화면, Video_Opening). 영상이 없으면 건너뛴다.</summary>
+        Opening,
+        /// <summary>M4-08: 승리 엔딩 영상(Video_Ending) → 결과판. 영상이 없으면 건너뛴다.</summary>
+        Ending,
     }
 
     /// <summary>판 흐름을 움직이는 신호. 서버의 <see cref="MatchFlow"/>가 전투 사건·운영자 조작을 이것으로 바꿔 넣는다.</summary>
@@ -79,6 +83,12 @@ namespace Anseong.Flow
 
         [Tooltip("한 판에 재기동 허용 횟수(대본: 1회, 두 번째 패배면 결과판).")]
         [Min(0)] public int rebootsAllowed = 1;
+
+        [Tooltip("오프닝 영상 길이(초). 0이면 오프닝 없이 바로 기체 점검. 영상 표(MatchMediaSet)가 있으면 영상 길이로 채워진다.")]
+        [Min(0f)] public float openingSeconds;
+
+        [Tooltip("엔딩 영상 길이(초). 0이면 승리 뒤 바로 결과판. 영상 표가 있으면 영상 길이로 채워진다.")]
+        [Min(0f)] public float endingSeconds;
     }
 
     /// <summary>
@@ -126,6 +136,8 @@ namespace Anseong.Flow
                 case MatchScene.LostSword: return settings.lossSeconds;
                 case MatchScene.Rebooting: return settings.rebootSeconds;
                 case MatchScene.Result: return settings.resultSeconds;
+                case MatchScene.Opening: return settings.openingSeconds;
+                case MatchScene.Ending: return settings.endingSeconds;
                 default: return 0f;
             }
         }
@@ -151,6 +163,8 @@ namespace Anseong.Flow
                 case MatchScene.LostGun: return Go(MatchScene.FightArmor, now);
                 case MatchScene.LostSword: return Go(MatchScene.FightCore, now);
                 case MatchScene.Rebooting: return Go(ResumeScene, now);
+                case MatchScene.Opening: return Go(MatchScene.Checkup, now);
+                case MatchScene.Ending: return Go(MatchScene.Result, now);
                 default: return false;
             }
         }
@@ -163,7 +177,7 @@ namespace Anseong.Flow
             switch (signal)
             {
                 case MatchSignal.Start:
-                    return Scene == MatchScene.Waiting && Go(MatchScene.Checkup, now);
+                    return Scene == MatchScene.Waiting && Go(settings.openingSeconds > 0f ? MatchScene.Opening : MatchScene.Checkup, now);
                 case MatchSignal.CheckupDone:
                     return Scene == MatchScene.Checkup && Go(MatchScene.Entrance, now);
                 case MatchSignal.DronesCleared:
@@ -177,9 +191,9 @@ namespace Anseong.Flow
                 case MatchSignal.BossKneel:
                     return Scene == MatchScene.FightCore && Go(MatchScene.Finisher, now);
                 case MatchSignal.BossDefeated:
-                    if (Scene == MatchScene.Result) return false;
+                    if (Scene == MatchScene.Result || Scene == MatchScene.Ending) return false;
                     Won = true;
-                    return Go(MatchScene.Result, now);
+                    return Go(settings.endingSeconds > 0f ? MatchScene.Ending : MatchScene.Result, now);
                 case MatchSignal.PilotDefeated:
                     return Defeated(now);
                 case MatchSignal.Skip:
@@ -191,7 +205,8 @@ namespace Anseong.Flow
 
         bool Defeated(double now)
         {
-            if (Scene == MatchScene.Result || Scene == MatchScene.Rebooting || Scene == MatchScene.Waiting || Scene == MatchScene.Checkup) return false;
+            if (Scene == MatchScene.Result || Scene == MatchScene.Rebooting || Scene == MatchScene.Waiting || Scene == MatchScene.Checkup
+                || Scene == MatchScene.Opening || Scene == MatchScene.Ending) return false;
             if (RebootsUsed < settings.rebootsAllowed)
             {
                 RebootsUsed++;
@@ -207,7 +222,9 @@ namespace Anseong.Flow
         {
             switch (Scene)
             {
-                case MatchScene.Waiting: return Go(MatchScene.Checkup, now);
+                case MatchScene.Waiting: return Go(settings.openingSeconds > 0f ? MatchScene.Opening : MatchScene.Checkup, now);
+                case MatchScene.Opening: return Go(MatchScene.Checkup, now);
+                case MatchScene.Ending: return Go(MatchScene.Result, now);
                 case MatchScene.Checkup: return Go(MatchScene.Entrance, now);
                 case MatchScene.Entrance: return Go(MatchScene.DroneHunt, now);
                 case MatchScene.DroneHunt: return Go(MatchScene.Approach, now);

@@ -44,6 +44,20 @@ namespace Anseong.EditorTools
         public static string OutputPath(string name) => $"{Folder}/{name}.anim";
 
         /// <summary>이 메뉴가 만든 클립(없으면 null).</summary>
+        /// <summary>
+        /// M4-08: 원본 클립 찾기. 같은 이름의 .anim이 먼저, 없으면 같은 이름의 .fbx(Cascadeur 내보내기) 안 첫 클립.
+        /// 그래서 유진이 다듬은 FBX를 같은 이름으로 넣기만 하면 메뉴 한 번에 바뀐다.
+        /// </summary>
+        public static AnimationClip LoadSource(string source)
+        {
+            var anim = AssetDatabase.LoadAssetAtPath<AnimationClip>($"{SourceFolder}/{source}.anim");
+            if (anim != null) return anim;
+            foreach (var ext in new[] { ".fbx", ".FBX" })
+                foreach (var asset in AssetDatabase.LoadAllAssetsAtPath($"{SourceFolder}/{source}{ext}"))
+                    if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__")) return clip;
+            return null;
+        }
+
         public static AnimationClip Imported(string name) => AssetDatabase.LoadAssetAtPath<AnimationClip>(OutputPath(name));
 
         /// <summary>기술 하나의 가져온 클립(Boss_&lt;기술&gt;). 돌진은 없다.</summary>
@@ -92,7 +106,7 @@ namespace Anseong.EditorTools
 
                 foreach (var (source, output, loop) in Table)
                 {
-                    var src = AssetDatabase.LoadAssetAtPath<AnimationClip>($"{SourceFolder}/{source}.anim");
+                    var src = LoadSource(source);
                     if (src == null)
                     {
                         lines.Add($"{source}: 원본 없음, 건너뜀");

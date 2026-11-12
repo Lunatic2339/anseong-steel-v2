@@ -30,6 +30,8 @@ namespace Anseong.Flow
         [SerializeField] Vector3[] plateOffsets = { new Vector3(-12f, 30f, 28f), new Vector3(0f, 34f, 30f), new Vector3(12f, 30f, 28f) };
         [SerializeField] Vector3 plateSize = new Vector3(8f, 10f, 1f);
         [SerializeField] Material shapeMaterial;
+        [SerializeField, Tooltip("M4-08 철판 표적 모델(성재 Meshy, Checkup_SteelPlate). 비면 도형 상자. 모델 크기 그대로, 원점 = 바닥 가운데.")]
+        GameObject platePrefab;
 
         MatchFlow flow;
         CombatServer combat;
@@ -228,6 +230,17 @@ namespace Anseong.Flow
 
         GameObject MakePlate(int i)
         {
+            if (platePrefab != null)
+            {
+                // 모델 원점 = 바닥 가운데(13_ai_tools 4번) → 빈 부모 아래 반 높이 내려 가운데를 맞춘다.
+                var holder = new GameObject("Checkup Plate " + i);
+                var model = Instantiate(platePrefab, holder.transform, false);
+                model.transform.localPosition = Vector3.down * (plateSize.y * 0.5f);
+                foreach (var col in model.GetComponentsInChildren<Collider>()) Destroy(col);
+                foreach (var rb in model.GetComponentsInChildren<Rigidbody>()) Destroy(rb);
+                holder.SetActive(false);
+                return holder;
+            }
             var go = GameObject.CreatePrimitive(PrimitiveType.Cube);
             var c = go.GetComponent<Collider>();
             if (c != null) Destroy(c);
@@ -262,7 +275,8 @@ namespace Anseong.Flow
                 {
                     // 트리거 → 철판이 날아간다.
                     flown[i] = true;
-                    var body = plate.AddComponent<Rigidbody>();
+                    var body = plate.GetComponent<Rigidbody>();
+                    if (body == null) body = plate.AddComponent<Rigidbody>();
                     body.mass = 50f;
                     body.linearVelocity = (player != null ? player.forward : Vector3.forward) * 40f + Vector3.up * 10f;
                     body.angularVelocity = Random.insideUnitSphere * 4f;

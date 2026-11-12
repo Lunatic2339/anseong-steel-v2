@@ -176,5 +176,44 @@ namespace Anseong.Tests
             Assert.AreEqual("2026-11-27 14:05:09,1,412.3,,5,3,1", row);
             Assert.AreEqual(MatchLogRow.Header.Split(',').Length, row.Split(',').Length);
         }
+
+        [Test]
+        public void OpeningAndEndingVideosWrapTheMatchWhenSet()
+        {
+            var r = NewRules(out var s);
+            s.openingSeconds = 20f;
+            s.endingSeconds = 30f;
+            Assert.IsTrue(r.Signal(MatchSignal.Start, 0));
+            Assert.AreEqual(MatchScene.Opening, r.Scene);
+            Assert.IsFalse(r.Signal(MatchSignal.PilotDefeated, 1));
+            Assert.IsFalse(r.Update(19.9));
+            Assert.IsTrue(r.Update(20));
+            Assert.AreEqual(MatchScene.Checkup, r.Scene);
+            r.Signal(MatchSignal.CheckupDone, 21);
+            r.Update(31); r.Update(39);
+            r.Signal(MatchSignal.ReachedMelee, 40);
+            r.Signal(MatchSignal.BossWeaponBroken, 50); r.Update(58);
+            r.Signal(MatchSignal.BossWeaponBroken, 70); r.Update(78);
+            r.Signal(MatchSignal.BossKneel, 90);
+            Assert.IsTrue(r.Signal(MatchSignal.BossDefeated, 95));
+            Assert.AreEqual(MatchScene.Ending, r.Scene);
+            Assert.IsTrue(r.Won);
+            Assert.IsFalse(r.Signal(MatchSignal.BossDefeated, 96));
+            Assert.IsTrue(r.Update(125));
+            Assert.AreEqual(MatchScene.Result, r.Scene);
+        }
+
+        [Test]
+        public void NoVideosMeansNoVideoScenesAndSkipJumpsVideos()
+        {
+            var r = NewRules(out var s);
+            r.Signal(MatchSignal.Start, 0);
+            Assert.AreEqual(MatchScene.Checkup, r.Scene);
+            r.Reset(1);
+            s.openingSeconds = 20f;
+            r.Signal(MatchSignal.Start, 2);
+            Assert.IsTrue(r.Signal(MatchSignal.Skip, 3));
+            Assert.AreEqual(MatchScene.Checkup, r.Scene);
+        }
     }
 }

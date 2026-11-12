@@ -336,7 +336,7 @@ namespace Anseong.Boss
         void UpdateHeadLight()
         {
             if (headGlow == null) return;
-            var awake = flow == null || !flow.Running || (flow.Scene != MatchScene.Waiting && flow.Scene != MatchScene.Checkup);
+            var awake = flow == null || !flow.Running || (flow.Scene != MatchScene.Waiting && flow.Scene != MatchScene.Checkup && flow.Scene != MatchScene.Opening);
             var flashing = Time.time < flashUntil && Mathf.Repeat(Time.time * 6f, 1f) < 0.5f;
             headGlow.enabled = awake && !flashing;
             if (headLight != null) headLight.intensity = awake && !flashing ? 50f : 0f;
