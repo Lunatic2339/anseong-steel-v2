@@ -37,6 +37,11 @@ namespace Anseong.Boss
         [SerializeField, Min(1f), Tooltip("조종사 쪽으로 도는 최대 속도(°/s).")]
         float turnDegreesPerSecond = 30f;
 
+        [SerializeField, Range(0f, 15f), Tooltip("공격하는 동안(예고~회복) 이만큼(m) 뒤로 물러서서 친다. 30 m에서 상체를 숙이거나 팔을 뻗으면 우리 몸·조종석 카메라와 겹쳐 보인다(11/13 자동 점검). 쉬거나 빈틈이면 제자리(근접 거리)로 돌아와 우리 주먹이 닿는다. 0이면 끔.")]
+        float attackStandOff = 7f;
+        [SerializeField, Min(0.5f), Tooltip("물러서고 돌아오는 속도(m/s).")]
+        float standOffSpeed = 7f;
+
         [Header("부스트 밀려남 (05 \"보스가 맞았을 때\")")]
         [SerializeField, Min(0f), Tooltip("뒤로 밀려나는 거리(m).")]
         float knockbackMeters = 10f;
@@ -149,6 +154,7 @@ namespace Anseong.Boss
             look.y = 0f;
             if (look.sqrMagnitude > 1e-4f) transform.rotation = Quaternion.LookRotation(look.normalized, Vector3.up);
             knockStart = -1;
+            standOff = 0f;
             if (server != null && server.Machine.State == BossState.Walk) server.Machine.Release(server.Now);
         }
 
@@ -207,8 +213,11 @@ namespace Anseong.Boss
             return true;
         }
 
+        float standOff;
+
         void BeginRun()
         {
+            standOff = 0f;
             var now = server.Now;
             nextAttackAt = now + firstAttackDelay;
             seen.Clear();
@@ -356,6 +365,7 @@ namespace Anseong.Boss
                 // 처음에 크게, 끝에 묵직하게 멈춘다(밀려남과 같은 곡선).
                 transform.position = Vector3.Lerp(retreatFrom, retreatTo, 1f - (1f - r) * (1f - r));
                 if (r >= 1f) retreatStart = -1;
+                standOff = 0f;
                 return;
             }
             if (machine.State == BossState.KnockedBack && knockStart >= 0)
@@ -364,7 +374,21 @@ namespace Anseong.Boss
                 // 처음에 크게, 끝에 묵직하게 멈춘다.
                 transform.position = Vector3.Lerp(knockFrom, knockTo, 1f - (1f - t) * (1f - t));
                 if (t >= 1f) knockStart = -1;
+                standOff = 0f;
                 return;
+            }
+            if (player != null && machine.State != BossState.Kneel && machine.State != BossState.Defeated)
+            {
+                // 공격 중엔 조금 물러서서, 끝나면 제자리로(위치에 더했다 뺀다: 걷기·회전 계산과 따로).
+                var want = machine.IsAttacking ? attackStandOff : 0f;
+                var next = Mathf.MoveTowards(standOff, want, standOffSpeed * dt);
+                if (!Mathf.Approximately(next, standOff))
+                {
+                    var away = transform.position - player.position;
+                    away.y = 0f;
+                    if (away.sqrMagnitude > 1e-4f) transform.position += away.normalized * (next - standOff);
+                    standOff = next;
+                }
             }
             if (player == null || (!machine.IsResting && machine.State != BossState.Walk)) return;
 
@@ -387,7 +411,7 @@ namespace Anseong.Boss
                 var step = Mathf.Min(walkSpeed * dt, distance - meleeDistance);
                 transform.position += to.normalized * step;
             }
-            else if (distance > meleeDistance + approachSlack && autoAttack)
+            else if (distance > meleeDistance + approachSlack && autoAttack && standOff < 0.05f)
             {
                 machine.Hold(BossState.Walk, now);
             }
