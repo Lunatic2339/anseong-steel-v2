@@ -126,6 +126,8 @@ namespace Anseong.Tests
         public void Authority_HitBreaksCombo_BlockKeepsIt()
         {
             var server = new CombatAuthority(new CombatResolver());
+            // 옛 규칙(들어오는 쪽 팔이 막는다)을 검사한다. 방패 하나로 양쪽 막기(M4-03 기본)는 WeaponRulesTests·DefenseRules 쪽.
+            server.ShieldBothSides = false;
             var events = new List<CombatEvent>();
             server.SubmitHit(new HitReport { Side = R, Kind = PunchKind.Jab, StrikeId = 1 }, 0.0, events);
             Assert.AreEqual(1, server.Snapshot.ComboStep);
@@ -150,6 +152,8 @@ namespace Anseong.Tests
         public void AlternatingCombo_FourHits_EachJudgedOnItsSide()
         {
             var server = new CombatAuthority(new CombatResolver());
+            // 옛 규칙(들어오는 쪽 팔이 막는다)을 검사한다. 방패 하나로 양쪽 막기(M4-03 기본)는 WeaponRulesTests·DefenseRules 쪽.
+            server.ShieldBothSides = false;
             var machine = new BossAttackStateMachine();
             var spec = BossAttackSpec.Default(BossAttackKind.AlternatingCombo);
             var events = new List<CombatEvent>();

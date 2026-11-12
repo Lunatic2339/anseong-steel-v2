@@ -1,0 +1,354 @@
+{
+ "voice": [
+  {
+   "file": "VO_Commander_01",
+   "text": "정면을 보고 두 팔을 끝까지 뻗어라."
+  },
+  {
+   "file": "VO_Commander_02",
+   "text": "편한 가드 자세에서 그립."
+  },
+  {
+   "file": "VO_Commander_03",
+   "text": "둘이 같이 스틱을 앞으로!"
+  },
+  {
+   "file": "VO_Commander_04",
+   "text": "무장 달기 전 관절 시험. 번갈아 쳐라!"
+  },
+  {
+   "file": "VO_Commander_06",
+   "text": "목표 확인. 전투 개시!"
+  },
+  {
+   "file": "VO_Commander_07",
+   "text": "포탄이 온다! 불러 줘라!"
+  },
+  {
+   "file": "VO_Commander_08",
+   "text": "지금이다!"
+  },
+  {
+   "file": "VO_Commander_09",
+   "text": "둘이 함께 팔을 뻗어라!"
+  },
+  {
+   "file": "VO_Commander_10",
+   "text": "작전 성공. 안성제철소를 지켜냈다."
+  },
+  {
+   "file": "VO_Commander_11",
+   "text": "두 팔로 막아라!"
+  },
+  {
+   "file": "VO_Commander_13",
+   "text": "막을 수 없다! 불러 주고 같이 피하라!"
+  },
+  {
+   "file": "VO_Commander_16",
+   "text": "두 팔을 정면으로 쭉 뻗어라!"
+  },
+  {
+   "file": "VO_Commander_18",
+   "text": "피격! 어디선가 쏜다. 왼팔, 스캐너로 찾아라!"
+  },
+  {
+   "file": "VO_Commander_20",
+   "text": "주포 파손! 칼과 방패뿐이다!"
+  },
+  {
+   "file": "VO_Commander_23",
+   "text": "무장 전부 상실. 처음 배운 주먹이 남았다. 쥐어라!"
+  },
+  {
+   "file": "VO_Commander_25",
+   "text": "기체 정지…. 재기동한다!"
+  },
+  {
+   "file": "VO_Commander_26",
+   "text": "네 쪽에 보이는 건 상대에게 안 보인다. 불러 줘라!"
+  },
+  {
+   "file": "VO_Commander_30",
+   "text": "팔이 해킹됐다! 반대 팔로 뜯어내라!"
+  },
+  {
+   "file": "VO_Commander_31",
+   "text": "제어 복구."
+  },
+  {
+   "file": "VO_Commander_33",
+   "text": "크레인 고리를 찾아 쏴라!"
+  },
+  {
+   "file": "VO_Commander_34",
+   "text": "박혔다! 몰아쳐라!"
+  },
+  {
+   "file": "VO_Commander_35",
+   "text": "그대로 밀어붙여!"
+  },
+  {
+   "file": "VO_Commander_36",
+   "text": "또 숨었다! 사격 무장!"
+  },
+  {
+   "file": "VO_Commander_37",
+   "text": "근접 무장!"
+  },
+  {
+   "file": "VO_Commander_38",
+   "text": "쏠 무기가 없다! 달려들면 쳐라!"
+  },
+  {
+   "file": "VO_Commander_39",
+   "text": "트리거!"
+  },
+  {
+   "file": "VO_Commander_42",
+   "text": "왼팔이 찾고 오른팔이 쏜다. 주포는 드론용이다. 붙으면 칼과 방패."
+  },
+  {
+   "file": "VO_Commander_43",
+   "text": "장갑에 안 통한다! 저놈은 붙어서 부숴야 한다!"
+  },
+  {
+   "file": "VO_Commander_44",
+   "text": "찾았다! 오른팔, 쏴라!"
+  },
+  {
+   "file": "VO_Commander_45",
+   "text": "그거다. 왼쪽이 찾고, 오른쪽이 쏜다."
+  },
+  {
+   "file": "VO_Commander_46",
+   "text": "드론 전멸. 놈이 직접 온다!"
+  },
+  {
+   "file": "VO_Commander_47",
+   "text": "놈의 팔뚝 포를 부숴라!"
+  },
+  {
+   "file": "VO_Commander_48",
+   "text": "놈의 방패를 깨라!"
+  },
+  {
+   "file": "VO_Commander_49",
+   "text": "놈도 맨손이다! 가슴 핵을 부숴라!"
+  }
+ ],
+ "sfx": [
+  {
+   "file": "SFX_GripLock_01",
+   "text": "heavy mechanical clamp locking shut, short metallic clunk with hydraulic hiss",
+   "seconds": 1.0
+  },
+  {
+   "file": "SFX_GripRelease_01",
+   "text": "hydraulic clamp releasing, short pneumatic hiss and metal click",
+   "seconds": 1.0
+  },
+  {
+   "file": "SFX_JabLaunch_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, arm thrusting forward fast, servo whine and deep air whoosh",
+   "seconds": 1.5
+  },
+  {
+   "file": "SFX_HookSwing_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, arm swinging sideways, long deep whoosh with servo groan",
+   "seconds": 1.8
+  },
+  {
+   "file": "SFX_PunchHit_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, steel fist slamming into thick metal armor, deep boom with metal crunch",
+   "seconds": 2.0
+  },
+  {
+   "file": "SFX_HookHit_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, huge steel fist smashing metal armor, enormous low boom, metal tearing, debris",
+   "seconds": 2.5
+  },
+  {
+   "file": "SFX_BossStagger_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, staggering backwards, groaning stressed metal and heavy footstep thud",
+   "seconds": 2.5
+  },
+  {
+   "file": "SFX_PunchWhoosh_01",
+   "text": "huge heavy object swinging through air and missing, deep whoosh",
+   "seconds": 1.5
+  },
+  {
+   "file": "SFX_ComboStep_01",
+   "text": "short rising electronic confirmation tone, clean sci-fi HUD beep",
+   "seconds": 0.6
+  },
+  {
+   "file": "SFX_BoostReady_01",
+   "text": "rocket thruster igniting and charging, rising whine, ready signal",
+   "seconds": 1.5
+  },
+  {
+   "file": "SFX_Boost_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, elbow rocket booster firing, explosive jet burst",
+   "seconds": 2.0
+  },
+  {
+   "file": "SFX_BoostHit_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, rocket powered fist impact, massive explosion with shockwave and metal crash",
+   "seconds": 3.0
+  },
+  {
+   "file": "SFX_Guard_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, blocking a huge blow with a steel shield, deep resonant clang",
+   "seconds": 2.0
+  },
+  {
+   "file": "SFX_WarnNormal_01",
+   "text": "short low warning beep, cockpit alert, two pulses",
+   "seconds": 0.8
+  },
+  {
+   "file": "SFX_WarnHeavy_01",
+   "text": "urgent low warning buzzer, cockpit danger alert, three fast pulses",
+   "seconds": 1.0
+  },
+  {
+   "file": "SFX_Siren_01",
+   "text": "industrial emergency siren, single rising wail",
+   "seconds": 2.5
+  },
+  {
+   "file": "SFX_BossSwing_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, enemy arm swinging, very deep whoosh with mechanical roar",
+   "seconds": 2.0
+  },
+  {
+   "file": "SFX_GuardStrain_01",
+   "text": "metal straining and creaking under heavy load, hydraulic groan",
+   "seconds": 2.0
+  },
+  {
+   "file": "SFX_DodgeSlide_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, sliding sideways on concrete, heavy scraping footsteps and thruster hiss",
+   "seconds": 2.0
+  },
+  {
+   "file": "SFX_DodgeBurst_01",
+   "text": "short sharp thruster burst, sci-fi dash success",
+   "seconds": 1.0
+  },
+  {
+   "file": "SFX_RobotHit_01",
+   "text": "inside a mecha cockpit taking a huge hit, deep impact, rattling metal, alarm chirp",
+   "seconds": 2.5
+  },
+  {
+   "file": "SFX_AlarmLowHP_01",
+   "text": "cockpit critical damage alarm, repeating low klaxon, power failing down",
+   "seconds": 4.0
+  },
+  {
+   "file": "SFX_BossRoar_01",
+   "text": "giant machine venting steam with mechanical alarm horn, armor piece breaking off and crashing",
+   "seconds": 4.0
+  },
+  {
+   "file": "SFX_BossKnockback_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, being knocked back, heavy sliding steps and crashing metal",
+   "seconds": 3.0
+  },
+  {
+   "file": "SFX_BeamCharge_01",
+   "text": "massive energy weapon charging, rising deep hum to a peak",
+   "seconds": 4.0
+  },
+  {
+   "file": "SFX_BeamFire_01",
+   "text": "massive energy beam cannon firing, thunderous blast with long tail",
+   "seconds": 5.0
+  },
+  {
+   "file": "SFX_BossDown_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, collapsing to the ground, colossal crash, shaking earth, metal settling",
+   "seconds": 6.0
+  },
+  {
+   "file": "SFX_MoveConfirm_01",
+   "text": "short positive double beep, cockpit command accepted",
+   "seconds": 0.6
+  },
+  {
+   "file": "SFX_DroneShot_01",
+   "text": "small sci-fi drone firing a rapid energy shot from distance",
+   "seconds": 1.0
+  },
+  {
+   "file": "SFX_ScanFound_01",
+   "text": "sci-fi scanner lock-on, rising ping, target acquired",
+   "seconds": 1.0
+  },
+  {
+   "file": "SFX_ScanLost_01",
+   "text": "sci-fi scanner losing signal, falling tone with static",
+   "seconds": 1.0
+  },
+  {
+   "file": "SFX_DroneExplode_01",
+   "text": "small flying drone exploding in mid air, sharp blast with electric crackle",
+   "seconds": 2.0
+  },
+  {
+   "file": "SFX_CannonFire_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, arm mounted autocannon single heavy shot, deep punchy blast with recoil clank",
+   "seconds": 1.5
+  },
+  {
+   "file": "SFX_HackNoise_01",
+   "text": "digital glitch static interference, corrupted signal noise, system hacked",
+   "seconds": 2.5
+  },
+  {
+   "file": "SFX_HackClear_01",
+   "text": "glitch noise clearing into a clean power-up chime, system restored",
+   "seconds": 1.5
+  },
+  {
+   "file": "SFX_EquipClank_01",
+   "text": "giant 65 meter steel mecha robot, heavy, low, massive, industrial, weapon being mounted onto arm, heavy clamps locking, big metallic clank and servo",
+   "seconds": 2.5
+  },
+  {
+   "file": "SFX_MapImpact_01",
+   "text": "huge steel coil dropping from a crane and crashing onto metal, enormous industrial impact",
+   "seconds": 4.0
+  },
+  {
+   "file": "SFX_SceneSting_01",
+   "text": "short low cinematic braam hit, tension sting",
+   "seconds": 2.5
+  }
+ ],
+ "bgm": [
+  {
+   "file": "BGM_Opening",
+   "text": "Tense military hangar preparation music for a giant robot launch. Slow heavy industrial percussion, low brass swells, steel factory ambience, building anticipation. Instrumental, loopable.",
+   "ms": 120000
+  },
+  {
+   "file": "BGM_Battle",
+   "text": "Heavy giant mecha battle music. Slow pounding war drums, massive low brass, distorted industrial synth bass, epic and weighty not fast, around 95 bpm. Instrumental, loopable.",
+   "ms": 150000
+  },
+  {
+   "file": "BGM_Bare",
+   "text": "Desperate final stand giant robot fist fight music. Heroic rising orchestra with choir-like synths over heavy pounding drums, emotional and determined, around 105 bpm. Instrumental, loopable.",
+   "ms": 150000
+  },
+  {
+   "file": "BGM_Ending",
+   "text": "Triumphant calm victory theme after a giant robot battle at a steel mill at dawn. Warm brass, strings, relieved and proud. Instrumental.",
+   "ms": 90000
+  }
+ ]
+}
