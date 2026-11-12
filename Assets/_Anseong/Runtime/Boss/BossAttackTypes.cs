@@ -12,6 +12,17 @@ namespace Anseong.Boss
         AlternatingCombo,
         SlamBoth,
         Charge,
+        // 11/13 유진 클립으로 늘린 기술(숫자가 네트워크로 가므로 끝에만 더한다).
+        /// <summary>검 베기(보스 오른손 검 = 조종사 왼쪽). 강공격, 왼팔 가드. 보스가 검을 든 동안만.</summary>
+        SwordSlash,
+        /// <summary>충격파(땅을 쳐서 퍼뜨림). 가드 불가, 회피.</summary>
+        Shockwave,
+        /// <summary>붙잡기(두 손으로 덮침). 강공격, 양팔 가드.</summary>
+        Grab,
+        /// <summary>속임수(치는 척 멈췄다가 늦게 침). 오른팔 가드, 예고가 길다.</summary>
+        Feint,
+        /// <summary>팔 꺾기(왼쪽으로 감아 들어옴). 왼팔 가드.</summary>
+        ArmLock,
     }
 
     /// <summary>요구 대응(01 "가드와 회피").</summary>
@@ -138,6 +149,34 @@ namespace Anseong.Boss
                     {
                         kind = kind, counter = BossCounter.BothGuard, level = TelegraphLevel.Heavy, telegraphSeconds = 1.8f, failDamage = 12f,
                         staggerOnSuccess = 0.8f, recoverySeconds = 1.2f,
+                    };
+                case BossAttackKind.SwordSlash:
+                    return new BossAttackSpec
+                    {
+                        kind = kind, counter = BossCounter.LeftGuard, firstSide = PilotSide.Left, level = TelegraphLevel.Heavy, telegraphSeconds = 1.6f,
+                        failDamage = 10f, recoverySeconds = 1.2f,
+                    };
+                case BossAttackKind.Shockwave:
+                    return new BossAttackSpec
+                    {
+                        kind = kind, counter = BossCounter.Dodge, level = TelegraphLevel.Unblockable, telegraphSeconds = 2.0f,
+                        failDamage = 12f, staggerOnSuccess = 0.8f, recoverySeconds = 1.4f,
+                    };
+                case BossAttackKind.Grab:
+                    return new BossAttackSpec
+                    {
+                        kind = kind, counter = BossCounter.BothGuard, level = TelegraphLevel.Heavy, telegraphSeconds = 1.7f, failDamage = 11f,
+                        staggerOnSuccess = 0.8f, recoverySeconds = 1.3f,
+                    };
+                case BossAttackKind.Feint:
+                    return new BossAttackSpec
+                    {
+                        kind = kind, counter = BossCounter.RightGuard, firstSide = PilotSide.Right, telegraphSeconds = 2.0f, failDamage = 7f, recoverySeconds = 0.9f,
+                    };
+                case BossAttackKind.ArmLock:
+                    return new BossAttackSpec
+                    {
+                        kind = kind, counter = BossCounter.LeftGuard, firstSide = PilotSide.Left, telegraphSeconds = 1.4f, failDamage = 7f,
                     };
                 default:
                     return new BossAttackSpec

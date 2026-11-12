@@ -30,33 +30,47 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void Phase1_HalfLeftHalfRight()
+        public void Phase1_PunchesAndSwordMoves_NoHeavyBodyMoves()
         {
+            // 11/13: 1페이즈 = 좌우 펀치 33%씩 + 검 베기·팔 꺾기(보스가 검을 든 동안).
             var list = Run(1, 1000);
-            Assert.AreEqual(0.5f, Share(list, BossAttackKind.PunchLeft), 0.05f);
-            Assert.IsFalse(list.Any(k => k != BossAttackKind.PunchLeft && k != BossAttackKind.PunchRight));
+            Assert.AreEqual(Share(list, BossAttackKind.PunchLeft), Share(list, BossAttackKind.PunchRight), 0.08f);
+            Assert.AreEqual(0.66f, Share(list, BossAttackKind.PunchLeft, BossAttackKind.PunchRight), 0.1f);
+            Assert.Greater(Share(list, BossAttackKind.SwordSlash), 0.08f);
+            Assert.Greater(Share(list, BossAttackKind.ArmLock), 0.08f);
+            Assert.IsFalse(list.Any(k => k == BossAttackKind.SlamBoth || k == BossAttackKind.AlternatingCombo || k == BossAttackKind.Charge ||
+                                         k == BossAttackKind.Shockwave || k == BossAttackKind.Grab || k == BossAttackKind.Feint));
         }
 
         [Test]
         public void Phase2_Ratios_RoughlyMatchTable()
         {
             var list = Run(2, 1000);
-            // 내려찍기 연속 금지 때문에 내려찍기는 표(25%)보다 조금 적다.
-            Assert.AreEqual(0.5f, Share(list, BossAttackKind.PunchLeft, BossAttackKind.PunchRight), 0.08f);
-            Assert.AreEqual(0.25f, Share(list, BossAttackKind.AlternatingCombo), 0.06f);
-            Assert.AreEqual(0.22f, Share(list, BossAttackKind.SlamBoth), 0.06f);
+            Assert.AreEqual(0.32f, Share(list, BossAttackKind.PunchLeft, BossAttackKind.PunchRight), 0.1f);
+            Assert.AreEqual(0.18f, Share(list, BossAttackKind.AlternatingCombo), 0.07f);
+            Assert.Greater(Share(list, BossAttackKind.SlamBoth), 0.08f);
+            Assert.Greater(Share(list, BossAttackKind.SwordSlash), 0.06f);
+            Assert.Greater(Share(list, BossAttackKind.Feint), 0.05f);
+            Assert.Greater(Share(list, BossAttackKind.Grab), 0.05f);
             Assert.IsFalse(list.Contains(BossAttackKind.Charge), "돌진은 3페이즈부터");
+            Assert.IsFalse(list.Contains(BossAttackKind.Shockwave), "충격파는 3페이즈부터");
         }
 
         [Test]
         public void Phase3_Ratios_AndChargeAtMostOneInThree()
         {
             var list = Run(3, 1000);
-            // 강공격 연속 금지·돌진 3번에 1번 때문에 단발 펀치가 표(35%)보다 늘고 돌진·내려찍기는 준다(시뮬레이션 약 43%·15%·15%).
-            Assert.AreEqual(0.43f, Share(list, BossAttackKind.PunchLeft, BossAttackKind.PunchRight), 0.08f);
-            Assert.Greater(Share(list, BossAttackKind.Charge), 0.1f);
+            Assert.Greater(Share(list, BossAttackKind.PunchLeft, BossAttackKind.PunchRight), 0.15f);
+            Assert.Greater(Share(list, BossAttackKind.Charge), 0.06f);
             Assert.LessOrEqual(Share(list, BossAttackKind.Charge), 1f / 3f + 0.01f);
+            Assert.Greater(Share(list, BossAttackKind.Shockwave), 0.04f);
+            Assert.IsFalse(list.Contains(BossAttackKind.SwordSlash), "검은 2페이즈 끝에 부서진다");
+            // 회피 기술(돌진·충격파)은 연달아 안 나온다.
+            for (var i = 1; i < list.Count; i++)
+                Assert.IsFalse(IsDodge(list[i - 1]) && IsDodge(list[i]), $"회피 기술 연속 ({i})");
         }
+
+        static bool IsDodge(BossAttackKind k) => k == BossAttackKind.Charge || k == BossAttackKind.Shockwave;
 
         [Test]
         public void NoForbiddenSequences()

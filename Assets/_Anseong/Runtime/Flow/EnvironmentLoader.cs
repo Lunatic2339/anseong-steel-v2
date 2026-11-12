@@ -25,6 +25,16 @@ namespace Anseong.Flow
         [SerializeField, Tooltip("맵 씬의 조명 설정(하늘·환경광·반사)을 가져와 쓴다. 맵 재질은 맵 씬의 조명에 맞춰 만든 것이라 Main 조명으로 그리면 바닥이 하얗게 날아간다(11/13 자동 점검). 안개는 Main 것을 유지.")]
         bool useEnvironmentLighting = true;
 
+        [Header("맵 바닥 (11/13: 바닥이 하얗게 날아가 무늬가 안 보임)")]
+        [SerializeField, Range(0.2f, 1.5f), Tooltip("맵 바닥 재질(밝기 값이 있는 맵 전용 셰이더)의 밝기에 곱한다. 재질 파일은 건드리지 않고 화면에서만 덮는다. 1 = 맵 그대로.")]
+        float groundBrightness = 0.5f;
+        [SerializeField, Range(0f, 0.3f), Tooltip("바닥 판 줄눈 세기 최소값(맵 값이 더 크면 그대로).")]
+        float groundJointMin = 0.14f;
+        [SerializeField, Range(0f, 0.3f), Tooltip("바닥 얼룩(넓은 먼지 무늬) 세기 최소값.")]
+        float groundDustMin = 0.16f;
+        [SerializeField, Range(0.2f, 1.5f), Tooltip("바닥 텍스처 대비 최소값(낮으면 무늬가 안 보인다).")]
+        float groundContrastMin = 0.7f;
+
         [SerializeField, Tooltip("Main의 해. 맵 씬에 켜진 Directional Light가 있으면 이것을 끈다.")]
         Light mainLight;
 
@@ -76,8 +86,9 @@ namespace Anseong.Flow
             }
             if (mapHasSun && mainLight != null) mainLight.enabled = false;
             if (useEnvironmentLighting) CopyLighting(scene);
+            var grounds = TuneGround(scene);
             Loaded = true;
-            Debug.Log($"[EnvironmentLoader] 환경 '{scene.name}' 불러옴: 카메라 {cameras}개 끔, 기준 오브젝트 {hidden}개 숨김, 맵 스크립트 {scripts}개 멈춤, 해 = {(mapHasSun ? "맵" : "Main")}.", this);
+            Debug.Log($"[EnvironmentLoader] 환경 '{scene.name}' 불러옴: 카메라 {cameras}개 끔, 기준 오브젝트 {hidden}개 숨김, 바닥 재질 칸 {grounds}개 조정, 맵 스크립트 {scripts}개 멈춤, 해 = {(mapHasSun ? "맵" : "Main")}.", this);
         }
 
         /// <summary>
@@ -115,6 +126,36 @@ namespace Anseong.Flow
             RenderSettings.reflectionIntensity = reflectionIntensity;
             RenderSettings.subtractiveShadowColor = shadow;
             DynamicGI.UpdateEnvironment();
+        }
+
+        static readonly int BrightnessId = Shader.PropertyToID("_Brightness");
+        static readonly int JointId = Shader.PropertyToID("_JointStrength");
+        static readonly int DustId = Shader.PropertyToID("_DustStrength");
+        static readonly int ContrastId = Shader.PropertyToID("_Contrast");
+
+        /// <summary>맵 바닥 셰이더(밝기 값이 있는 재질)를 쓰는 렌더러에 MaterialPropertyBlock으로 밝기·줄눈·얼룩·대비를 덮는다. 조정한 재질 칸 수.</summary>
+        int TuneGround(Scene scene)
+        {
+            var count = 0;
+            var block = new MaterialPropertyBlock();
+            foreach (var root in scene.GetRootGameObjects())
+            foreach (var r in root.GetComponentsInChildren<Renderer>(true))
+            {
+                var materials = r.sharedMaterials;
+                for (var i = 0; i < materials.Length; i++)
+                {
+                    var m = materials[i];
+                    if (m == null || !m.HasProperty(BrightnessId)) continue;
+                    r.GetPropertyBlock(block, i);
+                    block.SetFloat(BrightnessId, m.GetFloat(BrightnessId) * groundBrightness);
+                    if (m.HasProperty(JointId)) block.SetFloat(JointId, Mathf.Max(m.GetFloat(JointId), groundJointMin));
+                    if (m.HasProperty(DustId)) block.SetFloat(DustId, Mathf.Max(m.GetFloat(DustId), groundDustMin));
+                    if (m.HasProperty(ContrastId)) block.SetFloat(ContrastId, Mathf.Max(m.GetFloat(ContrastId), groundContrastMin));
+                    r.SetPropertyBlock(block, i);
+                    count++;
+                }
+            }
+            return count;
         }
 
         /// <summary>이름에 숨길 조각이 든 오브젝트를 끈다(자식까지 내려가며, 끈 것 아래는 더 보지 않는다).</summary>

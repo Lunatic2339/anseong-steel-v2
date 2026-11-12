@@ -27,16 +27,28 @@ namespace Anseong.EditorTools
         const float MinSpeed = 0.5f, MaxSpeed = 2.5f;
 
         /// <summary>유진 원본 이름 → 우리 이름, 반복 여부. Charge(돌진)·포효·무릎·밀려남은 맞는 클립이 없어 그대로(임시) 둔다.</summary>
-        static readonly (string source, string output, bool loop)[] Table =
+        /// <summary>
+        /// hipTravel = 골반이 처음 자리에서 수평으로 움직이는 정도(1 = 원본). 공격 클립은 몸이 앞으로 크게 쏠려
+        /// 30 m 앞에 선 우리 로봇 몸·조종석 카메라 안으로 파고든다(11/13 자동 점검) → 줄인다. 위아래 움직임은 그대로.
+        /// </summary>
+        static readonly (string source, string output, bool loop, float hipTravel)[] Table =
         {
-            ("Idle", "Boss_Idle", true),
-            ("Walk", "Boss_Walk", true),
-            ("Stagger", "Boss_Stagger", false),
-            ("Death", "Boss_Death", false),
-            ("Punch", "Boss_PunchRight", false),
-            ("Combat_AlternatingCombo", "Boss_AlternatingCombo", false),
-            ("Combat_OverheadSmash", "Boss_SlamBoth", false),
+            ("Idle", "Boss_Idle", true, 1f),
+            ("Walk", "Boss_Walk", true, 1f),
+            ("Stagger", "Boss_Stagger", false, 1f),
+            ("Death", "Boss_Death", false, 1f),
+            ("Punch", "Boss_PunchRight", false, AttackHipTravel),
+            ("Combat_AlternatingCombo", "Boss_AlternatingCombo", false, AttackHipTravel),
+            ("Combat_OverheadSmash", "Boss_SlamBoth", false, AttackHipTravel),
+            // 11/13 유진 브랜치(origin/Eugene, AnimationSandbox/Clips)에서 가져온 클립
+            ("Combat_SwordSlash", "Boss_SwordSlash", false, AttackHipTravel),
+            ("Combat_Shockwave", "Boss_Shockwave", false, AttackHipTravel),
+            ("Combat_Grab", "Boss_Grab", false, AttackHipTravel),
+            ("Combat_Feint", "Boss_Feint", false, AttackHipTravel),
+            ("Combat_ArmLock", "Boss_ArmLock", false, AttackHipTravel),
         };
+
+        const float AttackHipTravel = 0.4f;
 
         const string MirrorFrom = "Boss_PunchRight";
         const string MirrorTo = "Boss_PunchLeft";
@@ -104,7 +116,7 @@ namespace Anseong.EditorTools
                 var restRot = all.ToDictionary(t => t, t => t.rotation);
                 var restPos = all.ToDictionary(t => t, t => t.position);
 
-                foreach (var (source, output, loop) in Table)
+                foreach (var (source, output, loop, hipTravel) in Table)
                 {
                     var src = LoadSource(source);
                     if (src == null)
@@ -113,8 +125,10 @@ namespace Anseong.EditorTools
                         continue;
                     }
                     var clip = Remap(src, root.transform, bones, out var kept, out var dropped, out var hipScale);
+                    var travel = hipTravel < 1f ? LimitHipTravel(clip, root.transform, bones, hipTravel) : -1f;
                     Save(clip, output, loop);
-                    lines.Add($"{source} → {output} ({src.length:F2}초, 뼈 곡선 {kept}개 연결·{dropped}개 버림, 골반 이동 배율 {hipScale:F3})");
+                    lines.Add($"{source} → {output} ({src.length:F2}초, 뼈 곡선 {kept}개 연결·{dropped}개 버림, 골반 이동 배율 {hipScale:F3}" +
+                              (travel >= 0f ? $", 골반 수평 이동 최대 {travel:F1} m → {travel * hipTravel:F1} m)" : ")"));
                 }
 
                 var right = Imported(MirrorFrom);
@@ -163,6 +177,56 @@ namespace Anseong.EditorTools
             AnimationUtility.SetEditorCurves(clip, newBindings.ToArray(), curves.ToArray());
             clip.EnsureQuaternionContinuity();
             return clip;
+        }
+
+        /// <summary>
+        /// 골반 위치 곡선을 다시 구워 수평 이동(첫 프레임 기준, 모델 루트 공간의 X·Z)만 factor배로 줄인다. 원래 최대 수평 이동(모델 단위 m)을 돌려준다.
+        /// 골반 뼈의 부모(Armature)가 돌아가 있을 수 있어 부모 공간 → 루트 공간으로 바꿔 계산한다.
+        /// </summary>
+        static float LimitHipTravel(AnimationClip clip, Transform root, Dictionary<string, Transform> bones, float factor)
+        {
+            if (!bones.TryGetValue(RobotSandboxUtility.HipsBone, out var hips) || hips.parent == null) return -1f;
+            var path = AnimationUtility.CalculateTransformPath(hips, root);
+            var bx = EditorCurveBinding.FloatCurve(path, typeof(Transform), "m_LocalPosition.x");
+            var by = EditorCurveBinding.FloatCurve(path, typeof(Transform), "m_LocalPosition.y");
+            var bz = EditorCurveBinding.FloatCurve(path, typeof(Transform), "m_LocalPosition.z");
+            var cx = AnimationUtility.GetEditorCurve(clip, bx);
+            var cy = AnimationUtility.GetEditorCurve(clip, by);
+            var cz = AnimationUtility.GetEditorCurve(clip, bz);
+            if (cx == null || cy == null || cz == null) return -1f;
+
+            // 부모 공간 벡터 → 루트 공간 벡터(회전·크기 포함).
+            var toRoot = root.worldToLocalMatrix * hips.parent.localToWorldMatrix;
+            var fromRoot = toRoot.inverse;
+            var first = new Vector3(cx.Evaluate(0f), cy.Evaluate(0f), cz.Evaluate(0f));
+            var frames = Mathf.Max(1, Mathf.CeilToInt(clip.length * BakeRate));
+            var kx = new Keyframe[frames + 1];
+            var ky = new Keyframe[frames + 1];
+            var kz = new Keyframe[frames + 1];
+            var most = 0f;
+            for (var f = 0; f <= frames; f++)
+            {
+                var t = Mathf.Min(clip.length, f / BakeRate);
+                var delta = toRoot.MultiplyVector(new Vector3(cx.Evaluate(t), cy.Evaluate(t), cz.Evaluate(t)) - first);
+                most = Mathf.Max(most, new Vector2(delta.x, delta.z).magnitude);
+                delta.x *= factor;
+                delta.z *= factor;
+                var p = first + fromRoot.MultiplyVector(delta);
+                kx[f] = new Keyframe(t, p.x);
+                ky[f] = new Keyframe(t, p.y);
+                kz[f] = new Keyframe(t, p.z);
+            }
+            AnimationUtility.SetEditorCurve(clip, bx, Smooth(kx));
+            AnimationUtility.SetEditorCurve(clip, by, Smooth(ky));
+            AnimationUtility.SetEditorCurve(clip, bz, Smooth(kz));
+            return most * root.lossyScale.x;
+        }
+
+        static AnimationCurve Smooth(Keyframe[] keys)
+        {
+            var curve = new AnimationCurve(keys);
+            for (var i = 0; i < keys.Length; i++) curve.SmoothTangents(i, 0f);
+            return curve;
         }
 
         // 원본 골반 높이(첫 프레임)와 우리 모델 골반 높이의 비. 모델 단위가 달라도 골반이 떠 있거나 박히지 않게.
@@ -342,6 +406,7 @@ namespace Anseong.EditorTools
                 {
                     case BossAttackKind.PunchLeft: hands = new[] { leftHand }; break;
                     case BossAttackKind.PunchRight: hands = new[] { rightHand }; break;
+                    case BossAttackKind.SwordSlash: hands = new[] { rightHand }; break;
                     case BossAttackKind.AlternatingCombo: hands = new[] { def.spec.firstSide == PilotSide.Left ? leftHand : rightHand }; break;
                     default: hands = new[] { leftHand, rightHand }; break;
                 }

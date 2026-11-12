@@ -132,7 +132,7 @@ namespace Anseong.Boss
 
         void MarkSides(BossAttackKind kind, Anseong.Pilot.PilotSide side)
         {
-            var both = kind == BossAttackKind.SlamBoth || kind == BossAttackKind.Charge;
+            var both = kind == BossAttackKind.SlamBoth || kind == BossAttackKind.Charge || kind == BossAttackKind.Shockwave || kind == BossAttackKind.Grab;
             showLeft = both || side == Anseong.Pilot.PilotSide.Left;
             showRight = both || side == Anseong.Pilot.PilotSide.Right;
         }

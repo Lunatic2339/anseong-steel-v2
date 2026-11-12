@@ -17,6 +17,11 @@ namespace Anseong.Boss
                 case BossAttackKind.AlternatingCombo: return $"좌우 연타 {Hits(hits)}번";
                 case BossAttackKind.SlamBoth: return "두 손 내려찍기 (강공격)";
                 case BossAttackKind.Charge: return "돌진 (막기 불가)";
+                case BossAttackKind.SwordSlash: return "검 베기 (강공격)";
+                case BossAttackKind.Shockwave: return "충격파 (막기 불가)";
+                case BossAttackKind.Grab: return "붙잡기 (강공격)";
+                case BossAttackKind.Feint: return "속임수 펀치 (늦게 들어옴)";
+                case BossAttackKind.ArmLock: return "팔 꺾기";
                 default: return kind.ToString();
             }
         }
@@ -31,6 +36,11 @@ namespace Anseong.Boss
                 case BossAttackKind.AlternatingCombo: return $"{Arm(firstSide)}부터 번갈아 막기";
                 case BossAttackKind.SlamBoth: return "두 팔 다 들어 막기";
                 case BossAttackKind.Charge: return "부딪히기 직전에 두 스틱을 같은 쪽으로 밀어 피하기";
+                case BossAttackKind.SwordSlash: return "왼팔(방패) 들어 막기";
+                case BossAttackKind.Shockwave: return "퍼지기 직전에 두 스틱을 같은 쪽으로 밀어 피하기";
+                case BossAttackKind.Grab: return "두 팔 다 들어 막기";
+                case BossAttackKind.Feint: return "속지 말고 기다렸다가 오른팔 들어 막기";
+                case BossAttackKind.ArmLock: return "왼팔 들어 막기";
                 default: return string.Empty;
             }
         }

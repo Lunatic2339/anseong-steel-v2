@@ -25,6 +25,7 @@ namespace Anseong.EditorTools
         static readonly BossAttackKind[] Kinds =
         {
             BossAttackKind.PunchLeft, BossAttackKind.PunchRight, BossAttackKind.AlternatingCombo, BossAttackKind.SlamBoth, BossAttackKind.Charge,
+            BossAttackKind.SwordSlash, BossAttackKind.Shockwave, BossAttackKind.Grab, BossAttackKind.Feint, BossAttackKind.ArmLock,
         };
 
         public static string AssetPath(BossAttackKind kind) => $"{BossDataFolder}/BossAttack_{kind}.asset";
@@ -146,6 +147,15 @@ namespace Anseong.EditorTools
                 }
                 EditorUtility.SetDirty(table);
                 Debug.Log($"{LogPrefix} 페이즈 순서표에 기본 연속기를 채움(페이즈마다 9~10개)");
+            }
+            // 11/13 새 기술 5개: 옛 표(새 기술이 어디에도 없는 것)는 기본 표로 통째 바꾼다(비율·연속기에 새 기술이 섞여 있어 줄 단위로 못 끼움).
+            bool HasNew(BossPhaseEntry ph) => ph != null && ((ph.weights != null && ph.weights.Any(w => w.kind > BossAttackKind.Charge)) ||
+                (ph.chains != null && ph.chains.Any(c => c != null && c.attacks != null && c.attacks.Any(k => k > BossAttackKind.Charge))));
+            if (table.phases != null && !table.phases.Any(HasNew))
+            {
+                table.phases = BossPhaseTable.DefaultPhases();
+                EditorUtility.SetDirty(table);
+                Debug.Log($"{LogPrefix} 페이즈 순서표를 새 기본값으로 바꿈(검 베기·충격파·붙잡기·속임수·팔 꺾기 포함)");
             }
             if (table.weaponSet == null)
             {

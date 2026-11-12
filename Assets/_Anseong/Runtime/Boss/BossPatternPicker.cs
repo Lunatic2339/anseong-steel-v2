@@ -158,7 +158,15 @@ namespace Anseong.Boss
                     return phase < 3 || last != BossAttackKind.Charge;
                 case BossAttackKind.Charge:
                     if (last == BossAttackKind.Charge || before == BossAttackKind.Charge) return false;
-                    return phase < 3 || last != BossAttackKind.SlamBoth;
+                    return last != BossAttackKind.Shockwave && (phase < 3 || last != BossAttackKind.SlamBoth);
+                case BossAttackKind.Shockwave:
+                    // 회피 기술은 연달아 안 나온다(돌진 포함).
+                    return last != BossAttackKind.Shockwave && before != BossAttackKind.Shockwave && last != BossAttackKind.Charge;
+                case BossAttackKind.Grab:
+                case BossAttackKind.SwordSlash:
+                case BossAttackKind.Feint:
+                case BossAttackKind.ArmLock:
+                    return last != kind;
                 default:
                     return true;
             }

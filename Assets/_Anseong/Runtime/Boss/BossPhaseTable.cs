@@ -115,8 +115,17 @@ namespace Anseong.Boss
                     new BossChain(2f, 1, BossAttackKind.PunchLeft, BossAttackKind.PunchLeft, BossAttackKind.PunchRight),
                     new BossChain(2f, 2, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.SlamBoth),
                     new BossChain(1f, 2, BossAttackKind.PunchLeft, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.PunchRight),
+                    // 11/13 검·팔 꺾기(보스가 검을 든 동안)
+                    new BossChain(2f, 0, BossAttackKind.PunchRight, BossAttackKind.SwordSlash),
+                    new BossChain(2f, 1, BossAttackKind.ArmLock, BossAttackKind.PunchRight),
+                    new BossChain(2f, 1, BossAttackKind.SwordSlash, BossAttackKind.PunchRight, BossAttackKind.PunchLeft),
+                    new BossChain(1f, 2, BossAttackKind.ArmLock, BossAttackKind.SwordSlash, BossAttackKind.PunchRight),
                 },
-                weights = new[] { new AttackWeight(BossAttackKind.PunchLeft, 50f), new AttackWeight(BossAttackKind.PunchRight, 50f) },
+                weights = new[]
+                {
+                    new AttackWeight(BossAttackKind.PunchLeft, 33f), new AttackWeight(BossAttackKind.PunchRight, 33f),
+                    new AttackWeight(BossAttackKind.SwordSlash, 18f), new AttackWeight(BossAttackKind.ArmLock, 16f),
+                },
             },
             new BossPhaseEntry
             {
@@ -134,11 +143,19 @@ namespace Anseong.Boss
                     new BossChain(2f, 1, BossAttackKind.PunchLeft, BossAttackKind.SlamBoth, BossAttackKind.PunchRight),
                     new BossChain(2f, 2, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.AlternatingCombo),
                     new BossChain(1f, 2, BossAttackKind.SlamBoth, BossAttackKind.AlternatingCombo, BossAttackKind.SlamBoth),
+                    // 11/13 검·속임수·붙잡기
+                    new BossChain(2f, 0, BossAttackKind.Feint, BossAttackKind.PunchLeft),
+                    new BossChain(2f, 0, BossAttackKind.SwordSlash, BossAttackKind.SlamBoth),
+                    new BossChain(2f, 1, BossAttackKind.PunchLeft, BossAttackKind.Feint, BossAttackKind.Grab),
+                    new BossChain(2f, 1, BossAttackKind.SwordSlash, BossAttackKind.PunchRight, BossAttackKind.SwordSlash),
+                    new BossChain(1f, 2, BossAttackKind.Grab, BossAttackKind.AlternatingCombo),
+                    new BossChain(1f, 2, BossAttackKind.Feint, BossAttackKind.SwordSlash, BossAttackKind.SlamBoth),
                 },
                 weights = new[]
                 {
-                    new AttackWeight(BossAttackKind.PunchLeft, 25f), new AttackWeight(BossAttackKind.PunchRight, 25f),
-                    new AttackWeight(BossAttackKind.AlternatingCombo, 25f), new AttackWeight(BossAttackKind.SlamBoth, 25f),
+                    new AttackWeight(BossAttackKind.PunchLeft, 15f), new AttackWeight(BossAttackKind.PunchRight, 15f),
+                    new AttackWeight(BossAttackKind.AlternatingCombo, 18f), new AttackWeight(BossAttackKind.SlamBoth, 16f),
+                    new AttackWeight(BossAttackKind.SwordSlash, 14f), new AttackWeight(BossAttackKind.Feint, 11f), new AttackWeight(BossAttackKind.Grab, 11f),
                 },
             },
             new BossPhaseEntry
@@ -157,12 +174,21 @@ namespace Anseong.Boss
                     new BossChain(2f, 2, BossAttackKind.Charge, BossAttackKind.AlternatingCombo, BossAttackKind.SlamBoth),
                     new BossChain(2f, 2, BossAttackKind.PunchRight, BossAttackKind.PunchLeft, BossAttackKind.SlamBoth, BossAttackKind.Charge),
                     new BossChain(1f, 2, BossAttackKind.AlternatingCombo, BossAttackKind.SlamBoth, BossAttackKind.Charge),
+                    // 11/13 맨손 보스: 붙잡기·속임수·충격파
+                    new BossChain(2f, 0, BossAttackKind.Grab, BossAttackKind.PunchRight),
+                    new BossChain(2f, 0, BossAttackKind.Feint, BossAttackKind.SlamBoth),
+                    new BossChain(2f, 0, BossAttackKind.PunchLeft, BossAttackKind.PunchRight, BossAttackKind.Shockwave),
+                    new BossChain(2f, 1, BossAttackKind.ArmLock, BossAttackKind.Grab, BossAttackKind.Shockwave),
+                    new BossChain(2f, 1, BossAttackKind.Feint, BossAttackKind.Feint, BossAttackKind.Grab),
+                    new BossChain(1f, 2, BossAttackKind.Shockwave, BossAttackKind.AlternatingCombo, BossAttackKind.Charge),
+                    new BossChain(1f, 2, BossAttackKind.Grab, BossAttackKind.SlamBoth, BossAttackKind.Feint, BossAttackKind.Shockwave),
                 },
                 weights = new[]
                 {
-                    new AttackWeight(BossAttackKind.PunchLeft, 17.5f), new AttackWeight(BossAttackKind.PunchRight, 17.5f),
-                    new AttackWeight(BossAttackKind.AlternatingCombo, 20f), new AttackWeight(BossAttackKind.SlamBoth, 20f),
-                    new AttackWeight(BossAttackKind.Charge, 25f),
+                    new AttackWeight(BossAttackKind.PunchLeft, 10f), new AttackWeight(BossAttackKind.PunchRight, 10f),
+                    new AttackWeight(BossAttackKind.AlternatingCombo, 14f), new AttackWeight(BossAttackKind.SlamBoth, 14f),
+                    new AttackWeight(BossAttackKind.Charge, 16f), new AttackWeight(BossAttackKind.Shockwave, 12f),
+                    new AttackWeight(BossAttackKind.Grab, 10f), new AttackWeight(BossAttackKind.Feint, 8f), new AttackWeight(BossAttackKind.ArmLock, 6f),
                 },
             },
         };
