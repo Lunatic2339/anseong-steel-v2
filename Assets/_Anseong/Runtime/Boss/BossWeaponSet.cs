@@ -79,7 +79,8 @@ namespace Anseong.Boss
         }
 
         static readonly Color Armor = new Color(0.35f, 0.35f, 0.38f);
-        static readonly Color CoreRed = new Color(1f, 0.1f, 0.05f);
+        // 1보다 큰 값 = 후처리 블룸으로 빛나 보인다(11/13: 평면 스티커처럼 보임).
+        static readonly Color CoreRed = new Color(2.4f, 0.3f, 0.12f);
 
         /// <summary>
         /// 11/11 확정(시나리오 스레드): 보스도 우리와 같은 무장(팔뚝 포 + 오른손 검 + 왼손 방패), 가슴에 핵. 부수는 차례 팔뚝 포 → 방패 → 핵.
@@ -125,8 +126,17 @@ namespace Anseong.Boss
         static Weapon Core() => new Weapon
         {
             name = "핵", retaliate = false, retaliation = BossAttackKind.SlamBoth, color = CoreRed,
-            parts = new[] { new Part { label = "Core", bone = BossBone.Chest, placement = Placement.InFront, shape = PrimitiveType.Sphere, size = Vector3.one * 0.45f, push = 0.2f } },
+            parts = new[] { new Part { label = "Core", bone = BossBone.Chest, placement = Placement.InFront, shape = PrimitiveType.Sphere, size = Vector3.one * 0.3f, push = 0.36f } },
         };
+
+        /// <summary>핵 값을 코드 기본값으로 맞춘다(메뉴가 부름). 다른 무기 값은 건드리지 않는다.</summary>
+        public void SyncCore()
+        {
+            if (weapons == null) return;
+            for (var i = 0; i < weapons.Length; i++)
+                if (weapons[i] != null && weapons[i].parts != null && weapons[i].parts.Length == 1 && weapons[i].parts[0].bone == BossBone.Chest && weapons[i].parts[0].placement == Placement.InFront && weapons[i].parts[0].shape == PrimitiveType.Sphere)
+                    weapons[i] = Core();
+        }
 
         [ContextMenu("확정안 채우기 (팔뚝 포 → 방패·검 → 핵)")]
         void FillDefault() => weapons = DefaultWeapons();

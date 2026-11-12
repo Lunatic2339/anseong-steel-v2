@@ -25,18 +25,18 @@ Material:
     m_TexEnvs: []
     m_Ints: []
     m_Floats:
-    - _GrimeHeight: 14
-    - _GrimeStrength: 0.4
+    - _GrimeHeight: 18
+    - _GrimeStrength: 0.5
     - _PanelHeight: 11
-    - _PanelVariation: 0.24
+    - _PanelVariation: 0.32
     - _PanelWidth: 22
     - _RibSize: 3
-    - _RibStrength: 0.14
+    - _RibStrength: 0.22
     - _SeamStrength: 0.6
     - _StainStrength: 0.35
-    - _StreakStrength: 0.3
+    - _StreakStrength: 0.42
     - _WindowRatio: 0.5
-    - _WindowStrength: 0.85
+    - _WindowStrength: 0.7
     m_Colors:
     - _BaseColor: {r: 0.6, g: 0.62, b: 0.6399999, a: 1}
   m_BuildTextureStacks: []

@@ -61,7 +61,7 @@ MonoBehaviour:
     durability: 30
     retaliate: 0
     retaliation: 3
-    color: {r: 1, g: 0.1, b: 0.05, a: 1}
+    color: {r: 2.4, g: 0.3, b: 0.12, a: 1}
     parts:
     - label: Core
       bone: 4
@@ -69,5 +69,5 @@ MonoBehaviour:
       prefab: {fileID: 0}
       borrow: 0
       shape: 0
-      size: {x: 0.45, y: 0.45, z: 0.45}
-      push: 0.2
+      size: {x: 0.3, y: 0.3, z: 0.3}
+      push: 0.36

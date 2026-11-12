@@ -113,7 +113,13 @@ namespace Anseong.EditorTools
         public static BossWeaponSet EnsureWeaponSet()
         {
             var set = AssetDatabase.LoadAssetAtPath<BossWeaponSet>(WeaponSetPath);
-            if (set != null) return set;
+            if (set != null)
+            {
+                // 핵 모양·색은 코드 기본값을 따른다(11/13 화면 맞춤).
+                set.SyncCore();
+                EditorUtility.SetDirty(set);
+                return set;
+            }
             set = ScriptableObject.CreateInstance<BossWeaponSet>();
             AssetDatabase.CreateAsset(set, WeaponSetPath);
             AssetDatabase.SaveAssets();

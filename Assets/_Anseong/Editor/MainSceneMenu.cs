@@ -102,6 +102,8 @@ namespace Anseong.EditorTools
             return "맵: " + result;
         }
 
+        const float GroundBrightness = 0.5f, GroundJointMin = 0.3f, GroundDustMin = 0.55f, GroundContrastMin = 1.1f;
+
         static string AddEnvironmentLoader(Scene scene)
         {
             var map = AssetDatabase.LoadAssetAtPath<SceneAsset>(EnvironmentScenePath);
@@ -119,6 +121,11 @@ namespace Anseong.EditorTools
             serialized.FindProperty("environmentScene").stringValue = map != null ? map.name : string.Empty;
             serialized.FindProperty("mainLight").objectReferenceValue = sun;
             serialized.FindProperty("facadeMaterial").objectReferenceValue = EnsureFacadeMaterial();
+            // 바닥 무늬 값: 씬에 저장된 값이 클래스 기본값보다 우선이라 여기서 맞춘다(11/13 run12 화면 맞춤).
+            serialized.FindProperty("groundBrightness").floatValue = GroundBrightness;
+            serialized.FindProperty("groundJointMin").floatValue = GroundJointMin;
+            serialized.FindProperty("groundDustMin").floatValue = GroundDustMin;
+            serialized.FindProperty("groundContrastMin").floatValue = GroundContrastMin;
             serialized.ApplyModifiedProperties();
             return map != null ? $"{map.name}(Play하면 같이 불러옴)" : $"맵 씬이 없어 불러오지 않음({EnvironmentScenePath})";
         }
@@ -137,18 +144,18 @@ namespace Anseong.EditorTools
                 material = new Material(shader);
                 AssetDatabase.CreateAsset(material, FacadeMaterialPath);
             }
-            // 65 m 로봇 눈높이·수백 m 거리에서 보이게 크게 잡는다(11/13 run10: 9×5 m 패널·1 m 골은 거의 안 보였다).
+            // 65 m 로봇 눈높이·수백 m 거리에서 보이게 크게 잡는다(11/13 run10: 9×5 m 패널·1 m 골은 거의 안 보였다. run12: 세기 올림).
             material.SetFloat("_RibSize", 3f);
-            material.SetFloat("_RibStrength", 0.14f);
+            material.SetFloat("_RibStrength", 0.22f);
             material.SetFloat("_PanelWidth", 22f);
             material.SetFloat("_PanelHeight", 11f);
             material.SetFloat("_SeamStrength", 0.6f);
-            material.SetFloat("_PanelVariation", 0.24f);
-            material.SetFloat("_StreakStrength", 0.3f);
-            material.SetFloat("_GrimeHeight", 14f);
-            material.SetFloat("_GrimeStrength", 0.4f);
+            material.SetFloat("_PanelVariation", 0.32f);
+            material.SetFloat("_StreakStrength", 0.42f);
+            material.SetFloat("_GrimeHeight", 18f);
+            material.SetFloat("_GrimeStrength", 0.5f);
             material.SetFloat("_StainStrength", 0.35f);
-            material.SetFloat("_WindowStrength", 0.85f);
+            material.SetFloat("_WindowStrength", 0.7f);
             material.SetFloat("_WindowRatio", 0.5f);
             EditorUtility.SetDirty(material);
             return material;

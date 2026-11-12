@@ -30,10 +30,10 @@ namespace Anseong.Flow
         float groundBrightness = 0.5f;
         [SerializeField, Range(0f, 0.3f), Tooltip("바닥 판 줄눈 세기 최소값(맵 값이 더 크면 그대로).")]
         float groundJointMin = 0.24f;
-        [SerializeField, Range(0f, 0.3f), Tooltip("바닥 얼룩(넓은 먼지 무늬) 세기 최소값.")]
-        float groundDustMin = 0.26f;
+        [SerializeField, Range(0f, 0.6f), Tooltip("바닥 얼룩(넓은 먼지 무늬) 세기 최소값.")]
+        float groundDustMin = 0.45f;
         [SerializeField, Range(0.2f, 1.5f), Tooltip("바닥 텍스처 대비 최소값(낮으면 무늬가 안 보인다).")]
-        float groundContrastMin = 0.7f;
+        float groundContrastMin = 1.1f;
 
         [Header("맵 건물 외벽 (11/13: 건물이 단색 상자로 보임)")]
         [SerializeField, Tooltip("텍스처 없는 단색 건물 재질 대신 화면에서만 쓰는 외벽 재질(골강판·패널 이음매·창·때). 메뉴 Build M1 Main이 넣는다. 비우면 맵 그대로.")]

@@ -62,7 +62,7 @@ half4 frag(V i) : SV_Target
     half3 albedo = _BaseColor.rgb;
 
     float ribSize = max(0.1, _RibSize);
-    float ribFade = 1 - saturate(fwidth(h / ribSize) * 1.5);
+    float ribFade = 1 - saturate(fwidth(h / ribSize) * 0.8);
     albedo *= 1 + sin(h * 6.2831853 / ribSize) * _RibStrength * ribFade * wall;
 
     float2 size = float2(max(1, _PanelWidth), max(1, _PanelHeight));
@@ -70,8 +70,10 @@ half4 frag(V i) : SV_Target
     float2 edge = min(frac(panel), 1 - frac(panel)) * size;
     float d = min(edge.x, edge.y);
     float aa = max(fwidth(d), 0.01);
-    float seam = 1 - smoothstep(0.22 - aa, 0.22 + aa, d);
-    float panelFade = 1 - saturate(max(fwidth(panel.x), fwidth(panel.y)) * 2.5);
+    // 이음매 폭은 패널 크기에 비례(멀리서도 1~2픽셀은 남게, 11/13 run11 "거의 안 보임").
+    float seamWidth = max(0.22, 0.045 * min(size.x, size.y));
+    float seam = 1 - smoothstep(seamWidth - aa, seamWidth + aa, d);
+    float panelFade = 1 - saturate(max(fwidth(panel.x), fwidth(panel.y)) * 0.7);
     albedo *= 1 - seam * _SeamStrength * panelFade * wall;
     albedo *= 1 + (hash(floor(panel)) - 0.5) * _PanelVariation * panelFade * wall;
 

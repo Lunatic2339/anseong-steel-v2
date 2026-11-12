@@ -471,9 +471,10 @@ namespace Anseong.EditorTools
             material.SetFloat(SmoothnessId, smoothness);
             if (emission.maxColorComponent > 0f)
             {
-                material.EnableKeyword("_EMISSION");
-                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+                // 발광 켜기: 키워드가 저장되지 않아 화면이 꺼진 것처럼 보였다(11/13 run11, m_ValidKeywords 비어 있음).
+                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
                 material.SetColor(EmissionColorId, emission);
+                material.SetKeyword(new UnityEngine.Rendering.LocalKeyword(material.shader, "_EMISSION"), true);
             }
             EditorUtility.SetDirty(material);
             return material;

@@ -125,11 +125,12 @@ namespace Anseong.EditorTools
 
         static readonly Dress[] BossDress =
         {
-            new Dress { Label = "Crest", Model = "Boss_Crest", Bone = RobotSandboxUtility.HeadBone, Offset = new Vector3(0f, 0.75f, 0f), Size = 1.7f },
-            new Dress { Label = "Pauldron R", Model = "Boss_Pauldron", Bone = RobotSandboxUtility.RightPrefix + "Arm", Offset = new Vector3(0.25f, 0.45f, 0f), Size = 1.9f },
-            new Dress { Label = "Pauldron L", Model = "Boss_Pauldron", Bone = RobotSandboxUtility.LeftPrefix + "Arm", Offset = new Vector3(-0.25f, 0.45f, 0f), Size = 1.9f, Mirror = true },
-            new Dress { Label = "Back Spines", Model = "Boss_BackSpines", Bone = "mixamorig:Spine2", Offset = new Vector3(0f, 0.5f, -0.9f), Size = 3f },
-            new Dress { Label = "Core Housing", Model = "Boss_CoreHousing", Bone = "mixamorig:Spine2", Offset = new Vector3(0f, 0f, 0.62f), Size = 1.15f },
+            // 11/13 run12 화면 맞춤: 몸통 뼈는 Spine2가 없어 Spine(허리) 기준. 어깨 장갑은 너무 커서 머리가 셋처럼 보여 줄임.
+            new Dress { Label = "Crest", Model = "Boss_Crest", Bone = RobotSandboxUtility.HeadBone, Offset = new Vector3(0f, 0.6f, 0f), Size = 1.5f },
+            new Dress { Label = "Pauldron R", Model = "Boss_Pauldron", Bone = RobotSandboxUtility.RightPrefix + "Arm", Offset = new Vector3(0.3f, 0.05f, 0.05f), Size = 1.15f },
+            new Dress { Label = "Pauldron L", Model = "Boss_Pauldron", Bone = RobotSandboxUtility.LeftPrefix + "Arm", Offset = new Vector3(-0.3f, 0.05f, 0.05f), Size = 1.15f, Mirror = true },
+            new Dress { Label = "Back Spines", Model = "Boss_BackSpines", Bone = RobotSandboxUtility.SpineBone, Offset = new Vector3(0f, 0.95f, -0.45f), Size = 1.6f },
+            new Dress { Label = "Core Housing", Model = "Boss_CoreHousing", Bone = RobotSandboxUtility.SpineBone, Offset = new Vector3(0f, 0f, 0.4f), Size = 0.75f },
         };
 
         static string DressBoss(BossWeaponVisuals visuals, Dictionary<string, GameObject> prefabs)
@@ -173,14 +174,16 @@ namespace Anseong.EditorTools
 
         static readonly Scenery[] SceneryTable =
         {
-            new Scenery { Label = "Blast Furnace A", Model = "Scenery_BlastFurnace", Position = new Vector3(-230f, 0f, 340f), Yaw = 20f, Size = 150f },
-            new Scenery { Label = "Blast Furnace B", Model = "Scenery_BlastFurnace", Position = new Vector3(150f, 0f, 500f), Yaw = 200f, Size = 130f },
-            new Scenery { Label = "Chimney A", Model = "Scenery_Chimney", Position = new Vector3(250f, 0f, 380f), Size = 170f },
-            new Scenery { Label = "Chimney B", Model = "Scenery_Chimney", Position = new Vector3(-90f, 0f, 520f), Yaw = 90f, Size = 140f },
-            new Scenery { Label = "Gantry Crane A", Model = "Scenery_GantryCrane", Position = new Vector3(310f, 0f, 150f), Yaw = 70f, Size = 110f },
-            new Scenery { Label = "Gantry Crane B", Model = "Scenery_GantryCrane", Position = new Vector3(-300f, 0f, -40f), Yaw = -60f, Size = 100f },
-            new Scenery { Label = "Gas Holder A", Model = "Scenery_GasHolder", Position = new Vector3(-340f, 0f, 150f), Size = 90f },
-            new Scenery { Label = "Gas Holder B", Model = "Scenery_GasHolder", Position = new Vector3(380f, 0f, 330f), Yaw = 45f, Size = 80f },
+            // 11/13 run12: 위에서 본 맵 기준. 전투 마당 X -160~150·Z -270~290, 동쪽 X 240부터 바다, 서쪽 X -200부터 시가지.
+            // 북쪽(조종사 정면 배경)에 고로·굴뚝, 동쪽 부두에 크레인, 남쪽(뒤)에 가스 탱크.
+            new Scenery { Label = "Blast Furnace A", Model = "Scenery_BlastFurnace", Position = new Vector3(-60f, 0f, 400f), Yaw = 20f, Size = 150f },
+            new Scenery { Label = "Blast Furnace B", Model = "Scenery_BlastFurnace", Position = new Vector3(90f, 0f, 430f), Yaw = 200f, Size = 130f },
+            new Scenery { Label = "Chimney A", Model = "Scenery_Chimney", Position = new Vector3(195f, 0f, 330f), Size = 170f },
+            new Scenery { Label = "Chimney B", Model = "Scenery_Chimney", Position = new Vector3(-140f, 0f, 350f), Yaw = 90f, Size = 150f },
+            new Scenery { Label = "Gantry Crane A", Model = "Scenery_GantryCrane", Position = new Vector3(215f, 0f, 230f), Yaw = 90f, Size = 110f },
+            new Scenery { Label = "Gantry Crane B", Model = "Scenery_GantryCrane", Position = new Vector3(215f, 0f, -200f), Yaw = 90f, Size = 100f },
+            new Scenery { Label = "Gas Holder A", Model = "Scenery_GasHolder", Position = new Vector3(-80f, 0f, -380f), Size = 90f },
+            new Scenery { Label = "Gas Holder B", Model = "Scenery_GasHolder", Position = new Vector3(90f, 0f, -360f), Yaw = 45f, Size = 80f },
         };
 
         const string SceneryRootName = "Scenery (AI)";
