@@ -1,0 +1,29 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!114 &11400000
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f485f916f5e9c794a8b9a35e503d3c52, type: 3}
+  m_Name: BossAttack_Grab
+  m_EditorClassIdentifier: Anseong.Runtime::Anseong.Boss.BossAttackDefinition
+  clip: {fileID: 0}
+  clipSpeed: 0.5
+  spec:
+    kind: 7
+    telegraphSeconds: 1.7
+    hits: 1
+    hitIntervalSeconds: 0.7
+    recoverySeconds: 1.3
+    counter: 2
+    firstSide: 1
+    level: 1
+    failDamage: 11
+    openingOnSuccess: 3
+    openingOnFail: 1.5
+    staggerOnSuccess: 0.8

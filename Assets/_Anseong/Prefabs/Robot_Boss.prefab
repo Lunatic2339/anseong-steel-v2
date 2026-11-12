@@ -586,6 +586,11 @@ MonoBehaviour:
   - {fileID: 11400000, guid: 5f2c74da54dcd5249a332a9dccf15aff, type: 2}
   - {fileID: 11400000, guid: fe2906581af18c24084aea995194d0a2, type: 2}
   - {fileID: 11400000, guid: 8974955ddd5574c428cbd4727f0018f7, type: 2}
+  - {fileID: 11400000, guid: 7e4acc0f0ed31304b94f47a25a65a897, type: 2}
+  - {fileID: 11400000, guid: a21573f55ec92fc409c09ab75bbc4fe4, type: 2}
+  - {fileID: 11400000, guid: 8d480f1334d72f041bf70cb5450ab8ee, type: 2}
+  - {fileID: 11400000, guid: 4c427c15076f5ad4094b1700ccd2fa84, type: 2}
+  - {fileID: 11400000, guid: 097ccf6710e274a4497c17cb412b2a70, type: 2}
   restIsOpening: 1
   comboHoldSeconds: 2.4
   testAttack: 1
