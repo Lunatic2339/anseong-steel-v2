@@ -4,6 +4,7 @@ using System.IO;
 using System.Reflection;
 using System.Text;
 using Anseong.Boss;
+using Anseong.Combat;
 using Anseong.Flow;
 using Anseong.Net;
 using Anseong.Pilot;
@@ -274,6 +275,8 @@ namespace Anseong.EditorTools
             calibration = null;
             bossServer = null;
             trackingSpace = headTransform = null;
+            drones = null;
+            openingStart = -1;
         }
 
         static Vector3 HeadLocal()
@@ -326,13 +329,18 @@ namespace Anseong.EditorTools
 
             var scene = flow != null && flow.Running ? flow.Scene : MatchScene.Waiting;
             // 걷지 않는다: 보스가 근접 거리(30 m)까지 걸어온다. 우리가 걸어 들어가면 26 m까지 붙어 두 로봇이 겹쳐 보인다.
-            if (scene == MatchScene.DroneHunt && side == PilotSide.Right)
+            if (scene == MatchScene.DroneHunt)
             {
-                hand.Position = reach;
-                hand.Rotation = Quaternion.identity;
-                hand.Trigger = time % 0.8 < 0.4 ? 1f : 0f;
+                // 드론 사냥(11/13 run12): 왼손 스캐너로 숨은 드론을 비춰 드러내고, 오른손 포로 드러난 드론을 겨눠 쏜다.
+                // 팔(어깨→손) 방향이 무기 방향이므로 손 자리를 드론 쪽으로 뻗고, 손목도 같은 쪽으로 돌린다.
+                var shoulder = head + new Vector3(sx * 0.2f, -0.25f, 0f);
+                var aim = AimAtDrone(side);
+                hand.Position = shoulder + aim * 0.65f;
+                hand.Rotation = Quaternion.FromToRotation(Vector3.forward, aim);
+                if (side == PilotSide.Right) hand.Trigger = time % 0.6 < 0.3 ? 1f : 0f;
                 return hand;
             }
+            aimDirection[(int)side] = Vector3.forward;
             var state = bossServer != null ? bossServer.Action.BossState : BossState.Rest;
             var fighting = scene == MatchScene.Checkup || scene == MatchScene.FightCannon || scene == MatchScene.FightArmor || scene == MatchScene.FightCore;
             if (state == BossState.Telegraph || state == BossState.Strike)
@@ -347,6 +355,26 @@ namespace Anseong.EditorTools
             hand.Rotation = readyRotation;
             if (!fighting) return hand;
 
+            // 빈틈·경직: 좌우 번갈아 0.5초마다 한 번씩 빠르게 친다(연계 제한 2.4초·최소 간격 0.15초 안, 11/13 run12 "최고 연계 1").
+            // 헛친 주먹은 연계를 끊으므로 두 손 다 몸통 가운데로 뻗는다(왼손이 바깥으로 빗나가 매번 끊겼다).
+            if (state == BossState.Opening || state == BossState.Staggered)
+            {
+                reach = head + new Vector3(sx * 0.05f, -0.22f, 0.66f);
+                if (openingStart < 0) openingStart = time;
+                var t = time - openingStart;
+                var slot = (int)(t / ComboBeat);
+                if ((slot % 2 == 0) == (side == PilotSide.Left))
+                {
+                    var p = t - slot * ComboBeat;
+                    var kk = p < 0.12 ? (float)(p / 0.12) : p < 0.32 ? 1f : p < 0.45 ? 1f - (float)((p - 0.32) / 0.13) : 0f;
+                    kk = Mathf.SmoothStep(0f, 1f, kk);
+                    hand.Position = Vector3.Lerp(ready, reach, kk);
+                    hand.Rotation = Quaternion.Slerp(readyRotation, Quaternion.identity, Mathf.Clamp01(kk * 2.5f));
+                }
+                return hand;
+            }
+            openingStart = -1;
+
             // 잽: 0.18초 뻗기 → 0.5초 버티기(로봇 팔이 따라올 시간) → 0.25초 거두기. 왼손 먼저, 오른손은 반 주기 뒤.
             var phase = (since + (side == PilotSide.Right ? PunchPeriod * 0.5 : 0.0)) % PunchPeriod;
             float k;
@@ -358,6 +386,43 @@ namespace Anseong.EditorTools
             hand.Position = Vector3.Lerp(ready, reach, k);
             hand.Rotation = Quaternion.Slerp(readyRotation, Quaternion.identity, Mathf.Clamp01(k * 2.5f));
             return hand;
+        }
+
+        const double ComboBeat = 0.5;
+        static double openingStart = -1;
+        static readonly Vector3[] aimDirection = { Vector3.forward, Vector3.forward };
+        static DroneDirector drones;
+        static System.Reflection.FieldInfo droneNet;
+
+        /// <summary>
+        /// 목표 드론 방향(추적 공간)을 돌려준다. 손을 어깨에서 이 방향으로 뻗으면 팔뚝 무기(스캐너·포)가 드론을 향한다.
+        /// 왼손 = 숨은 드론(스캐너로 드러냄), 오른손 = 드러난 드론(포로 격추).
+        /// </summary>
+        static Vector3 AimAtDrone(PilotSide side)
+        {
+            var i = (int)side;
+            if (drones == null) drones = UnityEngine.Object.FindAnyObjectByType<DroneDirector>();
+            var weapons = UnityEngine.Object.FindAnyObjectByType<PlayerWeaponVisuals>();
+            if (drones == null || weapons == null || trackingSpace == null) return aimDirection[i];
+            var tip = side == PilotSide.Left ? weapons.ScannerTip : weapons.CannonTip;
+            if (tip == null || !tip.gameObject.activeInHierarchy) return aimDirection[i];
+            if (droneNet == null) droneNet = typeof(DroneDirector).GetField("net", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (droneNet == null || !(droneNet.GetValue(drones) is Unity.Netcode.NetworkVariable<DroneNetState> net)) return aimDirection[i];
+            var s = net.Value;
+            var want = side == PilotSide.Left ? DroneState.Hidden : DroneState.Revealed;
+            var best = -1;
+            var bestAngle = float.MaxValue;
+            for (var d = 0; d < DroneDirector.Slots; d++)
+            {
+                if (s.State(d) != want) continue;
+                var angle = Vector3.Angle(tip.up, s.Position(d) - tip.position);
+                if (angle < bestAngle) { bestAngle = angle; best = d; }
+            }
+            if (best < 0) return aimDirection[i];
+            // 목표 방향(추적 공간)으로 천천히 돌린다(로봇 팔이 묵직하게 따라오므로 손을 홱 돌리지 않는다).
+            var want3 = Quaternion.Inverse(trackingSpace.rotation) * (s.Position(best) - tip.position).normalized;
+            aimDirection[i] = Vector3.Slerp(aimDirection[i], want3, 0.1f).normalized;
+            return aimDirection[i];
         }
 
         /// <summary>

@@ -21,6 +21,8 @@ namespace Anseong.EditorTools
         public const string Parent = "Assets/_Anseong/Art/Boss";
         public const string Folder = Parent + "/Animation";
         public const string SourceFolder = Folder + "/Source";
+        /// <summary>Cascadeur로 다듬어 돌려받은 클립 자리(11/13). 결과 이름과 같은 FBX(예: Boss_SlamBoth.fbx)가 있으면 원본보다 먼저 쓴다.</summary>
+        public const string CascadeurFolder = Folder + "/Cascadeur";
         const float BakeRate = 30f;
         const int MeasureRate = 60;
         const float StrongPeak = 0.7f;
@@ -70,10 +72,52 @@ namespace Anseong.EditorTools
             return null;
         }
 
+        /// <summary>Cascadeur 폴더의 같은 이름 FBX 안 첫 클립(없으면 null).</summary>
+        public static AnimationClip LoadCascadeur(string output)
+        {
+            foreach (var ext in new[] { ".fbx", ".FBX" })
+                foreach (var asset in AssetDatabase.LoadAllAssetsAtPath($"{CascadeurFolder}/{output}{ext}"))
+                    if (asset is AnimationClip clip && !clip.name.StartsWith("__preview__")) return clip;
+            return null;
+        }
+
         public static AnimationClip Imported(string name) => AssetDatabase.LoadAssetAtPath<AnimationClip>(OutputPath(name));
 
         /// <summary>기술 하나의 가져온 클립(Boss_&lt;기술&gt;). 돌진은 없다.</summary>
         public static AnimationClip AttackClip(BossAttackKind kind) => Imported("Boss_" + kind);
+
+        /// <summary>Cascadeur에서 내보낸 FBX 폴더를 골라 Boss_*.fbx만 Cascadeur 폴더로 복사한 뒤 클립을 다시 가져온다.</summary>
+        [MenuItem("Anseong/Boss/Bring Cascadeur Clips...")]
+        static void BringCascadeurMenu()
+        {
+            var folder = EditorUtility.OpenFolderPanel("Cascadeur에서 내보낸 FBX 폴더", "", "");
+            if (string.IsNullOrEmpty(folder)) return;
+            Debug.Log($"{LogPrefix} Cascadeur 판 {CopyCascadeur(folder)}개 복사");
+            ImportMenu();
+        }
+
+        /// <summary>명령줄용: -cascadeurFolder &lt;폴더&gt; 의 Boss_*.fbx를 복사하고 클립을 다시 가져온다.</summary>
+        public static void BringCascadeurBatch()
+        {
+            var args = System.Environment.GetCommandLineArgs();
+            var i = System.Array.IndexOf(args, "-cascadeurFolder");
+            if (i >= 0 && i + 1 < args.Length) Debug.Log($"{LogPrefix} Cascadeur 판 {CopyCascadeur(args[i + 1])}개 복사");
+            ImportMenu();
+        }
+
+        static int CopyCascadeur(string folder)
+        {
+            if (!System.IO.Directory.Exists(folder)) return 0;
+            if (!AssetDatabase.IsValidFolder(CascadeurFolder)) AssetDatabase.CreateFolder(Folder, "Cascadeur");
+            var count = 0;
+            foreach (var file in System.IO.Directory.GetFiles(folder, "Boss_*.fbx"))
+            {
+                System.IO.File.Copy(file, $"{CascadeurFolder}/{System.IO.Path.GetFileName(file)}", true);
+                count++;
+            }
+            AssetDatabase.Refresh();
+            return count;
+        }
 
         [MenuItem("Anseong/Boss/Import Boss Clips (Yujin)")]
         static void ImportMenu()
@@ -118,16 +162,18 @@ namespace Anseong.EditorTools
 
                 foreach (var (source, output, loop, hipTravel) in Table)
                 {
-                    var src = LoadSource(source);
+                    // Cascadeur 판(이미 우리 모델 뼈·골반 이동 줄임이 들어간 Boss_* 클립을 다듬은 것)이 있으면 그것을 쓴다. 골반 이동은 다시 줄이지 않는다.
+                    var cascadeur = LoadCascadeur(output);
+                    var src = cascadeur != null ? cascadeur : LoadSource(source);
                     if (src == null)
                     {
                         lines.Add($"{source}: 원본 없음, 건너뜀");
                         continue;
                     }
                     var clip = Remap(src, root.transform, bones, out var kept, out var dropped, out var hipScale);
-                    var travel = hipTravel < 1f ? LimitHipTravel(clip, root.transform, bones, hipTravel) : -1f;
+                    var travel = cascadeur == null && hipTravel < 1f ? LimitHipTravel(clip, root.transform, bones, hipTravel) : -1f;
                     Save(clip, output, loop);
-                    lines.Add($"{source} → {output} ({src.length:F2}초, 뼈 곡선 {kept}개 연결·{dropped}개 버림, 골반 이동 배율 {hipScale:F3}" +
+                    lines.Add($"{(cascadeur != null ? "Cascadeur/" + output : source)} → {output} ({src.length:F2}초, 뼈 곡선 {kept}개 연결·{dropped}개 버림, 골반 이동 배율 {hipScale:F3}" +
                               (travel >= 0f ? $", 골반 수평 이동 최대 {travel:F1} m → {travel * hipTravel:F1} m)" : ")"));
                 }
 

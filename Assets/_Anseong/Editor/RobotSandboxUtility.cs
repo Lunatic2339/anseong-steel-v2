@@ -349,18 +349,21 @@ namespace Anseong.EditorTools
 
             // 창틀 안쪽 가장자리와 콘솔 위에 가는 빛줄(조종석 계기 느낌). 회색 상자만 있으면 개발용 틀처럼 보인다(11/13 자동 점검).
             var strip = FrameThickness * 0.4f;
+            // 창틀 빛줄은 화면·스위치보다 어둡고 가늘게(11/13 run12: 청록 기둥이 과하게 밝고 굵었다).
+            var frameGlow = CockpitMaterial("Cockpit_GlowDim", new Color(0.02f, 0.05f, 0.06f), new Color(0.15f, 0.9f, 1f) * 0.6f, 0f, 0.6f);
+            var thin = strip * 0.45f;
             var inset = FrameThickness * 0.5f + strip * 0.5f;
-            CreateBox(root.transform, "Glow Post L", new Vector3(strip, WindowTop - FrameThickness, strip), new Vector3(-WindowHalfWidth + inset, WindowTop * 0.5f, WindowZ - inset), cockpitGlow);
-            CreateBox(root.transform, "Glow Post R", new Vector3(strip, WindowTop - FrameThickness, strip), new Vector3(WindowHalfWidth - inset, WindowTop * 0.5f, WindowZ - inset), cockpitGlow);
-            CreateBox(root.transform, "Glow Top", new Vector3(WindowHalfWidth * 2f - FrameThickness, strip, strip), new Vector3(0f, WindowTop - inset, WindowZ - inset), cockpitGlow);
+            CreateBox(root.transform, "Glow Post L", new Vector3(thin, WindowTop - FrameThickness, thin), new Vector3(-WindowHalfWidth + inset, WindowTop * 0.5f, WindowZ - inset), frameGlow);
+            CreateBox(root.transform, "Glow Post R", new Vector3(thin, WindowTop - FrameThickness, thin), new Vector3(WindowHalfWidth - inset, WindowTop * 0.5f, WindowZ - inset), frameGlow);
+            CreateBox(root.transform, "Glow Top", new Vector3(WindowHalfWidth * 2f - FrameThickness, thin, thin), new Vector3(0f, WindowTop - inset, WindowZ - inset), frameGlow);
             CreateBox(root.transform, "Glow Console", new Vector3(ConsoleSize.x * 0.9f, strip, strip), new Vector3(0f, ConsoleSize.y + strip * 0.5f, ConsoleZ - ConsoleSize.z * 0.5f + strip), cockpitGlow);
             // 옆벽(낮은 난간)과 콘솔 위 계기판 3개: 창 하나·민무늬 벽뿐이면 조종석처럼 안 보인다(11/13).
             var amber = CockpitMaterial("Cockpit_GlowAmber", new Color(0.06f, 0.04f, 0.02f), new Color(1f, 0.6f, 0.15f) * 1.8f, 0f, 0.6f);
             var railSize = new Vector3(FrameThickness, ConsoleSize.y * 0.9f, WindowZ + 0.5f);
             CreateBox(root.transform, "Side Rail L", railSize, new Vector3(-WindowHalfWidth, railSize.y * 0.5f, (WindowZ - 0.5f) * 0.5f));
             CreateBox(root.transform, "Side Rail R", railSize, new Vector3(WindowHalfWidth, railSize.y * 0.5f, (WindowZ - 0.5f) * 0.5f));
-            CreateBox(root.transform, "Glow Rail L", new Vector3(strip, strip, railSize.z * 0.9f), new Vector3(-WindowHalfWidth + inset, railSize.y, (WindowZ - 0.5f) * 0.5f), cockpitGlow);
-            CreateBox(root.transform, "Glow Rail R", new Vector3(strip, strip, railSize.z * 0.9f), new Vector3(WindowHalfWidth - inset, railSize.y, (WindowZ - 0.5f) * 0.5f), cockpitGlow);
+            CreateBox(root.transform, "Glow Rail L", new Vector3(strip, strip, railSize.z * 0.9f), new Vector3(-WindowHalfWidth + inset, railSize.y, (WindowZ - 0.5f) * 0.5f), frameGlow);
+            CreateBox(root.transform, "Glow Rail R", new Vector3(strip, strip, railSize.z * 0.9f), new Vector3(WindowHalfWidth - inset, railSize.y, (WindowZ - 0.5f) * 0.5f), frameGlow);
             var panelY = ConsoleSize.y + 0.012f;
             var panelZ = ConsoleZ - ConsoleSize.z * 0.15f;
             CreateBox(root.transform, "Panel L", new Vector3(0.7f, 0.02f, 0.16f), new Vector3(-1.15f, panelY, panelZ), amber);
