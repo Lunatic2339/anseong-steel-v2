@@ -61,5 +61,28 @@ namespace Anseong.Tests.EditMode
         {
             Assert.IsFalse(new GrabSlashRules().TrySlash(1.0));
         }
+    
+        [Test]
+        public void AfterTwoLanded_BossBreaksFreeSooner_UntilNextPhase()
+        {
+            var r = new GrabSlashRules(new GrabSlashSettings { cooldownSeconds = 0f });
+            var now = 0.0;
+            for (var i = 0; i < 2; i++)
+            {
+                r.Update(now, true, true);
+                now += 0.5;
+                Assert.AreEqual(GrabStep.Started, r.Update(now, true, true));
+                Assert.IsTrue(r.TrySlash(now));
+                now += 0.1;
+            }
+            Assert.IsTrue(r.Learned);
+            Assert.Less(r.HoldSeconds, r.Settings.maxHoldSeconds);
+            r.Update(now, true, true);
+            now += 0.5;
+            Assert.AreEqual(GrabStep.Started, r.Update(now, true, true));
+            Assert.AreEqual(GrabStep.TimedOut, r.Update(now + r.HoldSeconds + 0.01, true, true));
+            r.NewPhase();
+            Assert.IsFalse(r.Learned);
+        }
     }
 }

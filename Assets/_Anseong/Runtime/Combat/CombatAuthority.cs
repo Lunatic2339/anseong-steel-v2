@@ -153,7 +153,7 @@ namespace Anseong.Combat
             switch (grab.Update(serverTime, BossGrabbable, finisher.IsReady(PilotSide.Left) && gripHeld[left]))
             {
                 case GrabStep.Started:
-                    events?.Add(Make(CombatCue.GrabStart, PilotSide.Left, serverTime, 0, grab.Settings.maxHoldSeconds));
+                    events?.Add(Make(CombatCue.GrabStart, PilotSide.Left, serverTime, grab.Learned ? 1 : 0, grab.HoldSeconds));
                     break;
                 case GrabStep.Broken:
                     events?.Add(Make(CombatCue.GrabBreak, PilotSide.Left, serverTime, 0, 0f));

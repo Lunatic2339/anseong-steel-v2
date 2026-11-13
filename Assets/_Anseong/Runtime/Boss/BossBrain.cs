@@ -294,6 +294,7 @@ namespace Anseong.Boss
                     var doPayback = retaliate && (broken == null || broken.retaliate);
                     if (!doPayback || !server.TryBegin(payback)) machine.Hold(BossState.Roar, now, table != null ? table.roarSeconds : 2f);
                     picker.BeginPhase(phases.Phase);
+                    authority.Grab.NewPhase();
                     var restore = table != null ? table.pilotRestorePercent : 60f;
                     if (restore > 0f) authority.Pilot.RestoreTo(restore);
                     Emit(CombatCue.PhaseChanged, phases.Phase, now);
@@ -501,7 +502,7 @@ namespace Anseong.Boss
                 case CombatCue.GrabStart:
                     // 붙잡힘: 버틸 수 있는 시간만큼 그 자리에서 버둥거린다(시간이 지나면 규칙이 GrabBreak를 낸다).
                     server.Machine.Hold(BossState.Grabbed, e.Time, e.Amount + 0.5f);
-                    Emit(CombatCue.CommanderLine, CommanderLines.GrabHeld, e.Time);
+                    Emit(CombatCue.CommanderLine, e.Code == 1 ? CommanderLines.GrabHurry : CommanderLines.GrabHeld, e.Time);
                     break;
                 case CombatCue.GrabSlash:
                     server.Machine.Release(e.Time);
@@ -510,6 +511,8 @@ namespace Anseong.Boss
                 case CombatCue.GrabBreak:
                     if (server.Machine.State == BossState.Grabbed) server.Machine.Release(e.Time);
                     Emit(CombatCue.CommanderLine, CommanderLines.GrabLost, e.Time);
+                    // 뿌리친 보스는 바로 되갚는다(쉬는 시간 없이 다음 공격).
+                    if (e.Amount >= 1f) nextAttackAt = e.Time + 0.3;
                     break;
                 case CombatCue.PilotHit:
                     stats.Strike(false);

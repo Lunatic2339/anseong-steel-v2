@@ -18,6 +18,12 @@ namespace Anseong.Combat
         [Tooltip("붙잡힌 보스를 오른팔로 벨 때 추가 피해(보스 HP %). 평타 피해에 더한다.")]
         [Range(0f, 30f)] public float slashDamage = 9f;
 
+        [Tooltip("같은 구간에서 이만큼 당한 뒤로는 보스가 익숙해져 빨리 뿌리친다(같은 수가 계속 통하지 않게).")]
+        [Range(1, 10)] public int learnAfter = 2;
+
+        [Tooltip("익숙해진 보스가 붙잡혀 버티는 시간 비율(1 = 그대로).")]
+        [Range(0.1f, 1f)] public float learnedHoldScale = 0.35f;
+
         [Tooltip("베인 뒤 보스가 휘청이는 시간(초).")]
         [Range(0.2f, 4f)] public float reelSeconds = 1.4f;
 
@@ -53,10 +59,17 @@ namespace Anseong.Combat
 
         public GrabSlashSettings Settings => settings;
         public bool Held => !double.IsNaN(heldSince);
+        /// <summary>이 구간에서 베기까지 성공한 횟수(구간이 바뀌면 <see cref="NewPhase"/>로 0).</summary>
+        public int Landed { get; private set; }
+        /// <summary>보스가 이 수에 익숙해졌는지(빨리 뿌리친다).</summary>
+        public bool Learned => Landed >= settings.learnAfter;
+        /// <summary>지금 붙잡고 버틸 수 있는 시간(초).</summary>
+        public float HoldSeconds => settings.maxHoldSeconds * (Learned ? settings.learnedHoldScale : 1f);
+        public void NewPhase() => Landed = 0;
         /// <summary>지금 붙잡을 수 있는지(안내용): 보스가 잡을 수 있는 상태이고 쉬는 시간이 끝남.</summary>
         public bool Available(double now, bool grabbable) => !Held && grabbable && now >= readyAt;
         /// <summary>붙잡고 버틴 비율 0~1(1이면 곧 뿌리친다).</summary>
-        public float HoldProgress(double now) => Held ? Mathf.Clamp01((float)((now - heldSince) / settings.maxHoldSeconds)) : 0f;
+        public float HoldProgress(double now) => Held ? Mathf.Clamp01((float)((now - heldSince) / HoldSeconds)) : 0f;
 
         /// <param name="grabbable">보스가 휘청·빈틈·붙잡힘 상태인가.</param>
         /// <param name="leftHolding">왼팔이 정면으로 뻗고 그립을 쥐고 있는가.</param>
@@ -69,7 +82,7 @@ namespace Anseong.Combat
                     End(now);
                     return GrabStep.Broken;
                 }
-                if (now - heldSince < settings.maxHoldSeconds) return GrabStep.None;
+                if (now - heldSince < HoldSeconds) return GrabStep.None;
                 End(now);
                 return GrabStep.TimedOut;
             }
@@ -90,6 +103,7 @@ namespace Anseong.Combat
         {
             if (!Held) return false;
             End(now);
+            Landed++;
             return true;
         }
 
@@ -97,6 +111,7 @@ namespace Anseong.Combat
         {
             reachSince = heldSince = double.NaN;
             readyAt = double.NegativeInfinity;
+            Landed = 0;
         }
 
         void End(double now)

@@ -128,7 +128,7 @@ namespace Anseong.Combat
         /// <summary>맵 장치 작동. Code = MapEventKind(크레인 코일·컨베이어·사일로).</summary>
         MapEvent,
         // ── 잡고 베기 (선우 11/13, GrabSlashRules) ──
-        /// <summary>왼팔이 보스를 붙잡음. Amount = 버틸 수 있는 시간(초).</summary>
+        /// <summary>왼팔이 보스를 붙잡음. Amount = 버틸 수 있는 시간(초), Code = 1이면 보스가 익숙해져 곧 뿌리친다.</summary>
         GrabStart,
         /// <summary>붙잡힌 보스를 오른팔이 벰. Damage = 추가 피해, Amount = 보스 휘청 시간(초).</summary>
         GrabSlash,
