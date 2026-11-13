@@ -72,6 +72,8 @@ namespace Anseong.Boss
         Kneel,
         /// <summary>왼팔에 붙잡혀 버둥거림(잡고 베기, 11/13). 피해가 들어간다.</summary>
         Grabbed,
+        /// <summary>검을 내리누르며 힘겨루기(11/13). 피해 없음.</summary>
+        Clash,
     }
 
     /// <summary>

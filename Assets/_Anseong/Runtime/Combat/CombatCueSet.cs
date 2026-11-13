@@ -125,6 +125,11 @@ namespace Anseong.Combat
             New(CombatCue.GrabStart, KindFilter.Any, "SFX_EquipClank", atHitPoint: true, haptic: 0.7f, seconds: 0.2f),
             New(CombatCue.GrabSlash, KindFilter.Any, "SFX_BoostHit", atHitPoint: true, haptic: 1f, seconds: 0.3f),
             New(CombatCue.GrabBreak, KindFilter.Any, "SFX_GuardStrain"),
+            // 검 맞부딪힘 힘겨루기(11/13)
+            New(CombatCue.ClashStart, KindFilter.Any, "SFX_Guard", haptic: 1f, seconds: 0.4f),
+            New(CombatCue.ClashTick, KindFilter.Any, "SFX_GuardStrain", haptic: 0.6f, seconds: 0.3f),
+            New(CombatCue.ClashWin, KindFilter.Any, "SFX_BossKnockback", haptic: 1f, seconds: 0.5f),
+            New(CombatCue.ClashLose, KindFilter.Any, "SFX_RobotHit", haptic: 1f, seconds: 0.4f),
             // M3-03 협동 이동(둘이 같은 방향으로 밀면 승인음)
             New(CombatCue.MoveStart, KindFilter.Any, "SFX_MoveConfirm", pitch: 1f),
             // M5-02 대본 사건(M4 새 사건, 파일이 없으면 무음)

@@ -21,7 +21,7 @@ namespace Anseong.Flow
         public static bool HasGun(MatchScene scene) => scene <= MatchScene.FightCannon || scene == MatchScene.Rebooting;
 
         /// <summary>그 장면에 아직 검·방패가 있는지.</summary>
-        public static bool HasSword(MatchScene scene) => scene <= MatchScene.FightArmor || scene == MatchScene.Rebooting;
+        public static bool HasSword(MatchScene scene) => scene <= MatchScene.FightArmor || scene == MatchScene.Rebooting || scene == MatchScene.Clash;
 
         /// <param name="checkupStep">기체 점검 단계(<see cref="CheckupStep"/>): 1-3에서 검·방패, 1-4부터 스캐너·포를 단다.</param>
         public static Loadout For(MatchScene scene, bool dronesActive, MatchScene resumeScene = MatchScene.Waiting, int checkupStep = 0)
@@ -42,6 +42,7 @@ namespace Anseong.Flow
                     return dronesActive ? Loadout.Ranged : Loadout.Melee;
                 case MatchScene.LostGun:
                 case MatchScene.FightArmor:
+                case MatchScene.Clash:
                     return Loadout.Melee;
                 default:
                     return Loadout.Bare;

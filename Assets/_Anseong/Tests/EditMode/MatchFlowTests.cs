@@ -37,6 +37,10 @@ namespace Anseong.Tests
             Assert.IsTrue(r.Update(68));
             Assert.AreEqual(MatchScene.FightArmor, r.Scene);
             Assert.IsTrue(r.Signal(MatchSignal.BossWeaponBroken, 100));
+            Assert.AreEqual(MatchScene.Clash, r.Scene);
+            Assert.IsFalse(r.Signal(MatchSignal.PilotDefeated, 100)); // 힘겨루기 중엔 안 쓰러진다
+            Assert.IsFalse(r.Update(100));
+            Assert.IsTrue(r.Signal(MatchSignal.ClashDone, 100));
             Assert.AreEqual(MatchScene.LostSword, r.Scene);
             Assert.IsTrue(r.Update(108));
             Assert.AreEqual(MatchScene.FightCore, r.Scene);

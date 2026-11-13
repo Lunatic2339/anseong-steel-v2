@@ -53,6 +53,9 @@ namespace Anseong.Flow
         [SerializeField, Range(0f, 100f), Tooltip("상실 장면이 끝나 다음 구간을 시작할 때 기체 HP를 이것(%)까지 채운다(대본 60).")]
         float restoreAfterLoss = 60f;
 
+        [SerializeField, Tooltip("검 맞부딪힘 힘겨루기(보스 방패가 깨진 뒤, 14_scenario_changes.md). 서버 PC의 값이 쓰인다.")]
+        ClashSettings clash = new ClashSettings();
+
         [SerializeField, Tooltip("결과판 시간이 지나면 저절로 처음부터(전시 운영 편의, 기본 끔: 운영자가 재시작).")]
         bool autoRestartAfterResult;
 
@@ -144,6 +147,7 @@ namespace Anseong.Flow
                 rules = new MatchFlowRules(settings);
                 stats.Reset();
                 rules.Reset(Now);
+            clashRules?.Reset();
                 Publish();
             }
         }
@@ -195,11 +199,49 @@ namespace Anseong.Flow
             if (rules.Scene == MatchScene.Approach && boss != null && boss.InMeleeRange) Signal(MatchSignal.ReachedMelee);
             var before = rules.Scene;
             if (rules.Update(now)) Enter(before);
+            if (rules.Scene == MatchScene.Clash) TickClash(now);
             if (autoRestartAfterResult && rules.ResultExpired(now)) combat.RequestReset();
             HoldBoss();
             // M4-03: 무기를 든 동안은 잽·훅 구분 없이 번갈아 세 번이 연계.
             if (combat.Authority != null) combat.Authority.Resolver.Combo.AnyKind = WeaponRules.For(rules.Scene, dronesActive, rules.ResumeScene, checkupStep) != Loadout.Bare;
             combat.Flush();
+        }
+
+        ClashRules clashRules;
+
+        /// <summary>서버: 검 힘겨루기. 둘 다 막기 자세로 버티면 밀어낸다. 끝나면 장면 7(양쪽 검·방패 파손).</summary>
+        void TickClash(double now)
+        {
+            var authority = combat.Authority;
+            if (authority == null || clashRules == null) return;
+            switch (clashRules.Update(now, authority.Guarding(PilotSide.Left), authority.Guarding(PilotSide.Right)))
+            {
+                case ClashStep.Started:
+                    if (boss != null) boss.BeginClash(clash.maxSeconds + 1f);
+                    Emit(CombatCue.ClashStart, 0, now, clash.maxSeconds);
+                    Line(CommanderLines.ClashHold, now);
+                    break;
+                case ClashStep.Tick:
+                    Emit(CombatCue.ClashTick, 0, now, clashRules.Gauge);
+                    break;
+                case ClashStep.Won:
+                    var dealt = authority.Resolver.Boss.Apply(clash.winDamage);
+                    if (boss != null) boss.EndClash(true, clash.winStagger);
+                    combat.Events.Add(new CombatEvent
+                    {
+                        Cue = CombatCue.ClashWin, Kind = PunchKind.None, Time = now, Damage = dealt,
+                        BossHealth = authority.Resolver.Boss.Current,
+                    });
+                    Line(CommanderLines.ClashWon, now);
+                    Signal(MatchSignal.ClashDone);
+                    break;
+                case ClashStep.Lost:
+                    if (boss != null) boss.EndClash(false, 0f);
+                    Emit(CombatCue.ClashLose, 0, now);
+                    Line(CommanderLines.ClashLost, now);
+                    Signal(MatchSignal.ClashDone);
+                    break;
+            }
         }
 
         bool PilotsReady()
@@ -286,6 +328,10 @@ namespace Anseong.Flow
                 case MatchScene.FightCannon: Line(CommanderLines.TargetCannon, now); break;
                 case MatchScene.LostGun: Line(CommanderLines.GunLost, now); break;
                 case MatchScene.FightArmor: Line(CommanderLines.TargetArmor, now); break;
+                case MatchScene.Clash:
+                    if (clashRules == null) clashRules = new ClashRules(clash);
+                    clashRules.Begin(now);
+                    break;
                 case MatchScene.LostSword: Line(CommanderLines.AllWeaponsLost, now); break;
                 case MatchScene.FightCore: Line(CommanderLines.TargetCore, now); break;
                 case MatchScene.Rebooting: Line(CommanderLines.Reboot, now); break;

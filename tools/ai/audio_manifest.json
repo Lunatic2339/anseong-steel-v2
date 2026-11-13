@@ -147,6 +147,18 @@
   {
    "file": "VO_Commander_52",
    "text": "놓쳤다!"
+  },
+  {
+   "file": "VO_Commander_53",
+   "text": "검이 맞물렸다! 둘 다 팔을 들어 버텨라!"
+  },
+  {
+   "file": "VO_Commander_54",
+   "text": "밀어냈다!"
+  },
+  {
+   "file": "VO_Commander_55",
+   "text": "밀렸다! 버텨!"
   }
  ],
  "sfx": [

@@ -43,6 +43,7 @@ namespace Anseong.Flow
                 case MatchScene.FightCannon:
                 case MatchScene.LostGun:
                 case MatchScene.FightArmor:
+                case MatchScene.Clash:
                 case MatchScene.LostSword:
                     return MusicTrack.Battle;
                 case MatchScene.FightCore:

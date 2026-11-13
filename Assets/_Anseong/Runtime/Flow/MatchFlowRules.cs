@@ -38,6 +38,8 @@ namespace Anseong.Flow
         Opening,
         /// <summary>M4-08: 승리 엔딩 영상(Video_Ending) → 결과판. 영상이 없으면 건너뛴다.</summary>
         Ending,
+        /// <summary>장면 6과 7 사이(11/13, 14_scenario_changes.md): 검 맞부딪힘 힘겨루기. 끝나면 장면 7.</summary>
+        Clash,
     }
 
     /// <summary>판 흐름을 움직이는 신호. 서버의 <see cref="MatchFlow"/>가 전투 사건·운영자 조작을 이것으로 바꿔 넣는다.</summary>
@@ -61,6 +63,8 @@ namespace Anseong.Flow
         PilotDefeated,
         /// <summary>운영자 "다음 장면"(시험용). 싸움 장면에서는 흐름이 직접 넘기지 않는다(<see cref="MatchFlowRules.IsFight"/>).</summary>
         Skip,
+        /// <summary>검 힘겨루기가 끝남(이기든 지든) → 장면 7.</summary>
+        ClashDone,
     }
 
     [Serializable]
@@ -74,6 +78,9 @@ namespace Anseong.Flow
 
         [Tooltip("상실 장면(5·7) 길이(초, 대본 8초).")]
         [Min(0f)] public float lossSeconds = 8f;
+
+        [Tooltip("보스 방패가 깨지면 검 맞부딪힘 힘겨루기를 거쳐 장면 7로 간다. 끄면 대본대로 바로 장면 7.")]
+        public bool clash = true;
 
         [Tooltip("패배 뒤 기체 재기동 연출 길이(초).")]
         [Min(0f)] public float rebootSeconds = 4f;
@@ -186,8 +193,10 @@ namespace Anseong.Flow
                     return Scene == MatchScene.Approach && Go(MatchScene.FightCannon, now);
                 case MatchSignal.BossWeaponBroken:
                     if (Scene == MatchScene.FightCannon) return Go(MatchScene.LostGun, now);
-                    if (Scene == MatchScene.FightArmor) return Go(MatchScene.LostSword, now);
+                    if (Scene == MatchScene.FightArmor) return Go(settings.clash ? MatchScene.Clash : MatchScene.LostSword, now);
                     return false;
+                case MatchSignal.ClashDone:
+                    return Scene == MatchScene.Clash && Go(MatchScene.LostSword, now);
                 case MatchSignal.BossKneel:
                     return Scene == MatchScene.FightCore && Go(MatchScene.Finisher, now);
                 case MatchSignal.BossDefeated:
@@ -205,8 +214,9 @@ namespace Anseong.Flow
 
         bool Defeated(double now)
         {
+            // 힘겨루기 중에는 쓰러지지 않는다(결과는 힘겨루기가 정한다).
             if (Scene == MatchScene.Result || Scene == MatchScene.Rebooting || Scene == MatchScene.Waiting || Scene == MatchScene.Checkup
-                || Scene == MatchScene.Opening || Scene == MatchScene.Ending) return false;
+                || Scene == MatchScene.Opening || Scene == MatchScene.Ending || Scene == MatchScene.Clash) return false;
             if (RebootsUsed < settings.rebootsAllowed)
             {
                 RebootsUsed++;
@@ -230,6 +240,7 @@ namespace Anseong.Flow
                 case MatchScene.DroneHunt: return Go(MatchScene.Approach, now);
                 case MatchScene.Approach: return Go(MatchScene.FightCannon, now);
                 case MatchScene.LostGun: return Go(MatchScene.FightArmor, now);
+                case MatchScene.Clash: return Go(MatchScene.LostSword, now);
                 case MatchScene.LostSword: return Go(MatchScene.FightCore, now);
                 case MatchScene.Rebooting: return Go(ResumeScene, now);
                 default: return false;

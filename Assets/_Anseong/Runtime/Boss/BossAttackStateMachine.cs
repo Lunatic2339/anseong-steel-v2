@@ -195,6 +195,7 @@ namespace Anseong.Boss
                 case BossState.KnockedBack:
                 case BossState.Kneel:
                 case BossState.Grabbed:
+                case BossState.Clash:
                     if (now < stateEnd) return false;
                     Enter(BossState.Rest, stateEnd);
                     return true;
@@ -222,7 +223,7 @@ namespace Anseong.Boss
         }
 
         /// <summary>걷기·포효·밀려남·무릎 중.</summary>
-        public bool IsHolding => State == BossState.Walk || State == BossState.Roar || State == BossState.KnockedBack || State == BossState.Kneel || State == BossState.Grabbed;
+        public bool IsHolding => State == BossState.Walk || State == BossState.Roar || State == BossState.KnockedBack || State == BossState.Kneel || State == BossState.Grabbed || State == BossState.Clash;
 
         /// <summary>바깥에서 경직을 건다(예: 부스트로 밀려남, M2-04). 끝나면 빈틈 openingAfter초.</summary>
         public void Stagger(float seconds, float openingAfter, double now, List<BossEvent> events)

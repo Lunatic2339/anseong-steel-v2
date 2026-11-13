@@ -134,6 +134,15 @@ namespace Anseong.Combat
         GrabSlash,
         /// <summary>잡기가 풀림. Amount = 0 놓음, 1 보스가 뿌리침.</summary>
         GrabBreak,
+        // ── 검 맞부딪힘 힘겨루기 (11/13, ClashRules) ──
+        /// <summary>검이 맞물림. Amount = 최대 시간(초).</summary>
+        ClashStart,
+        /// <summary>버티는 중 불꽃. Amount = 게이지 0~1.</summary>
+        ClashTick,
+        /// <summary>둘이 밀어냄. Damage = 핵에 들어간 피해.</summary>
+        ClashWin,
+        /// <summary>밀림.</summary>
+        ClashLose,
     }
 
     /// <summary>연계가 끊긴 이유.</summary>

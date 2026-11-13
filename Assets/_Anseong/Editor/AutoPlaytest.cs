@@ -371,6 +371,8 @@ namespace Anseong.EditorTools
             }
             aimDirection[(int)side] = Vector3.forward;
             if (walk) hand.Stick = new Vector2(0f, 1f);
+            // 검 힘겨루기: 둘 다 막기 자세로 끝까지 버틴다.
+            if (scene == MatchScene.Clash) return hand;
             var state = bossServer != null ? bossServer.Action.BossState : BossState.Rest;
             var fighting = scene == MatchScene.Checkup || scene == MatchScene.FightCannon || scene == MatchScene.FightArmor || scene == MatchScene.FightCore;
             if (state == BossState.Telegraph || state == BossState.Strike)

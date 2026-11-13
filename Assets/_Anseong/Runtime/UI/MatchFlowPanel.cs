@@ -142,6 +142,7 @@ namespace Anseong.UI
                 case MatchScene.FightCannon: return "근접전 · 목표: 보스 팔뚝 포";
                 case MatchScene.LostGun: return "장면 5 · 주포 상실";
                 case MatchScene.FightArmor: return "장면 6 · 목표: 보스 방패";
+                case MatchScene.Clash: return "검 맞부딪힘 · 힘겨루기";
                 case MatchScene.LostSword: return "장면 7 · 검·방패 상실";
                 case MatchScene.FightCore: return "장면 8 · 맨손 · 목표: 핵";
                 case MatchScene.Finisher: return "장면 9 · 필살기";
@@ -180,6 +181,7 @@ namespace Anseong.UI
                 case MatchScene.FightCannon:
                 case MatchScene.FightArmor:
                 case MatchScene.FightCore: return "막고 → 빈틈에 번갈아 세 번 + 트리거";
+                case MatchScene.Clash: return "둘 다 팔을 얼굴 앞으로 들어 버텨라! 한 사람만 버티면 밀린다";
                 case MatchScene.LostGun:
                 case MatchScene.LostSword: return "보스 보복! 막거나 피하라";
                 case MatchScene.Finisher: return "둘이 함께 정면으로 팔을 뻗고 버튼을 모두 눌러라";

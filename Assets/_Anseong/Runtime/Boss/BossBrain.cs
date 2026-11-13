@@ -140,6 +140,22 @@ namespace Anseong.Boss
             }
         }
 
+        /// <summary>서버: 검 힘겨루기 시작. 보스가 검을 내리누른 채 버틴다(끝은 <see cref="EndClash"/>).</summary>
+        public void BeginClash(double seconds)
+        {
+            if (server == null) return;
+            server.Machine.Hold(BossState.Clash, server.Now, seconds);
+        }
+
+        /// <summary>서버: 검 힘겨루기 끝. 밀어냈으면 보스가 크게 휘청이고 빈틈이 이어진다.</summary>
+        public void EndClash(bool pushedBack, float staggerSeconds)
+        {
+            if (server == null) return;
+            var now = server.Now;
+            if (server.Machine.State == BossState.Clash) server.Machine.Release(now);
+            if (pushedBack) server.Machine.Stagger(staggerSeconds, 0f, now, null);
+        }
+
         /// <summary>서버: 조종사에서 meters 떨어진 곳으로 옮기고 조종사를 보게 한다(장면 2 마당 끝 120 m, M4-02). 방향은 지금 보스가 있는 쪽.</summary>
         public void PlaceAtDistance(float meters)
         {

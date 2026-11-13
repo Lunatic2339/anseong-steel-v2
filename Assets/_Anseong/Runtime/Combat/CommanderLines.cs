@@ -51,6 +51,10 @@ namespace Anseong.Combat
         public const int GrabHint = 50;
         public const int GrabHeld = 51;
         public const int GrabLost = 52;
+        // 검 맞부딪힘 힘겨루기(11/13)
+        public const int ClashHold = 53;
+        public const int ClashWon = 54;
+        public const int ClashLost = 55;
 
         public static string Text(int line)
         {
@@ -93,6 +97,9 @@ namespace Anseong.Combat
                 case GrabHint: return "휘청인다! 왼팔, 뻗어서 붙잡아라!";
                 case GrabHeld: return "붙잡았다! 오른팔, 베어라!";
                 case GrabLost: return "놓쳤다!";
+                case ClashHold: return "검이 맞물렸다! 둘 다 팔을 들어 버텨라!";
+                case ClashWon: return "밀어냈다!";
+                case ClashLost: return "밀렸다! 버텨!";
                 default: return string.Empty;
             }
         }
@@ -102,7 +109,7 @@ namespace Anseong.Combat
         /// <summary>대본에서 쓰는 번호 전부(소리 표 기본 줄, 녹음 목록).</summary>
         public static readonly int[] All =
         {
-            1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 16, 18, 20, 23, 25, 26, 30, 31, 33, 34, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
+            1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 16, 18, 20, 23, 25, 26, 30, 31, 33, 34, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55,
         };
     }
 }
