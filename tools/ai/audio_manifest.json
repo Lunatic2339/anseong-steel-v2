@@ -135,6 +135,18 @@
   {
    "file": "VO_Commander_49",
    "text": "놈도 맨손이다! 가슴 핵을 부숴라!"
+  },
+  {
+   "file": "VO_Commander_50",
+   "text": "휘청인다! 왼팔, 뻗어서 붙잡아라!"
+  },
+  {
+   "file": "VO_Commander_51",
+   "text": "붙잡았다! 오른팔, 베어라!"
+  },
+  {
+   "file": "VO_Commander_52",
+   "text": "놓쳤다!"
   }
  ],
  "sfx": [

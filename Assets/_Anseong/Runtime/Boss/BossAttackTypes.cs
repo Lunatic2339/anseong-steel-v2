@@ -70,6 +70,8 @@ namespace Anseong.Boss
         KnockedBack,
         /// <summary>HP 10%: 무릎 꿇고 필살기 대기. 공격 안 함.</summary>
         Kneel,
+        /// <summary>왼팔에 붙잡혀 버둥거림(잡고 베기, 11/13). 피해가 들어간다.</summary>
+        Grabbed,
     }
 
     /// <summary>

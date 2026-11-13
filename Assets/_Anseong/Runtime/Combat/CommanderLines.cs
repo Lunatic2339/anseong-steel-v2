@@ -47,6 +47,10 @@ namespace Anseong.Combat
         public const int TargetCannon = 47;
         public const int TargetArmor = 48;
         public const int TargetCore = 49;
+        // 잡고 베기(11/13)
+        public const int GrabHint = 50;
+        public const int GrabHeld = 51;
+        public const int GrabLost = 52;
 
         public static string Text(int line)
         {
@@ -86,6 +90,9 @@ namespace Anseong.Combat
                 case TargetCannon: return "놈의 팔뚝 포를 부숴라!";
                 case TargetArmor: return "놈의 방패를 깨라!";
                 case TargetCore: return "놈도 맨손이다! 가슴 핵을 부숴라!";
+                case GrabHint: return "휘청인다! 왼팔, 뻗어서 붙잡아라!";
+                case GrabHeld: return "붙잡았다! 오른팔, 베어라!";
+                case GrabLost: return "놓쳤다!";
                 default: return string.Empty;
             }
         }
@@ -95,7 +102,7 @@ namespace Anseong.Combat
         /// <summary>대본에서 쓰는 번호 전부(소리 표 기본 줄, 녹음 목록).</summary>
         public static readonly int[] All =
         {
-            1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 16, 18, 20, 23, 25, 26, 30, 31, 33, 34, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47, 48, 49,
+            1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 16, 18, 20, 23, 25, 26, 30, 31, 33, 34, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52,
         };
     }
 }

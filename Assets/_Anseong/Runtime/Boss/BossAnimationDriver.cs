@@ -40,6 +40,9 @@ namespace Anseong.Boss
         [SerializeField, Tooltip("무릎 상태 이름(M2-04, Boss_Kneel, 없으면 대기 정지).")]
         string kneelState = "Kneel";
 
+        [SerializeField, Tooltip("붙잡힌 상태 이름(잡고 베기, Boss_Grabbed). 없으면 휘청 동작.")]
+        string grabbedState = "Grabbed";
+
         const string LayerPrefix = "Base Layer.";
         BossAction shown;
         bool hasShown;
@@ -82,6 +85,8 @@ namespace Anseong.Boss
         {
             var name = StateFor(action);
             var hash = Animator.StringToHash(LayerPrefix + name);
+            if (!animator.HasState(0, hash) && action.BossState == BossState.Grabbed)
+                hash = Animator.StringToHash(LayerPrefix + staggerState);
             if (!animator.HasState(0, hash))
             {
                 hash = Animator.StringToHash(LayerPrefix + idleState);
@@ -111,6 +116,8 @@ namespace Anseong.Boss
                     return knockbackState;
                 case BossState.Kneel:
                     return kneelState;
+                case BossState.Grabbed:
+                    return grabbedState;
                 default:
                     return idleState;
             }

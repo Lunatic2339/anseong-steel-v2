@@ -70,7 +70,7 @@ namespace Anseong.Boss
         public BossAttackSpec Attack => attack;
         public bool HasAttack => attack != null;
         /// <summary>빈틈·경직·무릎: 이때만 피해가 들어간다(무릎은 HP 바닥에 막혀 필살기만 끝낸다).</summary>
-        public bool CanBeDamaged => State == BossState.Opening || State == BossState.Staggered || State == BossState.Kneel;
+        public bool CanBeDamaged => State == BossState.Opening || State == BossState.Staggered || State == BossState.Kneel || State == BossState.Grabbed;
         public bool IsResting => State == BossState.Rest;
         /// <summary>공격 중(예고·명중·회복).</summary>
         public bool IsAttacking => State == BossState.Telegraph || State == BossState.Strike || State == BossState.Recovery;
@@ -194,6 +194,7 @@ namespace Anseong.Boss
                 case BossState.Roar:
                 case BossState.KnockedBack:
                 case BossState.Kneel:
+                case BossState.Grabbed:
                     if (now < stateEnd) return false;
                     Enter(BossState.Rest, stateEnd);
                     return true;
@@ -221,7 +222,7 @@ namespace Anseong.Boss
         }
 
         /// <summary>걷기·포효·밀려남·무릎 중.</summary>
-        public bool IsHolding => State == BossState.Walk || State == BossState.Roar || State == BossState.KnockedBack || State == BossState.Kneel;
+        public bool IsHolding => State == BossState.Walk || State == BossState.Roar || State == BossState.KnockedBack || State == BossState.Kneel || State == BossState.Grabbed;
 
         /// <summary>바깥에서 경직을 건다(예: 부스트로 밀려남, M2-04). 끝나면 빈틈 openingAfter초.</summary>
         public void Stagger(float seconds, float openingAfter, double now, List<BossEvent> events)

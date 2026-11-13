@@ -257,6 +257,15 @@ namespace Anseong.Boss
 
             // 페이즈 바닥: 경계 아래로 한 번에 못 내려간다.
             authority.BossPhase = phases.Kneeling ? 4 : phases.Phase;
+            var state = machine.State;
+            authority.BossGrabbable = state == BossState.Staggered || state == BossState.Opening || state == BossState.Grabbed;
+            // 잡고 베기 안내: 휘청일 때 한 판에 두 번까지 알려 준다.
+            if (state == BossState.Staggered && grabHints < 2 && authority.Grab.Available(now, true) && now - lastGrabHint > 20.0)
+            {
+                grabHints++;
+                lastGrabHint = now;
+                Emit(CombatCue.CommanderLine, CommanderLines.GrabHint, now);
+            }
             var boss = authority.Resolver.Boss;
             boss.Floor = boss.Max * phases.FloorPercent / 100f;
             var hp = boss.Max > 0f ? boss.Current / boss.Max * 100f : 0f;
@@ -473,12 +482,28 @@ namespace Anseong.Boss
                 case CombatCue.Dodge:
                     stats.Strike(true);
                     break;
+                case CombatCue.GrabStart:
+                    // 붙잡힘: 버틸 수 있는 시간만큼 그 자리에서 버둥거린다(시간이 지나면 규칙이 GrabBreak를 낸다).
+                    server.Machine.Hold(BossState.Grabbed, e.Time, e.Amount + 0.5f);
+                    Emit(CombatCue.CommanderLine, CommanderLines.GrabHeld, e.Time);
+                    break;
+                case CombatCue.GrabSlash:
+                    server.Machine.Release(e.Time);
+                    server.Machine.Stagger(e.Amount, server.Combat.Authority.Grab.Settings.openingAfter, e.Time, null);
+                    break;
+                case CombatCue.GrabBreak:
+                    if (server.Machine.State == BossState.Grabbed) server.Machine.Release(e.Time);
+                    Emit(CombatCue.CommanderLine, CommanderLines.GrabLost, e.Time);
+                    break;
                 case CombatCue.PilotHit:
                     stats.Strike(false);
                     stats.PilotDamage(e.Damage);
                     break;
             }
         }
+
+        int grabHints;
+        double lastGrabHint = double.NegativeInfinity;
 
         void Knockback(double now)
         {
@@ -530,6 +555,8 @@ namespace Anseong.Boss
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
             WriteLog("restart");
 #endif
+            grabHints = 0;
+            lastGrabHint = double.NegativeInfinity;
             picker?.Reset();
             phases?.Reset();
             transform.SetPositionAndRotation(startPosition, startRotation);

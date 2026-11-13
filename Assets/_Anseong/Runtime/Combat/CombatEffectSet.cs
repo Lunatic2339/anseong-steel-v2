@@ -72,6 +72,8 @@ namespace Anseong.Combat
             New("VFX_HookImpact", CombatCue.Hit, Anchor.EventPoint, 0.5f, 6f, new Color(1f, 0.55f, 0.2f), CombatCueSet.KindFilter.Hook),
             New("VFX_HookImpact", CombatCue.Hit, Anchor.EventPoint, 0.5f, 6f, new Color(1f, 0.55f, 0.2f), CombatCueSet.KindFilter.Uppercut),
             New("VFX_BoostShock", CombatCue.Boost, Anchor.EventPoint, 0.8f, 14f, new Color(0.5f, 0.8f, 1f)),
+            New("VFX_GuardSpark", CombatCue.GrabStart, Anchor.EventPoint, 0.5f, 6f, new Color(1f, 0.85f, 0.5f)),
+            New("VFX_BoostShock", CombatCue.GrabSlash, Anchor.EventPoint, 1f, 18f, new Color(1f, 0.6f, 0.25f)),
             New("VFX_GuardSpark", CombatCue.GuardBlock, Anchor.Cockpit, 0.3f, 4f, new Color(0.4f, 0.6f, 1f), lift: 0f),
             New("VFX_WeaponBreak", CombatCue.PhaseChanged, Anchor.Boss, 1.2f, 25f, Color.white, lift: 30f),
             New("VFX_DroneExplode", CombatCue.DroneDown, Anchor.EventPoint, 0.8f, 8f, new Color(1f, 0.45f, 0.1f)),

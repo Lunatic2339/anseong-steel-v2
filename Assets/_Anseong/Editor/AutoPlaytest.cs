@@ -371,11 +371,36 @@ namespace Anseong.EditorTools
 
             // 빈틈·경직: 좌우 번갈아 0.5초마다 한 번씩 빠르게 친다(연계 제한 2.4초·최소 간격 0.15초 안, 11/13 run12 "최고 연계 1").
             // 헛친 주먹은 연계를 끊으므로 두 손 다 몸통 가운데로 뻗는다(왼손이 바깥으로 빗나가 매번 끊겼다).
-            if (state == BossState.Opening || state == BossState.Staggered)
+            if (state == BossState.Opening || state == BossState.Staggered || state == BossState.Grabbed)
             {
-                reach = head + new Vector3(sx * 0.05f, -0.22f, 0.66f);
-                if (openingStart < 0) openingStart = time;
+                if (openingStart < 0)
+                {
+                    openingStart = time;
+                    // 잡고 베기: 쉬는 시간(18초)이 지났으면 이번 빈틈은 왼팔이 붙잡고 오른팔이 벤다.
+                    grabbing = time - lastGrabTry > 20.0;
+                    if (grabbing) lastGrabTry = time;
+                }
                 var t = time - openingStart;
+                if (grabbing && t < 3.0)
+                {
+                    if (side == PilotSide.Left)
+                    {
+                        // 보정 때 뻗은 자리 그대로(펴짐 100%, 정면)로 쥐고 버틴다.
+                        hand.Position = reach;
+                        hand.Rotation = Quaternion.identity;
+                        return hand;
+                    }
+                    // 오른팔: 붙잡힐 때까지 0.6초 기다렸다가 크게 한 번.
+                    reach = head + new Vector3(sx * 0.05f, -0.22f, 0.66f);
+                    var g = t - 0.6;
+                    var gk = g < 0 ? 0f : g < 0.15 ? (float)(g / 0.15) : g < 0.5 ? 1f : g < 0.7 ? 1f - (float)((g - 0.5) / 0.2) : 0f;
+                    if (g > 0.7) grabbing = false;
+                    gk = Mathf.SmoothStep(0f, 1f, gk);
+                    hand.Position = Vector3.Lerp(ready, reach, gk);
+                    hand.Rotation = Quaternion.Slerp(readyRotation, Quaternion.identity, Mathf.Clamp01(gk * 2.5f));
+                    return hand;
+                }
+                reach = head + new Vector3(sx * 0.05f, -0.22f, 0.66f);
                 var slot = (int)(t / ComboBeat);
                 if ((slot % 2 == 0) == (side == PilotSide.Left))
                 {
@@ -404,6 +429,8 @@ namespace Anseong.EditorTools
 
         const double ComboBeat = 0.5;
         static double openingStart = -1;
+        static double lastGrabTry = -100;
+        static bool grabbing;
         static readonly Vector3[] aimDirection = { Vector3.forward, Vector3.forward };
         static DroneDirector drones;
         static System.Reflection.FieldInfo droneNet;

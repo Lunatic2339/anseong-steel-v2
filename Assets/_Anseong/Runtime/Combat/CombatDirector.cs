@@ -41,6 +41,8 @@ namespace Anseong.Combat
         DodgeSettings dodge = new DodgeSettings();
         [SerializeField, Tooltip("합동 필살기(01, M2-05). 펴짐·각도는 보고하는 PC, 시간은 서버 PC의 값이 쓰인다.")]
         FinisherSettings finisher = new FinisherSettings();
+        [SerializeField, Tooltip("협동 기술 잡고 베기(왼팔이 붙잡고 오른팔이 벤다, 선우 11/13). 서버 PC의 값이 쓰인다.")]
+        GrabSlashSettings grab = new GrabSlashSettings();
 
         [Header("부스트 입력")]
         [SerializeField, Range(0.1f, 1f), Tooltip("트리거를 이만큼 당기면 누름(부스트).")]
@@ -98,7 +100,7 @@ namespace Anseong.Combat
         public CombatResolver CreateResolver() => new CombatResolver(combo, boost, bossHealth);
 
         /// <summary>서버 규칙 묶음 전체(전투 + 조종사 HP + 회피)를 이 컴포넌트의 수치로 만든다.</summary>
-        public CombatAuthority CreateAuthority() => new CombatAuthority(CreateResolver(), pilotHealth, dodge, finisher);
+        public CombatAuthority CreateAuthority() => new CombatAuthority(CreateResolver(), pilotHealth, dodge, finisher, grab);
 
         /// <summary>필살기 수치(준비 판정하는 쪽이 읽는다).</summary>
         public FinisherSettings Finisher => finisher;
