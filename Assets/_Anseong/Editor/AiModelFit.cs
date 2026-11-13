@@ -11,7 +11,8 @@ using UnityEngine;
 namespace Anseong.EditorTools
 {
     /// <summary>
-    /// AI(Meshy) 모델을 게임 칸에 넣는다. `Art/AI/&lt;이름&gt;/&lt;이름&gt;.fbx`(+ `_BaseColor`·`_Normal`·`_Metallic`·`_Emission` png)를 읽어
+    /// AI(Meshy) 모델과 직접 만든(Blender, `Art/Weapons/`) 모델을 게임 칸에 넣는다. 같은 이름이 `Art/Weapons/`에 있으면 그것이 먼저다.
+    /// 아래는 AI 모델 설명: `Art/AI/&lt;이름&gt;/&lt;이름&gt;.fbx`(+ `_BaseColor`·`_Normal`·`_Metallic`·`_Emission` png)를 읽어
     /// 방향(가장 긴 쪽 = 손가락 쪽 +Y 등)·크기(팔뚝 길이 배수 또는 m)·원점(가운데 또는 바닥)을 맞춘 프리팹을 `Art/AI/Prefabs/`에 만들고
     /// 우리 무기 4칸·드론·철판·보스 주먹 포탄 칸에 넣는다. AI 모델은 원점·방향이 제멋대로라 Blender 손질 대신 여기서 맞춘다.
     /// 'Add Match Flow'(그래서 Build Full Game)가 부른다. 모델이 없으면 그 칸은 그대로 둔다(도형).
@@ -20,6 +21,9 @@ namespace Anseong.EditorTools
     {
         const string Root = "Assets/_Anseong/Art/AI";
         const string PrefabFolder = Root + "/Prefabs";
+        /// <summary>Blender로 직접 만든 모델(tools/blender/build_*.py). 같은 이름이 여기 있으면 AI 모델보다 먼저 쓴다.</summary>
+        const string AuthoredRoot = "Assets/_Anseong/Art/Weapons";
+        const string BossTag = "_Boss";
 
         enum Align { None, LongestUp, ThinnestForward }
         enum Origin { Center, Bottom }
@@ -33,14 +37,22 @@ namespace Anseong.EditorTools
             public float Size;
             public bool InHand;
             public bool FlipWideEndDown;
+            /// <summary>직접 만든 모델(Art/Weapons)의 가장 긴 쪽(팔뚝 배수 또는 m). 0이면 직접 만든 모델을 찾지 않는다.
+            /// 직접 만든 모델은 붙일 뼈 좌표로 만들어져 있어 방향·원점을 건드리지 않고 크기만 맞춘다.</summary>
+            public float AuthoredSize;
+            /// <summary>보스 색 텍스처(_Boss_BaseColor·_Boss_Emission)로 프리팹을 하나 더 만든다(이름 + _Boss).</summary>
+            public bool BossVariant;
         }
 
         static readonly Spec[] Specs =
         {
-            new Spec { Name = "Weapon_Sword", Align = Align.LongestUp, Size = 1.9f, InHand = true, FlipWideEndDown = true },
-            new Spec { Name = "Weapon_Shield", Align = Align.ThinnestForward, Size = 1.5f, InHand = true },
-            new Spec { Name = "Weapon_Cannon", Align = Align.LongestUp, Size = 1.1f, InHand = true, FlipWideEndDown = true },
-            new Spec { Name = "Weapon_Scanner", Align = Align.LongestUp, Size = 0.8f, InHand = true, FlipWideEndDown = true },
+            new Spec { Name = "Weapon_Sword", Align = Align.LongestUp, Size = 1.9f, InHand = true, FlipWideEndDown = true, AuthoredSize = 4.393f, BossVariant = true },
+            new Spec { Name = "Weapon_Shield", Align = Align.ThinnestForward, Size = 1.5f, InHand = true, AuthoredSize = 2.82f, BossVariant = true },
+            new Spec { Name = "Weapon_Cannon", Align = Align.LongestUp, Size = 1.1f, InHand = true, FlipWideEndDown = true, AuthoredSize = 3.24f },
+            new Spec { Name = "Weapon_Scanner", Align = Align.LongestUp, Size = 0.8f, InHand = true, FlipWideEndDown = true, AuthoredSize = 1.788f },
+            // 보스 전용(직접 만든 것만 있음): 팔뚝을 감싸는 쌍포(팔뚝 가운데가 원점), 가슴 핵(가장 긴 쪽 5 m, 앞 +Z).
+            new Spec { Name = "Boss_ArmCannon", InHand = true, AuthoredSize = 1.64f },
+            new Spec { Name = "Boss_Core", AuthoredSize = 5f },
             new Spec { Name = "Drone", Align = Align.None, Size = 1f },   // DroneDirector가 droneSize(m)를 곱한다
             new Spec { Name = "Checkup_SteelPlate", Align = Align.ThinnestForward, Origin = Origin.Bottom, Size = 10f },
             new Spec { Name = "Boss_FistShell", Align = Align.None, Size = 1f },
@@ -72,10 +84,14 @@ namespace Anseong.EditorTools
             var notes = new List<string>();
             foreach (var spec in Specs)
             {
-                var prefab = Build(spec, handScale, forearm, out var note);
+                var prefab = Build(spec, handScale, forearm, string.Empty, out var note);
                 if (prefab != null) prefabs[spec.Name] = prefab;
                 notes.Add(spec.Name + (prefab != null ? " ✓" : " –(" + note + ")"));
+                if (!spec.BossVariant || prefab == null) continue;
+                var boss = Build(spec, handScale, forearm, BossTag, out _);
+                if (boss != null) prefabs[spec.Name + BossTag] = boss;
             }
+            notes.Add(FillBossWeaponSet(prefabs));
 
             var weapons = roots.SelectMany(r => r.GetComponentsInChildren<PlayerWeaponVisuals>(true)).FirstOrDefault();
             if (weapons != null)
@@ -237,19 +253,21 @@ namespace Anseong.EditorTools
             if (hand.parent != null) forearm = Mathf.Max(0.01f, Vector3.Distance(hand.position, hand.parent.position));
         }
 
-        static GameObject Build(Spec spec, float handScale, float forearm, out string note)
+        static GameObject Build(Spec spec, float handScale, float forearm, string tag, out string note)
         {
             note = string.Empty;
-            var modelPath = $"{Root}/{spec.Name}/{spec.Name}.fbx";
-            var model = AssetDatabase.LoadAssetAtPath<GameObject>(modelPath);
+            var authoredFolder = $"{AuthoredRoot}/{spec.Name}";
+            var authored = spec.AuthoredSize > 0f ? AssetDatabase.LoadAssetAtPath<GameObject>($"{authoredFolder}/{spec.Name}.fbx") : null;
+            if (authored == null && tag.Length > 0) return null;   // 보스 색은 직접 만든 모델에만 있다
+            var model = authored != null ? authored : AssetDatabase.LoadAssetAtPath<GameObject>($"{Root}/{spec.Name}/{spec.Name}.fbx");
             if (model == null)
             {
                 note = "모델 없음";
                 return null;
             }
-            var material = BuildMaterial(spec.Name);
+            var material = authored != null ? BuildAuthoredMaterial(authoredFolder, spec.Name, tag) : BuildMaterial(spec.Name);
 
-            var root = new GameObject(spec.Name);
+            var root = new GameObject(spec.Name + tag);
             try
             {
                 var pivot = new GameObject("Fit").transform;
@@ -260,6 +278,36 @@ namespace Anseong.EditorTools
                 if (material != null)
                     foreach (var r in instance.GetComponentsInChildren<Renderer>(true))
                         r.sharedMaterials = Enumerable.Repeat(material, Mathf.Max(1, r.sharedMaterials.Length)).ToArray();
+
+                if (authored != null)
+                {
+                    // 직접 만든 모델: 붙일 뼈 좌표 그대로(회전·원점 그대로), 크기만 가장 긴 쪽 = AuthoredSize.
+                    var filters = instance.GetComponentsInChildren<MeshFilter>(true).Where(f => f.sharedMesh != null).ToArray();
+                    if (filters.Length == 0)
+                    {
+                        note = "메시 없음";
+                        return null;
+                    }
+                    var box = new Bounds();
+                    var first = true;
+                    foreach (var f in filters)
+                    {
+                        var toRoot = root.transform.worldToLocalMatrix * f.transform.localToWorldMatrix;
+                        var b = f.sharedMesh.bounds;
+                        for (var c = 0; c < 8; c++)
+                        {
+                            var corner = b.center + Vector3.Scale(b.extents, new Vector3((c & 1) == 0 ? -1 : 1, (c & 2) == 0 ? -1 : 1, (c & 4) == 0 ? -1 : 1));
+                            var p = toRoot.MultiplyPoint3x4(corner);
+                            if (first) { box = new Bounds(p, Vector3.zero); first = false; }
+                            else box.Encapsulate(p);
+                        }
+                    }
+                    var longestSide = Mathf.Max(box.size.x, Mathf.Max(box.size.y, box.size.z));
+                    var want = spec.InHand ? spec.AuthoredSize * forearm / handScale : spec.AuthoredSize;
+                    pivot.localScale = Vector3.one * (want / Mathf.Max(1e-6f, longestSide));
+                    if (!AssetDatabase.IsValidFolder(PrefabFolder)) AssetDatabase.CreateFolder(Root, "Prefabs");
+                    return PrefabUtility.SaveAsPrefabAsset(root, $"{PrefabFolder}/{spec.Name}{tag}.prefab");
+                }
 
                 var points = Vertices(instance, root.transform);
                 if (points.Count == 0)
@@ -347,6 +395,88 @@ namespace Anseong.EditorTools
                 else if (q.y >= highCut) top = Mathf.Max(top, radius);
             }
             return top > bottom * 1.15f;
+        }
+
+        // 붙이는 점(손목에서 손가락 쪽으로, 팔뚝 배수). tools/blender/build_weapons.py의 ALONG·PlayerWeaponVisuals.Attach의 along과 같다.
+        const float SwordAlong = 1.3f, ShieldAlong = 0.2f;
+
+        /// <summary>
+        /// 보스 무기 목록(Data/Boss/BossWeaponSet.asset)의 부품 모델 칸을 직접 만든 보스용 모델로 채운다:
+        /// 검·방패 = 우리 모델의 보스 색 프리팹, 팔뚝 포 = Boss_ArmCannon, 핵 = Boss_Core. 모델이 없는 칸은 그대로 둔다(우리 모델 빌리기·도형).
+        /// 모델이 들어간 무기는 색 칸을 흰색으로 둔다(색 칸은 모델 색에 곱해지므로 회색이면 텍스처가 죽는다. 금 색은 그대로 곱해진다).
+        /// </summary>
+        static string FillBossWeaponSet(Dictionary<string, GameObject> prefabs)
+        {
+            var set = BossAttackMenu.EnsureWeaponSet();
+            if (set == null || set.weapons == null) return "보스 무기 모델 0";
+            var filled = 0;
+            foreach (var weapon in set.weapons)
+            {
+                if (weapon == null || weapon.parts == null) continue;
+                var all = weapon.parts.Length > 0;
+                foreach (var part in weapon.parts)
+                {
+                    GameObject prefab = null;
+                    if (part.borrow == BossWeaponSet.PlayerModel.Sword && prefabs.TryGetValue("Weapon_Sword" + BossTag, out prefab)) part.push = SwordAlong;
+                    else if (part.borrow == BossWeaponSet.PlayerModel.Shield && prefabs.TryGetValue("Weapon_Shield" + BossTag, out prefab)) part.push = ShieldAlong;
+                    else if (part.borrow == BossWeaponSet.PlayerModel.Cannon && part.placement == BossWeaponSet.Placement.AlongForeArm) prefabs.TryGetValue("Boss_ArmCannon", out prefab);
+                    else if (part.borrow == BossWeaponSet.PlayerModel.None && part.bone == BossBone.Chest && part.placement == BossWeaponSet.Placement.InFront
+                             && prefabs.TryGetValue("Boss_Core", out prefab))
+                        part.shape = PrimitiveType.Cube;   // BossWeaponSet.SyncCore가 '구' 핵을 코드 기본값으로 되돌리며 모델 칸을 지우지 않게
+                    if (prefab != null)
+                    {
+                        part.prefab = prefab;
+                        filled++;
+                    }
+                    else if (part.prefab == null) all = false;
+                }
+                if (all) weapon.color = Color.white;
+            }
+            EditorUtility.SetDirty(set);
+            return $"보스 무기 모델 {filled}";
+        }
+
+        /// <summary>직접 만든 모델 재질: _BaseColor(AO·닳음 포함) + _MetallicSmoothness(R 금속, A 매끈함) + _Emission. tag = "" 또는 "_Boss".</summary>
+        static Material BuildAuthoredMaterial(string folder, string name, string tag)
+        {
+            var baseMap = AssetDatabase.LoadAssetAtPath<Texture2D>($"{folder}/{name}{tag}_BaseColor.png");
+            if (baseMap == null) return null;
+            var path = $"{folder}/{name}{tag}.mat";
+            var material = AssetDatabase.LoadAssetAtPath<Material>(path);
+            if (material == null)
+            {
+                var shader = Shader.Find("Universal Render Pipeline/Lit");
+                if (shader == null) return null;
+                material = new Material(shader);
+                AssetDatabase.CreateAsset(material, path);
+            }
+            material.SetTexture("_BaseMap", baseMap);
+            material.SetColor("_BaseColor", Color.white);
+            var maskPath = $"{folder}/{name}_MetallicSmoothness.png";
+            var importer = AssetImporter.GetAtPath(maskPath) as TextureImporter;
+            if (importer != null && importer.sRGBTexture)
+            {
+                importer.sRGBTexture = false;
+                importer.SaveAndReimport();
+            }
+            var mask = AssetDatabase.LoadAssetAtPath<Texture2D>(maskPath);
+            if (mask != null)
+            {
+                material.SetTexture("_MetallicGlossMap", mask);
+                material.EnableKeyword("_METALLICSPECGLOSSMAP");
+                material.SetFloat("_Metallic", 1f);
+            }
+            material.SetFloat("_Smoothness", 1f);   // 매끈함은 맵의 알파 × 이 값
+            var emission = AssetDatabase.LoadAssetAtPath<Texture2D>($"{folder}/{name}{tag}_Emission.png");
+            if (emission != null)
+            {
+                material.SetTexture("_EmissionMap", emission);
+                material.SetColor("_EmissionColor", Color.white * 3f);   // 1보다 커야 블룸에 걸려 빛나 보인다
+                material.EnableKeyword("_EMISSION");
+                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.None;
+            }
+            EditorUtility.SetDirty(material);
+            return material;
         }
 
         /// <summary>같은 폴더의 텍스처로 URP Lit 재질을 만든다(FBX 안 재질이 텍스처를 못 찾는 경우를 피함). 텍스처가 없으면 null.</summary>
