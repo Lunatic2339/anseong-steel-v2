@@ -88,6 +88,18 @@ namespace Anseong.Combat
                     // 큰 피해일수록 조금 더(최대 2배).
                     shakeScale = Mathf.Clamp(e.Damage / 6f, 0.5f, 2f);
                     break;
+                case CombatCue.CheckupBall:
+                    // 점검 공을 못 막음: 피해는 없고 조종석만 가볍게.
+                    if (!shake || e.Code != 2) return;
+                    shakeStart = Time.time;
+                    shakeScale = 0.6f;
+                    break;
+                case CombatCue.MapImpact:
+                    // 크레인 코일이 보스에 떨어짐: 땅 울림.
+                    if (!shake) return;
+                    shakeStart = Time.time;
+                    shakeScale = Mathf.Clamp(e.Amount, 0.3f, 1f);
+                    break;
             }
         }
 

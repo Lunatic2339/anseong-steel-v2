@@ -163,6 +163,10 @@
   {
    "file": "VO_Commander_56",
    "text": "놈이 뿌리친다! 빨리 베어라!"
+  },
+  {
+   "file": "VO_Commander_60",
+   "text": "드론은 끝이다. 오른팔, 주포로 놈을 쏴 봐라!"
   }
  ],
  "sfx": [
@@ -355,6 +359,36 @@
    "file": "SFX_SceneSting_01",
    "text": "short low cinematic braam hit, tension sting",
    "seconds": 2.5
+  },
+  {
+   "file": "SFX_DroneLaunch_01",
+   "text": "small combat drones launching in a burst, rising electric whine and whoosh fading into distance",
+   "seconds": 1.5
+  },
+  {
+   "file": "SFX_ArmorRicochet_01",
+   "text": "heavy cannon shell ricocheting off thick steel armor, sharp metallic clang followed by whistling deflection",
+   "seconds": 1.5
+  },
+  {
+   "file": "SFX_DroneBeep_01",
+   "text": "single short urgent electronic warning beep, military targeting alert",
+   "seconds": 0.5
+  },
+  {
+   "file": "SFX_HackGrab_01",
+   "text": "giant metal hand clamping onto a small machine, clunk with crackling electric static",
+   "seconds": 1.0
+  },
+  {
+   "file": "SFX_HangarDoor_01",
+   "text": "massive steel hangar doors rolling open on rails, deep rumbling grind with warning buzzer, ends with heavy thud",
+   "seconds": 3.5
+  },
+  {
+   "file": "SFX_BallLauncher_01",
+   "text": "industrial hydraulic launcher arm winding up with servo whine then a heavy mechanical release clunk",
+   "seconds": 2.0
   }
  ],
  "bgm": [

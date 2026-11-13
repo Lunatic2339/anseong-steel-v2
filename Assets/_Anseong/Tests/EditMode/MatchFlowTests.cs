@@ -128,10 +128,35 @@ namespace Anseong.Tests
         {
             var r = NewRules(out var s);
             s.droneHuntPlaceholderSeconds = 0f;
+            s.droneDirectorActive = true;
             for (var i = 0; i < 3; i++) r.Signal(MatchSignal.Skip, 0);
             Assert.AreEqual(MatchScene.DroneHunt, r.Scene);
             Assert.IsFalse(r.Update(1000));
             Assert.IsTrue(r.Signal(MatchSignal.DronesCleared, 1001));
+            Assert.AreEqual(MatchScene.Approach, r.Scene);
+        }
+
+        [Test]
+        public void DroneHuntDefaultHasNoTimerWhenDirectorIsActive()
+        {
+            // 기본값: 임시 타이머 0. 드론 감독이 있으면 장면 3은 시간으로 안 끝난다(8초에 끊기던 문제).
+            var s = new MatchFlowSettings { droneDirectorActive = true };
+            Assert.AreEqual(0f, s.droneHuntPlaceholderSeconds);
+            var r = new MatchFlowRules(s);
+            Assert.AreEqual(0f, r.SceneSeconds(MatchScene.DroneHunt));
+        }
+
+        [Test]
+        public void DroneHuntFallsBackToTimerWithoutDirector()
+        {
+            // 드론 감독이 없는 씬: 안전장치 시간 뒤 넘어간다(영원히 막히지 않게).
+            var s = new MatchFlowSettings { droneHuntFallbackSeconds = 8f };
+            var r = new MatchFlowRules(s);
+            r.Reset(0);
+            for (var i = 0; i < 3; i++) r.Signal(MatchSignal.Skip, 0);
+            Assert.AreEqual(MatchScene.DroneHunt, r.Scene);
+            Assert.IsFalse(r.Update(7.9));
+            Assert.IsTrue(r.Update(8));
             Assert.AreEqual(MatchScene.Approach, r.Scene);
         }
 

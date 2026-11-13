@@ -69,7 +69,7 @@ namespace Anseong.Combat
 
         /// <summary>보스가 빈틈·경직이 아닐 때 친 명중: 피해 0, 연계 차례 그대로(M2-02).</summary>
         Blocked,
-        /// <summary>보스 공격 예고 시작. Code = 기술(BossAttackKind), Amount = 예고 등급(0 일반, 1 강, 2 가드 불가), Side = 첫 타가 들어오는 쪽, ComboStep = 타 수(연타 4), Damage = 예고 길이(초, 연속기 뒤쪽은 줄어든 값).</summary>
+        /// <summary>보스 공격 예고 시작. Code = 기술(BossAttackKind), Amount = 예고 등급(0 일반, 1 강, 2 가드 불가), Side = 첫 타가 들어오는 쪽(돌진만: 피해야 하는 쪽), ComboStep = 타 수(연타 4), Damage = 예고 길이(초, 연속기 뒤쪽은 줄어든 값).</summary>
         BossTelegraph,
         /// <summary>보스 공격 명중 순간(연타는 타마다). Code = 기술, Amount = 몇 번째 타(0부터), Side = 들어오는 쪽.</summary>
         BossStrike,
@@ -125,7 +125,7 @@ namespace Anseong.Combat
         // ── M4-05·07 ──
         /// <summary>기체 점검 단계가 바뀜. Code = 단계 번호(PilotCheckup).</summary>
         CheckupStep,
-        /// <summary>맵 장치 작동. Code = MapEventKind(크레인 코일·컨베이어·사일로).</summary>
+        /// <summary>맵 장치 작동. Code = MapEventKind(크레인 코일·컨베이어·사일로), Point = 보스 자리. 코일은 Amount = 떨어져 보스에 닿기까지(초, 닿는 순간은 MapImpact).</summary>
         MapEvent,
         // ── 잡고 베기 (선우 11/13, GrabSlashRules) ──
         /// <summary>왼팔이 보스를 붙잡음. Amount = 버틸 수 있는 시간(초), Code = 1이면 보스가 익숙해져 곧 뿌리친다.</summary>
@@ -143,6 +143,26 @@ namespace Anseong.Combat
         ClashWin,
         /// <summary>밀림.</summary>
         ClashLose,
+        // ── 정비고·맵 장치 실물 연출 (11/13, CheckupDirector·MatchFlow·MapEvents가 낸다. 이 네 개는 한 블록) ──
+        /// <summary>정비 로봇 공 던지기(장면 1-3). Code = 0 조준 시작(Side = 공이 오는 쪽, Amount = 조준 시간(초), Damage = 날아오는 시간(초)), 1 방패로 막음, 2 못 막음(피해 없음). Point = 공이 닿는 자리.</summary>
+        CheckupBall,
+        /// <summary>무장이 끼워짐(점검 1-3·1-4, 싸움 중 무장 바꿈). Code = Anseong.Flow.Loadout(1 검·방패, 2 스캐너·포).</summary>
+        WeaponMount,
+        /// <summary>정비고 출격 문(장면 1-5). Code = 0 열리기 시작(Amount = 걸리는 시간(초)), 1 다 열림. Point = 문 가운데.</summary>
+        HangarDoor,
+        /// <summary>맵 장치가 보스에 부딪힌 순간(크레인 코일이 떨어져 맞음). Code = MapEventKind, Amount = 세기(0~1), Point = 부딪힌 자리. MapEvent는 장치가 움직이기 시작한 순간.</summary>
+        MapImpact,
+        // ── (정비고·맵 장치 블록 끝) ──
+        // ── 드론 연출 (11/13, DroneDirector). 이 블록은 드론 담당이 더한 것. 다른 사건은 이 블록 아래에 더한다 ──
+        /// <summary>보스 등 뒤에서 드론이 튀어나옴. Point = 튀어나온 자리, Code = 드론 수, Amount = 0 복선(장면 2, 흩어져 사라지는 겉모습만), 1 진짜 드론이 날아 들어옴.</summary>
+        DroneScatter,
+        /// <summary>우리 포탄이 보스 장갑에 맞고 튕김(대본 3-4). Point = 명중점(보스 몸 높이). 금속음 + 불꽃.</summary>
+        CannonRicochet,
+        /// <summary>달려드는 드론 경고음(가까울수록 자주 온다). Point = 드론 위치, Code = 드론 번호, Amount = 다가온 정도 0~1, Side = 노리는 쪽.</summary>
+        DroneWarn,
+        /// <summary>동료 손이 팔에 붙은 해킹 드론을 붙잡음(이제 당기면 뜯긴다). Side = 잡은 팔, Point = 드론 위치.</summary>
+        HackGrab,
+        // ── 드론 연출 끝 ──
     }
 
     /// <summary>연계가 끊긴 이유.</summary>

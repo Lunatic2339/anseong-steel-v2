@@ -16,6 +16,8 @@ namespace Anseong.UI
     public class PilotHud : MonoBehaviour
     {
         [SerializeField] CombatDirector director;
+        [SerializeField, Tooltip("보스 서버(기술의 요구 대응을 읽는다). 비어 있으면 처음 예고 때 한 번 찾는다. 없으면 05 기본값.")]
+        BossServer boss;
         [SerializeField] TextMesh text;
         [SerializeField, Tooltip("한쪽에만 보이기를 끈다(시험용: 둘 다 모든 것을 봄).")]
         bool showEverything;
@@ -73,14 +75,10 @@ namespace Anseong.UI
             switch (e.Cue)
             {
                 case CombatCue.BossTelegraph:
+                    // 기술의 대응 방식에 맞는 글(붙잡기 = 둘이 막기, 충격파 = 회피). 오는 쪽·피할 쪽은 볼 수 있는 사람에게만.
                     var kind = (BossAttackKind)e.Code;
-                    if (kind == BossAttackKind.SlamBoth) Show(ref attack, ref attackUntil, "두 팔 발광: 둘이 X자로 막아라");
-                    else if (kind == BossAttackKind.Charge)
-                    {
-                        if (Sees(HudInfo.DodgeSide)) Show(ref attack, ref attackUntil, "돌진! 같이 피할 쪽을 불러 줘라");
-                    }
-                    else if (Sees(HudInfo.AttackSide))
-                        Show(ref attack, ref attackUntil, e.Side == PilotSide.Left ? "◀◀ 왼쪽 공격" : "오른쪽 공격 ▶▶");
+                    var callout = HudRules.AttackCallout(kind, CounterOf(kind), e.Side, Sees(HudInfo.AttackSide), Sees(HudInfo.DodgeSide));
+                    if (callout.Length > 0) Show(ref attack, ref attackUntil, callout);
                     break;
                 case CombatCue.DroneFire:
                     if (Sees(HudInfo.DroneDirection) && head != null)
@@ -127,6 +125,19 @@ namespace Anseong.UI
                     if ((MatchScene)e.Code != MatchScene.Clash) clashGauge = -1f;
                     break;
             }
+        }
+
+        bool lookedForBoss;
+
+        /// <summary>그 기술의 요구 대응(기술 에셋). 보스가 없으면 05 기본값.</summary>
+        BossCounter CounterOf(BossAttackKind kind)
+        {
+            if (boss == null && !lookedForBoss)
+            {
+                lookedForBoss = true;
+                boss = FindAnyObjectByType<BossServer>();
+            }
+            return boss != null ? boss.SpecOf(kind).counter : BossAttackSpec.Default(kind).counter;
         }
 
         void Show(ref string slot, ref float until, string value)

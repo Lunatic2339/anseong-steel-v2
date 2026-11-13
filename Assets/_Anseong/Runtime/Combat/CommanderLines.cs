@@ -56,6 +56,8 @@ namespace Anseong.Combat
         public const int ClashHold = 53;
         public const int ClashWon = 54;
         public const int ClashLost = 55;
+        // 드론(11/13, DroneDirector): 대본 3-4 "보스를 쏴 보면"을 사령관이 시킨다. 번호는 다른 새 대사와 겹치지 않게 60.
+        public const int ShootBoss = 60;
 
         public static string Text(int line)
         {
@@ -102,6 +104,7 @@ namespace Anseong.Combat
                 case ClashHold: return "검이 맞물렸다! 둘 다 팔을 들어 버텨라!";
                 case ClashWon: return "밀어냈다!";
                 case ClashLost: return "밀렸다! 버텨!";
+                case ShootBoss: return "드론은 끝이다. 오른팔, 주포로 놈을 쏴 봐라!";
                 default: return string.Empty;
             }
         }
@@ -111,7 +114,7 @@ namespace Anseong.Combat
         /// <summary>대본에서 쓰는 번호 전부(소리 표 기본 줄, 녹음 목록).</summary>
         public static readonly int[] All =
         {
-            1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 16, 18, 20, 23, 25, 26, 30, 31, 33, 34, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56,
+            1, 2, 3, 4, 6, 7, 8, 9, 10, 11, 13, 16, 18, 20, 23, 25, 26, 30, 31, 33, 34, 35, 36, 37, 38, 39, 42, 43, 44, 45, 46, 47, 48, 49, 50, 51, 52, 53, 54, 55, 56, 60,
         };
     }
 }

@@ -58,6 +58,36 @@ namespace Anseong.Tests
         }
 
         [Test]
+        public void Dodge_RequiredSide_OnlyThatSideCounts()
+        {
+            var dodge = new DodgeRules();
+            dodge.Update(L, new Vector2(-1f, 0f), 9.6);
+            dodge.Update(R, new Vector2(-1f, 0f), 9.7);
+            Assert.IsTrue(dodge.Dodged(10.0, -1), "왼쪽으로 피해야 하는 돌진을 왼쪽으로");
+            Assert.IsFalse(dodge.Dodged(10.0, 1), "반대쪽으로 피하면 맞는다");
+            Assert.IsTrue(dodge.Dodged(10.0, 0), "0 = 아무 쪽(충격파)");
+            // 창 안에서 맞는 쪽으로 다시 밀면 인정(방향이 바뀌면 새 시작).
+            dodge.Update(L, new Vector2(1f, 0f), 9.8);
+            Assert.IsTrue(dodge.Update(R, new Vector2(1f, 0f), 9.85));
+            Assert.IsTrue(dodge.Dodged(10.0, 1));
+            Assert.IsFalse(dodge.Dodged(10.0, -1));
+        }
+
+        [Test]
+        public void Authority_ChargeDodgedTheWrongWay_Hits()
+        {
+            var server = new CombatAuthority(new CombatResolver());
+            var events = new List<CombatEvent>();
+            server.SetStick(L, new Vector2(1f, 0f), 1.7, events);
+            server.SetStick(R, new Vector2(1f, 0f), 1.75, events);
+            var wrong = server.ResolveBossStrike(BossCounter.Dodge, R, 15f, (int)BossAttackKind.Charge, 2.0, events, -1);
+            Assert.AreEqual(DefenseResult.Hit, wrong, "안전한 쪽은 왼쪽인데 오른쪽으로 피함");
+            Assert.AreEqual(1, events.Count(e => e.Cue == CombatCue.PilotHit));
+            var right = server.ResolveBossStrike(BossCounter.Dodge, R, 15f, (int)BossAttackKind.Charge, 2.1, events, 1);
+            Assert.AreEqual(DefenseResult.Dodged, right);
+        }
+
+        [Test]
         public void Dodge_HeldEarly_DoesNotCount()
         {
             var dodge = new DodgeRules();

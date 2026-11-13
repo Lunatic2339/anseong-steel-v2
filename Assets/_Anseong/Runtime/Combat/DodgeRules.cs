@@ -57,6 +57,13 @@ namespace Anseong.Combat
         /// <summary>명중 순간에 회피가 인정되는지.</summary>
         public bool Dodged(double impactTime) => OnsetTime <= impactTime && OnsetTime >= impactTime - settings.windowSeconds;
 
+        /// <summary>
+        /// 정해진 쪽으로 피했을 때만 인정(돌진: 서버가 안전한 쪽을 정한다). requiredDirection = -1 왼쪽, +1 오른쪽, 0 = 아무 쪽.
+        /// 반대로 밀었다가 창 안에서 맞는 쪽으로 다시 밀면 인정된다(방향이 바뀌면 새 시작으로 친다).
+        /// </summary>
+        public bool Dodged(double impactTime, int requiredDirection) =>
+            Dodged(impactTime) && (requiredDirection == 0 || Direction == requiredDirection);
+
         public void Reset()
         {
             sticks[0] = sticks[1] = Vector2.zero;

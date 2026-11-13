@@ -69,6 +69,9 @@ namespace Anseong.EditorTools
         /// <summary>빛 고리 재질(더하기 섞기, 양면). 보스 예고 표시 같은 판에 쓴다. 못 만들면 null.</summary>
         internal static Material RingMaterial() => EnsureMaterials() ? ringAdd : null;
 
+        /// <summary>둥근 빛 재질(더하기 섞기). 드론 불꽃·섬광·아지랑이 파티클에 쓴다(DroneDirector). 못 만들면 null.</summary>
+        internal static Material GlowMaterial() => EnsureMaterials() ? glowAdd : null;
+
         static string BuildPrefabs(CombatEffectSet set)
         {
 

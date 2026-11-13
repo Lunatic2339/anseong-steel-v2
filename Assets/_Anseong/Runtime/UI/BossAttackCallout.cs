@@ -1,6 +1,7 @@
 using Anseong.Boss;
 using Anseong.Combat;
 using Anseong.Core;
+using Anseong.Net;
 using Anseong.Pilot;
 using UnityEngine;
 
@@ -10,6 +11,7 @@ namespace Anseong.UI
     /// 보스 공격 안내 글자(M2-06, 선우 11/04). 보스가 공격을 예고하면 눈앞 위쪽에 크게 "무슨 공격 + 어느 팔로 무엇을" 띄우고,
     /// 연타 중엔 다음 타("2/4 → 왼팔"), 명중 순간엔 결과(막음·맞음·피함), 빈틈엔 "지금 치기"를 띄운 뒤 잠시 후 지운다.
     /// 색은 세기(노랑 일반, 주황 강공격, 빨강 막기 불가)로 보스 몸 색과 같다. 전투 이벤트만 듣는다(모든 PC).
+    /// 2인 모드에서는 <see cref="HudRules"/>대로 "어느 쪽"을 오른쪽 조종사에게만 보인다(왼쪽에는 "동료가 부르는 쪽으로"). 1인 양팔(개발용)은 다 보인다.
     /// 초보 안내 HUD(M4)가 오면 이 자리를 바꾼다. 조절 메뉴 "안내 → 공격 안내 글자"로 끈다. Add Pilot Input 메뉴가 XR 카메라 아래에 만든다.
     /// </summary>
     public class BossAttackCallout : MonoBehaviour, ITunable
@@ -23,8 +25,13 @@ namespace Anseong.UI
         [SerializeField, Tooltip("한글 OS 글꼴(앞에서부터 있는 것).")]
         string[] osFontNames = { "Malgun Gothic", "맑은 고딕", "Arial" };
 
+        [SerializeField, Tooltip("보스 서버(기술의 요구 대응을 읽는다). 비어 있으면 처음 예고 때 한 번 찾는다. 없으면 05 기본값.")]
+        BossServer boss;
+
         [SerializeField, Tooltip("켜면 보스 공격마다 안내 글자를 띄운다.")]
         bool show = true;
+        [SerializeField, Tooltip("한쪽에만 보이기를 끈다(시험용: 2인 모드에서도 둘 다 공격 오는 쪽·피할 쪽을 봄).")]
+        bool showEverything;
         [SerializeField, Min(0.3f), Tooltip("결과(막음·맞음) 글자를 남겨 두는 시간(초).")]
         float resultSeconds = 1.5f;
 
@@ -40,9 +47,28 @@ namespace Anseong.UI
         Color color = Color.white;
         float hideAt = -1f;
         MeshRenderer textRenderer;
+        SessionBootstrap session;
+        PilotSide? hacked;
+        bool seesSide = true, lookedForBoss;
+
+        // 누가 무엇을 보는지는 PilotHud와 같은 규칙(HudRules).
+        bool BothArms => showEverything || session == null || session.Mode == SessionMode.SoloBothArms;
+        PilotSide Viewer => session != null && session.Mode == SessionMode.Client ? PilotSide.Right : PilotSide.Left;
+
+        /// <summary>그 기술의 요구 대응(기술 에셋). 보스가 없으면 05 기본값.</summary>
+        BossCounter CounterOf(BossAttackKind attack)
+        {
+            if (boss == null && !lookedForBoss)
+            {
+                lookedForBoss = true;
+                boss = FindAnyObjectByType<BossServer>();
+            }
+            return boss != null ? boss.SpecOf(attack).counter : BossAttackSpec.Default(attack).counter;
+        }
 
         void Start()
         {
+            session = FindAnyObjectByType<SessionBootstrap>();
             if (combat == null) combat = FindAnyObjectByType<CombatDirector>();
             if (tuningMenu == null) tuningMenu = FindAnyObjectByType<TuningMenu>();
             if (text == null || combat == null)
@@ -70,8 +96,11 @@ namespace Anseong.UI
                     hits = Mathf.Max(1, e.ComboStep);
                     var level = Mathf.RoundToInt(e.Amount);
                     color = level >= 2 ? unblockable : level == 1 ? heavy : normal;
-                    head = BossAttackGuide.Name(kind, hits);
-                    line = BossAttackGuide.Action(kind, e.Side);
+                    // 공격 오는 쪽·돌진 피할 쪽은 볼 수 있는 사람(2인: 오른쪽 조종사)에게만. 글은 판정 규칙(왼팔 방패·X자·정해진 쪽 회피)대로.
+                    var counter = CounterOf(kind);
+                    seesSide = HudRules.Visible(counter == BossCounter.Dodge ? HudInfo.DodgeSide : HudInfo.AttackSide, Viewer, BothArms, hacked);
+                    head = BossAttackGuide.Name(kind, hits, seesSide);
+                    line = BossAttackGuide.Action(kind, counter, e.Side, Viewer, BothArms, seesSide);
                     result = string.Empty;
                     hideAt = -1f;
                     break;
@@ -80,7 +109,7 @@ namespace Anseong.UI
                     {
                         var hit = Mathf.RoundToInt(e.Amount);
                         var nextSide = e.Side == PilotSide.Left ? PilotSide.Right : PilotSide.Left;
-                        var next = BossAttackGuide.Next(hit, hits, nextSide);
+                        var next = BossAttackGuide.Next(hit, hits, nextSide, seesSide);
                         line = next.Length > 0 ? next : "마지막 타";
                     }
                     break;
@@ -121,6 +150,13 @@ namespace Anseong.UI
                     line = string.Empty;
                     hideAt = Time.time + 3f;
                     break;
+                case CombatCue.HackStart:
+                    hacked = e.Side;
+                    return;
+                case CombatCue.HackCleared:
+                case CombatCue.MatchScene:
+                    hacked = null;
+                    return;
                 case CombatCue.PhaseChanged:
                 case CombatCue.EncounterWon:
                 case CombatCue.PilotDefeated:
@@ -142,7 +178,9 @@ namespace Anseong.UI
 
         void Update()
         {
-            var hide = !show || (tuningMenu != null && tuningMenu.IsOpen);
+            // 해킹당한 사람의 화면은 잡음으로 덮인다(PilotHud) → 안내도 숨긴다. 동료가 대신 다 본다.
+            var jammed = hacked.HasValue && !BothArms && hacked.Value == Viewer;
+            var hide = !show || jammed || (tuningMenu != null && tuningMenu.IsOpen);
             if (textRenderer != null && textRenderer.enabled == hide) textRenderer.enabled = !hide;
             if (hideAt < 0f || Time.time < hideAt) return;
             hideAt = -1f;

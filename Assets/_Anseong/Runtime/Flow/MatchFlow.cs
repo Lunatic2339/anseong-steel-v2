@@ -3,6 +3,7 @@ using Anseong.Boss;
 using Anseong.Combat;
 using Anseong.Core;
 using Anseong.Net;
+using Anseong.Pilot;
 using Unity.Netcode;
 using UnityEngine;
 
@@ -155,6 +156,7 @@ namespace Anseong.Flow
         public override void OnNetworkDespawn()
         {
             state.OnValueChanged -= OnState;
+            if (boss != null) boss.FlowDirected = false;
             Unbind();
             rules = null;
             matchLog?.Dispose();
@@ -203,11 +205,19 @@ namespace Anseong.Flow
             if (autoRestartAfterResult && rules.ResultExpired(now)) combat.RequestReset();
             HoldBoss();
             // M4-03: 무기를 든 동안은 잽·훅 구분 없이 번갈아 세 번이 연계.
-            if (combat.Authority != null) combat.Authority.Resolver.Combo.AnyKind = WeaponRules.For(rules.Scene, dronesActive, rules.ResumeScene, checkupStep) != Loadout.Bare;
+            var loadoutNow = WeaponRules.For(rules.Scene, dronesActive, rules.ResumeScene, checkupStep);
+            if (combat.Authority != null) combat.Authority.Resolver.Combo.AnyKind = loadoutNow != Loadout.Bare;
+            // 무장이 바뀌어 끼워지는 순간(철컥 소리·불꽃 큐). 겉모습은 PlayerWeaponVisuals가 복제된 장면으로 같이 움직인다.
+            if (loadoutNow != lastLoadout)
+            {
+                lastLoadout = loadoutNow;
+                if (loadoutNow != Loadout.Bare) Emit(CombatCue.WeaponMount, (int)loadoutNow, now);
+            }
             combat.Flush();
         }
 
         ClashRules clashRules;
+        Loadout lastLoadout;
 
         /// <summary>서버: 검 힘겨루기. 둘 다 막기 자세로 버티면 밀어낸다. 끝나면 장면 7(양쪽 검·방패 파손).</summary>
         void TickClash(double now)
@@ -254,6 +264,8 @@ namespace Anseong.Flow
         {
             if (boss == null) return;
             var scene = rules.Scene;
+            // 장면 대사(무기 상실)와 상실 뒤 기체 HP 회복은 여기(판 흐름)가 맡는다 → 보스 두뇌는 같은 순간에 겹쳐 내지 않는다.
+            boss.FlowDirected = true;
             boss.MovementHeld = !MatchFlowRules.BossMayMove(scene);
             // 드론이 떠 있는 동안(근접전 끼어들기) 보스는 물러나 쉰다.
             boss.AttacksHeld = !MatchFlowRules.BossMayAttack(scene) || dronesActive;
@@ -331,6 +343,8 @@ namespace Anseong.Flow
                 case MatchScene.Clash:
                     if (clashRules == null) clashRules = new ClashRules(clash);
                     clashRules.Begin(now);
+                    // 보스의 보복 내려치기가 떨어지는 순간에 검이 맞물리게 예고 시작을 맞춘다.
+                    if (boss != null) boss.AlignPayback(now + clash.delaySeconds);
                     break;
                 case MatchScene.LostSword: Line(CommanderLines.AllWeaponsLost, now); break;
                 case MatchScene.FightCore: Line(CommanderLines.TargetCore, now); break;

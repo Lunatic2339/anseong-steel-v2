@@ -47,6 +47,9 @@ namespace Anseong.EditorTools
             var droneSerialized = new SerializedObject(drones);
             if (droneSerialized.FindProperty("shapeMaterial").objectReferenceValue == null)
                 droneSerialized.FindProperty("shapeMaterial").objectReferenceValue = CombatSetup.GetOrCreateUnlit(WeaponShapePath, Color.white);
+            // 드론 불꽃·총구 섬광·아지랑이 파티클 재질(Build Combat VFX와 같은 빛 재질).
+            var droneGlow = droneSerialized.FindProperty("glowMaterial");
+            if (droneGlow != null && droneGlow.objectReferenceValue == null) droneGlow.objectReferenceValue = VfxBuilder.GlowMaterial();
             droneSerialized.ApplyModifiedProperties();
             // M4-05: 기체 점검(같은 NetworkObject).
             var checkup = server.GetComponent<CheckupDirector>();
@@ -55,15 +58,14 @@ namespace Anseong.EditorTools
             if (checkupSerialized.FindProperty("shapeMaterial").objectReferenceValue == null)
                 checkupSerialized.FindProperty("shapeMaterial").objectReferenceValue = CombatSetup.GetOrCreateUnlit(WeaponShapePath, Color.white);
             checkupSerialized.ApplyModifiedProperties();
-            // M4-07: 맵 연출(크레인 코일·컨베이어·사일로). 윤주 맵 자리는 Inspector 칸에 사람이 넣는다.
+            // M4-07: 맵 연출(크레인 코일·컨베이어·사일로). 소품은 아래 StagePropsMenu가 도형으로 세워 칸에 넣는다.
             var mapEvents = server.GetComponent<MapEvents>();
             if (mapEvents == null) mapEvents = Undo.AddComponent<MapEvents>(server.gameObject);
-            var mapSerialized = new SerializedObject(mapEvents);
-            if (mapSerialized.FindProperty("shapeMaterial").objectReferenceValue == null)
-                mapSerialized.FindProperty("shapeMaterial").objectReferenceValue = CombatSetup.GetOrCreateUnlit(WeaponShapePath, Color.white);
-            mapSerialized.ApplyModifiedProperties();
             var serialized = new SerializedObject(flow);
             serialized.FindProperty("combat").objectReferenceValue = server;
+            // 장면 3은 드론 감독이 끝낸다: 씬에 저장된 임시 타이머(예전 8초)를 0으로 맞춘다. 드론 없이 시험하려면 Inspector에서 다시 올린다.
+            var dronePlaceholder = serialized.FindProperty("settings.droneHuntPlaceholderSeconds");
+            if (dronePlaceholder != null) dronePlaceholder.floatValue = 0f;
             serialized.ApplyModifiedProperties();
 
             var media = AddMedia(server, flow, checkup);
@@ -71,9 +73,11 @@ namespace Anseong.EditorTools
             var panel = AddPanel(roots, flow);
             var weapons = AddPlayerWeapons(roots);
             var hud = AddHud(roots);
+            // 정비고·정비 로봇·크레인·컨베이어·사일로(도형) + 공 글자 + 장착 불꽃. 우리 무기(PlayerWeaponVisuals)가 붙은 뒤에.
+            var props = StagePropsMenu.Build(scene);
             var models = AiModelFit.Apply(scene.GetRootGameObjects());
             EditorSceneManager.MarkSceneDirty(scene);
-            return $"판 흐름({(made ? "새로 붙임" : "있던 것 다시 연결")}), 글자판: {panel}, 우리 무기: {weapons}, HUD: {hud}, 연출: {effects}, 음악·영상: {media}, {models}";
+            return $"판 흐름({(made ? "새로 붙임" : "있던 것 다시 연결")}), 글자판: {panel}, 우리 무기: {weapons}, HUD: {hud}, {props}, 연출: {effects}, 음악·영상: {media}, {models}";
         }
 
         const string MediaSetPath = "Assets/_Anseong/Audio/MatchMedia.asset";

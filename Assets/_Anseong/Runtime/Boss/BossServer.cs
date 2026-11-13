@@ -3,6 +3,7 @@ using System.Collections.Generic;
 using Anseong.Combat;
 using Anseong.Core;
 using Anseong.Net;
+using Anseong.Pilot;
 using Unity.Netcode;
 using UnityEngine;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
@@ -132,6 +133,15 @@ namespace Anseong.Boss
         [SerializeField, Min(0f), Tooltip("연속기를 전부 막으면 기술 하나마다 더 주는 빈틈(초).")]
         float chainOpeningBonus = 0.5f;
 
+        [Header("돌진 (피할 쪽)")]
+        [SerializeField, Tooltip("돌진은 서버가 정한 안전한 쪽(예고 사건의 Side, 오른쪽 조종사 HUD에만 뜸)으로 피해야 성공. 끄면 아무 쪽으로 피해도 성공(예전 규칙).")]
+        bool chargeNeedsSide = true;
+
+        PilotSide chargeSafeSide = PilotSide.Left;
+
+        /// <summary>서버: 지금(마지막) 돌진에서 피해야 하는 쪽(조종사 기준). 보스는 반대쪽으로 스쳐 지나간다.</summary>
+        public PilotSide ChargeSafeSide => chargeSafeSide;
+
         readonly List<BossAttackSpec> chainSpecs = new List<BossAttackSpec>(6);
 
         /// <summary>서버: 연속기 시작(쉬는 중일 때만). 기술을 빈틈 없이 이어 치고 빈틈은 마지막 뒤에만.</summary>
@@ -224,6 +234,9 @@ namespace Anseong.Boss
 
         void OnImmediate(BossEvent e)
         {
+            // 돌진: 예고가 시작될 때 안전한 쪽을 정한다(예고 사건에 실려 가고, 보스 두뇌가 반대쪽으로 달린다).
+            if (e.Type == BossEventType.AttackStarted && e.Attack == BossAttackKind.Charge)
+                chargeSafeSide = UnityEngine.Random.value < 0.5f ? PilotSide.Left : PilotSide.Right;
             if (e.Type == BossEventType.Impact && combat != null && combat.Authority != null)
             {
                 // 명중 순간: 먼저 "명중 순간" 사건, 이어서 가드·회피 판정 결과(M2-03). 결과는 빈틈 길이를 정한다.
@@ -233,7 +246,8 @@ namespace Anseong.Boss
                     BossHealth = combat.Authority.Resolver.Boss.Current, Point = transform.position,
                 });
                 var spec = machine.Attack ?? SpecOf(e.Attack);
-                var result = combat.Authority.ResolveBossStrike(spec.counter, e.Side, spec.failDamage, (int)e.Attack, e.Time, combat.Events);
+                var direction = chargeNeedsSide && e.Attack == BossAttackKind.Charge ? (chargeSafeSide == PilotSide.Left ? -1 : 1) : 0;
+                var result = combat.Authority.ResolveBossStrike(spec.counter, e.Side, spec.failDamage, (int)e.Attack, e.Time, combat.Events, direction);
                 machine.ReportOutcome(DefenseRules.IsSuccess(result));
             }
             ServerEvent?.Invoke(e);
@@ -261,6 +275,8 @@ namespace Anseong.Boss
                 {
                     case BossEventType.AttackStarted:
                         cue.Cue = CombatCue.BossTelegraph;
+                        // 돌진만: Side = 피해야 하는 쪽(다른 기술은 첫 타가 들어오는 쪽 그대로).
+                        if (e.Attack == BossAttackKind.Charge) cue.Side = chargeSafeSide;
                         cue.Amount = (int)SpecOf(e.Attack).level;
                         // 안내 글자용 타 수(M2-06, 연타 "4번").
                         cue.ComboStep = SpecOf(e.Attack).HitCount;

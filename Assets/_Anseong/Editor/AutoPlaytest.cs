@@ -459,19 +459,13 @@ namespace Anseong.EditorTools
         /// 왼손 = 숨은 드론(스캐너로 드러냄), 오른손 = 드러난 드론(포로 격추).
         /// </summary>
         static CheckupDirector checkup;
-        static System.Reflection.FieldInfo drillPendingField, drillSideField;
 
         /// <summary>1-3 공이 날아오는 중이면 true와 오는 쪽.</summary>
         static bool DrillPending(out PilotSide drillSide)
         {
             drillSide = PilotSide.Left;
             if (checkup == null) checkup = UnityEngine.Object.FindAnyObjectByType<CheckupDirector>();
-            if (checkup == null) return false;
-            if (drillPendingField == null) drillPendingField = typeof(CheckupDirector).GetField("drillPending", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (drillSideField == null) drillSideField = typeof(CheckupDirector).GetField("drillSide", BindingFlags.Instance | BindingFlags.NonPublic);
-            if (drillPendingField == null || drillSideField == null) return false;
-            drillSide = (PilotSide)drillSideField.GetValue(checkup);
-            return (bool)drillPendingField.GetValue(checkup);
+            return checkup != null && checkup.BallIncoming(out drillSide);
         }
 
         /// <summary>숨었거나 드러난 은폐 드론이 있고, 팔에 스캐너가 달려 있으면(사격 무장) true.</summary>

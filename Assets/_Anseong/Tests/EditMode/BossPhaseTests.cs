@@ -173,5 +173,32 @@ namespace Anseong.Tests
             Assert.AreEqual(BossState.Kneel, m.State, "무릎은 계속");
             Assert.IsTrue(m.CanBeDamaged);
         }
+
+        [Test]
+        public void Payback_RoarCutsTheOpening_ThenTheAttackStarts()
+        {
+            // 무기는 빈틈 중에 부서진다: 빈틈에서는 새 공격을 못 걸지만, 짧은 포효로 끊고 나면 보복이 시작된다(BossBrain 보복 흐름).
+            var m = new BossAttackStateMachine();
+            var punch = BossAttackSpec.Default(BossAttackKind.PunchRight);
+            Assert.IsTrue(m.Begin(punch, 0, null));
+            m.Update(punch.EndTime + 0.1, false, null);
+            Assert.AreEqual(BossState.Opening, m.State);
+            var charge = BossAttackSpec.Default(BossAttackKind.Charge);
+            Assert.IsFalse(m.Begin(charge, 3, null), "빈틈 중에는 바로 못 건다(예전 보복 불발의 원인)");
+            m.Hold(BossState.Roar, 3, 0.8);
+            Assert.IsFalse(m.HasAttack);
+            Assert.IsFalse(m.CanBeDamaged, "포효 중 무적");
+            m.Update(3.81, false, null);
+            Assert.AreEqual(BossState.Rest, m.State);
+            Assert.IsTrue(m.Begin(charge, 3.81, null));
+            Assert.AreEqual(BossState.Telegraph, m.State);
+            // 검 힘겨루기가 예고를 덮어쓴다(의도): 명중 판정 없이 버티기로.
+            var impacts = 0;
+            m.Immediate = e => { if (e.Type == BossEventType.Impact) impacts++; };
+            m.Hold(BossState.Clash, 5.0, 9);
+            m.Update(8, false, null);
+            Assert.AreEqual(BossState.Clash, m.State);
+            Assert.AreEqual(0, impacts);
+        }
     }
 }

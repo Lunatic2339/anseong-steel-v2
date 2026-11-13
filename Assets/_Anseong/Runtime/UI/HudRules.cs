@@ -1,3 +1,4 @@
+using Anseong.Boss;
 using Anseong.Pilot;
 
 namespace Anseong.UI
@@ -7,7 +8,7 @@ namespace Anseong.UI
     {
         /// <summary>보스 공격이 오는 쪽(좌/우 펀치·주먹 포탄). 오른쪽 조종사만.</summary>
         AttackSide,
-        /// <summary>돌진 피할 방향. 오른쪽 조종사만.</summary>
+        /// <summary>돌진 피할 방향(서버가 돌진마다 정한다). 오른쪽 조종사만.</summary>
         DodgeSide,
         /// <summary>숨은 드론이 쏜 방향. 왼쪽 조종사만(왼팔 = 스캐너).</summary>
         DroneDirection,
@@ -32,6 +33,31 @@ namespace Anseong.UI
             if (info == HudInfo.Shared) return true;
             if (hacked.HasValue) return true; // 동료가 해킹당함 → 대신 다 본다
             return Owner(info) == viewer;
+        }
+
+        /// <summary>
+        /// 보스 공격 예고 때 조종사 HUD에 띄울 글(대응 방식에 맞춰). 띄울 것이 없으면 빈 글자.
+        /// counter = 그 기술의 요구 대응, side = 첫 타가 들어오는 쪽(돌진은 피해야 하는 쪽),
+        /// seesAttackSide·seesDodgeSide = 이 사람이 그 정보를 보는지(<see cref="Visible"/>).
+        /// 둘이 X자로 막기·충격파는 둘 다 본다. 공격 오는 쪽·돌진 피할 쪽은 오른쪽 조종사만(왼쪽은 "동료가 부르는 쪽으로").
+        /// </summary>
+        public static string AttackCallout(BossAttackKind kind, BossCounter counter, PilotSide side, bool seesAttackSide, bool seesDodgeSide)
+        {
+            switch (counter)
+            {
+                case BossCounter.BothGuard:
+                    return kind == BossAttackKind.Grab ? "붙잡으러 온다: 둘이 X자로 막아라" : "두 팔 발광: 둘이 X자로 막아라";
+                case BossCounter.Dodge:
+                    if (kind != BossAttackKind.Charge) return "충격파! 같이 옆으로 피해라";
+                    if (!seesDodgeSide) return "돌진! 동료가 부르는 쪽으로";
+                    return side == PilotSide.Left ? "돌진! ◀◀ 왼쪽으로 피해라" : "돌진! 오른쪽으로 피해라 ▶▶";
+                case BossCounter.AlternateGuard:
+                    if (!seesAttackSide) return string.Empty;
+                    return side == PilotSide.Left ? "◀◀ 왼쪽부터 연타" : "오른쪽부터 연타 ▶▶";
+                default:
+                    if (!seesAttackSide) return string.Empty;
+                    return side == PilotSide.Left ? "◀◀ 왼쪽 공격" : "오른쪽 공격 ▶▶";
+            }
         }
 
         /// <summary>머리 기준 방향을 글자로(조종석 안에서 고개를 돌릴 쪽).</summary>

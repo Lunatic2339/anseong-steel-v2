@@ -14,7 +14,7 @@ namespace Anseong.Flow
         Checkup,
         /// <summary>장면 2: 마당 등장(보스 멀리, 10초).</summary>
         Entrance,
-        /// <summary>장면 3: 숨은 드론 사냥. 드론은 M4-04, 그 전엔 시간으로 넘어간다.</summary>
+        /// <summary>장면 3: 숨은 드론 사냥(M4-04 DroneDirector). 드론 감독이 없는 씬에서만 시간으로 넘어간다.</summary>
         DroneHunt,
         /// <summary>장면 4: 접근. 보스가 근접 거리에 닿으면 근접전.</summary>
         Approach,
@@ -73,8 +73,15 @@ namespace Anseong.Flow
         [Tooltip("장면 2 마당 등장 길이(초, 대본 10초).")]
         [Min(0f)] public float entranceSeconds = 10f;
 
-        [Tooltip("드론(M4-04)이 생기기 전 장면 3을 이 시간(초) 뒤 넘긴다. 0이면 드론 전멸 신호만 기다린다.")]
-        [Min(0f)] public float droneHuntPlaceholderSeconds = 8f;
+        [Tooltip("장면 3을 드론과 상관없이 이 시간(초) 뒤 넘긴다(드론 없이 흐름만 시험할 때). " +
+            "0(기본)이면 드론 전멸 신호 또는 드론 감독(DroneDirector)의 제한 시간으로만 넘어간다. 메뉴 'Add Match Flow'가 씬 값도 0으로 맞춘다.")]
+        [Min(0f)] public float droneHuntPlaceholderSeconds = 0f;
+
+        [Tooltip("씬에 드론 감독(DroneDirector)이 없을 때 장면 3을 넘기는 시간(초). 영원히 막히지 않게 하는 안전장치.")]
+        [Min(1f)] public float droneHuntFallbackSeconds = 8f;
+
+        /// <summary>드론 감독이 떠 있다(DroneDirector가 세션 시작 때 켜고 끝날 때 끈다). 꺼져 있으면 장면 3은 안전장치 시간으로 넘어간다.</summary>
+        [NonSerialized] public bool droneDirectorActive;
 
         [Tooltip("상실 장면(5·7) 길이(초, 대본 8초).")]
         [Min(0f)] public float lossSeconds = 8f;
@@ -138,7 +145,10 @@ namespace Anseong.Flow
             switch (scene)
             {
                 case MatchScene.Entrance: return settings.entranceSeconds;
-                case MatchScene.DroneHunt: return settings.droneHuntPlaceholderSeconds;
+                case MatchScene.DroneHunt:
+                    // 드론 감독이 있으면 시간으로 넘기지 않는다(전멸 신호·감독의 제한 시간). 없으면 안전장치 시간.
+                    if (settings.droneHuntPlaceholderSeconds > 0f) return settings.droneHuntPlaceholderSeconds;
+                    return settings.droneDirectorActive ? 0f : settings.droneHuntFallbackSeconds;
                 case MatchScene.LostGun:
                 case MatchScene.LostSword: return settings.lossSeconds;
                 case MatchScene.Rebooting: return settings.rebootSeconds;

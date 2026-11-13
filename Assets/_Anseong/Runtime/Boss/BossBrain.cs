@@ -9,6 +9,8 @@ namespace Anseong.Boss
     /// <summary>
     /// 보스 스스로 싸우기(M2-04, 서버만 동작): 근접 거리 밖이면 걸어오고, 안이면 쉬는 시간 뒤 페이즈 표대로 기술을 고른다.
     /// HP 경계(60·25·10%)에서 페이즈 전환(공격이 끝난 뒤 포효 2초 무적, 조종사 HP 회복), 10%에서 무릎. 부스트에 맞으면 뒤로 밀려났다가 다시 걸어온다.
+    /// 보스 무기가 부서지면(= 페이즈 전환) 하던 동작을 끊고 짧은 포효 뒤 보복 공격을 건다(대본 장면 5 돌진, 장면 7 검 내려치기).
+    /// 돌진은 실제로 달려온다(<see cref="BossChargePath"/>): 물러나 자세 → 달려옴 → 안전한 쪽 반대편으로 스침 → 미끄러져 멈춤 → 근접 거리로 복귀.
     /// 위치·회전은 서버만 바꾸고 NetworkTransform이 복제한다. 사령관 대사 사건(글자·소리 자리)도 여기서 낸다.
     /// 보스 프리팹 루트에 메뉴가 붙인다. <see cref="BossServer"/>보다 먼저 돈다.
     /// </summary>
@@ -42,6 +44,10 @@ namespace Anseong.Boss
         [SerializeField, Min(0.5f), Tooltip("물러서고 돌아오는 속도(m/s).")]
         float standOffSpeed = 7f;
 
+        [Header("돌진 이동 (05 기술표 \"돌진\")")]
+        [SerializeField, Tooltip("돌진 때 보스가 움직이는 길: 물러나 자세 잡기 → 달려옴 → 스쳐 지나감 → 미끄러져 멈춤 → 근접 거리로 복귀. 판 흐름이 걷기를 막은 장면(상실 장면의 보복)에서도 움직인다.")]
+        BossChargeSettings charge = new BossChargeSettings();
+
         [Header("부스트 밀려남 (05 \"보스가 맞았을 때\")")]
         [SerializeField, Min(0f), Tooltip("뒤로 밀려나는 거리(m).")]
         float knockbackMeters = 10f;
@@ -65,6 +71,10 @@ namespace Anseong.Boss
         [Header("보스 무기·원거리 (M4-02)")]
         [SerializeField, Tooltip("보스 무기가 부서지면 보복 공격(무기 목록의 보복: 팔뚝 포 → 돌진, 방패 → 검 내려치기). 끄면 예전처럼 포효.")]
         bool retaliate = true;
+        [SerializeField, Min(0f), Tooltip("무기가 부서진 뒤 보복 공격 예고가 시작될 때까지 뜸(초). 그동안 하던 동작(빈틈·휘청·밀려남)을 끊고 포효한다.")]
+        float paybackDelay = 0.8f;
+        [SerializeField, Range(0f, 0.5f), Tooltip("검 힘겨루기와 맞출 때: 보복 내려치기의 명중 순간을 힘겨루기 시작보다 이만큼(초) 늦춘다(검이 닿기 직전에 맞물려, 피해 판정 없이 힘겨루기로 넘어간다).")]
+        float paybackClashLead = 0.15f;
         [SerializeField, Min(0.5f), Tooltip("접근 장면 주먹 포탄 사이 쉬는 시간 최소(초, 11 참고표 3.0).")]
         float rangedRestMin = 3f;
         [SerializeField, Min(0.5f), Tooltip("주먹 포탄 사이 쉬는 시간 최대(초, 4.0).")]
@@ -87,6 +97,19 @@ namespace Anseong.Boss
         double retreatStart = -1;
         Vector3 retreatFrom, retreatTo;
         int seed;
+        // 보복(무기가 부서진 뒤 예약된 공격).
+        bool paybackPending;
+        BossAttackKind paybackKind;
+        double paybackAt;
+        /// <summary>예약한 보복을 이 시간(초) 안에 못 걸면(계속 휘청·밀려남) 버린다.</summary>
+        const double PaybackGiveUpSeconds = 4.0;
+        // 돌진 이동.
+        bool chargeActive, chargeReturning;
+        double chargeStart;
+        float chargeTelegraph, chargeFrom;
+        Vector3 chargeOrigin, chargeForward;
+        int chargeSafe;
+        bool saidIncoming;
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         CsvLog log;
 #endif
@@ -105,6 +128,15 @@ namespace Anseong.Boss
 
         /// <summary>판 흐름(M4-02)이 접근 장면에서 켠다: 걸어오면서 주먹 포탄(펀치 클립 + 탄)을 쏜다. 근접 공격 잠금과 따로.</summary>
         public bool RangedAllowed { get; set; }
+
+        /// <summary>
+        /// 판 흐름(MatchFlow)이 이 보스를 이끈다(판 흐름이 매 프레임 켠다). 켜지면 장면 대사(무기 상실)와 상실 뒤 기체 HP 회복은 판 흐름이 맡고,
+        /// 여기서는 같은 순간에 겹치는 대사·회복을 내지 않는다. 판 흐름이 없는 씬(샌드박스)에서는 예전처럼 여기서 낸다.
+        /// </summary>
+        public bool FlowDirected { get; set; }
+
+        /// <summary>서버: 무기가 부서진 뒤 보복이 예약돼 아직 시작 전인지.</summary>
+        public bool PaybackPending => paybackPending;
 
         float[] thresholds;
 
@@ -144,7 +176,23 @@ namespace Anseong.Boss
         public void BeginClash(double seconds)
         {
             if (server == null) return;
+            // 힘겨루기가 보복 내려치기를 받아 낸다: 아직 못 건 보복은 버리고, 진행 중인 공격은 Hold가 끊는다(의도).
+            paybackPending = false;
+            if (chargeActive) chargeReturning = true;
             server.Machine.Hold(BossState.Clash, server.Now, seconds);
+        }
+
+        /// <summary>
+        /// 서버: 예약된 보복의 명중 순간을 이 서버 시각에 맞춘다(판 흐름이 검 힘겨루기 장면에 들어갈 때 부른다).
+        /// 내려치는 검이 닿기 직전에 힘겨루기가 맞물리게 예고 시작을 앞뒤로 옮긴다. 예약된 보복이 없으면 아무 일도 없다.
+        /// </summary>
+        public void AlignPayback(double impactAt)
+        {
+            if (!paybackPending || server == null) return;
+            var now = server.Now;
+            paybackAt = System.Math.Max(now, impactAt + paybackClashLead - server.SpecOf(paybackKind).telegraphSeconds);
+            // 포효 길이도 새 시작 시각에 맞춘다(끝나면 바로 보복 예고).
+            if (server.Machine.State == BossState.Roar) server.Machine.Hold(BossState.Roar, now, paybackAt - now);
         }
 
         /// <summary>서버: 검 힘겨루기 끝. 밀어냈으면 보스가 크게 휘청이고 빈틈이 이어진다.</summary>
@@ -171,6 +219,8 @@ namespace Anseong.Boss
             if (look.sqrMagnitude > 1e-4f) transform.rotation = Quaternion.LookRotation(look.normalized, Vector3.up);
             knockStart = -1;
             standOff = 0f;
+            chargeActive = false;
+            paybackPending = false;
             if (server != null && server.Machine.State == BossState.Walk) server.Machine.Release(server.Now);
         }
 
@@ -237,7 +287,9 @@ namespace Anseong.Boss
             var now = server.Now;
             nextAttackAt = now + firstAttackDelay;
             seen.Clear();
-            sawOpening = finishedLog = false;
+            sawOpening = finishedLog = saidIncoming = false;
+            paybackPending = false;
+            chargeActive = chargeReturning = false;
             knockStart = -1;
             retreatStart = -1;
             wonAt = -1;
@@ -288,21 +340,35 @@ namespace Anseong.Boss
             switch (phases.Update(now, hp, machine.IsAttacking || machine.State == BossState.Staggered))
             {
                 case PhaseStep.PhaseChanged:
-                    // M4-02: 무기를 잃은 보스의 보복(무기 목록에서: 기본 팔뚝 포 → 돌진, 둘째 → 큰 내려찍기). 시작 못 하면 포효.
+                    // M4-02: 무기를 잃은 보스의 보복(무기 목록에서: 기본 팔뚝 포 → 돌진, 둘째 → 큰 내려찍기).
+                    // 무기는 늘 빈틈·휘청·밀려남 중에 부서지므로 바로 시작할 수 없다 → 하던 동작을 끊고(Hold) 짧게 포효한 뒤 보복을 건다(TickPayback).
                     var broken = Weapons != null ? Weapons.At(phases.Phase - 2) : null;
                     var payback = broken != null ? broken.retaliation : phases.Phase == 2 ? BossAttackKind.Charge : BossAttackKind.SlamBoth;
                     var doPayback = retaliate && (broken == null || broken.retaliate);
-                    if (!doPayback || !server.TryBegin(payback)) machine.Hold(BossState.Roar, now, table != null ? table.roarSeconds : 2f);
+                    var roar = table != null ? table.roarSeconds : 2f;
+                    if (doPayback)
+                    {
+                        paybackKind = payback;
+                        paybackPending = true;
+                        paybackAt = now + paybackDelay;
+                        machine.Hold(BossState.Roar, now, paybackDelay);
+                    }
+                    else machine.Hold(BossState.Roar, now, roar);
                     picker.BeginPhase(phases.Phase);
                     authority.Grab.NewPhase();
-                    var restore = table != null ? table.pilotRestorePercent : 60f;
-                    if (restore > 0f) authority.Pilot.RestoreTo(restore);
+                    // 판 흐름이 있으면 회복은 상실 장면이 끝날 때 한 번(보복에 깎인 것까지 채움), 상실 대사도 판 흐름이 낸다.
+                    if (!FlowDirected)
+                    {
+                        var restore = table != null ? table.pilotRestorePercent : 60f;
+                        if (restore > 0f) authority.Pilot.RestoreTo(restore);
+                    }
                     Emit(CombatCue.PhaseChanged, phases.Phase, now);
-                    Emit(CombatCue.CommanderLine, phases.Phase == 2 ? CommanderLines.Phase2 : CommanderLines.Phase3, now);
-                    nextAttackAt = now + (table != null ? table.roarSeconds : 2f) + 0.5f;
+                    if (!FlowDirected) Emit(CombatCue.CommanderLine, phases.Phase == 2 ? CommanderLines.Phase2 : CommanderLines.Phase3, now);
+                    nextAttackAt = now + roar + 0.5f;
                     stats.EnterPhase(phases.Phase, now);
                     break;
                 case PhaseStep.Kneel:
+                    paybackPending = false;
                     machine.Hold(BossState.Kneel, now);
                     Emit(CombatCue.BossKneel, 0, now);
                     Emit(CombatCue.CommanderLine, CommanderLines.KneelFinisher, now);
@@ -314,13 +380,19 @@ namespace Anseong.Boss
             }
             if (phases.Kneeling) Finisher(now, authority);
 
-            if (!MovementHeld) Move(now, machine);
-            else if (machine.State == BossState.Walk) machine.Release(now);
+            // 밀려남·돌진은 판 흐름이 걷기를 막은 장면에서도 이어진다(상실 장면의 보복 돌진).
+            if (!ForcedMove(now, machine))
+            {
+                if (!MovementHeld) Move(now, machine);
+                else if (machine.State == BossState.Walk) machine.Release(now);
+            }
             if (AttacksHeld) nextAttackAt = now + firstAttackDelay;
+            if (paybackPending) TickPayback(now, machine, authority);
             if (RangedAllowed) Ranged(now, machine, authority);
             else nextRangedAt = now + firstAttackDelay;
 
-            if (autoAttack && !AttacksHeld && machine.IsResting && now >= nextAttackAt && !authority.Pilot.IsDefeated && InReach())
+            // 보복이 예약된 동안은 다른 공격이 끼어들지 않는다(보복이 시작되면 상태기계가 막는다).
+            if (autoAttack && !AttacksHeld && !paybackPending && machine.IsResting && now >= nextAttackAt && !authority.Pilot.IsDefeated && InReach())
             {
                 var pattern = picker.NextPattern(BossWeaponRules.CrackCount(hp, Thresholds));
                 if (server.TryBeginChain(pattern))
@@ -333,14 +405,46 @@ namespace Anseong.Boss
             server.Combat.Flush();
         }
 
+        /// <summary>
+        /// 예약된 보복: 뜸이 지나고 보스가 쉬는 중이 되면 바로 건다. 판 흐름이 근접 공격을 막은 장면(상실)에서도 나간다.
+        /// 계속 못 걸면(다시 휘청·밀려남) 조금 기다리다 버린다.
+        /// </summary>
+        void TickPayback(double now, BossAttackStateMachine machine, CombatAuthority authority)
+        {
+            if (authority.Pilot.IsDefeated || machine.State == BossState.Defeated)
+            {
+                paybackPending = false;
+                return;
+            }
+            if (now < paybackAt) return;
+            // 포효·걷기는 끊고 바로 시작(다른 상태는 끝나기를 기다린다).
+            if (machine.State == BossState.Roar || machine.State == BossState.Walk) machine.Release(now);
+            if (!machine.IsResting)
+            {
+                if (now > paybackAt + PaybackGiveUpSeconds) paybackPending = false;
+                return;
+            }
+            paybackPending = false;
+            if (server.TryBegin(paybackKind)) stats.AttackStarted();
+        }
+
         /// <summary>접근 장면: 걷다가 멈춰 주먹 포탄 한 발(좌/우 펀치 기술 그대로, 판정은 같은 막기). 쏘고 나면 다시 걷는다.</summary>
         void Ranged(double now, BossAttackStateMachine machine, CombatAuthority authority)
         {
-            if (now < nextRangedAt || authority.Pilot.IsDefeated || InReach()) return;
+            if (paybackPending || now < nextRangedAt || authority.Pilot.IsDefeated || InReach()) return;
             if (machine.State != BossState.Walk && !machine.IsResting) return;
             if (machine.State == BossState.Walk) machine.Release(now);
             var kind = Random.value < 0.5f ? BossAttackKind.PunchLeft : BossAttackKind.PunchRight;
-            if (server.TryBegin(kind)) stats.AttackStarted();
+            if (server.TryBegin(kind))
+            {
+                stats.AttackStarted();
+                // 대사 7 "포탄이 온다": 접근 장면의 첫 포탄에(대본 장면 4).
+                if (!saidIncoming)
+                {
+                    saidIncoming = true;
+                    Emit(CombatCue.CommanderLine, CommanderLines.IncomingAttack, now);
+                }
+            }
             nextRangedAt = now + Random.Range(Mathf.Min(rangedRestMin, rangedRestMax), Mathf.Max(rangedRestMin, rangedRestMax));
         }
 
@@ -382,6 +486,84 @@ namespace Anseong.Boss
             }
         }
 
+        /// <summary>
+        /// 판 흐름이 걷기를 막아도 이어지는 이동: 부스트 밀려남(무기가 부서져 포효로 끊겨도 끝까지 미끄러진다)과 돌진.
+        /// 움직였으면 true(그 프레임엔 걷기·물러서기를 하지 않는다).
+        /// </summary>
+        bool ForcedMove(double now, BossAttackStateMachine machine)
+        {
+            if (knockStart >= 0)
+            {
+                chargeActive = false;
+                var t = Mathf.Clamp01((float)((now - knockStart) / knockbackSeconds));
+                // 처음에 크게, 끝에 묵직하게 멈춘다.
+                transform.position = Vector3.Lerp(knockFrom, knockTo, 1f - (1f - t) * (1f - t));
+                if (t >= 1f) knockStart = -1;
+                standOff = 0f;
+                return true;
+            }
+            return ChargeMove(now, machine);
+        }
+
+        /// <summary>
+        /// 돌진 이동: 예고 동안 물러나 자세를 잡고, 끝에 달려와 안전한 쪽(서버가 정함) 반대편으로 스치고, 미끄러져 멈춘 뒤 근접 거리로 돌아온다.
+        /// 돌아오는 동안 휘청·빈틈이 이어지므로 우리 주먹이 닿는 자리로 온다.
+        /// </summary>
+        bool ChargeMove(double now, BossAttackStateMachine machine)
+        {
+            if (player == null) return false;
+            var charging = machine.IsAttacking && machine.HasAttack && machine.Attack.kind == BossAttackKind.Charge;
+            if (charging && (!chargeActive || machine.AttackStart != chargeStart)) BeginCharge(machine);
+            if (!chargeActive) return false;
+            if (retreatStart >= 0 || machine.State == BossState.Defeated)
+            {
+                chargeActive = false;
+                return false;
+            }
+            var dt = Time.deltaTime;
+            var t = (float)(now - chargeStart);
+            if (!charging || t > BossChargePath.EndSeconds(charge, chargeTelegraph)) chargeReturning = true;
+            if (!chargeReturning)
+            {
+                var p = BossChargePath.At(charge, chargeFrom, meleeDistance, chargeTelegraph, t, chargeSafe);
+                var right = Vector3.Cross(Vector3.up, chargeForward);
+                var position = chargeOrigin + chargeForward * p.y + right * p.x;
+                position.y = transform.position.y;
+                transform.position = position;
+            }
+            else
+            {
+                var home = chargeOrigin + chargeForward * meleeDistance;
+                home.y = transform.position.y;
+                transform.position = Vector3.MoveTowards(transform.position, home, charge.returnSpeed * dt);
+                if ((transform.position - home).sqrMagnitude < 0.01f) chargeActive = false;
+            }
+            var to = player.position - transform.position;
+            to.y = 0f;
+            if (to.sqrMagnitude > 1e-4f)
+            {
+                var look = Quaternion.LookRotation(to.normalized, Vector3.up);
+                transform.rotation = Quaternion.RotateTowards(transform.rotation, look, charge.turnDegreesPerSecond * dt);
+            }
+            return true;
+        }
+
+        void BeginCharge(BossAttackStateMachine machine)
+        {
+            chargeActive = true;
+            chargeReturning = false;
+            chargeStart = machine.AttackStart;
+            chargeTelegraph = machine.Attack.telegraphSeconds;
+            chargeOrigin = player.position;
+            var away = transform.position - chargeOrigin;
+            away.y = 0f;
+            chargeFrom = away.magnitude;
+            chargeForward = chargeFrom > 0.01f ? away / chargeFrom : -transform.forward;
+            chargeSafe = server.ChargeSafeSide == PilotSide.Left ? -1 : 1;
+            // 물러서 있던 만큼(다른 공격의 물러서기)은 시작 위치에 이미 들어 있다.
+            standOff = 0f;
+        }
+
         void Move(double now, BossAttackStateMachine machine)
         {
             var dt = Time.deltaTime;
@@ -391,15 +573,6 @@ namespace Anseong.Boss
                 // 처음에 크게, 끝에 묵직하게 멈춘다(밀려남과 같은 곡선).
                 transform.position = Vector3.Lerp(retreatFrom, retreatTo, 1f - (1f - r) * (1f - r));
                 if (r >= 1f) retreatStart = -1;
-                standOff = 0f;
-                return;
-            }
-            if (machine.State == BossState.KnockedBack && knockStart >= 0)
-            {
-                var t = Mathf.Clamp01((float)((now - knockStart) / knockbackSeconds));
-                // 처음에 크게, 끝에 묵직하게 멈춘다.
-                transform.position = Vector3.Lerp(knockFrom, knockTo, 1f - (1f - t) * (1f - t));
-                if (t >= 1f) knockStart = -1;
                 standOff = 0f;
                 return;
             }
@@ -453,7 +626,12 @@ namespace Anseong.Boss
 
         void FirstSight(BossAttackKind kind, double now)
         {
-            if (seen.Count == 1) Emit(CombatCue.CommanderLine, CommanderLines.IncomingAttack, now);
+            // 대사 7 "포탄이 온다"는 접근 장면 첫 포탄에 낸다(Ranged). 판 흐름이 없는 씬에서만 예전처럼 첫 공격에.
+            if (seen.Count == 1 && !FlowDirected && !saidIncoming)
+            {
+                saidIncoming = true;
+                Emit(CombatCue.CommanderLine, CommanderLines.IncomingAttack, now);
+            }
             switch (kind)
             {
                 case BossAttackKind.SlamBoth: Emit(CombatCue.CommanderLine, CommanderLines.FirstSlam, now); break;
@@ -510,7 +688,8 @@ namespace Anseong.Boss
                     break;
                 case CombatCue.GrabBreak:
                     if (server.Machine.State == BossState.Grabbed) server.Machine.Release(e.Time);
-                    Emit(CombatCue.CommanderLine, CommanderLines.GrabLost, e.Time);
+                    // 무기가 부서져 포효로 끊긴 잡기: 상실 대사와 겹치지 않게 "놓쳤다"는 내지 않는다.
+                    if (!paybackPending) Emit(CombatCue.CommanderLine, CommanderLines.GrabLost, e.Time);
                     // 뿌리친 보스는 바로 되갚는다(쉬는 시간 없이 다음 공격).
                     if (e.Amount >= 1f) nextAttackAt = e.Time + 0.3;
                     break;
@@ -532,6 +711,7 @@ namespace Anseong.Boss
             away.y = 0f;
             if (away.sqrMagnitude < 1e-4f) away = -transform.forward;
             machine.Hold(BossState.KnockedBack, now, knockbackSeconds);
+            chargeActive = false;
             knockFrom = transform.position;
             knockTo = knockFrom + away.normalized * knockbackMeters;
             knockStart = now;
@@ -567,6 +747,8 @@ namespace Anseong.Boss
             retreatTo = player.position + away.normalized * finisherDistance;
             retreatTo.y = retreatFrom.y;
             retreatStart = now;
+            knockStart = -1;
+            chargeActive = false;
         }
 
         void OnReset()
@@ -614,6 +796,10 @@ namespace Anseong.Boss
             list.AddToggle(g, "boss.auto", "보스 스스로 공격(끄면 \"보스 시험\" 공격)", () => autoAttack, v => autoAttack = v);
             list.AddFloat(g, "boss.walkSpeed", "걷는 속도(m/s)", () => walkSpeed, v => walkSpeed = v, 1f, 20f, 0.5f, 1);
             list.AddFloat(g, "boss.finisherDistance", "필살기 때 물러나는 거리(m, 0 = 그 자리)", () => finisherDistance, v => finisherDistance = v, 0f, 200f, 10f, 0);
+            list.AddFloat(g, "boss.paybackDelay", "무기 부서진 뒤 보복까지 뜸(초)", () => paybackDelay, v => paybackDelay = v, 0f, 3f, 0.1f, 1);
+            list.AddFloat(g, "boss.chargeClose", "돌진: 가장 가까이 오는 거리(m)", () => charge.closeDistance, v => charge.closeDistance = v, 8f, 30f, 1f, 0);
+            list.AddFloat(g, "boss.chargeSide", "돌진: 옆으로 비켜 스치는 거리(m)", () => charge.sideOffset, v => charge.sideOffset = v, 0f, 25f, 1f, 0);
+            list.AddFloat(g, "boss.chargeRun", "돌진: 달려오는 시간(초, 짧을수록 빠름)", () => charge.runSeconds, v => charge.runSeconds = v, 0.3f, 2f, 0.1f, 1);
         }
     }
 }

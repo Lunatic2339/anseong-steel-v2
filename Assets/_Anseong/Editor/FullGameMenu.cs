@@ -6,6 +6,7 @@ namespace Anseong.EditorTools
     /// <summary>
     /// 메뉴 하나로 한 판 전체를 조립한다(선우 11/12 "완성된 게임 한 번에"). 있는 메뉴를 순서대로 부를 뿐이라 따로 돌려도 결과가 같다.
     /// 보스 클립 읽기 → 보스 기술 에셋 → Main 조립(로봇·보스·XR·입력·전투·네트워크·판 흐름·드론·점검·맵 연출·HUD·효과·음악·영상) → 외골격 연결.
+    /// 정비고·크레인·컨베이어·사일로 소품(StagePropsMenu)은 Main 조립 안(Add Match Flow)에서 만들고, 파티클 재질이 생긴 뒤 여기서 한 번 더 만든다.
     /// 여러 번 실행해도 된다(있는 것은 그대로, 연결만 다시). 끝나면 Main을 Ctrl+S로 저장한다(Main은 선우만).
     /// </summary>
     public static class FullGameMenu
@@ -44,6 +45,9 @@ namespace Anseong.EditorTools
             // 이펙트 파티클(효과 표가 만들어진 뒤).
             Debug.Log(VfxBuilder.BuildAll());
             log.Append("✓ Build Combat VFX / ");
+            // 정비고·맵 장치 소품: 먼지·불꽃 재질이 방금 만들어졌을 수 있으니(첫 실행) 다시 조립해 파티클까지 넣는다.
+            Debug.Log("[FullGameMenu] " + StagePropsMenu.Build(UnityEngine.SceneManagement.SceneManager.GetActiveScene()));
+            log.Append("✓ Build Stage Props / ");
             Debug.Log(LookMenu.Apply(UnityEngine.SceneManagement.SceneManager.GetActiveScene()));
             log.Append("✓ Apply Battle Look / ");
             log.Append("끝. 콘솔의 각 메뉴 줄을 확인하고 Ctrl+S로 Main을 저장하세요.");

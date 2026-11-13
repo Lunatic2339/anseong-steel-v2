@@ -130,6 +130,16 @@ namespace Anseong.Combat
             New(CombatCue.ClashTick, KindFilter.Any, "SFX_GuardStrain", haptic: 0.6f, seconds: 0.3f),
             New(CombatCue.ClashWin, KindFilter.Any, "SFX_BossKnockback", haptic: 1f, seconds: 0.5f),
             New(CombatCue.ClashLose, KindFilter.Any, "SFX_RobotHit", haptic: 1f, seconds: 0.4f),
+            // 드론 보강(11/13): 흩어짐·날아옴, 장갑 튕김, 달려드는 경고, 해킹 드론 붙잡기
+            New(CombatCue.DroneScatter, KindFilter.Any, "SFX_DroneLaunch", atHitPoint: true),
+            New(CombatCue.CannonRicochet, KindFilter.Any, "SFX_ArmorRicochet", atHitPoint: true),
+            New(CombatCue.DroneWarn, KindFilter.Any, "SFX_DroneBeep", atHitPoint: true, pitch: 1f),
+            New(CombatCue.HackGrab, KindFilter.Any, "SFX_HackGrab", haptic: 0.6f, seconds: 0.1f),
+            // 정비고·맵 장치(11/13): 공 던지기, 무장 달기, 출격 문, 코일 충돌. 전용 소리가 오기 전까지 있는 소리로.
+            WithAmount(New(CombatCue.WeaponMount, KindFilter.Any, "SFX_EquipClank", haptic: 0.5f, seconds: 0.1f), 0),
+            New(CombatCue.HangarDoor, KindFilter.Any, "SFX_HangarDoor", atHitPoint: true),
+            New(CombatCue.MapImpact, KindFilter.Any, "SFX_MapImpact", atHitPoint: true, haptic: 1f, seconds: 0.4f),
+            New(CombatCue.CheckupBall, KindFilter.Any, "SFX_BallLauncher", atHitPoint: true),
             // M3-03 협동 이동(둘이 같은 방향으로 밀면 승인음)
             New(CombatCue.MoveStart, KindFilter.Any, "SFX_MoveConfirm", pitch: 1f),
             // M5-02 대본 사건(M4 새 사건, 파일이 없으면 무음)

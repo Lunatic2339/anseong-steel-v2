@@ -106,12 +106,15 @@ namespace Anseong.Combat
         /// <summary>
         /// 보스 공격 명중 순간(서버). 가드·회피를 판정해 사건을 더하고, 맞으면 조종사 HP를 깎고 연계를 끊는다.
         /// 결과가 성공(막음·피함)이면 보스 빈틈이 길어진다(상태기계에 넘김).
+        /// dodgeDirection = 피해야 하는 쪽(-1 왼쪽, +1 오른쪽, 돌진). 0이면 아무 쪽으로 피해도 인정(충격파).
         /// </summary>
-        public DefenseResult ResolveBossStrike(BossCounter counter, PilotSide incoming, float failDamage, int attackCode, double serverTime, List<CombatEvent> events)
+        public DefenseResult ResolveBossStrike(BossCounter counter, PilotSide incoming, float failDamage, int attackCode, double serverTime, List<CombatEvent> events,
+            int dodgeDirection = 0)
         {
+            var dodged = dodge.Dodged(serverTime, dodgeDirection);
             var result = ShieldBothSides
-                ? DefenseRules.JudgeShield(counter, incoming, guarding[0], cover[0], guarding[1], dodge.Dodged(serverTime))
-                : DefenseRules.Judge(counter, incoming, guarding[0], guarding[1], dodge.Dodged(serverTime));
+                ? DefenseRules.JudgeShield(counter, incoming, guarding[0], cover[0], guarding[1], dodged)
+                : DefenseRules.Judge(counter, incoming, guarding[0], guarding[1], dodged);
             switch (result)
             {
                 case DefenseResult.Blocked:

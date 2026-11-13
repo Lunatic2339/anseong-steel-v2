@@ -143,6 +143,21 @@ namespace Anseong.Pilot
         /// </summary>
         public Func<Vector3, Vector3> TargetModifier { get; set; }
 
+        float responseScale = 1f;
+
+        /// <summary>
+        /// 팔 반응 배율(1 = 평소, 작을수록 느림). 해킹 드론이 붙으면 드론 감독(DroneDirector)이 낮춘다(대본 장면 8).
+        /// 이 팔을 직접 모는 PC에서만 쓰인다. 상대 PC는 느려진 뼈 회전을 그대로 받아 그린다(PilotPoseSync).
+        /// </summary>
+        public float ResponseScale
+        {
+            get => responseScale;
+            set => responseScale = Mathf.Clamp(value, 0.05f, 1f);
+        }
+
+        /// <summary>해킹으로 느려졌을 때, 즉시 따라가는 설정이어도 이만큼은 늦게 따라간다(초).</summary>
+        const float SlowedMinResponseSeconds = 0.15f;
+
         public ArmMappingMode MappingMode
         {
             get => mappingMode;
@@ -227,6 +242,7 @@ namespace Anseong.Pilot
                 return;
             }
 
+            var slowed = responseScale < 0.999f;
             if (!active)
             {
                 filteredLocal = local;
@@ -235,20 +251,22 @@ namespace Anseong.Pilot
             }
             else if (responseMode == ArmResponseMode.PathAccelerate)
             {
-                filteredLocal = pathFollower.Step(local, length, dt, path);
+                // 해킹으로 느려지면 따라가는 시간을 통째로 늦춘다(출발·가속·최대 속도가 같은 비율로 준다).
+                filteredLocal = pathFollower.Step(local, length, dt * responseScale, path);
                 filteredVelocity = Vector3.zero;
             }
-            else if (responseSeconds <= 0f && maxTargetSpeed <= 0f)
+            else if (responseSeconds <= 0f && maxTargetSpeed <= 0f && !slowed)
             {
                 filteredLocal = local;
                 filteredVelocity = Vector3.zero;
                 pathFollower.Reset(local);
             }
-            else if (responseSeconds > 0f)
+            else if (responseSeconds > 0f || slowed)
             {
                 pathFollower.Reset(local);
-                filteredLocal = Vector3.SmoothDamp(filteredLocal, local, ref filteredVelocity, responseSeconds,
-                    maxTargetSpeed > 0f ? maxTargetSpeed : Mathf.Infinity, dt);
+                var seconds = (slowed ? Mathf.Max(responseSeconds, SlowedMinResponseSeconds) : responseSeconds) / responseScale;
+                filteredLocal = Vector3.SmoothDamp(filteredLocal, local, ref filteredVelocity, seconds,
+                    maxTargetSpeed > 0f ? maxTargetSpeed * responseScale : Mathf.Infinity, dt);
             }
             else
             {

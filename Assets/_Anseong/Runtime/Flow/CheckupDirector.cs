@@ -1,3 +1,4 @@
+using System.Collections.Generic;
 using Anseong.Boss;
 using Anseong.Combat;
 using Anseong.Net;
@@ -8,27 +9,43 @@ using UnityEngine;
 namespace Anseong.Flow
 {
     /// <summary>
-    /// 기체 점검(M4-05 프로토타입, 장면 1 "정비고에서 무장 달기"). 서버가 단계를 정하고 판 흐름에 실어 복제한다.
-    /// 1-1 두 팔 보정 끝 → 1-2 철판 셋 앞에서 번갈아 세 번 + 트리거 → 철판 날아감 → 1-3 검·방패 장착, 공 막기 3번(오는 쪽은 오른쪽 HUD에만)
-    /// → 1-4 스캐너·포 장착 설명 → 1-5 둘이 같이 스틱 앞으로 = 출격.
-    /// 철판은 도형(윤주 정비고 자리가 오면 그 위치로). 메뉴 'Add Match Flow'가 Combat Server에 붙인다.
+    /// 기체 점검(M4-05, 장면 1 "정비고에서 무장 달기"). 서버가 단계를 정하고 판 흐름에 실어 복제한다.
+    /// 1-1 두 팔 보정 끝 → 1-2 철판 셋 앞에서 번갈아 세 번 + 트리거 → 철판 날아감 → 1-3 검·방패 장착, 정비 로봇이 던지는 공 막기(오는 쪽은 오른쪽 HUD에만)
+    /// → 1-4 스캐너·포 장착 설명 → 1-5 둘이 같이 스틱 앞으로 → 정비고 문이 무겁게 열리고 → 다 열리면 장면 2.
+    /// 정비고·정비 로봇·공의 겉모습은 <see cref="CheckupBay"/>(메뉴 'Build Stage Props'가 만들어 칸에 넣는다). 비어 있어도 규칙은 그대로 돈다.
+    /// 공은 조준 시작 때 닿는 시각을 정해 사건(<see cref="CombatCue.CheckupBall"/>)으로 보내고, 그 시각에 서버가 방패 판정을 한다(그림과 판정이 같은 순간).
+    /// 메뉴 'Add Match Flow'가 Combat Server에 붙인다.
     /// </summary>
     public class CheckupDirector : NetworkBehaviour
     {
         [SerializeField, Min(1), Tooltip("관절 시험: 좌우 번갈아 몇 번(대본 3).")]
         int alternations = 3;
-        [SerializeField, Min(1), Tooltip("공 막기 연습: 몇 번 막으면 넘어가나.")]
-        int drillBlocks = 3;
-        [SerializeField, Min(0.5f), Tooltip("공이 오는 예고 시간(초).")]
-        float drillTelegraph = 2f;
-        [SerializeField, Min(0.5f), Tooltip("공 사이 쉬는 시간(초).")]
-        float drillRest = 2f;
+        [SerializeField, Tooltip("공 막기 연습(장면 1-3): 횟수·예고·날아오는 시간·간격.")]
+        ShieldDrillSettings drill = new ShieldDrillSettings();
         [SerializeField, Min(1f), Tooltip("스캐너·포 설명 뒤 출격 안내까지(초).")]
         float briefSeconds = 5f;
+        [SerializeField, Range(0.5f, 6f), Tooltip("출격 문이 열리는 시간(초). 다 열린 뒤 장면 2로 넘어간다.")]
+        float doorSeconds = 2.8f;
+
+        [Header("정비고 (메뉴 'Build Stage Props'가 넣는다)")]
+        [SerializeField, Tooltip("정비고 벽·문 + 정비 로봇. 비면 겉모습 없이 규칙만.")]
+        CheckupBay bay;
+        [SerializeField, Tooltip("공이 오는 쪽 글자(XR 카메라 아래, 오른쪽 조종사 PC에만 켠다).")]
+        TextMesh ballCallout;
+        [SerializeField, Tooltip("공 글자를 눈앞 가운데에서 옆으로 띄우는 거리(m, 카메라 기준). 오는 쪽에 뜬다.")]
+        Vector3 calloutOffset = new Vector3(0.17f, 0.04f, 0.9f);
+        [SerializeField, Tooltip("공 글자에 쓸 글꼴(이 PC에 설치된 것 중 먼저 찾은 것).")]
+        string[] osFontNames = { "Malgun Gothic", "맑은 고딕", "Arial" };
 
         [Header("철판 (조종사 루트 기준 m)")]
         [SerializeField] Vector3[] plateOffsets = { new Vector3(-12f, 30f, 28f), new Vector3(0f, 34f, 30f), new Vector3(12f, 30f, 28f) };
         [SerializeField] Vector3 plateSize = new Vector3(8f, 10f, 1f);
+        [SerializeField, Min(0f), Tooltip("철판이 날아가는 빠르기(m/s). 정비고 문 앞에 떨어지게 느리고 묵직하게.")]
+        float plateFlySpeed = 12f;
+        [SerializeField, Min(0f), Tooltip("철판이 위로 뜨는 빠르기(m/s).")]
+        float plateFlyUp = 6f;
+        [SerializeField, Min(0.5f), Tooltip("날아간 철판이 사라지기까지(초).")]
+        float plateSeconds = 4.5f;
         [SerializeField] Material shapeMaterial;
         [SerializeField, Tooltip("M4-08 철판 표적 모델(성재 Meshy, Checkup_SteelPlate). 비면 도형 상자. 모델 크기 그대로, 원점 = 바닥 가운데.")]
         GameObject platePrefab;
@@ -37,17 +54,21 @@ namespace Anseong.Flow
         CombatServer combat;
         PilotCalibrationFlow calibration;
         PilotHandInput input;
+        SessionBootstrap session;
         Transform player;
         readonly AlternationCounter counter = new AlternationCounter();
+        readonly List<CombatEvent> scratch = new List<CombatEvent>(8);
         readonly bool[] calibrated = new bool[2];
+        ShieldDrill drillRules;
         CheckupStep step;
-        double stepStart, drillAt;
-        int blocks;
-        bool drillPending, triggerArmed;
-        PilotSide drillSide;
-        bool bound, reportedCalibration, triggerWasDown;
+        double stepStart, doorDoneAt, calloutUntil;
+        bool triggerArmed, doorOpening;
+        bool bound, cueBound, reportedCalibration, triggerWasDown, bayInside, bayKnown;
+        CombatDirector cueSource;
+        MeshRenderer calloutRenderer;
         GameObject[] plates;
         bool[] flown;
+        float[] flownAt;
 
         public override void OnNetworkSpawn()
         {
@@ -55,10 +76,14 @@ namespace Anseong.Flow
             combat = GetComponent<CombatServer>();
             calibration = FindAnyObjectByType<PilotCalibrationFlow>();
             input = FindAnyObjectByType<PilotHandInput>();
+            session = FindAnyObjectByType<SessionBootstrap>();
             var seat = FindAnyObjectByType<CockpitSeat>();
             if (seat != null) player = seat.transform.root;
             if (flow != null) flow.CheckupControlled = true;
             if (flow != null) flow.SceneChanged += OnScene;
+            if (bay != null) bay.Bind(player);
+            bayKnown = false;
+            SetUpCallout();
             BuildPlates();
         }
 
@@ -66,7 +91,10 @@ namespace Anseong.Flow
         {
             if (flow != null) flow.SceneChanged -= OnScene;
             if (bound && combat != null) combat.ServerCue -= OnCue;
-            bound = false;
+            if (cueBound && cueSource != null) cueSource.Cue -= OnClientCue;
+            bound = cueBound = false;
+            cueSource = null;
+            if (calloutRenderer != null) calloutRenderer.enabled = false;
         }
 
         void Update()
@@ -92,10 +120,32 @@ namespace Anseong.Flow
                 case CheckupStep.GunBrief:
                     if (now - stepStart >= briefSeconds) Go(CheckupStep.Sortie, now);
                     break;
+                case CheckupStep.Sortie:
+                    // 문이 다 열린 뒤에 장면 2(마당 등장)로.
+                    if (doorOpening && now >= doorDoneAt)
+                    {
+                        doorOpening = false;
+                        Emit(CombatCue.HangarDoor, 1, now, PilotSide.Left, 0f, 0f, DoorPoint);
+                        flow.ServerSignal(MatchSignal.CheckupDone);
+                        combat.Flush();
+                    }
+                    break;
             }
         }
 
         double Now => NetworkManager != null ? NetworkManager.ServerTime.Time : 0d;
+
+        /// <summary>서버: 공 막기 연습에서 공이 조준·비행 중이면 true와 오는 쪽(자동 점검이 방패를 그쪽으로 든다).</summary>
+        public bool BallIncoming(out PilotSide side)
+        {
+            side = drillRules != null ? drillRules.Side : PilotSide.Left;
+            return IsServer && step == CheckupStep.ShieldDrill && drillRules != null && drillRules.InFlight;
+        }
+
+        Vector3 DoorPoint => bay != null ? bay.DoorCenter : player != null ? player.position + player.forward * 78f : Vector3.zero;
+
+        Vector3 BallPoint(PilotSide side) =>
+            bay != null ? bay.BallTarget(side) : player != null ? player.position + player.rotation * new Vector3(side == PilotSide.Left ? -6f : 6f, 50f, 13f) : Vector3.zero;
 
         void OnScene(MatchScene scene, MatchScene previous)
         {
@@ -104,8 +154,8 @@ namespace Anseong.Flow
             {
                 calibrated[0] = calibrated[1] = false;
                 counter.Reset();
-                blocks = 0;
-                drillPending = triggerArmed = false;
+                triggerArmed = doorOpening = false;
+                drillRules = null;
                 Go(CheckupStep.Connect, Now);
             }
         }
@@ -120,9 +170,13 @@ namespace Anseong.Flow
             {
                 case CheckupStep.Connect: Line(CommanderLines.Reach, now); break;
                 case CheckupStep.JointTest: Line(CommanderLines.JointTest, now); counter.Reset(); triggerArmed = false; break;
-                case CheckupStep.ShieldDrill: Line(CommanderLines.CallOut, now); blocks = 0; drillAt = now + drillRest; break;
+                case CheckupStep.ShieldDrill:
+                    Line(CommanderLines.CallOut, now);
+                    drillRules = new ShieldDrill(drill);
+                    drillRules.Begin(now);
+                    break;
                 case CheckupStep.GunBrief: Line(CommanderLines.WeaponsBrief, now); break;
-                case CheckupStep.Sortie: Line(CommanderLines.PushTogether, now); break;
+                case CheckupStep.Sortie: Line(CommanderLines.PushTogether, now); doorOpening = false; break;
             }
             combat.Flush();
         }
@@ -143,47 +197,68 @@ namespace Anseong.Flow
                     }
                     break;
                 case CheckupStep.Sortie:
-                    if (e.Cue == CombatCue.MoveStart && (MoveKind)(int)e.Amount == MoveKind.Approach) flow.ServerSignal(MatchSignal.CheckupDone);
+                    // 둘이 같이 스틱을 앞으로 → 문이 열리기 시작한다. 다 열리면 Update가 장면을 넘긴다.
+                    if (e.Cue == CombatCue.MoveStart && (MoveKind)(int)e.Amount == MoveKind.Approach && !doorOpening)
+                    {
+                        doorOpening = true;
+                        doorDoneAt = e.Time + doorSeconds;
+                        Emit(CombatCue.HangarDoor, 0, e.Time, PilotSide.Left, doorSeconds, 0f, DoorPoint);
+                    }
                     break;
             }
         }
 
-        /// <summary>1-3 공 막기: 예고(오른쪽 HUD에만 방향) → 명중 순간에 방패 판정(피해 0).</summary>
+        /// <summary>
+        /// 1-3 공 막기: 조준(오는 쪽은 오른쪽 HUD에만) → 던짐 → 닿는 순간에 방패 판정. 못 막아도 피해는 없다(연습).
+        /// 닿는 시각은 조준을 시작할 때 사건에 실어 보내므로 각 PC의 공이 그 순간 방패 자리에 온다.
+        /// </summary>
         void Drill(double now)
         {
-            if (!drillPending && now >= drillAt)
+            if (drillRules == null)
             {
-                drillPending = true;
-                drillSide = Random.value < 0.5f ? PilotSide.Left : PilotSide.Right;
-                drillAt = now + drillTelegraph;
-                combat.Events.Add(new CombatEvent
-                {
-                    Cue = CombatCue.BossTelegraph, Side = drillSide, Kind = PunchKind.None, Time = now,
-                    Code = (int)(drillSide == PilotSide.Left ? BossAttackKind.PunchLeft : BossAttackKind.PunchRight),
-                    BossHealth = combat.Authority.Resolver.Boss.Current,
-                });
-                combat.Flush();
-                return;
+                drillRules = new ShieldDrill(drill);
+                drillRules.Begin(now);
             }
-            if (drillPending && now >= drillAt)
+            switch (drillRules.Update(now, Random.value))
             {
-                drillPending = false;
-                drillAt = now + drillRest;
-                var need = drillSide == PilotSide.Left ? BossCounter.LeftGuard : BossCounter.RightGuard;
-                var result = combat.Authority.ResolveBossStrike(need, drillSide, 0f, -1, now, combat.Events);
-                if (DefenseRules.IsSuccess(result)) blocks++;
-                combat.Flush();
-                if (blocks >= drillBlocks) Go(CheckupStep.GunBrief, now);
+                case DrillStep.Aim:
+                    Emit(CombatCue.CheckupBall, 0, now, drillRules.Side, drill.aimSeconds, drill.flightSeconds, BallPoint(drillRules.Side));
+                    combat.Flush();
+                    break;
+                case DrillStep.Impact:
+                    var side = drillRules.Side;
+                    var need = side == PilotSide.Left ? BossCounter.LeftGuard : BossCounter.RightGuard;
+                    // 판정만 빌려 쓴다: 피해 0, 피격 사건(경보·붉은 화면)은 내보내지 않는다.
+                    scratch.Clear();
+                    var blocked = DefenseRules.IsSuccess(combat.Authority.ResolveBossStrike(need, side, 0f, -1, now, scratch));
+                    var point = BallPoint(side);
+                    if (blocked)
+                        foreach (var made in scratch)
+                        {
+                            if (made.Cue != CombatCue.GuardBlock) continue;
+                            // 막기 소리·진동·외골격 저항은 실전과 같은 사건으로.
+                            var block = made;
+                            block.Point = point;
+                            combat.Events.Add(block);
+                        }
+                    Emit(CombatCue.CheckupBall, blocked ? 1 : 2, now, side, 0f, 0f, point);
+                    drillRules.Report(blocked, now);
+                    combat.Flush();
+                    break;
+                case DrillStep.Done:
+                    Go(CheckupStep.GunBrief, now);
+                    break;
             }
         }
 
         void Line(int line, double now) => Emit(CombatCue.CommanderLine, line, now, PilotSide.Left);
 
-        void Emit(CombatCue cue, int code, double now, PilotSide side)
+        void Emit(CombatCue cue, int code, double now, PilotSide side, float amount = 0f, float damage = 0f, Vector3 point = default)
         {
             combat.Events.Add(new CombatEvent
             {
-                Cue = cue, Side = side, Kind = PunchKind.None, Code = code, Time = now, BossHealth = combat.Authority.Resolver.Boss.Current,
+                Cue = cue, Side = side, Kind = PunchKind.None, Code = code, Time = now, Amount = amount, Damage = damage, Point = point,
+                BossHealth = combat.Authority.Resolver.Boss.Current,
             });
         }
 
@@ -201,10 +276,20 @@ namespace Anseong.Flow
 
         // ── 모든 PC ──
 
+        /// <summary>공이 오는 쪽을 이 PC가 보는가: 오른쪽 조종사(클라이언트)와 1인 양팔만(대본 "오른쪽 HUD에만").</summary>
+        bool SeesBallSide => session == null || session.Mode == SessionMode.SoloBothArms || session.Mode == SessionMode.Client;
+
         void ClientTick()
         {
             if (!IsSpawned || flow == null) return;
-            var inCheckup = flow.Scene == MatchScene.Checkup;
+            if (!cueBound && combat != null && combat.Director != null)
+            {
+                cueSource = combat.Director;
+                cueSource.Cue += OnClientCue;
+                cueBound = true;
+            }
+            var scene = flow.Scene;
+            var inCheckup = scene == MatchScene.Checkup;
             if (!inCheckup) reportedCalibration = false;
             if (inCheckup && calibration != null && calibration.IsComplete && !reportedCalibration && input != null)
             {
@@ -219,12 +304,81 @@ namespace Anseong.Flow
             if (trigger && !triggerWasDown && inCheckup && flow.CheckupStep == (int)CheckupStep.JointTest) TriggerRpc();
             triggerWasDown = trigger;
             UpdatePlates(inCheckup && flow.CheckupStep <= (int)CheckupStep.JointTest);
+            TickBay(scene, inCheckup);
+            if (calloutRenderer != null && calloutRenderer.enabled && (Now > calloutUntil || !inCheckup)) calloutRenderer.enabled = false;
+        }
+
+        /// <summary>정비고: 대기·오프닝·점검 동안은 닫혀 서 있고, 그 밖의 장면이 되면 땅속으로 내려간다. 판을 다시 시작하면 다시 선다.</summary>
+        void TickBay(MatchScene scene, bool inCheckup)
+        {
+            if (bay == null) return;
+            var inside = inCheckup || scene == MatchScene.Waiting || scene == MatchScene.Opening;
+            if (!bayKnown || inside != bayInside)
+            {
+                bayKnown = true;
+                bayInside = inside;
+                if (inside) bay.SetClosed();
+                else bay.Leave(Now);
+            }
+            bay.ShowThrower(inCheckup && flow.CheckupStep == (int)CheckupStep.ShieldDrill);
+            bay.Tick(Now);
+        }
+
+        void OnClientCue(CombatEvent e)
+        {
+            switch (e.Cue)
+            {
+                case CombatCue.CheckupBall:
+                    if (e.Code == 0)
+                    {
+                        var release = e.Time + e.Amount;
+                        var impact = release + e.Damage;
+                        if (bay != null) bay.Aim(e.Side, e.Time, release, impact);
+                        ShowCallout(e.Side, impact);
+                    }
+                    else
+                    {
+                        if (bay != null) bay.BallResult(e.Code == 1);
+                        if (calloutRenderer != null) calloutRenderer.enabled = false;
+                    }
+                    break;
+                case CombatCue.HangarDoor:
+                    if (e.Code == 0 && bay != null) bay.OpenDoors(e.Time, e.Amount);
+                    break;
+            }
+        }
+
+        void SetUpCallout()
+        {
+            if (ballCallout == null) return;
+            calloutRenderer = ballCallout.GetComponent<MeshRenderer>();
+            var font = osFontNames != null && osFontNames.Length > 0
+                ? Font.CreateDynamicFontFromOSFont(osFontNames, ballCallout.fontSize > 0 ? ballCallout.fontSize : 32) : null;
+            if (font != null)
+            {
+                ballCallout.font = font;
+                if (calloutRenderer != null) calloutRenderer.sharedMaterial = font.material;
+            }
+            if (calloutRenderer != null) calloutRenderer.enabled = false;
+        }
+
+        void ShowCallout(PilotSide side, double until)
+        {
+            if (ballCallout == null || calloutRenderer == null || !SeesBallSide) return;
+            var left = side == PilotSide.Left;
+            ballCallout.text = left ? "◀◀ 왼쪽에서 공!" : "오른쪽에서 공! ▶▶";
+            var offset = calloutOffset;
+            offset.x = left ? -Mathf.Abs(offset.x) : Mathf.Abs(offset.x);
+            ballCallout.transform.localPosition = offset;
+            calloutRenderer.enabled = true;
+            calloutUntil = until;
         }
 
         void BuildPlates()
         {
             plates = new GameObject[plateOffsets.Length];
             flown = new bool[plateOffsets.Length];
+            flownAt = new float[plateOffsets.Length];
             for (var i = 0; i < plates.Length; i++) plates[i] = MakePlate(i);
         }
 
@@ -273,15 +427,17 @@ namespace Anseong.Flow
                 }
                 else if (plate.activeSelf && !flown[i] && flow.Scene == MatchScene.Checkup)
                 {
-                    // 트리거 → 철판이 날아간다.
+                    // 트리거 → 철판이 날아간다(정비고 안에 떨어지게 느리고 묵직하게).
                     flown[i] = true;
+                    flownAt[i] = Time.time;
                     var body = plate.GetComponent<Rigidbody>();
                     if (body == null) body = plate.AddComponent<Rigidbody>();
                     body.mass = 50f;
-                    body.linearVelocity = (player != null ? player.forward : Vector3.forward) * 40f + Vector3.up * 10f;
-                    body.angularVelocity = Random.insideUnitSphere * 4f;
+                    body.linearVelocity = (player != null ? player.forward : Vector3.forward) * plateFlySpeed + Vector3.up * plateFlyUp;
+                    body.angularVelocity = Random.insideUnitSphere * 3f;
                 }
-                else if (flow.Scene != MatchScene.Checkup && plate.activeSelf) plate.SetActive(false);
+                else if (plate.activeSelf && (flow.Scene != MatchScene.Checkup || (flown[i] && Time.time - flownAt[i] > plateSeconds)))
+                    plate.SetActive(false);
             }
         }
     }
