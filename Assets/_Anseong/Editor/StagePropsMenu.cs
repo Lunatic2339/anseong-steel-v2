@@ -20,7 +20,7 @@ namespace Anseong.EditorTools
     /// - 공이 오는 쪽 글자(XR 카메라 아래), 무장 장착 불꽃(플레이어 로봇 아래).
     /// 자리는 조종사 로봇이 처음 서는 곳 기준(m, +Z = 정면). 마당(X -160~150, Z -270~290) 안, 둘레 구조물(AiModelFit.SceneryTable) 안쪽.
     /// 'Add Match Flow'(그래서 Build M1 Main·Build Full Game)가 부른다. 여러 번 실행하면 지우고 다시 만든다. 씬 저장은 사람이 한다.
-    /// 재질은 Art/Environment/Props/*.mat(URP Lit, 에디터에서만 셰이더를 찾는다), 먼지·불꽃은 VfxBuilder의 파티클 재질.
+    /// 재질은 Art/Environment/Props/*.mat(낡은 도장 강철 셰이더 IndustrialProp, 없으면 URP Lit. 에디터에서만 셰이더를 찾는다), 먼지·불꽃은 VfxBuilder의 파티클 재질.
     /// </summary>
     public static class StagePropsMenu
     {
@@ -31,6 +31,8 @@ namespace Anseong.EditorTools
         const string FacadeMaterialPath = "Assets/_Anseong/Art/Environment/Facade/IndustrialFacade.mat";
         const string SmokeMaterialPath = "Assets/_Anseong/Art/VFX/Materials/VFX_Smoke_Blend.mat";
         const string SparkMaterialPath = "Assets/_Anseong/Art/VFX/Materials/VFX_Spark_Add.mat";
+        // 소품 재질 셰이더(낡은 도장 강철). 없으면 URP Lit 단색으로 만든다.
+        const string PropShaderPath = MaterialFolder + "/IndustrialProp.shader";
 
         // 정비고(조종사 로봇 기준 m): 안쪽 반폭, 뒷벽 Z, 문 Z, 벽 높이. 문은 눈높이(약 60 m)에서 120 m 밖 보스를 가릴 만큼 높다.
         const float HangarHalf = 46f, HangarBack = -38f, HangarDoor = 78f, HangarHeight = 86f;
@@ -49,7 +51,12 @@ namespace Anseong.EditorTools
         static readonly int SmoothnessId = Shader.PropertyToID("_Smoothness");
         static readonly int EmissionColorId = Shader.PropertyToID("_EmissionColor");
 
-        static Material steel, paint, hazard, rust, concrete, dark, lamp, wall, coilSteel, smoke, spark;
+        static Material steel, paint, hazard, hazardStripe, rust, concrete, dark, lamp, wall, coilSteel, smoke, spark;
+        static Shader propShader;
+        // 원통·공에 쓰는 짝 재질(무늬를 둘레로 감는다). 상자용 재질 → 둥근 것용.
+        static readonly Dictionary<Material, Material> RoundOf = new Dictionary<Material, Material>();
+        // 이 이름이 들어간 노란 도형은 사선 경고 띠 재질로 바꾼다(넓은 몸통은 그냥 노란 도장).
+        static readonly string[] StripeNames = { "Hazard Band", "Stripe", "Bumper", "End Stop", "Tower Band", "Warning Block" };
 
         [MenuItem("Anseong/Setup/Build Stage Props (정비고·맵 장치)", priority = 5)]
         static void BuildInActiveScene()
@@ -615,6 +622,8 @@ namespace Anseong.EditorTools
             go.transform.localPosition = localPosition;
             go.transform.localRotation = localRotation;
             go.transform.localScale = scale;
+            if (material == hazard && hazardStripe != null && StripeNames.Any(name.Contains)) material = hazardStripe;
+            if (type != PrimitiveType.Cube && material != null && RoundOf.TryGetValue(material, out var round)) material = round;
             if (material != null) go.GetComponent<Renderer>().sharedMaterial = material;
             return go.transform;
         }
@@ -744,13 +753,17 @@ namespace Anseong.EditorTools
         {
             if (!AssetDatabase.IsValidFolder(MaterialParent)) AssetDatabase.CreateFolder("Assets/_Anseong/Art", "Environment");
             if (!AssetDatabase.IsValidFolder(MaterialFolder)) AssetDatabase.CreateFolder(MaterialParent, "Props");
-            steel = Lit("Prop_Steel", new Color(0.27f, 0.29f, 0.32f), 0.75f, 0.42f);
-            paint = Lit("Prop_PaintedSteel", new Color(0.5f, 0.54f, 0.57f), 0.45f, 0.35f);
-            hazard = Lit("Prop_HazardYellow", new Color(0.92f, 0.66f, 0.08f), 0.25f, 0.4f);
-            rust = Lit("Prop_OxideRed", new Color(0.5f, 0.2f, 0.13f), 0.35f, 0.3f);
-            concrete = Lit("Prop_Concrete", new Color(0.47f, 0.47f, 0.45f), 0f, 0.15f);
-            dark = Lit("Prop_DarkRubber", new Color(0.08f, 0.085f, 0.09f), 0.2f, 0.25f);
-            coilSteel = Lit("Prop_CoilSteel", new Color(0.66f, 0.68f, 0.72f), 0.95f, 0.62f);
+            propShader = AssetDatabase.LoadAssetAtPath<Shader>(PropShaderPath);
+            RoundOf.Clear();
+            // 낡음: 모서리 벗겨짐, 녹, 아래쪽 때, 패널 크기(m).
+            steel = Lit("Prop_Steel", new Color(0.27f, 0.29f, 0.32f), 0.75f, 0.42f, wear: 0.35f, rustAmount: 0.3f, grime: 0.25f, panel: 8f);
+            paint = Lit("Prop_PaintedSteel", new Color(0.5f, 0.54f, 0.57f), 0.45f, 0.35f, wear: 0.5f, rustAmount: 0.24f, grime: 0.3f, panel: 6f);
+            hazard = Lit("Prop_HazardYellow", new Color(0.92f, 0.66f, 0.08f), 0.25f, 0.4f, wear: 0.55f, rustAmount: 0.18f, grime: 0.3f, panel: 5f);
+            hazardStripe = Lit("Prop_HazardStripe", new Color(0.92f, 0.66f, 0.08f), 0.25f, 0.4f, wear: 0.45f, rustAmount: 0.12f, grime: 0.2f, panel: 12f, stripe: 3f);
+            rust = Lit("Prop_OxideRed", new Color(0.5f, 0.2f, 0.13f), 0.35f, 0.3f, wear: 0.4f, rustAmount: 0.38f, grime: 0.3f, panel: 7f);
+            concrete = Lit("Prop_Concrete", new Color(0.47f, 0.47f, 0.45f), 0f, 0.15f, wear: 0f, rustAmount: 0f, grime: 0.35f, panel: 10f);
+            dark = Lit("Prop_DarkRubber", new Color(0.08f, 0.085f, 0.09f), 0.2f, 0.25f, wear: 0.25f, rustAmount: 0f, grime: 0.1f, panel: 6f);
+            coilSteel = Lit("Prop_CoilSteel", new Color(0.66f, 0.68f, 0.72f), 0.95f, 0.62f, wear: 0f, rustAmount: 0.1f, grime: 0f, panel: 0.6f);
             lamp = Lit("Prop_LampAmber", new Color(1f, 0.62f, 0.12f), 0f, 0.5f, new Color(1f, 0.55f, 0.1f) * 3f);
             if (steel == null) return false;
             wall = WallMaterial();
@@ -780,28 +793,62 @@ namespace Anseong.EditorTools
             return material;
         }
 
-        /// <summary>URP Lit 재질(있으면 값만 다시 맞춘다). 셰이더는 에디터에서만 찾는다(런타임 Shader.Find 금지).</summary>
-        static Material Lit(string name, Color baseColor, float metallic, float smoothness, Color emission = default)
+        /// <summary>
+        /// 소품 재질(있으면 값만 다시 맞춘다). 소품 셰이더(IndustrialProp)가 있고 빛나는 재질이 아니면 그 셰이더로,
+        /// 아니면 URP Lit 단색으로 만든다. 셰이더는 에디터에서만 찾는다(런타임 Shader.Find 금지).
+        /// 소품 셰이더 재질은 원통·공용 짝(_Round)도 같이 만들어 <see cref="RoundOf"/>에 넣는다.
+        /// </summary>
+        static Material Lit(string name, Color baseColor, float metallic, float smoothness, Color emission = default,
+            float wear = 0.4f, float rustAmount = 0.2f, float grime = 0.25f, float panel = 6f, float stripe = 0f)
+        {
+            var glowing = emission.maxColorComponent > 0f;
+            var shader = !glowing && propShader != null ? propShader : Shader.Find("Universal Render Pipeline/Lit");
+            if (shader == null) return null;
+            var material = MaterialAsset(name, shader);
+            Fill(material, false);
+            if (shader == propShader)
+            {
+                var round = MaterialAsset(name + "_Round", shader);
+                Fill(round, true);
+                RoundOf[material] = round;
+            }
+            return material;
+
+            void Fill(Material target, bool isRound)
+            {
+                target.SetColor(BaseColorId, baseColor);
+                target.SetFloat(MetallicId, metallic);
+                target.SetFloat(SmoothnessId, smoothness);
+                if (shader == propShader)
+                {
+                    target.SetFloat("_WearStrength", wear);
+                    target.SetFloat("_RustAmount", rustAmount);
+                    target.SetFloat("_GrimeStrength", grime);
+                    target.SetFloat("_PanelSize", panel);
+                    target.SetFloat("_Stripe", stripe > 0f ? 1f : 0f);
+                    if (stripe > 0f) target.SetFloat("_StripeSize", stripe);
+                    target.SetFloat("_Round", isRound ? 1f : 0f);
+                }
+                if (glowing)
+                {
+                    target.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
+                    target.SetColor(EmissionColorId, emission);
+                    target.SetKeyword(new LocalKeyword(target.shader, "_EMISSION"), true);
+                }
+                EditorUtility.SetDirty(target);
+            }
+        }
+
+        static Material MaterialAsset(string name, Shader shader)
         {
             var path = $"{MaterialFolder}/{name}.mat";
             var material = AssetDatabase.LoadAssetAtPath<Material>(path);
             if (material == null)
             {
-                var shader = Shader.Find("Universal Render Pipeline/Lit");
-                if (shader == null) return null;
                 material = new Material(shader);
                 AssetDatabase.CreateAsset(material, path);
             }
-            material.SetColor(BaseColorId, baseColor);
-            material.SetFloat(MetallicId, metallic);
-            material.SetFloat(SmoothnessId, smoothness);
-            if (emission.maxColorComponent > 0f)
-            {
-                material.globalIlluminationFlags = MaterialGlobalIlluminationFlags.RealtimeEmissive;
-                material.SetColor(EmissionColorId, emission);
-                material.SetKeyword(new LocalKeyword(material.shader, "_EMISSION"), true);
-            }
-            EditorUtility.SetDirty(material);
+            else if (material.shader != shader) material.shader = shader;
             return material;
         }
     }
