@@ -2,75 +2,75 @@
  "voice": [
   {
    "file": "VO_Commander_01",
-   "text": "정면을 보고 두 팔을 끝까지 뻗어라."
+   "text": "정면을 본다. 두 팔을 끝까지 뻗어라."
   },
   {
    "file": "VO_Commander_02",
-   "text": "편한 가드 자세에서 그립."
+   "text": "가드 자세를 잡고, 그립을 쥐어라."
   },
   {
    "file": "VO_Commander_03",
-   "text": "둘이 같이 스틱을 앞으로!"
+   "text": "출격한다. 둘이 함께 스틱을 앞으로."
   },
   {
    "file": "VO_Commander_04",
-   "text": "무장 달기 전 관절 시험. 번갈아 쳐라!"
+   "text": "무장에 앞서 관절을 시험한다. 번갈아 쳐라."
   },
   {
    "file": "VO_Commander_06",
-   "text": "목표 확인. 전투 개시!"
+   "text": "목표 확인. 전투를 개시한다."
   },
   {
    "file": "VO_Commander_07",
-   "text": "포탄이 온다! 불러 줘라!"
+   "text": "포탄이 온다. 오른팔, 방향을 불러라."
   },
   {
    "file": "VO_Commander_08",
-   "text": "지금이다!"
+   "text": "지금이다. 쳐라."
   },
   {
    "file": "VO_Commander_09",
-   "text": "둘이 함께 팔을 뻗어라!"
+   "text": "끝을 낸다. 둘이 함께 팔을 뻗어라."
   },
   {
    "file": "VO_Commander_10",
-   "text": "작전 성공. 안성제철소를 지켜냈다."
+   "text": "작전 종료. 안성제철소를 지켜냈다. 수고했다."
   },
   {
    "file": "VO_Commander_11",
-   "text": "두 팔로 막아라!"
+   "text": "크다. 두 팔로 막아라."
   },
   {
    "file": "VO_Commander_13",
-   "text": "막을 수 없다! 불러 주고 같이 피하라!"
+   "text": "막을 수 없다. 불러 주고, 함께 피하라."
   },
   {
    "file": "VO_Commander_16",
-   "text": "두 팔을 정면으로 쭉 뻗어라!"
+   "text": "두 팔을 정면으로 끝까지 뻗어라."
   },
   {
    "file": "VO_Commander_18",
-   "text": "피격! 어디선가 쏜다. 왼팔, 스캐너로 찾아라!"
+   "text": "피격. 숨어서 쏘는 놈이 있다. 왼팔, 스캐너로 찾아라."
   },
   {
    "file": "VO_Commander_20",
-   "text": "주포 파손! 칼과 방패뿐이다!"
+   "text": "주포 파손. 남은 건 검과 방패다."
   },
   {
    "file": "VO_Commander_23",
-   "text": "무장 전부 상실. 처음 배운 주먹이 남았다. 쥐어라!"
+   "text": "무장 전부 상실. 처음 배운 주먹이 남았다. 쥐어라."
   },
   {
    "file": "VO_Commander_25",
-   "text": "기체 정지…. 재기동한다!"
+   "text": "기체 정지. 재기동한다. 다시 일어서라."
   },
   {
    "file": "VO_Commander_26",
-   "text": "네 쪽에 보이는 건 상대에게 안 보인다. 불러 줘라!"
+   "text": "네 눈에 보이는 것이 동료에겐 보이지 않는다. 불러 줘라."
   },
   {
    "file": "VO_Commander_30",
-   "text": "팔이 해킹됐다! 반대 팔로 뜯어내라!"
+   "text": "팔이 침식당했다. 동료가 뜯어내라."
   },
   {
    "file": "VO_Commander_31",
@@ -78,95 +78,95 @@
   },
   {
    "file": "VO_Commander_33",
-   "text": "크레인 고리를 찾아 쏴라!"
+   "text": "놈이 크레인 아래다. 고리를 찾아 쏴라."
   },
   {
    "file": "VO_Commander_34",
-   "text": "박혔다! 몰아쳐라!"
+   "text": "놈이 박혔다. 몰아쳐라."
   },
   {
    "file": "VO_Commander_35",
-   "text": "그대로 밀어붙여!"
+   "text": "주먹이 통한다. 그대로 밀어붙여라."
   },
   {
    "file": "VO_Commander_36",
-   "text": "또 숨었다! 사격 무장!"
+   "text": "드론이 다시 숨었다. 사격 무장."
   },
   {
    "file": "VO_Commander_37",
-   "text": "근접 무장!"
+   "text": "근접 무장."
   },
   {
    "file": "VO_Commander_38",
-   "text": "쏠 무기가 없다! 달려들면 쳐라!"
+   "text": "쏠 무기는 없다. 달려드는 놈은 쳐서 떨궈라."
   },
   {
    "file": "VO_Commander_39",
-   "text": "트리거!"
+   "text": "트리거를 당겨라."
   },
   {
    "file": "VO_Commander_42",
-   "text": "왼팔이 찾고 오른팔이 쏜다. 주포는 드론용이다. 붙으면 칼과 방패."
+   "text": "왼팔이 찾고, 오른팔이 쏜다. 주포는 드론을 잡는 무기다. 붙으면 검과 방패다."
   },
   {
    "file": "VO_Commander_43",
-   "text": "장갑에 안 통한다! 저놈은 붙어서 부숴야 한다!"
+   "text": "장갑에 통하지 않는다. 놈은 붙어서 부순다."
   },
   {
    "file": "VO_Commander_44",
-   "text": "찾았다! 오른팔, 쏴라!"
+   "text": "포착. 오른팔, 쏴라."
   },
   {
    "file": "VO_Commander_45",
-   "text": "그거다. 왼쪽이 찾고, 오른쪽이 쏜다."
+   "text": "그것이다. 왼팔이 찾고, 오른팔이 쏜다."
   },
   {
    "file": "VO_Commander_46",
-   "text": "드론 전멸. 놈이 직접 온다!"
+   "text": "드론 전멸. 놈이 직접 온다."
   },
   {
    "file": "VO_Commander_47",
-   "text": "놈의 팔뚝 포를 부숴라!"
+   "text": "목표, 놈의 팔뚝 포. 부숴라."
   },
   {
    "file": "VO_Commander_48",
-   "text": "놈의 방패를 깨라!"
+   "text": "목표, 놈의 방패. 깨뜨려라."
   },
   {
    "file": "VO_Commander_49",
-   "text": "놈도 맨손이다! 가슴 핵을 부숴라!"
+   "text": "놈도 맨손이다. 가슴의 핵을 부숴라."
   },
   {
    "file": "VO_Commander_50",
-   "text": "휘청인다! 왼팔, 뻗어서 붙잡아라!"
+   "text": "놈이 휘청인다. 왼팔, 붙잡아라."
   },
   {
    "file": "VO_Commander_51",
-   "text": "붙잡았다! 오른팔, 베어라!"
+   "text": "붙잡았다. 오른팔, 베어라."
   },
   {
    "file": "VO_Commander_52",
-   "text": "놓쳤다!"
+   "text": "놓쳤다. 다시 노려라."
   },
   {
    "file": "VO_Commander_53",
-   "text": "검이 맞물렸다! 둘 다 팔을 들어 버텨라!"
+   "text": "검이 맞물렸다. 둘 다 팔을 들어 버텨라."
   },
   {
    "file": "VO_Commander_54",
-   "text": "밀어냈다!"
+   "text": "밀어냈다."
   },
   {
    "file": "VO_Commander_55",
-   "text": "밀렸다! 버텨!"
+   "text": "밀린다. 버텨라."
   },
   {
    "file": "VO_Commander_56",
-   "text": "놈이 뿌리친다! 빨리 베어라!"
+   "text": "놈이 뿌리친다. 서둘러 베어라."
   },
   {
    "file": "VO_Commander_60",
-   "text": "드론은 끝이다. 오른팔, 주포로 놈을 쏴 봐라!"
+   "text": "드론은 끝났다. 오른팔, 주포로 놈을 쏴 봐라."
   }
  ],
  "sfx": [
