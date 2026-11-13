@@ -35,6 +35,11 @@ namespace Anseong.EditorTools
         const float CheckupDwell = 16f;  // 점검(보정 + 철판 치기)
         const float ShotEvery = 3f;      // 머무는 동안 찍는 간격
         const float Timeout = 600f;
+        // 실전 모드(명령줄 -anseongReal, 선우 11/13 "1분 55초 승리는 볼륨이 작다는 증거"): 장면을 강제로 넘기지 않고 봇이 실제로 끝까지 싸운다.
+        // 진짜 판 길이·장면별 시간을 잰다. 한 장면이 RealStuck초 넘게 안 넘어가면 "막힘"으로 적고 그때만 넘긴다.
+        const float RealTimeout = 1500f;
+        const float RealStuck = 300f;
+        static bool real;
         const int Width = 1920, Height = 1080;
 
         // 영상용 연속 장면(명령줄에 -anseongRecord를 붙이면): 두 로봇을 도는 카메라로 초당 12장 JPG → Logs/Playtest/video/. ffmpeg로 묶는다.
@@ -85,6 +90,7 @@ namespace Anseong.EditorTools
                 foreach (var f in Directory.GetFiles(outDir)) File.Delete(f);
             Directory.CreateDirectory(outDir);
             recording = Array.IndexOf(Environment.GetCommandLineArgs(), "-anseongRecord") >= 0;
+            real = Array.IndexOf(Environment.GetCommandLineArgs(), "-anseongReal") >= 0;
             frameIndex = 0;
             videoDir = Path.Combine(outDir, "video");
             if (Directory.Exists(videoDir)) Directory.Delete(videoDir, true);
@@ -146,9 +152,10 @@ namespace Anseong.EditorTools
             if (!EditorApplication.isPlaying) return;
             if (playStart < 0) playStart = now;
             var t = now - playStart;
-            if (t > Timeout)
+            var limit = real ? RealTimeout : Timeout;
+            if (t > limit)
             {
-                report.AppendLine($"시간 초과({Timeout}초). 마지막 장면: {(sawScene ? lastScene.ToString() : "없음")}");
+                report.AppendLine($"시간 초과({limit}초). 마지막 장면: {(sawScene ? lastScene.ToString() : "없음")}");
                 errorCount++;
                 Finish();
                 return;
@@ -184,6 +191,7 @@ namespace Anseong.EditorTools
             var scene = flow.Scene;
             if (!sawScene || scene != lastScene)
             {
+                if (sawScene) report.AppendLine($"    {lastScene} 머문 시간 {now - sceneEnter:F1}초{Situation()}");
                 sawScene = true;
                 lastScene = scene;
                 sceneEnter = now;
@@ -227,6 +235,12 @@ namespace Anseong.EditorTools
             var timed = flow.Remaining >= 0f;
             var dwell = scene == MatchScene.FightCannon || scene == MatchScene.FightArmor || scene == MatchScene.FightCore ? FightDwell
                 : scene == MatchScene.Checkup ? CheckupDwell : Dwell;
+            if (real && scene != MatchScene.Waiting)
+            {
+                if (inScene < RealStuck) return;
+                if (now - lastNext >= 2.0) report.AppendLine($"{t:F1}s 막힘: {scene}이(가) {RealStuck}초 동안 스스로 넘어가지 않아 강제로 넘김{Situation()}");
+                dwell = RealStuck;
+            }
             if (!timed && scene != MatchScene.Finisher && inScene >= dwell && now - lastNext >= 2.0)
             {
                 lastNext = now;
