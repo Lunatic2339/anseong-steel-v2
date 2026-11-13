@@ -601,6 +601,8 @@ AvatarMask:
     m_Weight: 0
   - m_Path: ARMOR_p242_i1.R
     m_Weight: 0
+  - m_Path: C
+    m_Weight: 0
   - m_Path: HOUSING_Chest_Triangle_Walls_And_Rim_p9_i1.C
     m_Weight: 0
   - m_Path: HOUSING_Forearm_Back_Walls_And_Rim_p95_i1.L
@@ -654,6 +656,8 @@ AvatarMask:
   - m_Path: HOUSING_Visor_Walls_And_Rim_p60_i1.C
     m_Weight: 0
   - m_Path: HOUSING_Visor_Walls_And_Rim_p119_i1.C
+    m_Weight: 0
+  - m_Path: L
     m_Weight: 0
   - m_Path: RED_Chest_Triangle_Floor_p9_i1.C
     m_Weight: 0

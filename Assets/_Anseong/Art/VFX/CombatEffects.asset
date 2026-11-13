@@ -145,3 +145,25 @@ MonoBehaviour:
     seconds: 5
     scale: 45
     color: {r: 1, g: 0.5, b: 0.15, a: 1}
+  - effectName: VFX_GuardSpark
+    cue: 40
+    matchCode: 0
+    code: 0
+    kind: 0
+    prefab: {fileID: 2487634048455577079, guid: 597550e528b839242ae9c02e4601de21, type: 3}
+    anchor: 0
+    lift: 0
+    seconds: 1
+    scale: 10
+    color: {r: 1, g: 0.85, b: 0.5, a: 1}
+  - effectName: VFX_BoostShock
+    cue: 41
+    matchCode: 0
+    code: 0
+    kind: 0
+    prefab: {fileID: 6950045662632084947, guid: b45fa8cb325c5644db3faf2bc0696e13, type: 3}
+    anchor: 0
+    lift: 0
+    seconds: 1.4
+    scale: 18
+    color: {r: 1, g: 0.6, b: 0.25, a: 1}

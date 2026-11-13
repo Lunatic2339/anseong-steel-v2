@@ -1274,3 +1274,96 @@ MonoBehaviour:
     code: 49
     matchAmount: 0
     amount: 0
+  - cue: 40
+    kind: 0
+    soundName: SFX_EquipClank
+    clips:
+    - {fileID: 8300000, guid: 85c3497df8d1c854b8980bbf8b4beda3, type: 3}
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 0.7
+    hapticSeconds: 0.2
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 41
+    kind: 0
+    soundName: SFX_BoostHit
+    clips:
+    - {fileID: 8300000, guid: 1e04f0d200c075e428c6caceabc01e6d, type: 3}
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 1
+    hapticAmplitude: 1
+    hapticSeconds: 0.3
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 42
+    kind: 0
+    soundName: SFX_GuardStrain
+    clips:
+    - {fileID: 8300000, guid: bd6c763f8166bae4983540a47546e26c, type: 3}
+    volume: 1
+    pitch: 0.75
+    pitchJitter: 0.05
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 0
+    code: 0
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_50
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 50
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_51
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 51
+    matchAmount: 0
+    amount: 0
+  - cue: 23
+    kind: 0
+    soundName: VO_Commander_52
+    clips: []
+    volume: 1
+    pitch: 1
+    pitchJitter: 0
+    pitchPerComboStep: 0
+    atHitPoint: 0
+    hapticAmplitude: 0
+    hapticSeconds: 0
+    matchCode: 1
+    code: 52
+    matchAmount: 0
+    amount: 0
