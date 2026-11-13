@@ -52,6 +52,15 @@ namespace Anseong.EditorTools
 
         const float AttackHipTravel = 0.4f;
 
+        /// <summary>
+        /// 손가락 곡선을 클립에 남길지(11/13 선우 "보스 손가락 리깅이 이상하다"). 이 모델은 손가락 장갑 조각이 손가락 뼈 하나에 100% 묶여 있어 가중치는 깨끗하지만,
+        /// 손가락 뼈 축이 손가락마다 달라(처음 자세 3마디 회전이 +90°·−90°·−72°·2°) 다른 모델용 손가락 회전을 그대로 넣으면 손가락이 제각각 꺾인다.
+        /// 끄면 손가락은 처음 자세(편 손)로 남는다. 손 자체(손목) 곡선은 그대로 쓴다.
+        /// </summary>
+        const bool KeepFingerCurves = false;
+
+        static bool IsFinger(string bone) => bone.Contains("Hand") && (bone.Contains("Thumb") || bone.Contains("Index") || bone.Contains("Middle") || bone.Contains("Ring") || bone.Contains("Pinky"));
+
         const string MirrorFrom = "Boss_PunchRight";
         const string MirrorTo = "Boss_PunchLeft";
 
@@ -207,7 +216,7 @@ namespace Anseong.EditorTools
             foreach (var b in bindings)
             {
                 var name = b.path.Substring(b.path.LastIndexOf('/') + 1);
-                if (b.type != typeof(Transform) || !bones.TryGetValue(name, out var bone) || bone == root)
+                if (b.type != typeof(Transform) || !bones.TryGetValue(name, out var bone) || bone == root || (!KeepFingerCurves && IsFinger(name)))
                 {
                     dropped++;
                     continue;
