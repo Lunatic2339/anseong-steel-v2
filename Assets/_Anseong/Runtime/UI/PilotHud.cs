@@ -28,8 +28,9 @@ namespace Anseong.UI
         TuningMenu tuningMenu;
         MeshRenderer textRenderer;
         Transform head;
-        string attack = string.Empty, drone = string.Empty;
-        float attackUntil, droneUntil, nextRefresh;
+        string attack = string.Empty, drone = string.Empty, coop = string.Empty;
+        float attackUntil, droneUntil, coopUntil, nextRefresh;
+        float clashGauge = -1f;
         PilotSide? hacked;
         bool subscribed;
 
@@ -93,9 +94,37 @@ namespace Anseong.UI
                 case CombatCue.HackStart:
                     hacked = e.Side;
                     break;
+                // 잡고 베기: 붙잡은 쪽(왼)과 베는 쪽(오른)에 서로 다른 말을 띄운다. 1인 양팔은 둘 다.
+                case CombatCue.GrabStart:
+                    coop = BothArms ? "붙잡았다! 오른팔로 베어라" : Viewer == PilotSide.Left ? "붙잡았다! 놓지 마라" : "지금 베어라!";
+                    coopUntil = Time.unscaledTime + Mathf.Max(0.5f, e.Amount);
+                    break;
+                case CombatCue.GrabSlash:
+                    Show(ref coop, ref coopUntil, "잡고 베기 성공!");
+                    break;
+                case CombatCue.GrabBreak:
+                    Show(ref coop, ref coopUntil, e.Amount >= 1f ? "뿌리쳤다! 반격이 온다" : "놓쳤다");
+                    break;
+                case CombatCue.ClashStart:
+                    clashGauge = 0.4f;
+                    break;
+                case CombatCue.ClashTick:
+                    clashGauge = e.Amount;
+                    break;
+                case CombatCue.ClashWin:
+                    clashGauge = -1f;
+                    Show(ref coop, ref coopUntil, "밀어냈다!");
+                    break;
+                case CombatCue.ClashLose:
+                    clashGauge = -1f;
+                    Show(ref coop, ref coopUntil, "밀렸다!");
+                    break;
                 case CombatCue.HackCleared:
+                    hacked = null;
+                    break;
                 case CombatCue.MatchScene:
                     hacked = null;
+                    if ((MatchScene)e.Code != MatchScene.Clash) clashGauge = -1f;
                     break;
             }
         }
@@ -120,6 +149,13 @@ namespace Anseong.UI
                 return;
             }
             if (Time.unscaledTime < attackUntil) builder.Append("<size=120><color=#ffcc33>").Append(attack).Append("</color></size>\n");
+            if (clashGauge >= 0f)
+            {
+                // 힘겨루기 게이지: 둘 다 팔을 들어야 찬다.
+                var filled = Mathf.Clamp(Mathf.RoundToInt(clashGauge * 10f), 0, 10);
+                builder.Append("<size=120><color=#ff8844>버텨라! ").Append('■', filled).Append('□', 10 - filled).Append("</color></size>\n");
+            }
+            if (Time.unscaledTime < coopUntil) builder.Append("<size=120><color=#ffe066>").Append(coop).Append("</color></size>\n");
             if (Time.unscaledTime < droneUntil) builder.Append("<color=#66ffcc>").Append(drone).Append("</color>\n");
             if (director != null)
             {
