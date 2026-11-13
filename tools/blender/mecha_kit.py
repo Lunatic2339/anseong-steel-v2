@@ -129,9 +129,9 @@ def mirror_y(ob):
     return c
 
 
-def join_all(name):
-    """수정자 적용 → 하나로 합침 → 뒤집힌 면 고침 → UV."""
-    obs = [o for o in bpy.context.scene.objects if o.type == 'MESH']
+def join_all(name, only=None, uv=True):
+    """수정자 적용 → 하나로 합침 → 뒤집힌 면 고침 → UV. only = 합칠 오브젝트(비우면 씬의 메시 전부)."""
+    obs = list(only) if only is not None else [o for o in bpy.context.scene.objects if o.type == 'MESH']
     dg = bpy.context.evaluated_depsgraph_get()
     bm = bmesh.new()
     mats = [bpy.data.materials[s] for s in SLOTS]
@@ -163,6 +163,15 @@ def join_all(name):
     for p in mesh.polygons:
         p.use_smooth = True
     mesh.set_sharp_from_angle(angle=math.radians(32))
+    if uv:
+        unwrap(ob)
+    return ob
+
+
+def unwrap(ob):
+    bpy.ops.object.select_all(action='DESELECT')
+    bpy.context.view_layer.objects.active = ob
+    ob.select_set(True)
     bpy.ops.object.mode_set(mode='EDIT')
     bpy.ops.mesh.select_all(action='SELECT')
     bpy.ops.uv.smart_project(angle_limit=math.radians(66), island_margin=0.004)
@@ -277,8 +286,19 @@ def _save(arr, path, srgb):
 
 def bake_and_export(ob, folder, name, res=2048, shift_z=0.0, palettes=None):
     """텍스처 굽기(우리 색·보스 색) + FBX. shift_z = 손목에서 붙이는 점까지(PlayerWeaponVisuals의 along)만큼 원점을 옮긴다."""
+    bake_textures(ob, folder, name, res, palettes)
+    ob.data.transform(Matrix.Translation((0, 0, -shift_z)))
+    bpy.ops.export_scene.fbx(filepath=f"{folder}/{name}.fbx", use_selection=True, object_types={'MESH'},
+                             axis_forward='-Z', axis_up='Y', bake_space_transform=True, mesh_smooth_type='FACE',
+                             use_mesh_modifiers=False, add_leaf_bones=False, apply_scale_options='FBX_SCALE_ALL')
+    print("EXPORTED", name, "tris", len(ob.data.polygons), "dims", [round(x, 3) for x in ob.dimensions])
+
+
+def bake_textures(ob, folder, name, res=2048, palettes=None):
+    """텍스처만 굽고 재질을 하나(이름 = name)로 줄인다."""
     import numpy as np
     os.makedirs(folder, exist_ok=True)
+    bpy.ops.object.select_all(action='DESELECT')
     bpy.context.view_layer.objects.active = ob
     ob.select_set(True)
     # AO (한 번, 색과 무관)
@@ -309,8 +329,3 @@ def bake_and_export(ob, folder, name, res=2048, shift_z=0.0, palettes=None):
     ob.data.materials.append(one)
     for p in ob.data.polygons:
         p.material_index = 0
-    ob.data.transform(Matrix.Translation((0, 0, -shift_z)))
-    bpy.ops.export_scene.fbx(filepath=f"{folder}/{name}.fbx", use_selection=True, object_types={'MESH'},
-                             axis_forward='-Z', axis_up='Y', bake_space_transform=True, mesh_smooth_type='FACE',
-                             use_mesh_modifiers=False, add_leaf_bones=False, apply_scale_options='FBX_SCALE_ALL')
-    print("EXPORTED", name, "tris", len(ob.data.polygons), "dims", [round(x, 3) for x in ob.dimensions])

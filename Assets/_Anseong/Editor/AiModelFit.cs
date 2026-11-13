@@ -166,6 +166,8 @@ namespace Anseong.EditorTools
                 var d = BossDress[i];
                 var e = list.GetArrayElementAtIndex(i);
                 prefabs.TryGetValue(d.Model, out var prefab);
+                // 보스 전용 몸(Boss_Body.fbx)에는 뿔·등 날개·어깨 가시가 이미 달려 있다 → Meshy 머리 볏·어깨 장갑·등 가시는 겹치므로 뺀다.
+                if (BossBodyMenu.InUse && d.Model != "Boss_CoreHousing") prefab = null;
                 var bone = RobotSandboxUtility.FindBone(boss, d.Bone);
                 e.FindPropertyRelative("label").stringValue = d.Label;
                 e.FindPropertyRelative("bone").objectReferenceValue = bone;
@@ -437,7 +439,7 @@ namespace Anseong.EditorTools
         }
 
         /// <summary>직접 만든 모델 재질: _BaseColor(AO·닳음 포함) + _MetallicSmoothness(R 금속, A 매끈함) + _Emission. tag = "" 또는 "_Boss".</summary>
-        static Material BuildAuthoredMaterial(string folder, string name, string tag)
+        internal static Material BuildAuthoredMaterial(string folder, string name, string tag)
         {
             var baseMap = AssetDatabase.LoadAssetAtPath<Texture2D>($"{folder}/{name}{tag}_BaseColor.png");
             if (baseMap == null) return null;

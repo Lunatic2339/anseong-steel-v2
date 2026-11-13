@@ -28,6 +28,12 @@ namespace Anseong.EditorTools
 
         public static void CaptureBatch()
         {
+            // 보스 전용 몸이 있으면 쓰게 하고 로봇 프리팹을 다시 만든다(없으면 지금 프리팹 그대로).
+            if (AssetDatabase.LoadAssetAtPath<GameObject>(BossBodyMenu.BossBodyPath) != null)
+            {
+                BossBodyMenu.Use();
+                RobotPrefabMenu.Build();
+            }
             AiModelFit.Apply(new GameObject[0]);
             Capture();
             EditorApplication.Exit(0);

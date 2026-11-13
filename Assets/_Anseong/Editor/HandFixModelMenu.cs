@@ -51,7 +51,7 @@ namespace Anseong.EditorTools
         }
 
         /// <summary>원본 FBX의 가져오기 설정(뼈대 종류·재질·크기)을 새 FBX에 맞춘다.</summary>
-        static void CopyImportSettings(string from, string to)
+        internal static void CopyImportSettings(string from, string to)
         {
             var src = AssetImporter.GetAtPath(from) as ModelImporter;
             var dst = AssetImporter.GetAtPath(to) as ModelImporter;
