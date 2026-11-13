@@ -290,6 +290,7 @@ namespace Anseong.EditorTools
             bossServer = null;
             trackingSpace = headTransform = null;
             drones = null;
+            checkup = null;
             openingStart = -1;
         }
 
@@ -343,7 +344,21 @@ namespace Anseong.EditorTools
 
             var scene = flow != null && flow.Running ? flow.Scene : MatchScene.Waiting;
             // 걷지 않는다: 보스가 근접 거리(30 m)까지 걸어온다. 우리가 걸어 들어가면 26 m까지 붙어 두 로봇이 겹쳐 보인다.
-            if (scene == MatchScene.DroneHunt)
+            // 실전 모드(11/13): 출격(1-5)·접근(장면 4)은 둘이 스틱을 같이 앞으로 민다. 그동안 오는 공격은 아래에서 막는다.
+            var sortie = scene == MatchScene.Checkup && flow.CheckupStep == (int)CheckupStep.Sortie;
+            var walk = sortie || scene == MatchScene.Approach;
+            // 1-3 공 막기: 공이 오는 쪽으로 왼팔 방패를 옮겨 든다(오는 쪽은 오른쪽 HUD에만 → 오른쪽이 불러 준다는 설정).
+            if (scene == MatchScene.Checkup && flow.CheckupStep == (int)CheckupStep.ShieldDrill)
+            {
+                // 묵직한 로봇 팔이 공이 날아오는 짧은 시간에 가드까지 못 올라온다 → 이 단계 동안 계속 가드, 공이 오면 그쪽으로만 옮긴다.
+                hand.Position = guard;
+                hand.Rotation = GuardRotation;
+                if (side == PilotSide.Left && DrillPending(out var drillSide))
+                    hand.Position = head + new Vector3(drillSide == PilotSide.Right ? 0.07f : -0.14f, -0.12f, 0.28f);
+                return hand;
+            }
+            // 드론 사냥, 그리고 싸움 중 드론 끼어들기(사격 무장일 때): 스캐너·포로 대응한다.
+            if (scene == MatchScene.DroneHunt || (!walk && DronesUp()))
             {
                 // 드론 사냥(11/13 run12): 왼손 스캐너로 숨은 드론을 비춰 드러내고, 오른손 포로 드러난 드론을 겨눠 쏜다.
                 // 팔(어깨→손) 방향이 무기 방향이므로 손 자리를 드론 쪽으로 뻗고, 손목도 같은 쪽으로 돌린다.
@@ -351,10 +366,11 @@ namespace Anseong.EditorTools
                 var aim = AimAtDrone(side);
                 hand.Position = shoulder + aim * 0.65f;
                 hand.Rotation = Quaternion.FromToRotation(Vector3.forward, aim);
-                if (side == PilotSide.Right) hand.Trigger = time % 0.6 < 0.3 ? 1f : 0f;
+                if (side == PilotSide.Right) hand.Trigger = time % 0.6 < 0.3 && aimError[1] < 8f ? 1f : 0f;
                 return hand;
             }
             aimDirection[(int)side] = Vector3.forward;
+            if (walk) hand.Stick = new Vector2(0f, 1f);
             var state = bossServer != null ? bossServer.Action.BossState : BossState.Rest;
             var fighting = scene == MatchScene.Checkup || scene == MatchScene.FightCannon || scene == MatchScene.FightArmor || scene == MatchScene.FightCore;
             if (state == BossState.Telegraph || state == BossState.Strike)
@@ -432,6 +448,7 @@ namespace Anseong.EditorTools
         static double lastGrabTry = -100;
         static bool grabbing;
         static readonly Vector3[] aimDirection = { Vector3.forward, Vector3.forward };
+        static readonly float[] aimError = { 180f, 180f };
         static DroneDirector drones;
         static System.Reflection.FieldInfo droneNet;
 
@@ -439,6 +456,36 @@ namespace Anseong.EditorTools
         /// 목표 드론 방향(추적 공간)을 돌려준다. 손을 어깨에서 이 방향으로 뻗으면 팔뚝 무기(스캐너·포)가 드론을 향한다.
         /// 왼손 = 숨은 드론(스캐너로 드러냄), 오른손 = 드러난 드론(포로 격추).
         /// </summary>
+        static CheckupDirector checkup;
+        static System.Reflection.FieldInfo drillPendingField, drillSideField;
+
+        /// <summary>1-3 공이 날아오는 중이면 true와 오는 쪽.</summary>
+        static bool DrillPending(out PilotSide drillSide)
+        {
+            drillSide = PilotSide.Left;
+            if (checkup == null) checkup = UnityEngine.Object.FindAnyObjectByType<CheckupDirector>();
+            if (checkup == null) return false;
+            if (drillPendingField == null) drillPendingField = typeof(CheckupDirector).GetField("drillPending", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (drillSideField == null) drillSideField = typeof(CheckupDirector).GetField("drillSide", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (drillPendingField == null || drillSideField == null) return false;
+            drillSide = (PilotSide)drillSideField.GetValue(checkup);
+            return (bool)drillPendingField.GetValue(checkup);
+        }
+
+        /// <summary>숨었거나 드러난 은폐 드론이 있고, 팔에 스캐너가 달려 있으면(사격 무장) true.</summary>
+        static bool DronesUp()
+        {
+            if (drones == null) drones = UnityEngine.Object.FindAnyObjectByType<DroneDirector>();
+            var weapons = UnityEngine.Object.FindAnyObjectByType<PlayerWeaponVisuals>();
+            if (drones == null || weapons == null || weapons.ScannerTip == null || !weapons.ScannerTip.gameObject.activeInHierarchy) return false;
+            if (droneNet == null) droneNet = typeof(DroneDirector).GetField("net", BindingFlags.Instance | BindingFlags.NonPublic);
+            if (droneNet == null || !(droneNet.GetValue(drones) is Unity.Netcode.NetworkVariable<DroneNetState> net)) return false;
+            var s = net.Value;
+            for (var d = 0; d < DroneDirector.Slots; d++)
+                if (s.Kind(d) == DroneKind.Cloaked && (s.State(d) == DroneState.Hidden || s.State(d) == DroneState.Revealed)) return true;
+            return false;
+        }
+
         static Vector3 AimAtDrone(PilotSide side)
         {
             var i = (int)side;
@@ -459,10 +506,11 @@ namespace Anseong.EditorTools
                 var angle = Vector3.Angle(tip.up, s.Position(d) - tip.position);
                 if (angle < bestAngle) { bestAngle = angle; best = d; }
             }
+            aimError[i] = best < 0 ? 180f : bestAngle;
             if (best < 0) return aimDirection[i];
             // 목표 방향(추적 공간)으로 천천히 돌린다(로봇 팔이 묵직하게 따라오므로 손을 홱 돌리지 않는다).
             var want3 = Quaternion.Inverse(trackingSpace.rotation) * (s.Position(best) - tip.position).normalized;
-            aimDirection[i] = Vector3.Slerp(aimDirection[i], want3, 0.1f).normalized;
+            aimDirection[i] = Vector3.Slerp(aimDirection[i], want3, 0.25f).normalized;
             return aimDirection[i];
         }
 
