@@ -1,0 +1,10 @@
+{
+  "name": "com.anseong.foundation",
+  "version": "0.1.0",
+  "displayName": "Anseong Foundation",
+  "unity": "6000.3",
+  "description": "Selected foundational utilities from the existing Anseong project. Not a playable game.",
+  "dependencies": {
+    "com.unity.modules.xr": "1.0.0"
+  }
+}

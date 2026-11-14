@@ -1,0 +1,54 @@
+{
+  "date": "2026-11-14",
+  "canonical_root": "C:\\Users\\anthony\\Documents\\Codex\\2026-11-13\\new-chat\\outputs",
+  "files": [
+    {
+      "file": "anseong-steel-coop-10min.md",
+      "sha256": "7bf76d72a9480d0f77500392ac95762eaa37495679004f0d83ec42964a254b93"
+    },
+    {
+      "file": "code-inventory.csv",
+      "sha256": "db1d3f1f1adb60f7ffb8dfaf9bec2258a0280204a226bfc80eb85dcb4a143612"
+    },
+    {
+      "file": "code-reuse-review.md",
+      "sha256": "d42199304b998e4634964cb5f52421e2cd8437ab7462a8e5124e2925132c254c"
+    },
+    {
+      "file": "coop-interaction-catalog.md",
+      "sha256": "d193e3fd7cdb5a33e8fd8086d09f175b60f9b0e9085d8d0367bf7e3d1d894f83"
+    },
+    {
+      "file": "decisions-and-history.md",
+      "sha256": "d833a9abe264e19f94c739f753833270df49c385199e0174028f38e3d812d511"
+    },
+    {
+      "file": "game-concept.md",
+      "sha256": "c956e260b85c68b952ab6a5f475fcd34375aac7dde0f78102064c03f4a7cdff8"
+    },
+    {
+      "file": "game-encounter-plan.md",
+      "sha256": "4aadd9db0314cd2be7be83c6ee9cb1ae93f9918482740a5f9bcd1f88a7f68060"
+    },
+    {
+      "file": "game-ux-production-spec.md",
+      "sha256": "d77364e24bec7cc75dc9ce7e91c900ec08d66da1ef70944d2d6b234bfe1cd17c"
+    },
+    {
+      "file": "map-layout-35m.md",
+      "sha256": "1763248c15e4b313ee831712d507cd721613ecd69ef5865daf1ded56faa5eedb"
+    },
+    {
+      "file": "map-layout-options.md",
+      "sha256": "14a3d43721ae09f8fbff087dc3abe3fc95ee90f828c003ac0fca35ad81c6e02f"
+    },
+    {
+      "file": "repo-concept-review.md",
+      "sha256": "19a8fe36aa9edfdc1af5371d042e305fbfd9d0f1c0d334e95fe0ba42192b90c3"
+    },
+    {
+      "file": "START-HERE.md",
+      "sha256": "6f24489c843c03d8f04baadf1fb29399b49156353ff69dff66171886b3d37234"
+    }
+  ]
+}

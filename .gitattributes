@@ -1,0 +1,5 @@
+# Preserve source/snapshot bytes for provenance hashes.
+* -text whitespace=blank-at-eol,blank-at-eof,space-before-tab,cr-at-eol
+# Unity-generated metadata and captured logs keep their original spacing.
+*.meta -whitespace
+docs/validation/*.log -whitespace

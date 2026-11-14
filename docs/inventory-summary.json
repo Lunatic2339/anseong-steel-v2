@@ -1,0 +1,13 @@
+{
+  "source_commit": "16b077539572050e121aa31828fa4ef45622730e",
+  "files": 129,
+  "lines": 20699,
+  "by_decision": {
+    "보류": 13,
+    "재작성/부분참고": 39,
+    "수정 후 재사용 후보": 45,
+    "선별 복사": 10,
+    "참고/동반 수정": 22
+  },
+  "coverage_note": "All Assets C# files structurally inventoried. Not an exhaustive line-by-line correctness audit."
+}

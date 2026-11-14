@@ -1,0 +1,66 @@
+{
+  "source_root": "C:\\Users\\anthony\\Desktop\\re-capstone\\anseong-steel-v2",
+  "source_commit": "16b077539572050e121aa31828fa4ef45622730e",
+  "files": [
+    {
+      "source": "Assets/_Anseong/Runtime/Core/HeightFit.cs",
+      "destination": "Packages/com.anseong.foundation/Runtime/Core/HeightFit.cs",
+      "sha256": "0a083f6f7833728a68f85ede20b3bd0db4034763b2d8c5e1215d8840af2a2d12",
+      "modified": false
+    },
+    {
+      "source": "Assets/_Anseong/Tests/EditMode/HeightFitTests.cs",
+      "destination": "Packages/com.anseong.foundation/Tests/Editor/HeightFitTests.cs",
+      "sha256": "2fa1a2834480d6342c73d74cf3c9b4bb299bced068a25ba51bc94126795975fc",
+      "modified": false
+    },
+    {
+      "source": "Assets/_Anseong/Runtime/Core/MaterialSlotNames.cs",
+      "destination": "Packages/com.anseong.foundation/Runtime/Core/MaterialSlotNames.cs",
+      "sha256": "22c8ec8a0f40532682720a22e2ada183107f8ab95ae5948220efb8f7788c574d",
+      "modified": false
+    },
+    {
+      "source": "Assets/_Anseong/Tests/EditMode/MaterialSlotNamesTests.cs",
+      "destination": "Packages/com.anseong.foundation/Tests/Editor/MaterialSlotNamesTests.cs",
+      "sha256": "7eab6126ce6f311c1c5d9916823f23026bac0c7283de834d4c44b7d095572294",
+      "modified": false
+    },
+    {
+      "source": "Assets/_Anseong/Runtime/Pilot/HandDeadzone.cs",
+      "destination": "Packages/com.anseong.foundation/Runtime/Pilot/HandDeadzone.cs",
+      "sha256": "30121c423e5ac2434d55f39e23b892eac0f6bfd375eff3c03857dcfa88f2b7ef",
+      "modified": false
+    },
+    {
+      "source": "Assets/_Anseong/Tests/EditMode/HandDeadzoneTests.cs",
+      "destination": "Packages/com.anseong.foundation/Tests/Editor/HandDeadzoneTests.cs",
+      "sha256": "92ea0d489de3746ca13268e9a6bfbe488eefc51d52104e8e70e7cbdaf74c2032",
+      "modified": false
+    },
+    {
+      "source": "Assets/_Anseong/Runtime/Pilot/TrackingStateRules.cs",
+      "destination": "Packages/com.anseong.foundation/Runtime/Pilot/TrackingStateRules.cs",
+      "sha256": "9b02031337247b4ee5d6a7b6889142f9cb575c08f403b08d359d30bfed3ba22f",
+      "modified": false
+    },
+    {
+      "source": "Assets/_Anseong/Tests/EditMode/TrackingStateRulesTests.cs",
+      "destination": "Packages/com.anseong.foundation/Tests/Editor/TrackingStateRulesTests.cs",
+      "sha256": "1e05fb57809b22d2ed27776b1691c99fa1ba22084aa2caeaf8c3f63087da7f3d",
+      "modified": false
+    },
+    {
+      "source": "Assets/_Anseong/Runtime/Pilot/CockpitClearZoneMath.cs",
+      "destination": "Packages/com.anseong.foundation/Runtime/Pilot/CockpitClearZoneMath.cs",
+      "sha256": "3a2b6a5c89f2ef0f1405f561133e69ab3b08f243db79a7bb26f9f4bb15a93740",
+      "modified": false
+    },
+    {
+      "source": "Assets/_Anseong/Tests/EditMode/CockpitClearZoneMathTests.cs",
+      "destination": "Packages/com.anseong.foundation/Tests/Editor/CockpitClearZoneMathTests.cs",
+      "sha256": "b6b73c7ba67a42000a3baf1b9c7c6cec421e409feccc0be80f094aa8cd98f7a9",
+      "modified": false
+    }
+  ]
+}

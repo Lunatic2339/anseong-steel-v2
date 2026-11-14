@@ -1,0 +1,10 @@
+{
+  "dependencies": {
+    "com.anseong.foundation": "file:C:/Users/anthony/Desktop/re-capstone/anseong-steel-next/Packages/com.anseong.foundation",
+    "com.unity.test-framework": "1.6.0",
+    "com.unity.modules.xr": "1.0.0"
+  },
+  "testables": [
+    "com.anseong.foundation"
+  ]
+}
