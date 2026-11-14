@@ -1,0 +1,11 @@
+{
+  "name": "Anseong.Z1",
+  "references": [
+    "Anseong.Foundation",
+    "Unity.Netcode.Runtime",
+    "Unity.Networking.Transport",
+    "Unity.Collections",
+    "Unity.InputSystem",
+    "Unity.XR.Management"
+  ]
+}

@@ -1,0 +1,13 @@
+{
+  "name": "Anseong.Z1.Editor",
+  "references": [
+    "Anseong.Z1",
+    "Unity.XR.Management",
+    "Unity.XR.Management.Editor",
+    "Unity.XR.OpenXR",
+    "Unity.XR.OpenXR.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

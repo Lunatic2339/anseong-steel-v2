@@ -4,7 +4,7 @@
   "files": [
     {
       "file": "anseong-steel-coop-10min.md",
-      "sha256": "7bf76d72a9480d0f77500392ac95762eaa37495679004f0d83ec42964a254b93"
+      "sha256": "f42e0ab77b910c10c29018322d5175e338e9a6454ae15fc87c24018ae491d3f9"
     },
     {
       "file": "code-inventory.csv",
@@ -20,7 +20,7 @@
     },
     {
       "file": "decisions-and-history.md",
-      "sha256": "d833a9abe264e19f94c739f753833270df49c385199e0174028f38e3d812d511"
+      "sha256": "5c74b5377c5715b6285b755f1cfe952ec3c4b6a028dcfebaec3ad936ab0301cd"
     },
     {
       "file": "game-concept.md",
@@ -48,7 +48,11 @@
     },
     {
       "file": "START-HERE.md",
-      "sha256": "6f24489c843c03d8f04baadf1fb29399b49156353ff69dff66171886b3d37234"
+      "sha256": "860fd7dd914c55708e20ecad12dc09da59e4d99ab40056412521f339df7c95fe"
+    },
+    {
+      "file": "z1-coop-prototype.md",
+      "sha256": "baf3910996fcc2bc6037b7e17f2c4b0014885a900ca0934c99982c8b31136ca1"
     }
   ]
 }

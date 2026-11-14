@@ -1,0 +1,19 @@
+{
+  "dependencies": {
+    "com.anseong.foundation": "file:../../Packages/com.anseong.foundation",
+    "com.unity.netcode.gameobjects": "2.13.3",
+    "com.unity.inputsystem": "1.20.0",
+    "com.unity.xr.management": "4.7.0",
+    "com.unity.xr.openxr": "1.16.1",
+    "com.unity.test-framework": "1.6.0",
+    "com.unity.modules.physics": "1.0.0",
+    "com.unity.modules.xr": "1.0.0",
+    "com.unity.modules.imgui": "1.0.0",
+    "com.unity.modules.jsonserialize": "1.0.0",
+    "com.unity.modules.audio": "1.0.0",
+    "com.unity.modules.imageconversion": "1.0.0"
+  },
+  "testables": [
+    "com.anseong.foundation"
+  ]
+}

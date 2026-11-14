@@ -1,0 +1,28 @@
+{
+    "epoch": 1,
+    "phase": 3,
+    "mechPresent": true,
+    "supportPresent": true,
+    "mechReady": true,
+    "supportReady": true,
+    "tracking": true,
+    "contact": 0.300296813249588,
+    "scan": 1.0,
+    "travel": 1.0,
+    "releases": 1,
+    "left": {
+        "x": -4.0,
+        "y": 24.0,
+        "z": 7.5
+    },
+    "right": {
+        "x": 4.0,
+        "y": 24.0,
+        "z": 7.5
+    },
+    "drone": {
+        "x": 14.0,
+        "y": 28.0,
+        "z": 3.0
+    }
+}

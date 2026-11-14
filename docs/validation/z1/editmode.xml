@@ -1,0 +1,404 @@
+<?xml version="1.0" encoding="utf-8"?>
+<test-run id="2" testcasecount="56" result="Passed" total="56" passed="56" failed="0" inconclusive="0" skipped="0" asserts="0" engine-version="3.5.0.0" clr-version="4.0.30319.42000" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.0542548">
+  <test-suite type="TestSuite" id="1000" name="Anseong Z1 Coop Lab" fullname="Anseong Z1 Coop Lab" runstate="Runnable" testcasecount="56" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.054255" total="56" passed="56" failed="0" inconclusive="0" skipped="0" asserts="0">
+    <properties>
+      <property name="platform" value="EditMode" />
+    </properties>
+    <test-suite type="Assembly" id="1051" name="Anseong.Foundation.Tests.dll" fullname="C:/Users/anthony/Desktop/re-capstone/anseong-steel-next/Game/Library/ScriptAssemblies/Anseong.Foundation.Tests.dll" runstate="Runnable" testcasecount="40" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.040075" total="40" passed="40" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="1584" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestSuite" id="1052" name="Anseong" fullname="Anseong" runstate="Runnable" testcasecount="40" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.039825" total="40" passed="40" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-suite type="TestSuite" id="1053" name="Tests" fullname="Anseong.Tests" runstate="Runnable" testcasecount="40" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.039702" total="40" passed="40" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-suite type="TestFixture" id="1001" name="CockpitClearZoneMathTests" fullname="Anseong.Tests.CockpitClearZoneMathTests" classname="Anseong.Tests.CockpitClearZoneMathTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.019628" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1005" name="CockpitYawed_UsesCockpitAxes" fullname="Anseong.Tests.CockpitClearZoneMathTests.CockpitYawed_UsesCockpitAxes" methodname="CockpitYawed_UsesCockpitAxes" classname="Anseong.Tests.CockpitClearZoneMathTests" runstate="Runnable" seed="777530765" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.008055" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1003" name="FarAway_DoesNotOverlap" fullname="Anseong.Tests.CockpitClearZoneMathTests.FarAway_DoesNotOverlap" methodname="FarAway_DoesNotOverlap" classname="Anseong.Tests.CockpitClearZoneMathTests" runstate="Runnable" seed="972393562" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000327" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1002" name="InsideBox_Overlaps" fullname="Anseong.Tests.CockpitClearZoneMathTests.InsideBox_Overlaps" methodname="InsideBox_Overlaps" classname="Anseong.Tests.CockpitClearZoneMathTests" runstate="Runnable" seed="834315185" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000231" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1004" name="TouchingEdgeWithExtents_Overlaps" fullname="Anseong.Tests.CockpitClearZoneMathTests.TouchingEdgeWithExtents_Overlaps" methodname="TouchingEdgeWithExtents_Overlaps" classname="Anseong.Tests.CockpitClearZoneMathTests" runstate="Runnable" seed="733693492" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000165" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1006" name="HandDeadzoneTests" fullname="Anseong.Tests.HandDeadzoneTests" classname="Anseong.Tests.HandDeadzoneTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.007170" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1008" name="BigMove_FollowsAndStopsRadiusBehind" fullname="Anseong.Tests.HandDeadzoneTests.BigMove_FollowsAndStopsRadiusBehind" methodname="BigMove_FollowsAndStopsRadiusBehind" classname="Anseong.Tests.HandDeadzoneTests" runstate="Runnable" seed="592293679" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.004017" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1009" name="BigTurn_FollowsMinusThreshold" fullname="Anseong.Tests.HandDeadzoneTests.BigTurn_FollowsMinusThreshold" methodname="BigTurn_FollowsMinusThreshold" classname="Anseong.Tests.HandDeadzoneTests" runstate="Runnable" seed="862423260" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000460" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1010" name="Disabled_PassesThrough" fullname="Anseong.Tests.HandDeadzoneTests.Disabled_PassesThrough" methodname="Disabled_PassesThrough" classname="Anseong.Tests.HandDeadzoneTests" runstate="Runnable" seed="1171180224" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.001273" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1007" name="SmallJitter_IsIgnored" fullname="Anseong.Tests.HandDeadzoneTests.SmallJitter_IsIgnored" methodname="SmallJitter_IsIgnored" classname="Anseong.Tests.HandDeadzoneTests" runstate="Runnable" seed="621660900" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000297" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1011" name="HeightFitTests" fullname="Anseong.Tests.HeightFitTests" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" testcasecount="11" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.006702" total="11" passed="11" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1023" name="GroundOffset_FeetBelowPivot_LiftsByScaledDistance" fullname="Anseong.Tests.HeightFitTests.GroundOffset_FeetBelowPivot_LiftsByScaledDistance" methodname="GroundOffset_FeetBelowPivot_LiftsByScaledDistance" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="832894546" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000323" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1022" name="GroundOffset_PivotAtFeet_IsZero" fullname="Anseong.Tests.HeightFitTests.GroundOffset_PivotAtFeet_IsZero" methodname="GroundOffset_PivotAtFeet_IsZero" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="57755247" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000113" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1024" name="GroundOffset_RespectsGroundY" fullname="Anseong.Tests.HeightFitTests.GroundOffset_RespectsGroundY" methodname="GroundOffset_RespectsGroundY" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="366352922" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000071" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1018" name="Scale_InvalidMeasuredHeight_Throws" fullname="Anseong.Tests.HeightFitTests.Scale_InvalidMeasuredHeight_Throws" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.003963" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1014" name="Scale_InvalidMeasuredHeight_Throws(0.0f)" fullname="Anseong.Tests.HeightFitTests.Scale_InvalidMeasuredHeight_Throws(0.0f)" methodname="Scale_InvalidMeasuredHeight_Throws" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="440992534" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.002759" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1015" name="Scale_InvalidMeasuredHeight_Throws(-1.0f)" fullname="Anseong.Tests.HeightFitTests.Scale_InvalidMeasuredHeight_Throws(-1.0f)" methodname="Scale_InvalidMeasuredHeight_Throws" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="1530247569" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000202" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1016" name="Scale_InvalidMeasuredHeight_Throws(float.NaN)" fullname="Anseong.Tests.HeightFitTests.Scale_InvalidMeasuredHeight_Throws(float.NaN)" methodname="Scale_InvalidMeasuredHeight_Throws" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="1231737889" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000078" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1017" name="Scale_InvalidMeasuredHeight_Throws(float.PositiveInfinity)" fullname="Anseong.Tests.HeightFitTests.Scale_InvalidMeasuredHeight_Throws(float.PositiveInfinity)" methodname="Scale_InvalidMeasuredHeight_Throws" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="548485714" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000125" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="ParameterizedMethod" id="1021" name="Scale_InvalidTargetHeight_Throws" fullname="Anseong.Tests.HeightFitTests.Scale_InvalidTargetHeight_Throws" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000887" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1019" name="Scale_InvalidTargetHeight_Throws(0.0f)" fullname="Anseong.Tests.HeightFitTests.Scale_InvalidTargetHeight_Throws(0.0f)" methodname="Scale_InvalidTargetHeight_Throws" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="1562709538" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000303" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1020" name="Scale_InvalidTargetHeight_Throws(-65.0f)" fullname="Anseong.Tests.HeightFitTests.Scale_InvalidTargetHeight_Throws(-65.0f)" methodname="Scale_InvalidTargetHeight_Throws" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="2021654597" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000066" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1012" name="Scale_MakesMeasuredHeightTarget" fullname="Anseong.Tests.HeightFitTests.Scale_MakesMeasuredHeightTarget" methodname="Scale_MakesMeasuredHeightTarget" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="1973883356" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000101" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1013" name="Scale_SameHeight_IsOne" fullname="Anseong.Tests.HeightFitTests.Scale_SameHeight_IsOne" methodname="Scale_SameHeight_IsOne" classname="Anseong.Tests.HeightFitTests" runstate="Runnable" seed="407076133" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000064" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+          <test-suite type="TestFixture" id="1025" name="MaterialSlotNamesTests" fullname="Anseong.Tests.MaterialSlotNamesTests" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.003991" total="16" passed="16" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-suite type="ParameterizedMethod" id="1044" name="BaseName_StripsOnlyNumericSuffix" fullname="Anseong.Tests.MaterialSlotNamesTests.BaseName_StripsOnlyNumericSuffix" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" testcasecount="4" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000996" total="4" passed="4" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1040" name="BaseName_StripsOnlyNumericSuffix(&quot;Trim.001&quot;,&quot;Trim&quot;)" fullname="Anseong.Tests.MaterialSlotNamesTests.BaseName_StripsOnlyNumericSuffix(&quot;Trim.001&quot;,&quot;Trim&quot;)" methodname="BaseName_StripsOnlyNumericSuffix" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="1581535910" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000503" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1041" name="BaseName_StripsOnlyNumericSuffix(&quot;Trim.&quot;,&quot;Trim.&quot;)" fullname="Anseong.Tests.MaterialSlotNamesTests.BaseName_StripsOnlyNumericSuffix(&quot;Trim.&quot;,&quot;Trim.&quot;)" methodname="BaseName_StripsOnlyNumericSuffix" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="751708676" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000075" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1042" name="BaseName_StripsOnlyNumericSuffix(&quot;.001&quot;,&quot;.001&quot;)" fullname="Anseong.Tests.MaterialSlotNamesTests.BaseName_StripsOnlyNumericSuffix(&quot;.001&quot;,&quot;.001&quot;)" methodname="BaseName_StripsOnlyNumericSuffix" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="859309268" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000038" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1043" name="BaseName_StripsOnlyNumericSuffix(&quot;Robot.v026&quot;,&quot;Robot.v026&quot;)" fullname="Anseong.Tests.MaterialSlotNamesTests.BaseName_StripsOnlyNumericSuffix(&quot;Robot.v026&quot;,&quot;Robot.v026&quot;)" methodname="BaseName_StripsOnlyNumericSuffix" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="513627352" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000030" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-case id="1039" name="IndexOf_EmptyOrNullSlotsNeverMatch" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_EmptyOrNullSlotsNeverMatch" methodname="IndexOf_EmptyOrNullSlotsNeverMatch" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="392384004" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000687" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-suite type="ParameterizedMethod" id="1032" name="IndexOf_MatchesSlot" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_MatchesSlot" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" testcasecount="6" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000879" total="6" passed="6" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1026" name="IndexOf_MatchesSlot(&quot;ArmorMain&quot;,0)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_MatchesSlot(&quot;ArmorMain&quot;,0)" methodname="IndexOf_MatchesSlot" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="351231332" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000212" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1027" name="IndexOf_MatchesSlot(&quot;armormain&quot;,0)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_MatchesSlot(&quot;armormain&quot;,0)" methodname="IndexOf_MatchesSlot" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="1282073140" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000054" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1028" name="IndexOf_MatchesSlot(&quot;Glow&quot;,4)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_MatchesSlot(&quot;Glow&quot;,4)" methodname="IndexOf_MatchesSlot" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="942495760" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000032" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1029" name="IndexOf_MatchesSlot(&quot;Trim.001&quot;,5)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_MatchesSlot(&quot;Trim.001&quot;,5)" methodname="IndexOf_MatchesSlot" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="632005661" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000030" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1030" name="IndexOf_MatchesSlot(&quot;Dark.12&quot;,3)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_MatchesSlot(&quot;Dark.12&quot;,3)" methodname="IndexOf_MatchesSlot" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="2005179175" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000032" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1031" name="IndexOf_MatchesSlot(&quot; Metal &quot;,2)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_MatchesSlot(&quot; Metal &quot;,2)" methodname="IndexOf_MatchesSlot" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="793454373" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000030" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+            <test-suite type="ParameterizedMethod" id="1038" name="IndexOf_NoMatch_IsMinusOne" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_NoMatch_IsMinusOne" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000643" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+              <properties />
+              <test-case id="1033" name="IndexOf_NoMatch_IsMinusOne(&quot;Material_087&quot;)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_NoMatch_IsMinusOne(&quot;Material_087&quot;)" methodname="IndexOf_NoMatch_IsMinusOne" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="1742650295" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000164" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1034" name="IndexOf_NoMatch_IsMinusOne(&quot;ArmorMainOld&quot;)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_NoMatch_IsMinusOne(&quot;ArmorMainOld&quot;)" methodname="IndexOf_NoMatch_IsMinusOne" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="1932652794" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000042" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1035" name="IndexOf_NoMatch_IsMinusOne(&quot;Metal.v2&quot;)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_NoMatch_IsMinusOne(&quot;Metal.v2&quot;)" methodname="IndexOf_NoMatch_IsMinusOne" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="1722513996" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000031" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1036" name="IndexOf_NoMatch_IsMinusOne(&quot;&quot;)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_NoMatch_IsMinusOne(&quot;&quot;)" methodname="IndexOf_NoMatch_IsMinusOne" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="191653380" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000027" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+              <test-case id="1037" name="IndexOf_NoMatch_IsMinusOne(null)" fullname="Anseong.Tests.MaterialSlotNamesTests.IndexOf_NoMatch_IsMinusOne(null)" methodname="IndexOf_NoMatch_IsMinusOne" classname="Anseong.Tests.MaterialSlotNamesTests" runstate="Runnable" seed="1987755508" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000033" asserts="0">
+                <properties>
+                  <property name="retryIteration" value="0" />
+                  <property name="repeatIteration" value="0" />
+                </properties>
+              </test-case>
+            </test-suite>
+          </test-suite>
+          <test-suite type="TestFixture" id="1045" name="TrackingStateRulesTests" fullname="Anseong.Tests.TrackingStateRulesTests" classname="Anseong.Tests.TrackingStateRulesTests" runstate="Runnable" testcasecount="5" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.001123" total="5" passed="5" failed="0" inconclusive="0" skipped="0" asserts="0">
+            <properties />
+            <test-case id="1050" name="AllFlags_IsTracked" fullname="Anseong.Tests.TrackingStateRulesTests.AllFlags_IsTracked" methodname="AllFlags_IsTracked" classname="Anseong.Tests.TrackingStateRulesTests" runstate="Runnable" seed="102902085" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000110" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1046" name="None_IsNotTracked" fullname="Anseong.Tests.TrackingStateRulesTests.None_IsNotTracked" methodname="None_IsNotTracked" classname="Anseong.Tests.TrackingStateRulesTests" runstate="Runnable" seed="2016094884" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000066" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1049" name="PositionAndRotation_IsTracked" fullname="Anseong.Tests.TrackingStateRulesTests.PositionAndRotation_IsTracked" methodname="PositionAndRotation_IsTracked" classname="Anseong.Tests.TrackingStateRulesTests" runstate="Runnable" seed="707813434" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000056" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1047" name="PositionOnly_IsNotTracked" fullname="Anseong.Tests.TrackingStateRulesTests.PositionOnly_IsNotTracked" methodname="PositionOnly_IsNotTracked" classname="Anseong.Tests.TrackingStateRulesTests" runstate="Runnable" seed="1596589964" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000052" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+            <test-case id="1048" name="RotationOnly_IsNotTracked" fullname="Anseong.Tests.TrackingStateRulesTests.RotationOnly_IsNotTracked" methodname="RotationOnly_IsNotTracked" classname="Anseong.Tests.TrackingStateRulesTests" runstate="Runnable" seed="501578259" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000172" asserts="0">
+              <properties>
+                <property name="retryIteration" value="0" />
+                <property name="repeatIteration" value="0" />
+              </properties>
+            </test-case>
+          </test-suite>
+        </test-suite>
+      </test-suite>
+    </test-suite>
+    <test-suite type="Assembly" id="1072" name="Anseong.Z1.Tests.dll" fullname="C:/Users/anthony/Desktop/re-capstone/anseong-steel-next/Game/Library/ScriptAssemblies/Anseong.Z1.Tests.dll" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.009100" total="16" passed="16" failed="0" inconclusive="0" skipped="0" asserts="0">
+      <properties>
+        <property name="_PID" value="1584" />
+        <property name="_APPDOMAIN" value="Unity Child Domain" />
+        <property name="platform" value="EditMode" />
+        <property name="EditorOnly" value="True" />
+      </properties>
+      <test-suite type="TestFixture" id="1054" name="PlateSessionTests" fullname="PlateSessionTests" classname="PlateSessionTests" runstate="Runnable" testcasecount="16" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.008895" total="16" passed="16" failed="0" inconclusive="0" skipped="0" asserts="0">
+        <properties />
+        <test-case id="1057" name="BothPlayersMustReady" fullname="PlateSessionTests.BothPlayersMustReady" methodname="BothPlayersMustReady" classname="PlateSessionTests" runstate="Runnable" seed="913593062" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.002370" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1065" name="BracedPlateDoesNotRequireHoldingArm" fullname="PlateSessionTests.BracedPlateDoesNotRequireHoldingArm" methodname="BracedPlateDoesNotRequireHoldingArm" classname="PlateSessionTests" runstate="Runnable" seed="1667321057" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000493" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1062" name="ControlNeedsScanButDroneDoesNot" fullname="PlateSessionTests.ControlNeedsScanButDroneDoesNot" methodname="ControlNeedsScanButDroneDoesNot" classname="PlateSessionTests" runstate="Runnable" seed="1901447810" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000189" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1070" name="DisconnectPausesRetraction" fullname="PlateSessionTests.DisconnectPausesRetraction" methodname="DisconnectPausesRetraction" classname="PlateSessionTests" runstate="Runnable" seed="924228628" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000859" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1056" name="DuplicateSeatAndThirdPeerAreRejected" fullname="PlateSessionTests.DuplicateSeatAndThirdPeerAreRejected" methodname="DuplicateSeatAndThirdPeerAreRejected" classname="PlateSessionTests" runstate="Runnable" seed="1951484401" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000138" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1071" name="InterruptedScanLosesOnlyIncompleteProgress" fullname="PlateSessionTests.InterruptedScanLosesOnlyIncompleteProgress" methodname="InterruptedScanLosesOnlyIncompleteProgress" classname="PlateSessionTests" runstate="Runnable" seed="1015672458" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.001116" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1064" name="LosingTrackingCancelsPartialPush" fullname="PlateSessionTests.LosingTrackingCancelsPartialPush" methodname="LosingTrackingCancelsPartialPush" classname="PlateSessionTests" runstate="Runnable" seed="2032544224" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000186" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1063" name="MechCannotReleaseOrSupportReset" fullname="PlateSessionTests.MechCannotReleaseOrSupportReset" methodname="MechCannotReleaseOrSupportReset" classname="PlateSessionTests" runstate="Runnable" seed="337981414" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000079" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1066" name="MissingPoseExpiresAndCannotPush" fullname="PlateSessionTests.MissingPoseExpiresAndCannotPush" methodname="MissingPoseExpiresAndCannotPush" classname="PlateSessionTests" runstate="Runnable" seed="1533369986" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000110" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1069" name="NonfiniteAndOutOfReachHandsAreNotContact" fullname="PlateSessionTests.NonfiniteAndOutOfReachHandsAreNotContact" methodname="NonfiniteAndOutOfReachHandsAreNotContact" classname="PlateSessionTests" runstate="Runnable" seed="1402579046" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000117" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-suite type="ParameterizedMethod" id="1061" name="OnePhysicalEventSupportsBothVariants" fullname="PlateSessionTests.OnePhysicalEventSupportsBothVariants" classname="PlateSessionTests" runstate="Runnable" testcasecount="2" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.001381" total="2" passed="2" failed="0" inconclusive="0" skipped="0" asserts="0">
+          <properties />
+          <test-case id="1059" name="OnePhysicalEventSupportsBothVariants(Drone)" fullname="PlateSessionTests.OnePhysicalEventSupportsBothVariants(Drone)" methodname="OnePhysicalEventSupportsBothVariants" classname="PlateSessionTests" runstate="Runnable" seed="1743911069" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000609" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+          <test-case id="1060" name="OnePhysicalEventSupportsBothVariants(Control)" fullname="PlateSessionTests.OnePhysicalEventSupportsBothVariants(Control)" methodname="OnePhysicalEventSupportsBothVariants" classname="PlateSessionTests" runstate="Runnable" seed="738269003" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000087" asserts="0">
+            <properties>
+              <property name="retryIteration" value="0" />
+              <property name="repeatIteration" value="0" />
+            </properties>
+          </test-case>
+        </test-suite>
+        <test-case id="1067" name="ReconnectPreservesBraceButRequiresBothReadyAndRejectsOldEpoch" fullname="PlateSessionTests.ReconnectPreservesBraceButRequiresBothReadyAndRejectsOldEpoch" methodname="ReconnectPreservesBraceButRequiresBothReadyAndRejectsOldEpoch" classname="PlateSessionTests" runstate="Runnable" seed="1156079422" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000151" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1068" name="ResetInvalidatesQueuedReleaseAndClearsCheckpoint" fullname="PlateSessionTests.ResetInvalidatesQueuedReleaseAndClearsCheckpoint" methodname="ResetInvalidatesQueuedReleaseAndClearsCheckpoint" classname="PlateSessionTests" runstate="Runnable" seed="1716761247" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000111" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1058" name="SupportCannotReleaseBeforeMechPush" fullname="PlateSessionTests.SupportCannotReleaseBeforeMechPush" methodname="SupportCannotReleaseBeforeMechPush" classname="PlateSessionTests" runstate="Runnable" seed="454787252" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000067" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+        </test-case>
+        <test-case id="1055" name="SupportHostDoesNotTakeEitherMechHand" fullname="PlateSessionTests.SupportHostDoesNotTakeEitherMechHand" methodname="SupportHostDoesNotTakeEitherMechHand" classname="PlateSessionTests" runstate="Runnable" seed="1669049093" result="Passed" start-time="2026-11-14 04:41:48Z" end-time="2026-11-14 04:41:48Z" duration="0.000090" asserts="0">
+          <properties>
+            <property name="retryIteration" value="0" />
+            <property name="repeatIteration" value="0" />
+          </properties>
+          <output><![CDATA[Saving results to: C:/Users/anthony/AppData/LocalLow/Anseong/Anseong Z1 Coop Lab\TestResults.xml
+]]></output>
+        </test-case>
+      </test-suite>
+    </test-suite>
+  </test-suite>
+</test-run>

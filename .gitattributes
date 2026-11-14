@@ -3,3 +3,8 @@
 # Unity-generated metadata and captured logs keep their original spacing.
 *.meta -whitespace
 docs/validation/*.log -whitespace
+docs/validation/**/*.log -whitespace
+# Preserve Unity-authored serialized asset formatting.
+*.asset -whitespace
+*.unity -whitespace
+*.mat -whitespace
