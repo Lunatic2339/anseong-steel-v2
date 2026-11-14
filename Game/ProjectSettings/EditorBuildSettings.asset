@@ -9,6 +9,6 @@ EditorBuildSettings:
     path: Assets/Z1/Scenes/Z1Coop.unity
     guid: cf3ccd85a9297f7458c83323af284c43
   m_configObjects:
-    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 2b22c91250b492d4e9f8eb4c41ce71cf, type: 2}
+    com.unity.xr.management.loader_settings: {fileID: 11400000, guid: 2f9fd5c4cfce80441a17bf3f2cd4ab11, type: 2}
     com.unity.xr.openxr.settings4: {fileID: 11400000, guid: 82f2b683c10acfd4489f6f831454f80f, type: 2}
   m_UseUCBPForAssetBundles: 0

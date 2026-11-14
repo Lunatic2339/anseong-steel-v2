@@ -1,0 +1,6 @@
+{
+  "name": "Anseong.Map35",
+  "references": [
+    "Unity.InputSystem"
+  ]
+}

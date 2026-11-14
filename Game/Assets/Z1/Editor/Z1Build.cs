@@ -48,23 +48,34 @@ namespace Anseong.Z1.Editor
             PlayerSettings.fullScreenMode=FullScreenMode.Windowed;
             var settings=new SerializedObject(AssetDatabase.LoadAllAssetsAtPath("ProjectSettings/ProjectSettings.asset")[0]);
             settings.FindProperty("activeInputHandler").intValue=1;settings.ApplyModifiedPropertiesWithoutUndo();
+            PrepareXR();
+            var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
+            new GameObject("Z1 Prototype").AddComponent<Z1Prototype>();
+            EditorSceneManager.SaveScene(scene,ScenePath);
+            EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(ScenePath,true)};
+            AssetDatabase.SaveAssets();AssetDatabase.Refresh();
+            Debug.Log("Z1_PREPARE_OK");
+        }
+        // Shared project setup; does not regenerate the Z1 scene or change the active build scene.
+        public static void PrepareXR()
+        {
+            Directory.CreateDirectory("Assets/Z1/Settings");
             if(!EditorBuildSettings.TryGetConfigObject(XRGeneralSettings.settingsKey,out XRGeneralSettingsPerBuildTarget targets))
             {
                 targets=ScriptableObject.CreateInstance<XRGeneralSettingsPerBuildTarget>();
                 AssetDatabase.CreateAsset(targets,"Assets/Z1/Settings/XRTargets.asset");
                 EditorBuildSettings.AddConfigObject(XRGeneralSettings.settingsKey,targets,true);
             }
+            // General settings must be a sub-asset of the per-target container. A standalone
+            // XRGeneral main asset is auto-migrated on reopen and can lose its manager reference.
+            if(!targets.HasSettingsForBuildTarget(BuildTargetGroup.Standalone))
+                targets.CreateDefaultSettingsForBuildTarget(BuildTargetGroup.Standalone);
+            if(!targets.HasManagerSettingsForBuildTarget(BuildTargetGroup.Standalone))
+                targets.CreateDefaultManagerSettingsForBuildTarget(BuildTargetGroup.Standalone);
             var general=targets.SettingsForBuildTarget(BuildTargetGroup.Standalone);
-            if(general==null)
-            {
-                general=ScriptableObject.CreateInstance<XRGeneralSettings>();
-                var manager=ScriptableObject.CreateInstance<XRManagerSettings>();
-                AssetDatabase.CreateAsset(general,"Assets/Z1/Settings/XRGeneral.asset");
-                AssetDatabase.AddObjectToAsset(manager,general); general.Manager=manager;
-                targets.SetSettingsForBuildTarget(BuildTargetGroup.Standalone,general);
-            }
             // PC support must never auto-start XR. Only the explicit VR role initializes it.
             general.InitManagerOnStart=false;
+            general.Manager.automaticLoading=false;general.Manager.automaticRunning=false;
             XRPackageMetadataStore.AssignLoader(general.Manager,"UnityEngine.XR.OpenXR.OpenXRLoader",BuildTargetGroup.Standalone);
             var xr=OpenXRSettings.GetSettingsForBuildTargetGroup(BuildTargetGroup.Standalone);
             if(xr!=null)
@@ -74,12 +85,12 @@ namespace Anseong.Z1.Editor
                 EditorUtility.SetDirty(xr);
             }
             EditorUtility.SetDirty(general);EditorUtility.SetDirty(general.Manager);EditorUtility.SetDirty(targets);
-            var scene=EditorSceneManager.NewScene(NewSceneSetup.EmptyScene,NewSceneMode.Single);
-            new GameObject("Z1 Prototype").AddComponent<Z1Prototype>();
-            EditorSceneManager.SaveScene(scene,ScenePath);
-            EditorBuildSettings.scenes=new[]{new EditorBuildSettingsScene(ScenePath,true)};
-            AssetDatabase.SaveAssets();AssetDatabase.Refresh();
-            Debug.Log("Z1_PREPARE_OK");
+            // Preserve the older container too, replacing its stale main-asset reference after migration.
+            var olderTargets=AssetDatabase.LoadAssetAtPath<XRGeneralSettingsPerBuildTarget>("Assets/Z1/Settings/XRTargets.asset");
+            if(olderTargets!=null && olderTargets!=targets)
+                olderTargets.SetSettingsForBuildTarget(BuildTargetGroup.Standalone,general);
+            AssetDatabase.SaveAssets();
+            Debug.Log("XR_SETTINGS_READY manual-start manager="+(general.Manager!=null));
         }
         [MenuItem("Anseong/Z1/Build Windows Lab")]
         public static void Build()

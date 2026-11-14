@@ -1,0 +1,10 @@
+{
+  "name": "Anseong.Map35.Editor",
+  "references": [
+    "Anseong.Map35",
+    "Anseong.Z1.Editor"
+  ],
+  "includePlatforms": [
+    "Editor"
+  ]
+}

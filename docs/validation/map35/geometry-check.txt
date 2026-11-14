@@ -1,0 +1,5 @@
+Mech polyline length m: 470.00
+Mech structural samples: 249
+Mech structure contacts: none
+Drone radius1.5 structure contacts: none
+Scope: blockout static geometry only. Mech tests ignore boss phase proxies, plate, debris and props. Drone checks include suspended coil. Turn rotation, real rigs, moving boss and gameplay are not certified. Camera tests are point rays; consult rendered images.

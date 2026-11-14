@@ -1,0 +1,15 @@
+camera,target,in_frustum,line_clear,blocker
+K K0 Hangar,I1 push face,True,True,
+K K1 Departure,I1 control status,True,True,
+K K1 Departure,I1 push face,True,False,I1 sliding plate
+K K2 Yard,T1 front shell,True,True,
+K K2 Yard,T2 west nerve,True,True,
+K K2b Nerve,T2 west nerve,True,True,
+K K3 Crane yard,I6 final weakpoint,True,True,
+K K3 Crane yard,Coil east edge,True,False,cross beam
+K K3b Drop side,P02 crane latch,True,True,
+K K3b Drop side,Coil east edge,True,True,
+05 Drone Z1 / D1,I1 drone latch,True,True,
+06 Drone Z2 / D5,T2 west nerve,True,True,
+07 Drone Z3 / D10,P02 crane latch,True,True,
+K1 original z=-20,I1 control status,not_checked,False,west wall

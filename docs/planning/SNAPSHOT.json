@@ -4,7 +4,7 @@
   "files": [
     {
       "file": "anseong-steel-coop-10min.md",
-      "sha256": "f42e0ab77b910c10c29018322d5175e338e9a6454ae15fc87c24018ae491d3f9"
+      "sha256": "18315830ea432cf083a75c47db036d54c21020c09af6b07d0162ebff6f54f345"
     },
     {
       "file": "code-inventory.csv",
@@ -20,7 +20,7 @@
     },
     {
       "file": "decisions-and-history.md",
-      "sha256": "5c74b5377c5715b6285b755f1cfe952ec3c4b6a028dcfebaec3ad936ab0301cd"
+      "sha256": "6714077142eb946b23c76e3d5c48118ebdf3a9e7d5a63db9dd7ec505ae409d3d"
     },
     {
       "file": "game-concept.md",
@@ -36,11 +36,15 @@
     },
     {
       "file": "map-layout-35m.md",
-      "sha256": "1763248c15e4b313ee831712d507cd721613ecd69ef5865daf1ded56faa5eedb"
+      "sha256": "2d59c4fc6dbfba415ff1e8bbab288417f42b146719d208cda0016808c058decf"
     },
     {
       "file": "map-layout-options.md",
-      "sha256": "14a3d43721ae09f8fbff087dc3abe3fc95ee90f828c003ac0fca35ad81c6e02f"
+      "sha256": "d0221303fd4adf4a635bb90e65e090aeed0cb792843ef4321c9dcef74ec68fb5"
+    },
+    {
+      "file": "map-unity-build.md",
+      "sha256": "a79968f4bca2d707e649d0bc3ababab0f424156d8b37e208dc7b903d65af2495"
     },
     {
       "file": "repo-concept-review.md",
@@ -48,11 +52,11 @@
     },
     {
       "file": "START-HERE.md",
-      "sha256": "860fd7dd914c55708e20ecad12dc09da59e4d99ab40056412521f339df7c95fe"
+      "sha256": "9d0969ef347dda5a95966e8e6bd1ed6284304b1734447c9709deb4f4d0a6d5d2"
     },
     {
       "file": "z1-coop-prototype.md",
-      "sha256": "baf3910996fcc2bc6037b7e17f2c4b0014885a900ca0934c99982c8b31136ca1"
+      "sha256": "f7b070c6887b545b1bc96e69801f0ccf27e422da47a0ed6bba2edc24fcf37e99"
     }
   ]
 }
