@@ -1,0 +1,5 @@
+{
+  "name": "Anseong.MapShowcase.Editor",
+  "references": ["Unity.Postprocessing.Runtime"],
+  "includePlatforms": ["Editor"]
+}
