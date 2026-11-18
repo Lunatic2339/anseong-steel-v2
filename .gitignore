@@ -10,3 +10,9 @@ Builds/
 *.sln
 *.slnx
 .DS_Store
+SourceAssets/
+
+# Meshy source FBX embed ~100 MB of textures each; prefabs use the extracted meshes in MapShowcase/Meshes instead
+Game/Assets/MapShowcase/**/model.fbx
+Game/Assets/MapShowcase/**/model.fbx.meta
+Game/Temp/
