@@ -12,7 +12,7 @@ using UnityEngine;
 
 namespace Anseong.Map35.Editor
 {
-    public static class Map35Build
+    public static partial class Map35Build
     {
         const string Base="Assets/Map35/", ScenePath=Base+"Scenes/Steelworks35m.unity";
         const string Output="../docs/validation/map35";
@@ -311,14 +311,15 @@ namespace Anseong.Map35.Editor
             viewer.Select(0);labels.gameObject.SetActive(true);routes.gameObject.SetActive(true);viewer.SetLateState(false);EditorSceneManager.SaveScene(scene,ScenePath);
             Debug.Log("MAP35_GENERATED "+ScenePath);
         }
-        static void Capture()
+        static void Capture(string output=Output)
         {
+            WarmSceneParticles();
             for(int i=0;i<viewer.views.Length;i++)
             {
                 viewer.Select(i);labels.gameObject.SetActive(i<2);routes.gameObject.SetActive(i<2);var c=viewer.views[i];
                 var rt=new RenderTexture(1600,1000,24);c.targetTexture=rt;c.aspect=1.6f;c.Render();var prev=RenderTexture.active;RenderTexture.active=rt;
                 var tex=new Texture2D(1600,1000,TextureFormat.RGB24,false);tex.ReadPixels(new Rect(0,0,1600,1000),0,0);tex.Apply();
-                File.WriteAllBytes(Output+"/view-"+i.ToString("00")+".png",tex.EncodeToPNG());RenderTexture.active=prev;c.targetTexture=null;UnityEngine.Object.DestroyImmediate(tex);UnityEngine.Object.DestroyImmediate(rt);
+                File.WriteAllBytes(output+"/view-"+i.ToString("00")+".png",tex.EncodeToPNG());RenderTexture.active=prev;c.targetTexture=null;UnityEngine.Object.DestroyImmediate(tex);UnityEngine.Object.DestroyImmediate(rt);
             }
         }
         static void Validate()

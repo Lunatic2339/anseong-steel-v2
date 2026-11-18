@@ -1,6 +1,7 @@
 {
   "name": "Anseong.Map35.Editor",
   "references": [
+    "Unity.Postprocessing.Runtime",
     "Anseong.Map35",
     "Anseong.Z1.Editor"
   ],

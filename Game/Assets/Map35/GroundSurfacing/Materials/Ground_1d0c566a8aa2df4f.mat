@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Ground_1d0c566a8aa2df4f
+  m_Shader: {fileID: 4800000, guid: 5f73fe1a2c30aa64a9c08a5c9f61e88b, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    PurposeGroundSource: Assets/Map35/Materials/Landscape_surface_process aggregate
+      concrete.mat
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _GravelNormal:
+        m_Texture: {fileID: 2800000, guid: c3a5d5def766f494eb9bbcdadcbaa000, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _GravelRoughness:
+        m_Texture: {fileID: 2800000, guid: bc4aea57cbfc5e54ab3a10e74a01c164, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _GravelTex:
+        m_Texture: {fileID: 2800000, guid: ee2a842d037032543b28b9523929c1e1, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _PurposeMask:
+        m_Texture: {fileID: 2800000, guid: e75bc76b1bdb0be41a82219f3367af43, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RockNormal:
+        m_Texture: {fileID: 2800000, guid: 9cf9d2b900818304f8cd1f9543e3616f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RockRoughness:
+        m_Texture: {fileID: 2800000, guid: 2f7fcafeaf2d02f468bdf6e1b67078a3, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RockTex:
+        m_Texture: {fileID: 2800000, guid: 9d3c52138a30bca42a799753b5fa0001, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _EdgeDust: 0.06
+    - _GravelMetres: 1.4
+    - _GroundSurface: 1
+    - _NormalStrength: 0.48
+    - _RepairColorBlend: 0.45
+    - _RepairGain: 1.1
+    - _RockMetres: 3.5
+    - _RoughnessScale: 1.1
+    - _Saturation: 0.94
+    - _SeamStrength: 0
+    - _SlabEnabled: 1
+    - _SlabVariation: 0.2
+    - _WearDarkening: 0.35
+    - _WetGain: 0.72
+    - _Wetness: 0.025
+    m_Colors:
+    - _Color: {r: 0.94, g: 0.95, b: 0.93, a: 1}
+    - _MaskRect: {r: -510, g: -210, b: 0.0010204081, a: 0.00088495575}
+    - _RepairColor: {r: 0.99, g: 0.96, b: 0.88, a: 1}
+    - _ResidueColor: {r: 0.25, g: 0.15, b: 0.075, a: 1}
+    - _SlabMetres: {r: 10, g: 10, b: 0, a: 0}
+    - _SlabOrigin: {r: -178, g: 309, b: 0, a: 0}
+    - _SurfaceRect: {r: -178, g: 309, b: -132, a: 365}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

@@ -1,0 +1,82 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: Photo_946def0e5408a5d0
+  m_Shader: {fileID: 4800000, guid: a20ab15c2f716d2488e731bdb94db8b2, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 1
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap:
+    PurposeGroundSource: Assets/Map35/Materials/Landscape_surface_weathered aggregate
+      asphalt.mat
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _BaseNormal:
+        m_Texture: {fileID: 2800000, guid: 02f0ca1b1e8ebfe45b0ca4464d0ec4a0, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BaseRoughness:
+        m_Texture: {fileID: 2800000, guid: 20311ebfa09a3cc46ad9c4a8d90b4752, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _BaseTex:
+        m_Texture: {fileID: 2800000, guid: 22caec5882a39024e8cc3c808b30bda8, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DamageData:
+        m_Texture: {fileID: 2800000, guid: ef1313810e817d24bb398115027912eb, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DamageNormal:
+        m_Texture: {fileID: 2800000, guid: eb9cf574febae274cb9374bb367a4865, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DamageTex:
+        m_Texture: {fileID: 2800000, guid: 2f577476cd5a9a34a89206d0e8288526, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MacroNormal:
+        m_Texture: {fileID: 2800000, guid: 2c0dd7f178f36d544af676e365f88d93, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MacroRoughness:
+        m_Texture: {fileID: 2800000, guid: 5a4e7794c1afccf4699b9629e1b0dd53, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MacroTex:
+        m_Texture: {fileID: 2800000, guid: 5df9a534752c7ec48b7966ed1531a24e, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _PurposeMask:
+        m_Texture: {fileID: 2800000, guid: 541da00dab109cf4f89d0dad22d40321, type: 2}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Asphalt: 1
+    - _BaseMetres: 2.2
+    - _GroundSurface: 1
+    - _MacroMetres: 30
+    - _MacroStrength: 0.26
+    - _NormalStrength: 0.65
+    - _RoughnessScale: 0.95
+    - _WetGain: 0.35
+    m_Colors:
+    - _MaskRect: {r: -145, g: -20, b: 0.003508772, a: 0.0044444446}
+    - _Tint: {r: 0.96, g: 0.98, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1

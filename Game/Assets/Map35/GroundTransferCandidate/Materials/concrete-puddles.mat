@@ -1,0 +1,67 @@
+%YAML 1.1
+%TAG !u! tag:unity3d.com,2011:
+--- !u!21 &2100000
+Material:
+  serializedVersion: 8
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_Name: concrete-puddles
+  m_Shader: {fileID: 4800000, guid: 6085eef78f719404ea4f693f50d9c486, type: 3}
+  m_Parent: {fileID: 0}
+  m_ModifiedSerializedProperties: 0
+  m_ValidKeywords: []
+  m_InvalidKeywords: []
+  m_LightmapFlags: 4
+  m_EnableInstancingVariants: 0
+  m_DoubleSidedGI: 0
+  m_CustomRenderQueue: -1
+  stringTagMap: {}
+  disabledShaderPasses: []
+  m_LockedProperties: 
+  m_SavedProperties:
+    serializedVersion: 3
+    m_TexEnvs:
+    - _DetailColor:
+        m_Texture: {fileID: 2800000, guid: ee2a842d037032543b28b9523929c1e1, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailNormal:
+        m_Texture: {fileID: 2800000, guid: 3b890c4d241add44985637b346a9166a, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _DetailRough:
+        m_Texture: {fileID: 2800000, guid: bc4aea57cbfc5e54ab3a10e74a01c164, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _MainTex:
+        m_Texture: {fileID: 2800000, guid: 082148d2c1e0f0d47baca20f52324f5f, type: 3}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _NormalMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    - _RoughMap:
+        m_Texture: {fileID: 0}
+        m_Scale: {x: 1, y: 1}
+        m_Offset: {x: 0, y: 0}
+    m_Ints: []
+    m_Floats:
+    - _Detail: 1
+    - _DetailMetres: 1.4
+    - _PBR: 0
+    - _Puddles: 1
+    m_Colors:
+    - _Puddle0: {r: 25.791357, g: 60.562057, b: 1.9828097, a: 1.3011047}
+    - _Puddle1: {r: 53.152176, g: 67.579315, b: 1.7777748, a: 0.8049509}
+    - _Puddle2: {r: 41.762165, g: 68.35984, b: 1.8713101, a: 1.1891241}
+    - _Puddle3: {r: 52.19553, g: 43.404484, b: 1.681918, a: 1.8288544}
+    - _Puddle4: {r: 45.721134, g: 59.517517, b: 2.126365, a: 1.8180605}
+    - _Puddle5: {r: 31.842802, g: 69.669525, b: 1.5566148, a: 1.1564611}
+    - _Puddle6: {r: 41.99381, g: 50.727047, b: 2.0510461, a: 1.4561069}
+    - _Puddle7: {r: 33.22834, g: 53.736626, b: 1.6807609, a: 1.2162876}
+    - _UVRect: {r: 0, g: 0, b: 1, a: 1}
+  m_BuildTextureStacks: []
+  m_AllowLocking: 1
