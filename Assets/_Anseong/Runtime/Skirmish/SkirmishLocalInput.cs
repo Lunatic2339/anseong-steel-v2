@@ -1,0 +1,184 @@
+using UnityEngine;
+using UnityEngine.InputSystem;
+using UnityEngine.XR;
+
+namespace Anseong.Skirmish
+{
+    /// <summary>
+    /// 이 PC 한 사람의 입력을 교전 입력으로 바꾼다. 헤드셋이 켜져 있으면 컨트롤러, 아니면 키보드·마우스(개발 확인용, VR 검증 아님).
+    /// 자리에 맞춰 XR Origin을 메카 눈높이 또는 공중포대 조종석에 놓고, 처음 추적될 때 "정면 = 북쪽"으로 맞춘다.
+    /// <list type="bullet">
+    /// <item>메카(P1): 왼 스틱 이동, 왼 트리거 + 왼팔 방향 = 가드, 오른 트리거 + 오른팔 방향 = 포.</item>
+    /// <item>공중포대(P2): 오른손 방향 + 오른 트리거 = 기관포, 왼손으로 가리키고 왼 트리거 유지 → 놓기 = 미사일, 왼손 X 또는 오른손 B = 잠금 취소.</item>
+    /// </list>
+    /// 씬 구성은 메뉴 'Anseong → Sandbox → Build Z2 Skirmish'가 한다.
+    /// </summary>
+    [DefaultExecutionOrder(-50)]
+    public class SkirmishLocalInput : MonoBehaviour
+    {
+        [SerializeField, Tooltip("XR Origin 루트. 자리에 맞춰 옮긴다.")] Transform rig;
+        [SerializeField, Tooltip("컨트롤러 좌표의 기준(XR Origin의 Camera Offset).")] Transform trackingSpace;
+        [SerializeField, Tooltip("머리(카메라).")] Transform head;
+        [SerializeField, Tooltip("손 위치 표시(비면 안 그림).")] Transform leftHandMarker;
+        [SerializeField] Transform rightHandMarker;
+        [SerializeField, Tooltip("오른손 조준선.")] LineRenderer aimLine;
+        [SerializeField, Tooltip("왼손 지시선(가드 방향 / 미사일 지시).")] LineRenderer pointerLine;
+
+        [SerializeField, Min(1f), Tooltip("메카 눈높이(m).")] float mechEyeHeight = 30f;
+        [SerializeField, Range(0.05f, 0.95f), Tooltip("트리거를 이만큼 당기면 누른 것으로 본다.")] float triggerPress = 0.5f;
+        [SerializeField, Min(10f), Tooltip("조준선 길이(m).")] float lineLength = 250f;
+        [SerializeField, Range(0.02f, 0.5f)] float mouseSensitivity = 0.12f;
+        [SerializeField, Tooltip("이 자리를 자동 조작이 대신한다(혼자 구경·자동 시험용).")] bool useBot;
+
+        InputAction rightRotation, rightPointer, rightPosition, rightTrigger, rightSecondary;
+        InputAction leftRotation, leftPointer, leftPosition, leftTrigger, leftPrimary, leftStick, headPosition, headRotation;
+        float yaw, pitch;
+        bool recentered;
+        Vector3 rigOffset;
+
+        public SkirmishSeat Seat { get; private set; }
+        public MechInput Mech { get; private set; }
+        public GunnerInput Gunner { get; private set; }
+        public bool UseBot { get => useBot; set => useBot = value; }
+        /// <summary>헤드셋이 켜져 있어 컨트롤러 입력을 쓰는 중.</summary>
+        public bool VrActive { get; private set; }
+
+        public void Bind(Transform rigRoot, Transform tracking, Transform headTransform, Transform leftMarker, Transform rightMarker,
+            LineRenderer aim, LineRenderer pointer)
+        {
+            rig = rigRoot; trackingSpace = tracking; head = headTransform;
+            leftHandMarker = leftMarker; rightHandMarker = rightMarker; aimLine = aim; pointerLine = pointer;
+        }
+
+        /// <summary>자리가 바뀌면 다음 프레임에 정면을 다시 맞춘다.</summary>
+        public void SetSeat(SkirmishSeat seat)
+        {
+            if (seat == Seat && recentered) return;
+            Seat = seat;
+            recentered = false;
+            pitch = seat == SkirmishSeat.Gunner ? 25f : 5f;
+            yaw = 0f;
+        }
+
+        /// <summary>운영자가 착용자 정면을 다시 맞출 때.</summary>
+        public void Recenter() => recentered = false;
+
+        static InputAction Action(string binding)
+        {
+            var action = new InputAction(type: InputActionType.Value, binding: binding);
+            action.Enable();
+            return action;
+        }
+
+        void OnEnable()
+        {
+            const string R = "<XRController>{RightHand}/", L = "<XRController>{LeftHand}/";
+            rightRotation = Action(R + "deviceRotation"); rightPointer = Action(R + "pointerRotation");
+            rightPosition = Action(R + "devicePosition"); rightTrigger = Action(R + "trigger"); rightSecondary = Action(R + "secondaryButton");
+            leftRotation = Action(L + "deviceRotation"); leftPointer = Action(L + "pointerRotation");
+            leftPosition = Action(L + "devicePosition"); leftTrigger = Action(L + "trigger"); leftPrimary = Action(L + "primaryButton");
+            leftStick = Action(L + "thumbstick");
+            headPosition = Action("<XRHMD>/centerEyePosition"); headRotation = Action("<XRHMD>/centerEyeRotation");
+        }
+
+        void OnDisable()
+        {
+            foreach (var action in new[] { rightRotation, rightPointer, rightPosition, rightTrigger, rightSecondary,
+                         leftRotation, leftPointer, leftPosition, leftTrigger, leftPrimary, leftStick, headPosition, headRotation })
+                action?.Dispose();
+        }
+
+        /// <summary>조준 자세(pointer)가 있으면 그것을, 없으면 쥔 자세를 쓴다.</summary>
+        static Quaternion Rotation(InputAction pointer, InputAction device)
+        {
+            var q = pointer.controls.Count > 0 ? pointer.ReadValue<Quaternion>() : device.ReadValue<Quaternion>();
+            return q.x == 0f && q.y == 0f && q.z == 0f && q.w == 0f ? Quaternion.identity : q;
+        }
+
+        /// <param name="anchor">이 자리의 눈 위치(메카 눈 또는 공중포대 조종석).</param>
+        public void Read(Vector3 mechPosition, Vector3 gunnerPost)
+        {
+            if (rig == null || head == null) return;
+            var anchor = Seat == SkirmishSeat.Mech ? mechPosition + Vector3.up * mechEyeHeight : gunnerPost;
+            VrActive = XRSettings.isDeviceActive && headRotation.controls.Count > 0;
+
+            Vector3 rightDirection, leftDirection, move;
+            bool rightHeld, leftHeld, cancel;
+            if (VrActive)
+            {
+                var space = trackingSpace != null ? trackingSpace : rig;
+                if (!recentered)
+                {
+                    // 지금 보는 쪽을 북쪽(+Z)으로, 지금 머리 위치를 자리의 눈 위치로.
+                    var headLocal = headPosition.ReadValue<Vector3>();
+                    float headYaw = headRotation.ReadValue<Quaternion>().eulerAngles.y;
+                    rig.rotation = Quaternion.Euler(0f, -headYaw, 0f);
+                    rigOffset = -(rig.rotation * headLocal);
+                    recentered = true;
+                }
+                rig.position = anchor + rigOffset;
+                rightDirection = space.rotation * (Rotation(rightPointer, rightRotation) * Vector3.forward);
+                leftDirection = space.rotation * (Rotation(leftPointer, leftRotation) * Vector3.forward);
+                rightHeld = rightTrigger.ReadValue<float>() >= triggerPress;
+                leftHeld = leftTrigger.ReadValue<float>() >= triggerPress;
+                cancel = leftPrimary.ReadValue<float>() > 0.5f || rightSecondary.ReadValue<float>() > 0.5f;
+                var stick = leftStick.ReadValue<Vector2>();
+                move = Quaternion.Euler(0f, rig.eulerAngles.y, 0f) * new Vector3(stick.x, 0f, stick.y);
+                Place(rightHandMarker, space.TransformPoint(rightPosition.ReadValue<Vector3>()), rightDirection);
+                Place(leftHandMarker, space.TransformPoint(leftPosition.ReadValue<Vector3>()), leftDirection);
+            }
+            else
+            {
+                var keyboard = Keyboard.current;
+                var mouse = Mouse.current;
+                rig.SetPositionAndRotation(anchor, Quaternion.identity);
+                recentered = true;
+                if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
+                {
+                    var delta = mouse.delta.ReadValue() * mouseSensitivity;
+                    yaw = Mathf.Clamp(yaw + delta.x, -110f, 110f);
+                    pitch = Mathf.Clamp(pitch - delta.y, -40f, 75f);
+                }
+                if (mouse != null && mouse.leftButton.wasPressedThisFrame) Cursor.lockState = CursorLockMode.Locked;
+                if (keyboard != null && keyboard.escapeKey.wasPressedThisFrame) Cursor.lockState = CursorLockMode.None;
+                head.localPosition = Vector3.zero;
+                head.localRotation = Quaternion.Euler(pitch, yaw, 0f);
+                rightDirection = leftDirection = head.forward;
+                rightHeld = mouse != null && mouse.leftButton.isPressed;
+                leftHeld = mouse != null && mouse.rightButton.isPressed;
+                cancel = keyboard != null && keyboard.cKey.isPressed;
+                move = keyboard == null ? Vector3.zero : Quaternion.Euler(0f, yaw, 0f) * new Vector3(
+                    (keyboard.dKey.isPressed ? 1 : 0) - (keyboard.aKey.isPressed ? 1 : 0), 0f,
+                    (keyboard.wKey.isPressed ? 1 : 0) - (keyboard.sKey.isPressed ? 1 : 0));
+                Hide(rightHandMarker); Hide(leftHandMarker);
+            }
+
+            Mech = new MechInput { move = move, guard = leftHeld, guardDirection = leftDirection, fire = rightHeld, aim = rightDirection };
+            Gunner = new GunnerInput { aim = rightDirection, fire = rightHeld, pointer = leftDirection, lockHeld = leftHeld, cancel = cancel };
+
+            Line(aimLine, rightHandMarker, rightDirection, VrActive);
+            Line(pointerLine, leftHandMarker, leftDirection, VrActive);
+        }
+
+        static void Place(Transform marker, Vector3 position, Vector3 direction)
+        {
+            if (marker == null) return;
+            if (!marker.gameObject.activeSelf) marker.gameObject.SetActive(true);
+            marker.SetPositionAndRotation(position, Quaternion.LookRotation(direction));
+        }
+
+        static void Hide(Transform marker)
+        {
+            if (marker != null && marker.gameObject.activeSelf) marker.gameObject.SetActive(false);
+        }
+
+        void Line(LineRenderer line, Transform from, Vector3 direction, bool on)
+        {
+            if (line == null) return;
+            line.enabled = on && from != null;
+            if (!line.enabled) return;
+            line.SetPosition(0, from.position);
+            line.SetPosition(1, from.position + direction * lineLength);
+        }
+    }
+}
