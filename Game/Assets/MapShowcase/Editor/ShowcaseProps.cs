@@ -105,7 +105,7 @@ namespace Anseong.MapShowcase.Editor
             put("stock", -53, 232, 0); put("stock", -53, 248, 0); put("stock", 50, 250, 90); put("stock", 62, 262, 90); put("stock", -95, 320, 0); put("stock", 100, 240, 0);
             put("stock", 30, 100, 90); put("stock", 170, 610, 90); put("stock", -40, 330, 90); put("stock", 60, 180, 90);
             // invasion wreckage outside the lanes
-            put("wreck", -45, 150, 20); put("wreck", 62, 330, 140); put("wreck", -70, 345, 250); put("wreck", -32, 470, 60); put("wreck", 125, 602, 200);
+            put("wreck", -45, 150, 20); put("wreck", 93, 240, 75);   /* the burn scar and red glow at (92,238) had nothing lying on it */ put("wreck", 62, 330, 140); put("wreck", -70, 345, 250); put("wreck", -32, 470, 60); put("wreck", 125, 602, 200);
             put("wreck", 30, 500, 300); put("wreck", -100, 215, 100); put("wreck", 118, 380, 30); put("wreck", 25, 620, 170); put("wreck", -40, 40, 80);
             int wi = 0; foreach (var w in wreckSpots) { if (wi >= 14) break; put("wreck", w.x, w.z, (wi * 67) % 360); wi++; }
             Debug.Log("SHOWCASE wreck clusters " + wreckSpots.Count);

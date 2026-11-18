@@ -139,7 +139,7 @@ namespace Anseong.MapShowcase.Editor
             {
                 { "Yard", GroundMat("SC_Ground_ConcreteYard", macroS, detC, nC, new Color(1f, 1f, 1f), 160, 3.0f, Vector2.zero) },
                 { "Site", GroundMat("SC_Ground_SiteConcrete", macroC, detC, nC, new Color(.86f, .86f, .85f), 128, 3.0f, new Vector2(.37f, .61f)) },
-                { "Asphalt", GroundMat("SC_Ground_Road", macroA, detA, nA, new Color(.95f, .95f, .97f), 160, 2.2f, new Vector2(.11f, .23f)) },
+                { "Asphalt", GroundMat("SC_Ground_Road", macroA, detA, nA, new Color(.97f, .94f, .89f), 160, 2.2f, new Vector2(.07f, .15f)) },
             };
             var groundShaders = new HashSet<string> { "Anseong/PurposeGround", "Anseong/PhotographicGround", "Anseong/GeologicalGround" };
             var buckets = mats.Keys.ToDictionary(k => k, k => new List<CombineInstance>());

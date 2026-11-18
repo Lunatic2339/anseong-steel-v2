@@ -78,14 +78,13 @@ namespace Anseong.MapShowcase.Editor
 
         static void Trees(Transform root)
         {
-            var pf = ShowcaseBuildings.BuildPrefab("Prop_TreeClump", Root + "/Props/Prop_TreeClump", 20f, 2048, false); if (pf == null) return;
-            var mat = AssetDatabase.LoadAssetAtPath<Material>(Root + "/Props/Prop_TreeClump/Prop_TreeClump.mat"); if (mat) { mat.enableInstancing = true; mat.SetFloat("_GlossMapScale", 0.2f); EditorUtility.SetDirty(mat); }
+            var clumps = LeafyClumps();
             var rng = new System.Random(4217); var holder = new GameObject("SC_Trees"); holder.transform.SetParent(root, false);
             // candidate triangles: gentle slopes, low altitude, within sight of the play area
             var cand = new List<Vector3[]>(); var areas = new List<float>(); float total = 0; var centre = new Vector3(0, 0, 400);
             foreach (var m in lowMeshes)
             {
-                var v = m.vertices; var t = m.triangles; float crest = m.bounds.max.y < 60 ? m.bounds.max.y * 0.62f : 1e9f;   // keep trees off the low foothill crest (spiky skyline)
+                var v = m.vertices; var t = m.triangles; float crest = 1e9f;
                 for (int i = 0; i < t.Length; i += 3)
                 {
                     Vector3 a = v[t[i]], b = v[t[i + 1]], c = v[t[i + 2]]; var cr = Vector3.Cross(b - a, c - a); float area = cr.magnitude * .5f; if (area < 1) continue;
@@ -97,20 +96,67 @@ namespace Anseong.MapShowcase.Editor
                     cand.Add(new[] { a, b, c }); total += wgt; areas.Add(total);
                 }
             }
-            int count = 0, target = 420;
+            int count = 0, target = 900;
             for (int k = 0; k < target * 3 && count < target && cand.Count > 0; k++)
             {
                 float pick = (float)rng.NextDouble() * total; int lo = areas.BinarySearch(pick); if (lo < 0) lo = ~lo; lo = Mathf.Min(lo, cand.Count - 1);
                 var tri = cand[lo]; float u = (float)rng.NextDouble(), w = (float)rng.NextDouble(); if (u + w > 1) { u = 1 - u; w = 1 - w; }
                 var p = tri[0] + (tri[1] - tri[0]) * u + (tri[2] - tri[0]) * w;
-                var go = (GameObject)PrefabUtility.InstantiatePrefab(pf, holder.transform);
-                float s = 0.9f + (float)rng.NextDouble() * 1.1f;
-                go.transform.position = p + Vector3.down * 2.5f * s; go.transform.rotation = Quaternion.Euler(0, (float)rng.NextDouble() * 360f, 0);
+                var go = (GameObject)PrefabUtility.InstantiatePrefab(clumps[count % clumps.Length], holder.transform);
+                float s = 0.85f + (float)rng.NextDouble() * 0.5f;
+                go.transform.position = p + Vector3.down * 0.8f; go.transform.rotation = Quaternion.Euler(0, (float)rng.NextDouble() * 360f, 0);
                 go.transform.localScale = new Vector3(s * (0.9f + (float)rng.NextDouble() * .3f), s, s * (0.9f + (float)rng.NextDouble() * .3f));
                 foreach (var r in go.GetComponentsInChildren<Renderer>()) r.shadowCastingMode = ShadowCastingMode.Off;
                 count++;
             }
             Debug.Log("SHOWCASE trees placed " + count + " candidates " + cand.Count);
+        }
+
+        // Leafy tree clumps: crossed cut-out cards from one generated tree sheet (the Meshy clump came out as bare trunks).
+        static GameObject[] LeafyClumps()
+        {
+            var tp = Root + "/Textures/SC_TreeAtlas.png"; var imp = (TextureImporter)AssetImporter.GetAtPath(tp);
+            imp.textureType = TextureImporterType.Default; imp.sRGBTexture = true; imp.alphaSource = TextureImporterAlphaSource.FromInput; imp.alphaIsTransparency = true; imp.wrapMode = TextureWrapMode.Clamp;
+            imp.mipmapEnabled = true; imp.mipMapsPreserveCoverage = true; imp.alphaTestReferenceValue = 0.4f; imp.maxTextureSize = 2048; imp.anisoLevel = 4; imp.textureCompression = TextureImporterCompression.CompressedHQ; imp.SaveAndReimport();
+            var mp = Root + "/Materials/SC_TreeCards.mat"; var mat = AssetDatabase.LoadAssetAtPath<Material>(mp);
+            if (mat == null) { mat = new Material(Shader.Find("Standard")); AssetDatabase.CreateAsset(mat, mp); }
+            mat.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>(tp)); mat.color = new Color(.82f, .86f, .80f);
+            mat.SetFloat("_Mode", 1); mat.SetFloat("_Cutoff", 0.4f); mat.EnableKeyword("_ALPHATEST_ON"); mat.SetOverrideTag("RenderType", "TransparentCutout"); mat.renderQueue = 2450;
+            mat.SetFloat("_Glossiness", 0.05f); mat.SetFloat("_Metallic", 0); mat.SetFloat("_SpecularHighlights", 0); mat.EnableKeyword("_SPECULARHIGHLIGHTS_OFF"); mat.SetFloat("_GlossyReflections", 0); mat.EnableKeyword("_GLOSSYREFLECTIONS_OFF");
+            mat.enableInstancing = true; EditorUtility.SetDirty(mat);
+            // atlas rectangles (u0, v0, u1, v1) and tree heights in metres: pine, oak, tall pine, broadleaf
+            var rects = new[] { new Vector4(.003f, .077f, .251f, .757f), new Vector4(.240f, .077f, .5065f, .690f), new Vector4(.5065f, .077f, .713f, .908f), new Vector4(.7135f, .077f, .997f, .752f) };
+            var heights = new[] { 17f, 13f, 21f, 15f }; var aspect = new[] { .55f, .65f, .37f, .63f };
+            var result = new GameObject[3];
+            for (int c = 0; c < 3; c++)
+            {
+                var rng = new System.Random(77 + c * 13); var v = new List<Vector3>(); var uv = new List<Vector2>(); var nrm = new List<Vector3>(); var tri = new List<int>();
+                int trees = 9 + c * 2;
+                for (int i = 0; i < trees; i++)
+                {
+                    int k = rng.Next(10) < 6 ? (rng.Next(2) * 2) : (1 + rng.Next(2) * 2);   // pines a little more common
+                    float ang = (float)rng.NextDouble() * Mathf.PI * 2, rad = Mathf.Sqrt((float)rng.NextDouble()) * 13f; var basePos = new Vector3(Mathf.Cos(ang) * rad, 0, Mathf.Sin(ang) * rad);
+                    float h = heights[k] * (0.8f + (float)rng.NextDouble() * .45f), w = h * aspect[k]; float yaw = (float)rng.NextDouble() * Mathf.PI; var r = rects[k];
+                    for (int q = 0; q < 2; q++)
+                    {
+                        float a = yaw + q * Mathf.PI * .5f; var side = new Vector3(Mathf.Cos(a), 0, Mathf.Sin(a)) * (w * .5f);
+                        for (int f = 0; f < 2; f++)   // both windings: the Standard shader culls back faces
+                        {
+                            int o = v.Count; var s = f == 0 ? side : -side; float u0 = f == 0 ? r.x : r.z, u1 = f == 0 ? r.z : r.x;
+                            v.Add(basePos - s); v.Add(basePos + s); v.Add(basePos + s + Vector3.up * h); v.Add(basePos - s + Vector3.up * h);
+                            uv.Add(new Vector2(u0, r.y)); uv.Add(new Vector2(u1, r.y)); uv.Add(new Vector2(u1, r.w)); uv.Add(new Vector2(u0, r.w));
+                            for (int n = 0; n < 4; n++) nrm.Add(Vector3.up);   // upward normals: even overcast shading, no card flicker
+                            tri.AddRange(new[] { o, o + 2, o + 1, o, o + 3, o + 2 });
+                        }
+                    }
+                }
+                var mesh = new Mesh { name = "SC_TreeClump_" + c }; mesh.SetVertices(v); mesh.SetUVs(0, uv); mesh.SetNormals(nrm); mesh.SetTriangles(tri, 0); mesh.RecalculateBounds();
+                var meshPath = Root + "/Meshes/SC_TreeClump_" + c + ".asset"; AssetDatabase.DeleteAsset(meshPath); AssetDatabase.CreateAsset(mesh, meshPath);
+                var go = new GameObject("Prop_LeafyClump_" + c); go.AddComponent<MeshFilter>().sharedMesh = mesh; var mr = go.AddComponent<MeshRenderer>(); mr.sharedMaterial = mat;
+                mr.shadowCastingMode = ShadowCastingMode.Off; mr.lightProbeUsage = LightProbeUsage.Off; mr.reflectionProbeUsage = ReflectionProbeUsage.Off;
+                result[c] = PrefabUtility.SaveAsPrefabAsset(go, Root + "/Prefabs/Prop_LeafyClump_" + c + ".prefab"); Object.DestroyImmediate(go);
+            }
+            return result;
         }
 
         static float HeightAt(float x, float z)
@@ -144,7 +190,9 @@ namespace Anseong.MapShowcase.Editor
                                   new Vector2(-300, 1180), new Vector2(-60, 1220), new Vector2(190, 1200), new Vector2(-760, 780), new Vector2(-800, 450), new Vector2(-520, 1120), new Vector2(380, 1150), new Vector2(-780, 150) };
             foreach (var a in anchors)
             {
-                float x = a.x + (float)(rng.NextDouble() - .5) * 60, z = a.y + (float)(rng.NextDouble() - .5) * 60; float y = HeightAt(x, z);
+                // pushed 1.35x out from the site centre so even the nearest row sits in the haze instead of reading as crisp as the play area
+                var far = new Vector2(0, 400) + (a - new Vector2(0, 400)) * 1.35f;
+                float x = far.x + (float)(rng.NextDouble() - .5) * 60, z = far.y + (float)(rng.NextDouble() - .5) * 60; float y = HeightAt(x, z);
                 var pf = AssetDatabase.LoadAssetAtPath<GameObject>(Root + "/Prefabs/" + ids[n % ids.Length] + ".prefab"); if (pf == null) continue;
                 var go = (GameObject)PrefabUtility.InstantiatePrefab(pf, holder.transform); float s = 0.9f + (float)rng.NextDouble() * 0.7f;
                 go.transform.position = new Vector3(x, y - 2.5f, z); go.transform.rotation = Quaternion.Euler(0, rng.Next(4) * 90 + (float)(rng.NextDouble() - .5) * 16, 0); go.transform.localScale = new Vector3(s, s * (0.8f + (float)rng.NextDouble() * .4f), s);

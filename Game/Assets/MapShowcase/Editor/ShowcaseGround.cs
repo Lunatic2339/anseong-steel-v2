@@ -107,3 +107,33 @@ namespace Anseong.MapShowcase.Editor
         }
     }
 }
+namespace Anseong.MapShowcase.Editor
+{
+    public static class ShowcaseFlatQuery
+    {
+        // lists what is still drawn with untextured (blockout) materials in the work scene, grouped by material
+        public static void List()
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(ShowcaseCapture.WorkScene);
+            var groups = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<UnityEngine.Renderer>>();
+            foreach (var r in UnityEngine.Object.FindObjectsByType<UnityEngine.Renderer>(UnityEngine.FindObjectsInactive.Exclude, UnityEngine.FindObjectsSortMode.None))
+            {
+                if (!r.enabled) continue; var m = r.sharedMaterial; if (m == null) continue;
+                bool tex = false; foreach (var n in m.GetTexturePropertyNames()) if (m.GetTexture(n)) tex = true;
+                if (tex) continue;
+                var key = m.name + " [" + m.shader.name + "] col " + (m.HasProperty("_Color") ? m.color.ToString("F2") : "") + (m.IsKeywordEnabled("_EMISSION") ? " EMISSIVE" : "") + " | " + r.GetType().Name;
+                if (!groups.TryGetValue(key, out var l)) groups[key] = l = new System.Collections.Generic.List<UnityEngine.Renderer>();
+                l.Add(r);
+            }
+            var sb = new System.Text.StringBuilder();
+            foreach (var g in System.Linq.Enumerable.OrderByDescending(groups, g => g.Value.Count))
+            {
+                var b = g.Value[0].bounds; foreach (var r in g.Value) b.Encapsulate(r.bounds);
+                sb.AppendLine(g.Value.Count + " x " + g.Key + " | union c " + b.center.ToString("F0") + " s " + b.size.ToString("F0"));
+                foreach (var r in System.Linq.Enumerable.Take(System.Linq.Enumerable.OrderByDescending(g.Value, r => r.bounds.size.magnitude), 4))
+                { var t = r.transform; string p = t.name; for (int i = 0; i < 3 && t.parent; i++) { t = t.parent; p = t.name + "/" + p; } sb.AppendLine("    " + p + " c " + r.bounds.center.ToString("F0") + " s " + r.bounds.size.ToString("F1")); }
+            }
+            System.IO.File.WriteAllText(ShowcaseCapture.Arg("-dumpOut", "Temp/flat.txt"), sb.ToString());
+        }
+    }
+}
