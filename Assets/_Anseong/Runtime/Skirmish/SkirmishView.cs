@@ -26,11 +26,19 @@ namespace Anseong.Skirmish
         [SerializeField, Tooltip("실제 로봇 모델의 팔(있으면 상자 팔 대신 쓴다).")] SkirmishMechArms mechArms;
 
         [SerializeField, Min(0.01f), Tooltip("사격 궤적이 보이는 시간(초).")] float tracerSeconds = 0.06f;
+        [Header("돌격형 테두리 빛(전용 셰이더가 있는 재질에서만 보인다)")]
+        [SerializeField, ColorUsage(false, true)] Color gruntRim = new Color(0.3f, 0.17f, 0.1f);
+        [SerializeField, ColorUsage(false, true), Tooltip("공격을 예고하는 동안.")] Color gruntRimTelegraph = new Color(1.3f, 0.16f, 0.08f);
+        [SerializeField, ColorUsage(false, true), Tooltip("멈칫해서 빈틈이 난 동안.")] Color gruntRimStagger = new Color(0.7f, 0.7f, 0.65f);
+        [SerializeField, ColorUsage(false, true), Tooltip("가드를 굳힌 동안.")] Color gruntRimGuard = new Color(0.8f, 0.5f, 0.08f);
         [SerializeField] Color furnaceSafe = new Color(0.2f, 0.9f, 0.3f);
         [SerializeField] Color furnaceWarn = new Color(1f, 0.6f, 0.1f);
         [SerializeField] Color furnaceDanger = new Color(1f, 0.1f, 0.05f);
 
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
+        static readonly int RimColorId = Shader.PropertyToID("_RimColor");
+        Renderer[] gruntRenderers;
+        MaterialPropertyBlock rimBlock;
 
         readonly Dictionary<int, Transform> shells = new Dictionary<int, Transform>();
         readonly List<int> stale = new List<int>();
@@ -159,6 +167,13 @@ namespace Anseong.Skirmish
             grunt.rotation = pose;
 
             bool telegraph = st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike;
+            // 상태를 몸의 테두리 색으로도 알린다(예고 = 붉게, 빈틈 = 희게, 가드 = 노랗게, 쓰러지면 꺼짐).
+            gruntRenderers ??= grunt.GetComponentsInChildren<Renderer>(true);
+            rimBlock ??= new MaterialPropertyBlock();
+            rimBlock.SetColor(RimColorId, dead ? Color.black : telegraph ? gruntRimTelegraph
+                : st.gruntStep == GruntStep.Stagger || st.gruntStep == GruntStep.Frozen ? gruntRimStagger
+                : st.gruntStep == GruntStep.Guard ? gruntRimGuard : gruntRim);
+            foreach (var r in gruntRenderers) r.SetPropertyBlock(rimBlock);
             if (gruntTelegraph != null)
             {
                 gruntTelegraph.enabled = telegraph;

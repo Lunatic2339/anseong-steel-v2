@@ -17,11 +17,16 @@ namespace Anseong.Skirmish
         [SerializeField, Tooltip("모니터: 머리 기준 계기판 위치(m).")] Vector3 desktopLocalPosition = new Vector3(0f, -0.42f, 1f);
         [SerializeField, Range(0f, 80f), Tooltip("계기판을 위로 젖히는 각도(°).")] float tilt = 35f;
 
+        [SerializeField, Tooltip("P1 조종석의 계기판 자리. 헤드셋으로 P1일 때는 여기에 붙는다.")] Transform cockpitMount;
+
         Text text;
         Transform panel;
         string lastEvent = "";
 
         public void Bind(Transform rigRoot, Transform headTransform) { rig = rigRoot; head = headTransform; }
+        public void BindCockpit(Transform mount) => cockpitMount = mount;
+        [SerializeField, Tooltip("P1 조종석의 홀로그램 HUD(있으면 같이 갱신한다).")] MechHoloHud holo;
+        public void BindHolo(MechHoloHud value) => holo = value;
 
         void Build()
         {
@@ -52,12 +57,15 @@ namespace Anseong.Skirmish
         public void Show(SkirmishState st, SkirmishSettings s, IReadOnlyList<SkirmishEvent> events, SkirmishSeat seat, bool vr, string waiting)
         {
             if (text == null) Build();
-            var parent = vr ? rig : head;
+            if (holo != null) holo.Show(st, s, events, seat == SkirmishSeat.Mech, Time.time);
+            // 모니터로 볼 때는 고개를 숙일 수 없으니 계기판을 머리 앞에 그대로 둔다.
+            bool onDash = vr && seat == SkirmishSeat.Mech && cockpitMount != null;
+            var parent = onDash ? cockpitMount : vr ? rig : head;
             if (parent != null && panel.parent != parent)
             {
                 panel.SetParent(parent, false);
-                panel.localPosition = vr ? vrLocalPosition : desktopLocalPosition;
-                panel.localRotation = Quaternion.Euler(tilt, 0f, 0f);
+                panel.localPosition = onDash ? Vector3.zero : vr ? vrLocalPosition : desktopLocalPosition;
+                panel.localRotation = onDash ? Quaternion.identity : Quaternion.Euler(tilt, 0f, 0f);
             }
             for (int i = 0; events != null && i < events.Count; i++)
             {

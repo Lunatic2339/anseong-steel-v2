@@ -37,6 +37,8 @@ namespace Anseong.Skirmish
         [SerializeField, Min(0.1f), Tooltip("오른손이 앞으로 이 속도(m/s)보다 빠르게 나가면 주먹.")] float punchSpeed = 1.5f;
         [SerializeField, Min(0.05f), Tooltip("주먹과 주먹 사이 최소 간격(초).")] float punchInterval = 0.35f;
         [SerializeField, Min(0f), Tooltip("주먹 한 대의 피해(잽).")] float punchDamage = 25f;
+        [SerializeField, Tooltip("P1 조종석(사람 크기, 원점 = 조종사 발밑). P1일 때만 보인다.")] Transform cockpit;
+        [SerializeField, Tooltip("P1 화면에서 안 그릴 것(그림자는 남김). 눈이 들어가 있는 자기 로봇 머리.")] Renderer[] hideForPilot = new Renderer[0];
         [SerializeField, Tooltip("P1 카메라가 걸음·충격에 반응하는 정도.")] CameraFeelSettings cameraFeel = new CameraFeelSettings();
         [SerializeField, Range(0f, 1f), Tooltip("발을 디딜 때 두 컨트롤러 진동 세기. 0 = 끔.")] float stepHaptic = 0.25f;
         [SerializeField, Range(0f, 1f), Tooltip("맞았을 때 진동 세기.")] float hitHaptic = 0.9f;
@@ -52,6 +54,8 @@ namespace Anseong.Skirmish
         Vector3 lastRightLocal;
         bool hasLastRight;
         readonly MechCameraFeel feel = new MechCameraFeel();
+        float eyeHeight = 1.6f;     // 조종사 눈높이(m). 헤드셋이면 정면을 맞출 때 잰다.
+        bool pilotView, pilotViewSet;
 
         public MechCameraFeel Feel => feel;
 
@@ -72,6 +76,25 @@ namespace Anseong.Skirmish
         public void BindMech(SkirmishMechArms arms, Vector3 eye)
         {
             mechArms = arms; mechEye = eye;
+        }
+
+        public void BindCockpit(Transform cockpitRoot, Renderer[] hidden)
+        {
+            cockpit = cockpitRoot; hideForPilot = hidden ?? new Renderer[0];
+        }
+
+        /// <summary>조종석을 눈 아래 발밑 자리에 놓는다. P1이 아니면 숨긴다(P2 화면에는 조종석이 안 보인다).</summary>
+        public void PlaceCockpit(Vector3 eye, bool asPilot)
+        {
+            if (cockpit != null)
+            {
+                if (cockpit.gameObject.activeSelf != asPilot) cockpit.gameObject.SetActive(asPilot);
+                if (asPilot) cockpit.position = eye + Vector3.down * eyeHeight;
+            }
+            if (pilotViewSet && pilotView == asPilot) return;
+            pilotView = asPilot; pilotViewSet = true;
+            foreach (var r in hideForPilot)
+                if (r != null) r.shadowCastingMode = asPilot ? UnityEngine.Rendering.ShadowCastingMode.ShadowsOnly : UnityEngine.Rendering.ShadowCastingMode.On;
         }
 
         /// <summary>자리가 바뀌면 다음 프레임에 정면을 다시 맞춘다.</summary>
@@ -139,6 +162,7 @@ namespace Anseong.Skirmish
                     float headYaw = headRotation.ReadValue<Quaternion>().eulerAngles.y;
                     rig.rotation = Quaternion.Euler(0f, -headYaw, 0f);
                     rigOffset = -(rig.rotation * headLocal);
+                    eyeHeight = Mathf.Clamp(headLocal.y, 1f, 2.1f);
                     recentered = true;
                 }
                 rig.position = anchor + rigOffset;
@@ -207,6 +231,8 @@ namespace Anseong.Skirmish
                 guardHeld &= mechArms.ShieldReady;
             }
 
+            PlaceCockpit(anchor, Seat == SkirmishSeat.Mech);
+
             if (punched && Time.unscaledTime >= nextPunchAt)
             {
                 punchSeq++;
@@ -233,6 +259,8 @@ namespace Anseong.Skirmish
             feel.Tick(mechPosition, dt, cameraFeel);
             var anchor = mechPosition + mechEye + feel.Offset;
             rig.position = VrActive ? anchor + rigOffset : anchor;
+            // 걸음·충격에는 조종석째로 같이 움직인다(눈만 움직이면 틀이 따로 논다).
+            PlaceCockpit(anchor, true);
             if (feel.Stepped) Rumble(stepHaptic * feel.StepWeight, 0.04f);
         }
 
