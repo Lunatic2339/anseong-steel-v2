@@ -273,12 +273,25 @@ namespace Anseong.Skirmish
             public int furnace, statesReceived, gunnerInputsReceived;
             public bool g3Alive, g4Alive;
             public int gruntsDown;
+            // 화면 그리는 시간(교전 중, 맵이 다 불러와진 뒤). 헤드셋은 한 장에 13.9ms(72Hz) 안쪽이어야 한다.
+            public bool mapLoaded;
+            public int frames, screenWidth, screenHeight;
+            public float averageMs, p95Ms, worstMs;
         }
+
+        readonly List<float> frameMs = new List<float>(8192);
+        SkirmishMapLoader mapLoader;
+        float measureFrom = -1f;
 
         void Start()
         {
             autoResultPath = SessionRules.ArgValue(System.Environment.GetCommandLineArgs(), "-skirmishAuto");
             if (autoResultPath != null && local != null) local.UseBot = true;
+            if (autoResultPath == null) return;
+            mapLoader = FindAnyObjectByType<SkirmishMapLoader>();
+            // 그리는 시간을 재려면 화면 주사율에 묶이지 않아야 한다.
+            QualitySettings.vSyncCount = 0;
+            Application.targetFrameRate = -1;
         }
 
         void AutoCheck()
@@ -287,6 +300,13 @@ namespace Anseong.Skirmish
             if (autoStarted < 0f) autoStarted = Time.unscaledTime;
             if (IsSpawned) autoWasServer = IsServer;
             var st = CurrentState;
+            // 맵이 있으면 다 불러와지고 2초 뒤부터, 교전 중인 동안만 잰다.
+            bool mapReady = mapLoader == null || mapLoader.Loaded;
+            if (mapReady && st.phase == SkirmishPhase.Fighting)
+            {
+                if (measureFrom < 0f) measureFrom = Time.unscaledTime + 2f;
+                else if (Time.unscaledTime >= measureFrom) frameMs.Add(Time.unscaledDeltaTime * 1000f);
+            }
             bool ended = st.phase == SkirmishPhase.Cleared || st.phase == SkirmishPhase.Failed;
             if (ended && autoEndedAt < 0f) autoEndedAt = Time.unscaledTime;
             bool timedOut = Time.unscaledTime - autoStarted > 150f;
@@ -299,7 +319,18 @@ namespace Anseong.Skirmish
                 hull = st.hull, elapsed = st.elapsed, furnace = st.furnace,
                 statesReceived = StatesReceived, gunnerInputsReceived = GunnerInputsReceived,
                 g3Alive = st.enemies[0].Alive, g4Alive = st.enemies[1].Alive, gruntsDown = st.gruntsDown,
+                mapLoaded = mapLoader != null && mapLoader.Loaded, frames = frameMs.Count,
+                screenWidth = Screen.width, screenHeight = Screen.height,
             };
+            if (frameMs.Count > 0)
+            {
+                frameMs.Sort();
+                float sum = 0f;
+                foreach (float ms in frameMs) sum += ms;
+                result.averageMs = sum / frameMs.Count;
+                result.p95Ms = frameMs[Mathf.Min(frameMs.Count - 1, Mathf.FloorToInt(frameMs.Count * 0.95f))];
+                result.worstMs = frameMs[frameMs.Count - 1];
+            }
             System.IO.File.WriteAllText(autoResultPath, JsonUtility.ToJson(result, true));
             Debug.Log($"[Skirmish] SKIRMISH_AUTO {result.role} {result.phase} states={result.statesReceived} inputs={result.gunnerInputsReceived}");
             autoResultPath = null;
