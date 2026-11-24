@@ -81,9 +81,49 @@ namespace Anseong.Skirmish
         [Min(1f)] public float g4InterruptDamage = 50f;
         [Min(1f)] public float furnaceShellSpeed = 60f;
 
+        [Header("돌격형 (장면 1부터)")]
+        [Tooltip("멀리서 쏘는 적(G3, G4)을 내보낸다. 끄면 돌격형만 나온다.")]
+        public bool rangedEnemies = true;
+        [Tooltip("P1의 오른팔 포. 주먹으로 싸우는 장면에서는 끈다.")]
+        public bool mechGun = true;
+        public GruntSettings grunt = new GruntSettings();
+        [Tooltip("차례로 나오는 돌격형. 비어 있으면 돌격형이 없다.")]
+        public GruntWave[] grunts = new GruntWave[0];
+        [Tooltip("앞의 돌격형이 쓰러지고 다음이 나올 때까지(초).")]
+        [Min(0f)] public float gruntGap = 2f;
+        public float gruntHeight = 30f;
+        [Tooltip("포 조준 판정 반지름(m).")]
+        public float gruntRadius = 6.5f;
+
         [Header("고로 (B08)")]
         public Vector3 furnacePoint = new Vector3(100f, 45f, 715f);
         [Tooltip("고로가 버티는 피격 수.")]
         [Min(1)] public int furnaceHits = 3;
+
+        /// <summary>장면 1 "첫 상대": 정비고 앞 마당에서 돌격형 둘과 차례로 싸운다(제작 명세).</summary>
+        public static SkirmishSettings Scene1() => new SkirmishSettings
+        {
+            mechStart = new Vector3(0f, 0f, 65f),
+            mechArea = new Vector4(-40f, 40f, 40f, 100f),
+            mechSpeed = 10f,
+            gunnerPost = new Vector3(20f, 50f, 40f),
+            missiles = 3,
+            rangedEnemies = false,
+            mechGun = false,
+            grunts = new[]
+            {
+                // 돌격형 1: 내려치기만, 가드를 굳히지 않음, 첫 적이라 예고가 길다.
+                new GruntWave { start = new Vector3(0f, 0f, 130f), spec = new GruntSpec { holdSeconds = 1.2f, guardEveryDamage = 0f } },
+                // 돌격형 2: 한 대 맞으면 가드를 굳힌다. P2가 열어 줘야 한다.
+                new GruntWave { start = new Vector3(15f, 0f, 135f), spec = new GruntSpec { firstGuardDamage = 25f, guardEveryDamage = 60f } },
+            },
+        };
+    }
+
+    [Serializable]
+    public class GruntWave
+    {
+        public Vector3 start;
+        public GruntSpec spec = new GruntSpec();
     }
 }

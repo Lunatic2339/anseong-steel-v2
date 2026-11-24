@@ -25,6 +25,7 @@ namespace Anseong.EditorTools
         const string GruntFolder = "Assets/_Anseong/Art/Enemies/G01";
         const string GruntModel = GruntFolder + "/G01_fire.fbx";
         public const string ScenePath = "Assets/_Anseong/Scenes/Sandbox/Sandbox_Z2Skirmish.unity";
+        public const string DuelScenePath = "Assets/_Anseong/Scenes/Sandbox/Sandbox_Scene1Duel.unity";
         const float GruntPoseTime = 1.3f;   // 사격 클립에서 팔을 들고 조준하는 시점(초)
 
         [MenuItem("Anseong/Sandbox/Build Z2 Skirmish")]
@@ -130,10 +131,12 @@ namespace Anseong.EditorTools
             }
         }
 
-        public static void Build(out SkirmishView view, out Camera camera)
+        public static void Build(out SkirmishView view, out Camera camera) => Build(new SkirmishSettings(), out view, out camera);
+
+        /// <param name="settings">장면별 수치. 돌격형이 들어 있으면 돌격형 표시도 만든다.</param>
+        public static void Build(SkirmishSettings settings, out SkirmishView view, out Camera camera)
         {
             if (!AssetDatabase.IsValidFolder(DebugFolder)) AssetDatabase.CreateFolder("Assets/_Anseong/Art", "Debug");
-            var settings = new SkirmishSettings();
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             var concrete = Lit("Ground", new Color(0.23f, 0.24f, 0.25f));
@@ -209,6 +212,16 @@ namespace Anseong.EditorTools
                 Tracer("Cannon tracer", viewRoot.transform, tracer, 0.7f), Tracer("Mech gun tracer", viewRoot.transform, tracer, 1.2f),
                 furnaceLamp.GetComponent<Renderer>(), gunner, barrel);
 
+            if (settings.grunts != null && settings.grunts.Length > 0)
+            {
+                var gruntRoot = new GameObject("Charger grunt (돌격형)").transform;
+                Grunt(gruntRoot, settings.gruntHeight, enemy);
+                var telegraph = Shape(PrimitiveType.Sphere, "Charger telegraph glow", null, Vector3.zero, Vector3.one * 3f, danger).GetComponent<Renderer>();
+                var guardPlate = Box("Charger guard plate", null, Vector3.zero, new Vector3(13f, 12f, 1.2f), Lit("GuardPlate", new Color(0.05f, 0.05f, 0.06f))).GetComponent<Renderer>();
+                telegraph.enabled = guardPlate.enabled = false;
+                view.BindGrunt(gruntRoot, telegraph, guardPlate);
+            }
+
             // XR 리그: 자리에 맞춰 SkirmishLocalInput이 옮긴다. 헤드셋이 없으면 같은 카메라를 마우스로 돌린다.
             var rig = new GameObject("XR Origin (Skirmish)");
             var offset = new GameObject("Camera Offset");
@@ -250,11 +263,91 @@ namespace Anseong.EditorTools
 
             var serverObject = new GameObject("Skirmish Server");
             serverObject.AddComponent<NetworkObject>();
-            serverObject.AddComponent<SkirmishServer>().Bind(view, input, hud);
+            var server = serverObject.AddComponent<SkirmishServer>();
+            server.Bind(view, input, hud);
+            server.Configure(settings);
 
             view.Show(new SkirmishSession(settings), Vector3.forward, 0f);
             EditorSceneManager.MarkSceneDirty(scene);
             AssetDatabase.SaveAssets();
+        }
+
+        [MenuItem("Anseong/Sandbox/Build Scene 1 Duel")]
+        static void BuildDuelFromMenu()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            Build(SkirmishSettings.Scene1(), out _, out _);
+            Debug.Log($"{LogPrefix} 장면 1(첫 상대) 씬 생성 완료. {DuelScenePath}로 저장한 뒤 Play, 시작 화면에서 1(혼자) / 2(호스트 = 메카) / 3(클라이언트 = 공중포대)을 고르세요.");
+        }
+
+        /// <summary>
+        /// 배치 모드 확인용: 장면 1을 만들어 저장하고, 자동 조작으로 돌리며 몇 순간을 두 자리에서 찍어 Logs/DuelCapture에 저장한다.
+        /// -executeMethod Anseong.EditorTools.SkirmishSandboxMenu.CaptureDuelForReview
+        /// </summary>
+        public static void CaptureDuelForReview()
+        {
+            try
+            {
+                var settings = SkirmishSettings.Scene1();
+                Build(settings, out var view, out var camera);
+                if (!EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), DuelScenePath)) throw new System.Exception("scene save failed");
+                var session = new SkirmishSession(settings);
+                session.SetReady(true, true);
+                string folder = "Logs/DuelCapture";
+                Directory.CreateDirectory(folder);
+                var target = new RenderTexture(1600, 1000, 24) { antiAliasing = 4 };
+                var image = new Texture2D(1600, 1000, TextureFormat.RGB24, false);
+                camera.targetTexture = target;
+                var aim = Vector3.forward;
+
+                void Tick()
+                {
+                    var mech = SkirmishBots.Mech(session.State, settings);
+                    if (SkirmishMath.Direction(ref mech.aim)) aim = mech.aim;
+                    session.SetMech(mech);
+                    session.SetGunner(SkirmishBots.Gunner(session.State, settings));
+                    session.Tick(0.02f);
+                    view.Show(session, aim, 0f);
+                }
+                void Until(System.Func<SkirmishState, bool> reached, string what)
+                {
+                    for (int i = 0; i < 3000; i++) { Tick(); if (reached(session.State)) return; }
+                    throw new System.Exception("도달하지 못함: " + what + " / 상태 " + session.State.gruntStep);
+                }
+                void Shot(string name, Vector3 eye, Vector3 lookAt)
+                {
+                    camera.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(lookAt - eye));
+                    camera.Render();
+                    RenderTexture.active = target;
+                    image.ReadPixels(new Rect(0, 0, 1600, 1000), 0, 0);
+                    image.Apply();
+                    File.WriteAllBytes($"{folder}/{name}.png", image.EncodeToPNG());
+                }
+                Vector3 MechEye() => session.State.mech + Vector3.up * 28f;
+                Vector3 Center() => SkirmishSession.GruntCenter(session.State, settings);
+                var post = settings.gunnerPost;
+
+                Until(st => st.gruntIndex == 0 && st.gruntStep == GruntStep.Hold, "첫 적의 예고");
+                Shot("1-p1-telegraph-slam", MechEye(), Center() + Vector3.up * 6f);
+                Shot("1-p2-telegraph-slam", post, Center());
+                Until(st => st.gruntStep == GruntStep.Stagger, "튕겨남");
+                Shot("2-p1-stagger", MechEye(), Center());
+                Until(st => st.gruntIndex == 1 && st.gruntStep == GruntStep.Guard, "둘째 적의 가드");
+                Shot("3-p1-guard", MechEye(), Center());
+                Shot("3-p2-guard", post, Center());
+                Until(st => st.phase == SkirmishPhase.Cleared, "끝");
+                Shot("4-p2-cleared", post, Center());
+
+                RenderTexture.active = null;
+                camera.targetTexture = null;
+                Debug.Log($"{LogPrefix} DUEL_CAPTURE_OK elapsed={session.State.elapsed:0.0} hull={session.State.hull:0}");
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogException(e);
+                EditorApplication.Exit(1);
+            }
         }
 
         /// <summary>

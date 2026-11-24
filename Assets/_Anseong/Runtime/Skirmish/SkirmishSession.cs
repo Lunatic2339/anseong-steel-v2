@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Anseong.Pilot;
 using UnityEngine;
 
 namespace Anseong.Skirmish
@@ -23,6 +24,14 @@ namespace Anseong.Skirmish
         float mechGunCooldown, cannonCooldown;
         bool lockWasHeld, lockCancelled;
         int nextShellId;
+        GruntDuel grunt;
+        float gruntWait;
+        int lastPunchSeq;
+
+        /// <summary>P2가 없을 때 true. 돌격형의 가드가 스스로 더 빨리 풀린다.</summary>
+        public bool Solo;
+        /// <summary>지금 나와 있는 돌격형의 규칙(서버 전용). 없으면 null.</summary>
+        public GruntDuel Grunt => grunt;
 
         public SkirmishSession(SkirmishSettings settings = null)
         {
@@ -33,6 +42,7 @@ namespace Anseong.Skirmish
         SkirmishState NewState(int epoch)
         {
             var s = Settings;
+            var first = s.rangedEnemies ? EnemyStep.Advance : EnemyStep.Dead;
             return new SkirmishState
             {
                 epoch = epoch,
@@ -42,8 +52,8 @@ namespace Anseong.Skirmish
                 furnace = s.furnaceHits,
                 enemies = new[]
                 {
-                    new SkirmishEnemy { id = G3, position = s.g3Start, hp = s.g3Hp },
-                    new SkirmishEnemy { id = G4, position = s.g4Start, hp = s.g4Hp },
+                    new SkirmishEnemy { id = G3, position = s.g3Start, hp = s.rangedEnemies ? s.g3Hp : 0f, step = first },
+                    new SkirmishEnemy { id = G4, position = s.g4Start, hp = s.rangedEnemies ? s.g4Hp : 0f, step = first },
                 },
             };
         }
@@ -57,6 +67,9 @@ namespace Anseong.Skirmish
             gunner = default;
             mechGunCooldown = cannonCooldown = 0f;
             lockWasHeld = lockCancelled = false;
+            grunt = null;
+            gruntWait = 0f;
+            lastPunchSeq = 0;
         }
 
         public void SetReady(bool mechReady, bool gunnerReady)
@@ -79,6 +92,7 @@ namespace Anseong.Skirmish
         public static Vector3 Gun(SkirmishState state, SkirmishSettings s) => state.mech + Vector3.up * s.mechGunHeight;
         public static Vector3 Center(SkirmishState state, SkirmishSettings s, int id) => state.enemies[id].position + Vector3.up * (s.enemyHeight * 0.5f);
         public static Vector3 Muzzle(SkirmishState state, SkirmishSettings s, int id) => state.enemies[id].position + Vector3.up * s.enemyMuzzleHeight;
+        public static Vector3 GruntCenter(SkirmishState state, SkirmishSettings s) => state.gruntPosition + Vector3.up * (s.gruntHeight * 0.5f);
 
         public void Tick(float dt)
         {
@@ -88,6 +102,7 @@ namespace Anseong.Skirmish
             st.elapsed += dt;
 
             MoveMech(dt);
+            TickGrunt(dt);
             TickEnemy(st.enemies[G3], dt);
             TickEnemy(st.enemies[G4], dt);
             MechGunFire(dt);
@@ -110,6 +125,77 @@ namespace Anseong.Skirmish
             }
             st.guarding = mech.guard;
             st.guardDirection = SkirmishMath.Flat(mech.guardDirection);
+            st.guardSide = mech.guardSide;
+        }
+
+        /// <summary>돌격형은 한 번에 한 명. 앞의 적이 쓰러지면 gruntGap 뒤에 다음이 나온다.</summary>
+        void TickGrunt(float dt)
+        {
+            var st = State; var s = Settings;
+            bool punched = mech.punchSeq != lastPunchSeq && mech.punchDamage > 0f;
+            lastPunchSeq = mech.punchSeq;
+            if (s.grunts == null || s.grunts.Length == 0) return;
+            if (grunt == null || !grunt.Alive)
+            {
+                int next = st.gruntIndex + 1;
+                if (next >= s.grunts.Length) return;
+                gruntWait -= dt;
+                if (gruntWait > 0f) return;
+                var wave = s.grunts[next];
+                grunt = new GruntDuel(wave.start, wave.spec, s.grunt);
+                st.gruntIndex = next;
+            }
+            grunt.Solo = Solo;
+            grunt.Tick(dt, st.mech, st.guarding, st.guardSide);
+            if (punched) grunt.Punch(mech.punchDamage);
+            foreach (var e in grunt.Events) OnGruntEvent(e);
+            CopyGrunt();
+        }
+
+        void CopyGrunt()
+        {
+            var st = State;
+            st.gruntPosition = grunt.Position; st.gruntHp = grunt.Hp; st.gruntStep = grunt.Step;
+            st.gruntTimer = grunt.Timer; st.gruntAttack = grunt.Attack;
+        }
+
+        void OnGruntEvent(GruntEvent e)
+        {
+            var st = State;
+            var center = grunt.Position + Vector3.up * (Settings.gruntHeight * 0.5f);
+            switch (e.Kind)
+            {
+                case GruntEventKind.Arrived: Emit(SkirmishEventKind.GruntArrived, st.gruntIndex, center, MechChest); break;
+                case GruntEventKind.TelegraphStarted: Emit(SkirmishEventKind.GruntTelegraph, (int)e.Attack, center, MechChest); break;
+                case GruntEventKind.Blocked: Emit(SkirmishEventKind.GruntBlocked, (int)e.Attack, center, MechChest); break;
+                case GruntEventKind.PerfectBlocked: Emit(SkirmishEventKind.GruntPerfectBlock, (int)e.Attack, center, MechChest); break;
+                case GruntEventKind.RobotHit:
+                    st.hull = Mathf.Max(0f, st.hull - e.Amount);
+                    Emit(SkirmishEventKind.MechHit, -1, center, MechChest);
+                    break;
+                case GruntEventKind.PunchHit: Emit(SkirmishEventKind.PunchHit, st.gruntIndex, MechChest, center); break;
+                case GruntEventKind.PunchBounced: Emit(SkirmishEventKind.PunchBounced, st.gruntIndex, MechChest, center); break;
+                case GruntEventKind.GuardClosed: Emit(SkirmishEventKind.GuardClosed, st.gruntIndex, center, center); break;
+                case GruntEventKind.GuardBroken: Emit(SkirmishEventKind.GuardBroken, st.gruntIndex, center, center); break;
+                case GruntEventKind.Down:
+                    st.gruntsDown++;
+                    gruntWait = Settings.gruntGap;
+                    Emit(SkirmishEventKind.GruntDown, st.gruntIndex, center, center);
+                    break;
+            }
+        }
+
+        /// <summary>조준선이 살아 있는 돌격형에 닿는 거리. 안 닿으면 false.</summary>
+        bool GruntOnRay(Vector3 origin, Vector3 direction, out float distance)
+        {
+            distance = float.MaxValue;
+            if (grunt == null || !grunt.Alive) return false;
+            var s = Settings;
+            var a = grunt.Position + Vector3.up * s.gruntRadius;
+            var b = grunt.Position + Vector3.up * (s.gruntHeight - s.gruntRadius);
+            if (SkirmishMath.RayToSegment(origin, direction, a, b, out float t) > s.gruntRadius) return false;
+            distance = t;
+            return true;
         }
 
         void TickEnemy(SkirmishEnemy e, float dt)
@@ -237,7 +323,7 @@ namespace Anseong.Skirmish
         {
             mechGunCooldown -= dt;
             var aim = mech.aim;
-            if (!mech.fire || mechGunCooldown > 0f || !SkirmishMath.Direction(ref aim)) return;
+            if (!Settings.mechGun || !mech.fire || mechGunCooldown > 0f || !SkirmishMath.Direction(ref aim)) return;
             mechGunCooldown = Settings.mechGunInterval;
             int hit = EnemyOnRay(MechGun, aim, out float d);
             Emit(SkirmishEventKind.MechGunShot, hit, MechGun, MechGun + aim * (hit >= 0 ? d : 400f));
@@ -259,6 +345,16 @@ namespace Anseong.Skirmish
             int enemy = EnemyOnRay(s.gunnerPost, aim, out float enemyDistance);
             var shell = BigShellOnRay(s.gunnerPost, aim, out float shellDistance);
             bool shellFirst = shell != null && shellDistance < enemyDistance;
+            // 돌격형이 탄이나 다른 적보다 앞에 있으면 돌격형이 맞는다(가드 깨기).
+            if (GruntOnRay(s.gunnerPost, aim, out float gruntDistance) && gruntDistance < Mathf.Min(enemyDistance, shellDistance))
+            {
+                Emit(SkirmishEventKind.CannonShot, -1, s.gunnerPost, s.gunnerPost + aim * gruntDistance);
+                grunt.CannonHit(s.cannonDamage);
+                foreach (var e in grunt.Events)
+                    if (e.Kind == GruntEventKind.GuardBroken) OnGruntEvent(e);
+                CopyGrunt();
+                return;
+            }
             float reach = shellFirst ? shellDistance : enemy >= 0 ? enemyDistance : 400f;
             Emit(SkirmishEventKind.CannonShot, shellFirst ? shell.id : enemy, s.gunnerPost, s.gunnerPost + aim * reach);
             if (shellFirst)
@@ -387,6 +483,8 @@ namespace Anseong.Skirmish
                 return;
             }
             if (st.enemies[G3].Alive || st.enemies[G4].Alive) return;
+            int gruntCount = Settings.grunts != null ? Settings.grunts.Length : 0;
+            if (st.gruntsDown < gruntCount) return;
             foreach (var shell in st.shells)
                 if (shell.kind != ShellKind.Missile) return;
             st.phase = SkirmishPhase.Cleared;

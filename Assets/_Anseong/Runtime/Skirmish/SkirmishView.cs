@@ -20,6 +20,10 @@ namespace Anseong.Skirmish
         [SerializeField] Transform gunnerRig;
         [SerializeField, Tooltip("공중포대 포신(사수의 오른손 방향으로 돈다).")] Transform gunnerBarrel;
 
+        [SerializeField, Tooltip("돌격형(한 번에 한 명). 없으면 안 그린다.")] Transform grunt;
+        [SerializeField, Tooltip("예고 표시: 공격이 오는 쪽에 뜨는 빛.")] Renderer gruntTelegraph;
+        [SerializeField, Tooltip("가드 굳힘 표시: 가슴 앞을 막는 판.")] Renderer gruntGuard;
+
         [SerializeField, Min(0.01f), Tooltip("사격 궤적이 보이는 시간(초).")] float tracerSeconds = 0.06f;
         [SerializeField] Color furnaceSafe = new Color(0.2f, 0.9f, 0.3f);
         [SerializeField] Color furnaceWarn = new Color(1f, 0.6f, 0.1f);
@@ -30,7 +34,7 @@ namespace Anseong.Skirmish
         readonly Dictionary<int, Transform> shells = new Dictionary<int, Transform>();
         readonly List<int> stale = new List<int>();
         MaterialPropertyBlock block;
-        float cannonTracerUntil, mechTracerUntil;
+        float cannonTracerUntil, mechTracerUntil, punchUntil;
 
         public Transform Mech => mech;
         public Transform GunnerRig => gunnerRig;
@@ -45,6 +49,11 @@ namespace Anseong.Skirmish
             bigShellTemplate = bigShell; furnaceShellTemplate = furnaceShell; missileTemplate = missile;
             cannonTracer = cannonLine; mechTracer = mechLine;
             furnaceLight = furnace; gunnerRig = gunner; gunnerBarrel = barrel;
+        }
+
+        public void BindGrunt(Transform root, Renderer telegraph, Renderer guardPlate)
+        {
+            grunt = root; gruntTelegraph = telegraph; gruntGuard = guardPlate;
         }
 
         /// <summary>서버 쪽(규칙을 직접 돌리는 PC)에서 쓰는 짧은 형태.</summary>
@@ -62,6 +71,10 @@ namespace Anseong.Skirmish
 
             mech.position = st.mech;
             if (mechRightArm != null && mechAim.sqrMagnitude > 1e-6f) mechRightArm.rotation = Quaternion.LookRotation(mechAim);
+            for (int i = 0; events != null && i < events.Count; i++)
+                if (events[i].Kind == SkirmishEventKind.PunchHit || events[i].Kind == SkirmishEventKind.PunchBounced) punchUntil = now + 0.15f;
+            // 임시 표현: 주먹을 낸 순간 오른팔이 앞으로 늘어난다.
+            if (mechRightArm != null) mechRightArm.localScale = new Vector3(1f, 1f, now < punchUntil ? 1.6f : 1f);
             if (mechLeftArm != null)
             {
                 var guard = st.guarding && st.guardDirection.sqrMagnitude > 0f ? st.guardDirection + Vector3.up * 0.2f : new Vector3(0f, -0.6f, 0.8f);
@@ -73,6 +86,12 @@ namespace Anseong.Skirmish
             {
                 var e = st.enemies[i];
                 var t = enemies[i];
+                if (t.gameObject.activeSelf != s.rangedEnemies) t.gameObject.SetActive(s.rangedEnemies);
+                if (!s.rangedEnemies)
+                {
+                    Off(enemyGlow[i]);
+                    continue;
+                }
                 t.position = e.position;
                 var facing = i == SkirmishSession.G3 ? st.mech - e.position
                     : e.step == EnemyStep.Advance ? s.g4Post - e.position : s.furnacePoint - e.position;
@@ -93,6 +112,7 @@ namespace Anseong.Skirmish
                 glow.transform.localScale = Vector3.one * Mathf.Lerp(1.5f, 7f, 1f - Mathf.Clamp01(e.timer / total));
             }
 
+            ShowGrunt(st, s);
             SyncShells(st);
             ShowTracers(events, now);
 
@@ -101,6 +121,53 @@ namespace Anseong.Skirmish
                 float left = (float)st.furnace / Mathf.Max(1, s.furnaceHits);
                 block.SetColor(BaseColorId, left > 0.67f ? furnaceSafe : left > 0.34f ? furnaceWarn : furnaceDanger);
                 furnaceLight.SetPropertyBlock(block);
+            }
+        }
+
+        static void Off(Renderer r) { if (r != null) r.enabled = false; }
+
+        /// <summary>돌격형을 임시로 표현한다: 예고는 공격이 오는 쪽의 빛, 가드는 가슴 앞의 판. 동작 클립이 붙으면 대체한다.</summary>
+        void ShowGrunt(SkirmishState st, SkirmishSettings s)
+        {
+            if (grunt == null) return;
+            bool present = st.gruntIndex >= 0;
+            if (grunt.gameObject.activeSelf != present) grunt.gameObject.SetActive(present);
+            if (!present) { Off(gruntTelegraph); Off(gruntGuard); return; }
+
+            bool dead = st.gruntStep == GruntStep.Dead;
+            // 마무리 한 방에 밀려나는 것은 순간 이동하지 않고 미끄러지게 한다.
+            float glide = 60f * (Application.isPlaying ? Time.deltaTime : 1f);
+            grunt.position = dead ? Vector3.MoveTowards(grunt.position, st.gruntPosition, glide) : st.gruntPosition;
+            var facing = st.mech - st.gruntPosition;
+            facing.y = 0f;
+            var rotation = facing.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(facing) : grunt.rotation;
+            var pose = rotation;
+            if (dead) pose *= Quaternion.Euler(-88f, 0f, 0f);
+            else if (st.gruntStep == GruntStep.Stagger) pose *= Quaternion.Euler(-16f, 0f, 0f);
+            else if (st.gruntStep == GruntStep.Guard) pose *= Quaternion.Euler(10f, 0f, 0f);
+            grunt.rotation = pose;
+
+            bool telegraph = st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike;
+            if (gruntTelegraph != null)
+            {
+                gruntTelegraph.enabled = telegraph;
+                if (telegraph)
+                {
+                    // 내려치기는 적의 오른팔(로봇이 볼 때 왼쪽 위), 휘두르기는 적의 왼팔(로봇이 볼 때 오른쪽 옆)에서 온다.
+                    bool slam = st.gruntAttack == GruntAttack.Slam;
+                    var ready = st.gruntPosition + rotation * (slam ? new Vector3(9f, s.gruntHeight + 4f, 2f) : new Vector3(-15f, s.gruntHeight * 0.75f, 0f));
+                    var target = SkirmishSession.Chest(st, s) + rotation * (slam ? new Vector3(4f, 5f, 0f) : new Vector3(-6f, 0f, 0f));
+                    float k = st.gruntStep == GruntStep.Strike ? 1f - Mathf.Clamp01(st.gruntTimer / Mathf.Max(0.01f, s.grunt.strikeSeconds)) : 0f;
+                    float grow = st.gruntStep == GruntStep.Rise ? 1f - Mathf.Clamp01(st.gruntTimer / Mathf.Max(0.01f, s.grunt.riseSeconds)) : 1f;
+                    gruntTelegraph.transform.position = Vector3.Lerp(ready, target, k * k);
+                    gruntTelegraph.transform.localScale = Vector3.one * Mathf.Lerp(2f, 7f, grow);
+                }
+            }
+            if (gruntGuard != null)
+            {
+                bool guard = st.gruntStep == GruntStep.Guard;
+                gruntGuard.enabled = guard;
+                if (guard) gruntGuard.transform.SetPositionAndRotation(st.gruntPosition + rotation * new Vector3(0f, s.gruntHeight * 0.62f, 5.5f), rotation);
             }
         }
 

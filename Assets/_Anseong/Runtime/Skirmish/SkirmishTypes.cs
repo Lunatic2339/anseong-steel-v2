@@ -1,5 +1,6 @@
 using System;
 using System.Collections.Generic;
+using Anseong.Pilot;
 using UnityEngine;
 
 namespace Anseong.Skirmish
@@ -56,6 +57,16 @@ namespace Anseong.Skirmish
         FurnaceHit,
         Cleared,
         Failed,
+        // 돌격형. Id는 공격 종류(0 = 내려치기, 1 = 휘두르기) 또는 돌격형 번호.
+        GruntArrived,
+        GruntTelegraph,
+        GruntBlocked,
+        GruntPerfectBlock,
+        PunchHit,
+        PunchBounced,
+        GuardClosed,
+        GuardBroken,
+        GruntDown,
     }
 
     /// <summary>한 틱에 일어난 일. 화면·소리·진동이 이것을 보고 반응한다.</summary>
@@ -110,6 +121,17 @@ namespace Anseong.Skirmish
         public float hull;
         public bool guarding;
         public Vector3 guardDirection;
+        /// <summary>막는 팔이 덮고 있는 쪽(돌격형의 공격을 막을 때 본다).</summary>
+        public PilotSide guardSide;
+
+        /// <summary>지금 나와 있는 돌격형 번호. 아직 없으면 -1.</summary>
+        public int gruntIndex = -1;
+        public Vector3 gruntPosition;
+        public float gruntHp, gruntTimer;
+        public GruntStep gruntStep;
+        public GruntAttack gruntAttack;
+        public int gruntsDown;
+        public bool GruntAlive => gruntIndex >= 0 && gruntStep != GruntStep.Dead;
 
         public SkirmishEnemy[] enemies;
         public List<SkirmishShell> shells = new List<SkirmishShell>();
@@ -138,6 +160,12 @@ namespace Anseong.Skirmish
         public bool fire;
         /// <summary>오른팔 포가 향한 방향.</summary>
         public Vector3 aim;
+        /// <summary>막는 팔이 덮고 있는 쪽. 왼손이 얼굴 가운데보다 왼쪽이면 Left.</summary>
+        public PilotSide guardSide;
+        /// <summary>주먹을 낼 때마다 1씩 올린다. 값이 바뀐 틱에 한 번만 판정한다.</summary>
+        public int punchSeq;
+        /// <summary>그 주먹의 피해(잽 25, 훅 35).</summary>
+        public float punchDamage;
     }
 
     /// <summary>P2 공중포대 입력. 방향은 월드 기준.</summary>

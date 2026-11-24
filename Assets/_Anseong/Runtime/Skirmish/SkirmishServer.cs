@@ -39,6 +39,9 @@ namespace Anseong.Skirmish
         public int GunnerInputsReceived { get; private set; }
         public SkirmishState CurrentState => IsSpawned && IsServer ? session.State : shown;
 
+        /// <summary>씬을 만드는 에디터 메뉴가 장면별 수치를 넣는다.</summary>
+        public void Configure(SkirmishSettings value) => settings = value;
+
         public void Bind(SkirmishView skirmishView, SkirmishLocalInput input, SkirmishHud skirmishHud)
         {
             view = skirmishView; local = input; hud = skirmishHud;
@@ -139,6 +142,10 @@ namespace Anseong.Skirmish
             else gunnerInput = botFillsEmptySeat ? SkirmishBots.Gunner(st, settings) : default;
             if (SkirmishMath.Direction(ref mechInput.aim)) mechAim = mechInput.aim;
             if (SkirmishMath.Direction(ref gunnerInput.aim)) gunnerAim = gunnerInput.aim;
+            // 포가 없는 장면에서는 오른팔을 맞붙은 돌격형 쪽으로 보여 준다.
+            if (!settings.mechGun && st.GruntAlive) mechAim = (SkirmishSession.GruntCenter(st, settings) - SkirmishSession.Gun(st, settings)).normalized;
+            // 가드를 열어 줄 사람도 자동 조작도 없으면 가드가 스스로 더 빨리 풀린다.
+            session.Solo = localIsMech && !gunnerConnected && !botFillsEmptySeat;
 
             session.SetMech(mechInput);
             session.SetGunner(gunnerInput);
@@ -256,6 +263,7 @@ namespace Anseong.Skirmish
             public float hull, elapsed;
             public int furnace, statesReceived, gunnerInputsReceived;
             public bool g3Alive, g4Alive;
+            public int gruntsDown;
         }
 
         void Start()
@@ -281,7 +289,7 @@ namespace Anseong.Skirmish
                 role = autoWasServer ? "host-mech" : "client-gunner", phase = st.phase.ToString(),
                 hull = st.hull, elapsed = st.elapsed, furnace = st.furnace,
                 statesReceived = StatesReceived, gunnerInputsReceived = GunnerInputsReceived,
-                g3Alive = st.enemies[0].Alive, g4Alive = st.enemies[1].Alive,
+                g3Alive = st.enemies[0].Alive, g4Alive = st.enemies[1].Alive, gruntsDown = st.gruntsDown,
             };
             System.IO.File.WriteAllText(autoResultPath, JsonUtility.ToJson(result, true));
             Debug.Log($"[Skirmish] SKIRMISH_AUTO {result.role} {result.phase} states={result.statesReceived} inputs={result.gunnerInputsReceived}");

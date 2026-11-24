@@ -1,3 +1,4 @@
+using Anseong.Pilot;
 using UnityEngine;
 using UnityEngine.InputSystem;
 using UnityEngine.XR;
@@ -8,7 +9,10 @@ namespace Anseong.Skirmish
     /// 이 PC 한 사람의 입력을 교전 입력으로 바꾼다. 헤드셋이 켜져 있으면 컨트롤러, 아니면 키보드·마우스(개발 확인용, VR 검증 아님).
     /// 자리에 맞춰 XR Origin을 메카 눈높이 또는 공중포대 조종석에 놓고, 처음 추적될 때 "정면 = 북쪽"으로 맞춘다.
     /// <list type="bullet">
-    /// <item>메카(P1): 왼 스틱 이동, 왼 트리거 + 왼팔 방향 = 가드, 오른 트리거 + 오른팔 방향 = 포.</item>
+    /// <item>메카(P1): 왼 스틱 이동, 왼 트리거 + 왼팔 방향 = 가드(왼손이 얼굴 가운데보다 왼쪽이면 왼쪽을 막음),
+    /// 오른 트리거를 쥔 채 오른손을 앞으로 뻗으면 주먹. 포가 켜진 장면에서는 오른 트리거 + 오른팔 방향 = 포.
+    /// 키보드·마우스: 오른쪽 버튼 또는 Q = 왼쪽 막기, E = 오른쪽 막기, 왼쪽 버튼 = 주먹.
+    /// 막기와 주먹은 임시 판정이다. 실제 로봇이 들어오면 기존 팔 조종의 판정으로 바꾼다.</item>
     /// <item>공중포대(P2): 오른손 방향 + 오른 트리거 = 기관포, 왼손으로 가리키고 왼 트리거 유지 → 놓기 = 미사일, 왼손 X 또는 오른손 B = 잠금 취소.</item>
     /// </list>
     /// 씬 구성은 메뉴 'Anseong → Sandbox → Build Z2 Skirmish'가 한다.
@@ -29,12 +33,19 @@ namespace Anseong.Skirmish
         [SerializeField, Min(10f), Tooltip("조준선 길이(m).")] float lineLength = 250f;
         [SerializeField, Range(0.02f, 0.5f)] float mouseSensitivity = 0.12f;
         [SerializeField, Tooltip("이 자리를 자동 조작이 대신한다(혼자 구경·자동 시험용).")] bool useBot;
+        [SerializeField, Min(0.1f), Tooltip("오른손이 앞으로 이 속도(m/s)보다 빠르게 나가면 주먹.")] float punchSpeed = 1.5f;
+        [SerializeField, Min(0.05f), Tooltip("주먹과 주먹 사이 최소 간격(초).")] float punchInterval = 0.35f;
+        [SerializeField, Min(0f), Tooltip("주먹 한 대의 피해(잽).")] float punchDamage = 25f;
 
         InputAction rightRotation, rightPointer, rightPosition, rightTrigger, rightSecondary;
         InputAction leftRotation, leftPointer, leftPosition, leftTrigger, leftPrimary, leftStick, headPosition, headRotation;
         float yaw, pitch;
         bool recentered;
         Vector3 rigOffset;
+        int punchSeq;
+        float nextPunchAt;
+        Vector3 lastRightLocal;
+        bool hasLastRight;
 
         public SkirmishSeat Seat { get; private set; }
         public MechInput Mech { get; private set; }
@@ -103,7 +114,8 @@ namespace Anseong.Skirmish
             VrActive = XRSettings.isDeviceActive && headRotation.controls.Count > 0;
 
             Vector3 rightDirection, leftDirection, move;
-            bool rightHeld, leftHeld, cancel;
+            bool rightHeld, leftHeld, cancel, guardHeld, punched = false;
+            var guardSide = PilotSide.Left;
             if (VrActive)
             {
                 var space = trackingSpace != null ? trackingSpace : rig;
@@ -124,8 +136,22 @@ namespace Anseong.Skirmish
                 cancel = leftPrimary.ReadValue<float>() > 0.5f || rightSecondary.ReadValue<float>() > 0.5f;
                 var stick = leftStick.ReadValue<Vector2>();
                 move = Quaternion.Euler(0f, rig.eulerAngles.y, 0f) * new Vector3(stick.x, 0f, stick.y);
-                Place(rightHandMarker, space.TransformPoint(rightPosition.ReadValue<Vector3>()), rightDirection);
-                Place(leftHandMarker, space.TransformPoint(leftPosition.ReadValue<Vector3>()), leftDirection);
+                var rightLocal = rightPosition.ReadValue<Vector3>();
+                var leftWorld = space.TransformPoint(leftPosition.ReadValue<Vector3>());
+                Place(rightHandMarker, space.TransformPoint(rightLocal), rightDirection);
+                Place(leftHandMarker, leftWorld, leftDirection);
+                guardHeld = leftHeld;
+                // 왼손이 얼굴 가운데보다 왼쪽이면 왼쪽을, 오른쪽이면 오른쪽을 막는다.
+                guardSide = Vector3.Dot(leftWorld - head.position, head.right) < 0f ? PilotSide.Left : PilotSide.Right;
+                // 임시 주먹 판정: 오른 트리거를 쥔 채 손이 앞으로 빠르게 나감(자리 이동은 빼고 손의 움직임만 본다).
+                if (hasLastRight && Time.deltaTime > 0f)
+                {
+                    var velocity = space.TransformDirection((rightLocal - lastRightLocal) / Time.deltaTime);
+                    float forward = Vector3.Dot(velocity, SkirmishMath.Flat(head.forward));
+                    punched = rightHeld && forward >= punchSpeed;
+                }
+                lastRightLocal = rightLocal;
+                hasLastRight = true;
             }
             else
             {
@@ -147,13 +173,27 @@ namespace Anseong.Skirmish
                 rightHeld = mouse != null && mouse.leftButton.isPressed;
                 leftHeld = mouse != null && mouse.rightButton.isPressed;
                 cancel = keyboard != null && keyboard.cKey.isPressed;
+                bool right = keyboard != null && keyboard.eKey.isPressed;
+                guardHeld = leftHeld || right || (keyboard != null && keyboard.qKey.isPressed);
+                guardSide = right ? PilotSide.Right : PilotSide.Left;
+                punched = mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState == CursorLockMode.Locked;
+                hasLastRight = false;
                 move = keyboard == null ? Vector3.zero : Quaternion.Euler(0f, yaw, 0f) * new Vector3(
                     (keyboard.dKey.isPressed ? 1 : 0) - (keyboard.aKey.isPressed ? 1 : 0), 0f,
                     (keyboard.wKey.isPressed ? 1 : 0) - (keyboard.sKey.isPressed ? 1 : 0));
                 Hide(rightHandMarker); Hide(leftHandMarker);
             }
 
-            Mech = new MechInput { move = move, guard = leftHeld, guardDirection = leftDirection, fire = rightHeld, aim = rightDirection };
+            if (punched && Time.unscaledTime >= nextPunchAt)
+            {
+                punchSeq++;
+                nextPunchAt = Time.unscaledTime + punchInterval;
+            }
+            Mech = new MechInput
+            {
+                move = move, guard = guardHeld, guardDirection = leftDirection, fire = rightHeld, aim = rightDirection,
+                guardSide = guardSide, punchSeq = punchSeq, punchDamage = punchDamage,
+            };
             Gunner = new GunnerInput { aim = rightDirection, fire = rightHeld, pointer = leftDirection, lockHeld = leftHeld, cancel = cancel };
 
             Line(aimLine, rightHandMarker, rightDirection, VrActive);

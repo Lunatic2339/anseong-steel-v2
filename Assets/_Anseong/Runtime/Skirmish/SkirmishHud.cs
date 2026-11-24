@@ -69,10 +69,11 @@ namespace Anseong.Skirmish
             string status = seat == SkirmishSeat.Mech
                 ? $"메카 내구도 {st.hull:0}    고로 {st.furnace}/{s.furnaceHits}"
                 : $"고로 {st.furnace}/{s.furnaceHits}    미사일 {st.missiles}    포열 {st.cannonHeat * 100f:0}%{(st.cannonOverheated ? " 과열" : "")}";
+            if (st.gruntIndex >= 0) status += $"    적 {st.gruntIndex + 1} 체력 {st.gruntHp:0}{(st.gruntStep == GruntStep.Guard ? " 가드" : "")}";
             string lockLine = seat == SkirmishSeat.Gunner && st.lockTarget >= 0
                 ? $"잠금 {(st.lockTarget == SkirmishSession.G3 ? "정면 적" : "동쪽 적")} {st.lockProgress * 100f:0}%" + (st.lockProgress >= 1f ? " — 놓으면 발사" : "")
                 : "";
-            string result = st.phase == SkirmishPhase.Cleared ? "적치장 확보"
+            string result = st.phase == SkirmishPhase.Cleared ? (s.rangedEnemies ? "적치장 확보" : "첫 상대 격파")
                 : st.phase == SkirmishPhase.Failed ? "실패 — 운영자가 R로 재시작" : "";
             text.text = $"{status}\n{lockLine}\n{lastEvent}\n{result}";
         }
@@ -88,6 +89,14 @@ namespace Anseong.Skirmish
                 case SkirmishEventKind.ShellBlocked: return "메카가 막았다";
                 case SkirmishEventKind.ShellMissed: return "큰 탄 빗나감";
                 case SkirmishEventKind.MechHit: return "메카 피격!";
+                case SkirmishEventKind.GruntTelegraph: return e.Id == (int)GruntAttack.Slam ? "치켜든 팔! 왼쪽으로 막아!" : "옆으로 벌린 팔! 오른쪽으로 막아!";
+                case SkirmishEventKind.GruntBlocked: return "막았다 — 지금 쳐라!";
+                case SkirmishEventKind.GruntPerfectBlock: return "딱 맞춰 막았다 — 지금 쳐라!";
+                case SkirmishEventKind.PunchHit: return "주먹 명중";
+                case SkirmishEventKind.PunchBounced: return "주먹이 튕겼다";
+                case SkirmishEventKind.GuardClosed: return "가드가 단단하다. 지원, 열어 줘라!";
+                case SkirmishEventKind.GuardBroken: return "열렸다!";
+                case SkirmishEventKind.GruntDown: return "격파";
                 case SkirmishEventKind.MissileFired: return "미사일 발사";
                 case SkirmishEventKind.MissileHit: return who + " 미사일 명중";
                 case SkirmishEventKind.MissileLost: return "미사일 표적 없음";
