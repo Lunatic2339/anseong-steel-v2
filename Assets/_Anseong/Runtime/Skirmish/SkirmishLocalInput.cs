@@ -28,7 +28,8 @@ namespace Anseong.Skirmish
         [SerializeField, Tooltip("오른손 조준선.")] LineRenderer aimLine;
         [SerializeField, Tooltip("왼손 지시선(가드 방향 / 미사일 지시).")] LineRenderer pointerLine;
 
-        [SerializeField, Min(1f), Tooltip("메카 눈높이(m).")] float mechEyeHeight = 30f;
+        [SerializeField, Tooltip("메카 발밑에서 조종사 눈까지(m).")] Vector3 mechEye = new Vector3(0f, 30f, 0f);
+        [SerializeField, Tooltip("실제 로봇 모델의 팔(있으면 헤드셋의 두 손을 넘긴다).")] SkirmishMechArms mechArms;
         [SerializeField, Range(0.05f, 0.95f), Tooltip("트리거를 이만큼 당기면 누른 것으로 본다.")] float triggerPress = 0.5f;
         [SerializeField, Min(10f), Tooltip("조준선 길이(m).")] float lineLength = 250f;
         [SerializeField, Range(0.02f, 0.5f)] float mouseSensitivity = 0.12f;
@@ -59,6 +60,11 @@ namespace Anseong.Skirmish
         {
             rig = rigRoot; trackingSpace = tracking; head = headTransform;
             leftHandMarker = leftMarker; rightHandMarker = rightMarker; aimLine = aim; pointerLine = pointer;
+        }
+
+        public void BindMech(SkirmishMechArms arms, Vector3 eye)
+        {
+            mechArms = arms; mechEye = eye;
         }
 
         /// <summary>자리가 바뀌면 다음 프레임에 정면을 다시 맞춘다.</summary>
@@ -110,7 +116,7 @@ namespace Anseong.Skirmish
         public void Read(Vector3 mechPosition, Vector3 gunnerPost)
         {
             if (rig == null || head == null) return;
-            var anchor = Seat == SkirmishSeat.Mech ? mechPosition + Vector3.up * mechEyeHeight : gunnerPost;
+            var anchor = Seat == SkirmishSeat.Mech ? mechPosition + mechEye : gunnerPost;
             VrActive = XRSettings.isDeviceActive && headRotation.controls.Count > 0;
 
             Vector3 rightDirection, leftDirection, move;
@@ -152,6 +158,9 @@ namespace Anseong.Skirmish
                 }
                 lastRightLocal = rightLocal;
                 hasLastRight = true;
+                if (mechArms != null && Seat == SkirmishSeat.Mech && !useBot)
+                    mechArms.SetHands(head.position, rig.rotation, leftWorld, space.TransformPoint(rightLocal));
+                else if (mechArms != null) mechArms.ClearHands();
             }
             else
             {
@@ -182,6 +191,13 @@ namespace Anseong.Skirmish
                     (keyboard.dKey.isPressed ? 1 : 0) - (keyboard.aKey.isPressed ? 1 : 0), 0f,
                     (keyboard.wKey.isPressed ? 1 : 0) - (keyboard.sKey.isPressed ? 1 : 0));
                 Hide(rightHandMarker); Hide(leftHandMarker);
+                if (mechArms != null) mechArms.ClearHands();
+            }
+            if (mechArms != null)
+            {
+                mechArms.SetLocalPilot(Seat == SkirmishSeat.Mech && !useBot);
+                // 차폐판을 버튼으로 펴는 방식에서는 다 펴진 동안에만 막을 수 있다.
+                guardHeld &= mechArms.ShieldReady;
             }
 
             if (punched && Time.unscaledTime >= nextPunchAt)

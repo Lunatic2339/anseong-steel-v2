@@ -26,6 +26,11 @@ namespace Anseong.EditorTools
         const string GruntModel = GruntFolder + "/G01_fire.fbx";
         public const string ScenePath = "Assets/_Anseong/Scenes/Sandbox/Sandbox_Z2Skirmish.unity";
         public const string DuelScenePath = "Assets/_Anseong/Scenes/Sandbox/Sandbox_Scene1Duel.unity";
+        /// <summary>성재 전달본(v066). 없으면 상자 로봇으로 만든다.</summary>
+        const string RobotPrefab = "Assets/RobotDelivery_v066/Prefabs/Robot_v066_Shield_35m.prefab";
+        const float RobotHeight = 35f;
+        /// <summary>머리 뼈에서 조종사 눈까지(m, 35m 로봇 기준).</summary>
+        static readonly Vector3 RobotEyeFromHead = new Vector3(0f, 1f, 1.5f);
         const float GruntPoseTime = 1.3f;   // 사격 클립에서 팔을 들고 조준하는 시점(초)
 
         [MenuItem("Anseong/Sandbox/Build Z2 Skirmish")]
@@ -131,6 +136,76 @@ namespace Anseong.EditorTools
             }
         }
 
+        /// <summary>움직인 정점으로 잰 실제 높이(SkinnedMeshRenderer.bounds는 넉넉하게 잡혀 있어 쓰지 않는다).</summary>
+        static bool MeasureHeight(GameObject root, out float min, out float max)
+        {
+            min = float.MaxValue; max = float.MinValue;
+            var baked = new Mesh();
+            foreach (var skin in root.GetComponentsInChildren<SkinnedMeshRenderer>())
+            {
+                if (skin.sharedMesh == null) continue;
+                skin.BakeMesh(baked, true);
+                // 이 모델은 구운 정점에 렌더러의 배율(0.51)을 한 번 더 곱해야 실제 자리가 된다(머리 뼈 높이와 맞춰 확인).
+                var matrix = skin.transform.localToWorldMatrix;
+                foreach (var v in baked.vertices)
+                {
+                    float y = matrix.MultiplyPoint3x4(v).y;
+                    if (y < min) min = y;
+                    if (y > max) max = y;
+                }
+            }
+            Object.DestroyImmediate(baked);
+            return max > min;
+        }
+
+        static bool ArmBones(Transform robot, bool isLeft, out SkirmishMechArms.Arm arm)
+        {
+            string prefix = isLeft ? RobotSandboxUtility.LeftPrefix : RobotSandboxUtility.RightPrefix;
+            var all = robot.GetComponentsInChildren<Transform>(true);
+            Transform Bone(string suffix) => all.FirstOrDefault(t => t.name == prefix + suffix);
+            arm = new SkirmishMechArms.Arm
+            {
+                upper = Bone(RobotSandboxUtility.ArmSuffix), fore = Bone(RobotSandboxUtility.ForeArmSuffix), hand = Bone(RobotSandboxUtility.HandSuffix),
+            };
+            if (arm.upper == null || arm.fore == null || arm.hand == null) return false;
+            if (RobotArmSetup.TryMeasureFist(arm.hand, prefix, out _, out _, out var forward, out var back, out _))
+            {
+                arm.fistForwardLocal = forward; arm.fistBackLocal = back;
+            }
+            return true;
+        }
+
+        /// <summary>
+        /// 성재 전달본 로봇을 35m로 줄여 세우고 팔을 연결한다. 프리팹 이름은 35m지만 실제 높이는 50.7m라서 잰 값으로 줄인다.
+        /// </summary>
+        /// <param name="eye">발밑에서 조종사 눈까지.</param>
+        static SkirmishMechArms Robot(Transform mech, out Vector3 eye)
+        {
+            eye = new Vector3(0f, 30f, 0f);
+            var prefab = AssetDatabase.LoadAssetAtPath<GameObject>(RobotPrefab);
+            if (prefab == null) return null;
+            var robot = (GameObject)PrefabUtility.InstantiatePrefab(prefab);
+            robot.transform.SetParent(mech, false);
+            if (!MeasureHeight(robot, out float min, out float max)) { Object.DestroyImmediate(robot); return null; }
+            float scale = RobotHeight / (max - min);
+            robot.transform.localScale = Vector3.one * scale;
+            robot.transform.localPosition = new Vector3(0f, -min * scale, 0f);
+            foreach (var skin in robot.GetComponentsInChildren<SkinnedMeshRenderer>()) skin.updateWhenOffscreen = true;
+            if (!ArmBones(robot.transform, true, out var left) || !ArmBones(robot.transform, false, out var right))
+            {
+                Debug.LogWarning($"{LogPrefix} 로봇 팔 뼈를 찾지 못해 팔은 움직이지 않습니다.");
+                return null;
+            }
+            var head = robot.GetComponentsInChildren<Transform>(true).FirstOrDefault(t => t.name == RobotSandboxUtility.HeadBone);
+            if (head != null) eye = mech.InverseTransformPoint(head.position) + RobotEyeFromHead;
+            var arms = robot.AddComponent<SkirmishMechArms>();
+            arms.Bind(mech, left, right, robot.GetComponentsInChildren<MonoBehaviour>(true).FirstOrDefault(c => c != null && c.GetType().Name == "ShieldController"));
+            Debug.Log($"{LogPrefix} ROBOT_FIT 원래 높이 {max - min:F2} m → {RobotHeight} m (배율 {scale:F4}), 눈 {eye}, 차폐판 {(arms != null)}");
+            return arms;
+        }
+
+        public static Vector3 LastMechEye { get; private set; } = new Vector3(0f, 30f, 0f);
+
         public static void Build(out SkirmishView view, out Camera camera) => Build(new SkirmishSettings(), out view, out camera);
 
         /// <param name="settings">장면별 수치. 돌격형이 들어 있으면 돌격형 표시도 만든다.</param>
@@ -167,16 +242,22 @@ namespace Anseong.EditorTools
             Box("B08 blast furnace 103x90x104", world, new Vector3(100f, 45f, 715f), new Vector3(103f, 90f, 104f), building);
             var furnaceLamp = Shape(PrimitiveType.Sphere, "B08 furnace status lamp", world, new Vector3(100f, 60f, 660f), Vector3.one * 16f, lamp);
 
-            var mech = new GameObject("Mech 35m proxy").transform;
+            var mech = new GameObject("Mech 35m").transform;
+            var mechArms = Robot(mech, out var mechEye);
+            LastMechEye = mechEye;
+            Transform rightArm = null, leftArm = null;
+            if (mechArms == null)
+            {
             Box("Torso", mech, new Vector3(0f, 21f, 0f), new Vector3(11f, 12f, 5f), steel);
             foreach (float x in new[] { -3.2f, 3.2f }) Box("Leg", mech, new Vector3(x, 7.5f, 0f), new Vector3(3.6f, 15f, 4.5f), steel);
-            var rightArm = new GameObject("Right arm pivot (cannon)").transform;
+            rightArm = new GameObject("Right arm pivot (cannon)").transform;
             rightArm.SetParent(mech, false); rightArm.localPosition = new Vector3(7f, 26f, 0f);
             Box("Forearm cannon", rightArm, new Vector3(0f, 0f, 6.5f), new Vector3(2.4f, 2.4f, 13f), steel);
-            var leftArm = new GameObject("Left arm pivot (shield)").transform;
+            leftArm = new GameObject("Left arm pivot (shield)").transform;
             leftArm.SetParent(mech, false); leftArm.localPosition = new Vector3(-7f, 26f, 0f);
             Box("Forearm", leftArm, new Vector3(0f, 0f, 5f), new Vector3(2.2f, 2.2f, 10f), steel);
             Box("Shield", leftArm, new Vector3(0f, 0f, 10.5f), new Vector3(8f, 10f, 0.8f), Lit("Shield", new Color(0.2f, 0.7f, 0.75f)));
+            }
 
             var enemyRoots = new Transform[2];
             var glows = new Renderer[2];
@@ -211,6 +292,7 @@ namespace Anseong.EditorTools
             view.Bind(mech, rightArm, leftArm, enemyRoots, glows, bigShell, furnaceShell, missile,
                 Tracer("Cannon tracer", viewRoot.transform, tracer, 0.7f), Tracer("Mech gun tracer", viewRoot.transform, tracer, 1.2f),
                 furnaceLamp.GetComponent<Renderer>(), gunner, barrel);
+            view.BindMechArms(mechArms);
 
             if (settings.grunts != null && settings.grunts.Length > 0)
             {
@@ -238,7 +320,7 @@ namespace Anseong.EditorTools
             var driver = camera.gameObject.AddComponent<TrackedPoseDriver>();
             driver.positionInput = new InputActionProperty(new InputAction("Head position", InputActionType.Value, "<XRHMD>/centerEyePosition", expectedControlType: "Vector3"));
             driver.rotationInput = new InputActionProperty(new InputAction("Head rotation", InputActionType.Value, "<XRHMD>/centerEyeRotation", expectedControlType: "Quaternion"));
-            rig.transform.position = settings.mechStart + Vector3.up * 30f;
+            rig.transform.position = settings.mechStart + mechEye;
 
             var handMaterial = Unlit("Hand", new Color(0.3f, 0.9f, 1f));
             var leftHand = Box("Left hand marker", rig.transform, Vector3.zero, new Vector3(0.06f, 0.06f, 0.12f), handMaterial);
@@ -249,6 +331,7 @@ namespace Anseong.EditorTools
 
             var input = viewRoot.AddComponent<SkirmishLocalInput>();
             input.Bind(rig.transform, offset.transform, camera.transform, leftHand, rightHand, aimLine, pointerLine);
+            input.BindMech(mechArms, mechEye);
             var hud = viewRoot.AddComponent<SkirmishHud>();
             hud.Bind(rig.transform, camera.transform);
 
@@ -323,13 +406,15 @@ namespace Anseong.EditorTools
                     image.Apply();
                     File.WriteAllBytes($"{folder}/{name}.png", image.EncodeToPNG());
                 }
-                Vector3 MechEye() => session.State.mech + Vector3.up * 28f;
+                Vector3 MechEye() => session.State.mech + LastMechEye;
                 Vector3 Center() => SkirmishSession.GruntCenter(session.State, settings);
                 var post = settings.gunnerPost;
 
                 Until(st => st.gruntIndex == 0 && st.gruntStep == GruntStep.Hold, "첫 적의 예고");
                 Shot("1-p1-telegraph-slam", MechEye(), Center() + Vector3.up * 6f);
                 Shot("1-p2-telegraph-slam", post, Center());
+                Shot("1-side-telegraph-slam", session.State.mech + new Vector3(-55f, 22f, 10f), session.State.mech + new Vector3(0f, 20f, 12f));
+                Shot("1-front-robot", session.State.mech + new Vector3(8f, 24f, 42f), session.State.mech + Vector3.up * 19f);
                 Until(st => st.gruntStep == GruntStep.Stagger, "튕겨남");
                 Shot("2-p1-stagger", MechEye(), Center());
                 Until(st => st.gruntIndex == 1 && st.gruntStep == GruntStep.Guard, "둘째 적의 가드");

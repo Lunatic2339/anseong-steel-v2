@@ -174,7 +174,7 @@ namespace Anseong.EditorTools
         /// 손가락 뼈를 원래 회전으로 되돌린다(프리팹의 바인드 포즈를 바꾸지 않는다).
         /// palmCheck: 가운뎃손가락 굽은 방향과 손바닥 쪽의 내적(클수록 판별이 확실).
         /// </summary>
-        static bool TryMeasureFist(Transform hand, string prefix, out Transform[] joints, out Quaternion[] fist,
+        internal static bool TryMeasureFist(Transform hand, string prefix, out Transform[] joints, out Quaternion[] fist,
             out Vector3 forwardLocal, out Vector3 backLocal, out float palmCheck)
         {
             joints = null;

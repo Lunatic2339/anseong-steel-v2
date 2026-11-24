@@ -23,6 +23,7 @@ namespace Anseong.Skirmish
         [SerializeField, Tooltip("돌격형(한 번에 한 명). 없으면 안 그린다.")] Transform grunt;
         [SerializeField, Tooltip("예고 표시: 공격이 오는 쪽에 뜨는 빛.")] Renderer gruntTelegraph;
         [SerializeField, Tooltip("가드 굳힘 표시: 가슴 앞을 막는 판.")] Renderer gruntGuard;
+        [SerializeField, Tooltip("실제 로봇 모델의 팔(있으면 상자 팔 대신 쓴다).")] SkirmishMechArms mechArms;
 
         [SerializeField, Min(0.01f), Tooltip("사격 궤적이 보이는 시간(초).")] float tracerSeconds = 0.06f;
         [SerializeField] Color furnaceSafe = new Color(0.2f, 0.9f, 0.3f);
@@ -50,6 +51,8 @@ namespace Anseong.Skirmish
             cannonTracer = cannonLine; mechTracer = mechLine;
             furnaceLight = furnace; gunnerRig = gunner; gunnerBarrel = barrel;
         }
+
+        public void BindMechArms(SkirmishMechArms arms) => mechArms = arms;
 
         public void BindGrunt(Transform root, Renderer telegraph, Renderer guardPlate)
         {
@@ -79,6 +82,12 @@ namespace Anseong.Skirmish
             {
                 var guard = st.guarding && st.guardDirection.sqrMagnitude > 0f ? st.guardDirection + Vector3.up * 0.2f : new Vector3(0f, -0.6f, 0.8f);
                 mechLeftArm.rotation = Quaternion.LookRotation(guard);
+            }
+            if (mechArms != null)
+            {
+                mechArms.SetPose(st.guarding, st.guardSide, now < punchUntil);
+                // 에디터에서 화면을 찍을 때는 LateUpdate가 돌지 않으므로 여기서 바로 자세를 잡는다.
+                if (!Application.isPlaying) mechArms.Apply(0f, true);
             }
             if (gunnerRig != null) gunnerRig.position = s.gunnerPost;
 
