@@ -34,9 +34,24 @@ namespace Anseong.Skirmish
         [SerializeField] Color warn = new Color(1f, 0.72f, 0.2f, 0.95f);
         [SerializeField] Color danger = new Color(1f, 0.28f, 0.2f, 0.95f);
         [SerializeField] Color strike = new Color(1f, 1f, 1f, 0.95f);
+        [SerializeField, Tooltip("패널 뒷판. 밝은 하늘이나 바닥 위에서도 글자가 읽히게 한다.")] Color backing = new Color(0.01f, 0.07f, 0.09f, 0.42f);
+
+        [Header("빛 번짐")]
+        [SerializeField, Tooltip("빛을 더하는 UI 셰이더(Anseong/HoloUI). 메뉴가 채운다. 비면 번짐 없이 선만 그린다.")] Shader glowShader;
+        [SerializeField, Range(0f, 1f), Tooltip("번짐의 세기.")] float glowStrength = 0.38f;
+        [SerializeField, Min(0.05f), Tooltip("패널이 켜지는 시간(초).")] float bootSeconds = 0.45f;
 
         Font font;
-        Sprite ring;
+        Sprite ring, softRing, softBox, scanline;
+        Material glowMaterial;
+        readonly List<(Graphic core, Graphic glow)> glows = new List<(Graphic, Graphic)>();
+        readonly List<Transform> spinners = new List<Transform>();
+        Image hullFlash;
+        Text targetDistance;
+        float boot, lastNow, shownHull = -1f, hullFlashUntil, lastHull = -1f;
+        bool wasPilot;
+
+        public void BindGlow(Shader shader) => glowShader = shader;
         Transform left, right, alert, target;
         Image hullRing, enemyRing, sideBar;
         Text hullNumber, shieldLine, enemyTitle, enemyNumber, enemyState, partnerLine, alertText, targetText;
@@ -71,12 +86,39 @@ namespace Anseong.Skirmish
             rect.sizeDelta = size;
             image.color = main;
             image.raycastTarget = false;
+            // 패널의 가는 선은 번짐을 좁게, 멀리 있는 표적 테두리는 넓게.
+            Glow(image, softBox, Vector2.one * (parent == target ? 18f : 6f), true);
             return image;
+        }
+
+        /// <summary>선·고리 뒤에 깔리는 부드러운 빛. 색은 매번 본체를 따라간다.</summary>
+        void Glow(Image core, Sprite sprite, Vector2 spread, bool sliced)
+        {
+            if (glowMaterial == null) return;
+            var image = new GameObject("Glow").AddComponent<Image>();
+            var rect = image.rectTransform;
+            rect.SetParent(core.rectTransform, false);
+            rect.anchorMin = Vector2.zero; rect.anchorMax = Vector2.one;
+            rect.offsetMin = -spread; rect.offsetMax = spread;
+            image.sprite = sprite;
+            if (sliced) image.type = Image.Type.Sliced;
+            image.material = glowMaterial;
+            image.raycastTarget = false;
+            glows.Add((core, image));
         }
 
         Image Ring(Transform parent, Vector2 position, float size, float alpha)
         {
             var image = Line(parent, position, new Vector2(size, size));
+            // 고리는 채워지는 양이 바뀌므로 번짐은 고리 전체가 아니라 같은 모양의 부드러운 고리로 따로 둔다.
+            if (glows.Count > 0 && glows[glows.Count - 1].core == image)
+            {
+                var soft = (Image)glows[glows.Count - 1].glow;
+                soft.sprite = softRing; soft.type = Image.Type.Filled; soft.fillMethod = Image.FillMethod.Radial360;
+                soft.fillOrigin = (int)Image.Origin360.Top; soft.fillClockwise = true;
+                soft.rectTransform.offsetMin = new Vector2(-size * 0.12f, -size * 0.12f);
+                soft.rectTransform.offsetMax = new Vector2(size * 0.12f, size * 0.12f);
+            }
             image.sprite = ring;
             image.type = Image.Type.Filled;
             image.fillMethod = Image.FillMethod.Radial360;
@@ -105,11 +147,42 @@ namespace Anseong.Skirmish
         }
 
         /// <summary>가장자리가 부드러운 흰 고리(원형 계기용).</summary>
-        static Sprite MakeRing(int size, float inner, float outer)
+        static Sprite MakeRing(int size, float inner, float outer) => MakeRing(size, inner, outer, 1.5f / (size * 0.5f));
+
+        /// <summary>가운데가 진하고 가장자리로 갈수록 옅어지는 네모(늘려 쓰는 번짐용).</summary>
+        static Sprite MakeSoftBox(int size, int border)
         {
             var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
             var pixels = new Color32[size * size];
-            float half = size * 0.5f, soft = 1.5f / half;
+            for (int y = 0; y < size; y++)
+                for (int x = 0; x < size; x++)
+                {
+                    float ax = Mathf.Clamp01(Mathf.Min(x + 0.5f, size - x - 0.5f) / border);
+                    float ay = Mathf.Clamp01(Mathf.Min(y + 0.5f, size - y - 0.5f) / border);
+                    float a = Mathf.SmoothStep(0f, 1f, ax) * Mathf.SmoothStep(0f, 1f, ay);
+                    pixels[y * size + x] = new Color(1f, 1f, 1f, a * a);
+                }
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0, 0, size, size), new Vector2(0.5f, 0.5f), 100f, 0, SpriteMeshType.FullRect, Vector4.one * border);
+        }
+
+        /// <summary>가로 줄무늬(패널에 깔리는 주사선).</summary>
+        static Sprite MakeScanline()
+        {
+            var texture = new Texture2D(4, 4, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Repeat, filterMode = FilterMode.Bilinear };
+            var pixels = new Color32[16];
+            for (int i = 0; i < 16; i++) pixels[i] = new Color(1f, 1f, 1f, i / 4 == 0 ? 1f : 0f);
+            texture.SetPixels32(pixels);
+            texture.Apply();
+            return Sprite.Create(texture, new Rect(0, 0, 4, 4), new Vector2(0.5f, 0.5f), 100f);
+        }
+
+        static Sprite MakeRing(int size, float inner, float outer, float soft)
+        {
+            var texture = new Texture2D(size, size, TextureFormat.RGBA32, false) { wrapMode = TextureWrapMode.Clamp };
+            var pixels = new Color32[size * size];
+            float half = size * 0.5f;
             for (int y = 0; y < size; y++)
                 for (int x = 0; x < size; x++)
                 {
@@ -126,6 +199,10 @@ namespace Anseong.Skirmish
         {
             font = Font.CreateDynamicFontFromOSFont(osFontNames, 48);
             ring = MakeRing(256, 0.78f, 0.96f);
+            softRing = MakeRing(256, 0.52f, 1f, 0.2f);
+            softBox = MakeSoftBox(32, 12);
+            scanline = MakeScanline();
+            if (glowShader != null) glowMaterial = new Material(glowShader) { name = "Holo glow" };
 
             // 왼쪽: 내 로봇.
             left = NewCanvas("Holo left (내 로봇)", cockpit, new Vector2(400f, 320f), 0.001f);
@@ -133,6 +210,7 @@ namespace Anseong.Skirmish
             left.localRotation = Quaternion.Euler(8f, -panelYaw, 0f);
             Frame(left, 400f, 320f);
             Label(left, new Vector2(0f, 128f), new Vector2(360f, 40f), 26, TextAnchor.MiddleLeft, "기체");
+            Dial(left, new Vector2(-80f, 10f), 170f);
             Ring(left, new Vector2(-80f, 10f), 170f, 0.2f);
             hullRing = Ring(left, new Vector2(-80f, 10f), 170f, 1f);
             hullNumber = Label(left, new Vector2(-80f, 10f), new Vector2(170f, 80f), 54, TextAnchor.MiddleCenter);
@@ -145,6 +223,7 @@ namespace Anseong.Skirmish
             right.localRotation = Quaternion.Euler(8f, panelYaw, 0f);
             Frame(right, 400f, 320f);
             enemyTitle = Label(right, new Vector2(0f, 128f), new Vector2(360f, 40f), 26, TextAnchor.MiddleLeft);
+            Dial(right, new Vector2(80f, 10f), 170f);
             Ring(right, new Vector2(80f, 10f), 170f, 0.2f);
             enemyRing = Ring(right, new Vector2(80f, 10f), 170f, 1f);
             enemyNumber = Label(right, new Vector2(80f, 10f), new Vector2(170f, 80f), 54, TextAnchor.MiddleCenter);
@@ -168,12 +247,68 @@ namespace Anseong.Skirmish
                 }
             sideBar = Line(target, Vector2.zero, new Vector2(34f, 520f));
             targetText = Label(target, new Vector2(0f, -520f), new Vector2(1000f, 110f), 84, TextAnchor.MiddleCenter);
+            targetDistance = Label(target, new Vector2(330f, 495f), new Vector2(300f, 80f), 60, TextAnchor.MiddleRight);
+        }
+
+        /// <summary>원형 계기 둘레의 눈금과, 천천히 도는 가는 호 두 개.</summary>
+        void Dial(Transform panel, Vector2 center, float size)
+        {
+            float radius = size * 0.5f + 12f;
+            for (int i = 0; i < 36; i++)
+            {
+                float angle = i * 10f * Mathf.Deg2Rad;
+                bool major = i % 9 == 0;
+                var tick = new GameObject("Tick").AddComponent<Image>();
+                tick.rectTransform.SetParent(panel, false);
+                tick.rectTransform.anchoredPosition = center + new Vector2(Mathf.Sin(angle), Mathf.Cos(angle)) * (radius + (major ? 4f : 0f));
+                tick.rectTransform.sizeDelta = new Vector2(2f, major ? 14f : 6f);
+                tick.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -i * 10f);
+                tick.color = new Color(main.r, main.g, main.b, major ? 0.8f : 0.4f);
+                tick.raycastTarget = false;
+            }
+            foreach (var (scale, fill, alpha) in new[] { (1.34f, 0.16f, 0.55f), (1.48f, 0.07f, 0.35f) })
+            {
+                var arc = Ring(panel, center, size * scale, alpha);
+                arc.fillAmount = fill;
+                spinners.Add(arc.rectTransform);
+                // 도는 호는 가늘게 보여야 하므로 번짐을 떼어 낸다.
+                if (glows.Count > 0 && glows[glows.Count - 1].core == arc)
+                {
+                    if (Application.isPlaying) Destroy(glows[glows.Count - 1].glow.gameObject); else DestroyImmediate(glows[glows.Count - 1].glow.gameObject);
+                    glows.RemoveAt(glows.Count - 1);
+                }
+            }
         }
 
         /// <summary>패널 위아래의 가는 선과 모서리 표시.</summary>
         void Frame(Transform panel, float width, float height)
         {
             float w = width * 0.5f, h = height * 0.5f;
+            var back = new GameObject("Backing").AddComponent<Image>();
+            back.rectTransform.SetParent(panel, false);
+            back.rectTransform.sizeDelta = new Vector2(width, height);
+            back.color = backing;
+            back.raycastTarget = false;
+            if (glowMaterial != null)
+            {
+                var lines = new GameObject("Scanlines").AddComponent<Image>();
+                lines.rectTransform.SetParent(panel, false);
+                lines.rectTransform.sizeDelta = new Vector2(width, height);
+                lines.sprite = scanline;
+                lines.type = Image.Type.Tiled;
+                lines.material = glowMaterial;
+                lines.color = new Color(main.r, main.g, main.b, 0.07f);
+                lines.raycastTarget = false;
+            }
+            if (panel == left)
+            {
+                // 내구도가 깎이는 순간 패널 전체가 잠깐 붉게 번쩍인다.
+                hullFlash = new GameObject("Hit flash").AddComponent<Image>();
+                hullFlash.rectTransform.SetParent(panel, false);
+                hullFlash.rectTransform.sizeDelta = new Vector2(width, height);
+                hullFlash.color = Color.clear;
+                hullFlash.raycastTarget = false;
+            }
             Line(panel, new Vector2(0f, h), new Vector2(width, 2f));
             Line(panel, new Vector2(0f, -h), new Vector2(width, 2f));
             foreach (int s in new[] { -1, 1 })
@@ -192,14 +327,28 @@ namespace Anseong.Skirmish
             if (cockpit == null) return;
             if (left == null) Build();
             if (target.gameObject.activeSelf && !asPilot) target.gameObject.SetActive(false);
-            if (!asPilot) return;   // 패널과 알림은 조종석의 자식이라 조종석과 함께 꺼진다.
+            if (!asPilot) { wasPilot = false; return; }   // 패널과 알림은 조종석의 자식이라 조종석과 함께 꺼진다.
 
-            // 내 로봇.
-            float hull = Mathf.Clamp01(st.hull / Mathf.Max(1f, s.mechHull));
+            float dt = Mathf.Clamp(now - lastNow, 0f, 0.1f);
+            lastNow = now;
+            // 켜질 때: 가운데에서 옆으로 펼쳐진다. 에디터에서 찍을 때는 바로 다 켠다.
+            if (!wasPilot) { boot = 0f; shownHull = lastHull = st.hull; }
+            wasPilot = true;
+            boot = Application.isPlaying ? Mathf.MoveTowards(boot, 1f, dt / bootSeconds) : 1f;
+            float open = Mathf.SmoothStep(0f, 1f, boot);
+            left.localScale = right.localScale = new Vector3(Mathf.Lerp(0.02f, 1f, open), Mathf.Lerp(0.6f, 1f, open), 1f) * 0.001f;
+            for (int i = 0; i < spinners.Count; i++) spinners[i].localRotation = Quaternion.Euler(0f, 0f, (i % 2 == 0 ? -35f : 22f) * now + i * 70f);
+
+            // 내 로봇. 숫자와 고리는 깎인 값으로 미끄러지듯 따라간다.
+            if (st.hull < lastHull - 0.01f) hullFlashUntil = now + 0.35f;
+            lastHull = st.hull;
+            shownHull = Mathf.MoveTowards(shownHull, st.hull, 80f * dt + (Application.isPlaying ? 0f : 1000f));
+            if (hullFlash != null) hullFlash.color = new Color(danger.r, danger.g, danger.b, 0.45f * Mathf.Clamp01((hullFlashUntil - now) / 0.35f));
+            float hull = Mathf.Clamp01(shownHull / Mathf.Max(1f, s.mechHull));
             var hullColor = hull > 0.5f ? main : hull > 0.25f ? warn : danger;
             hullRing.fillAmount = hull;
             hullRing.color = hullNumber.color = hullColor;
-            hullNumber.text = Mathf.CeilToInt(st.hull).ToString();
+            hullNumber.text = Mathf.CeilToInt(shownHull).ToString();
             if (arms == null) shieldLine.text = "";
             else
             {
@@ -264,6 +413,8 @@ namespace Anseong.Skirmish
                 }
                 targetText.text = st.gruntStep == GruntStep.Guard ? "가드 — 포격 요청" : st.gruntStep == GruntStep.Stagger ? "빈틈" : "";
                 targetText.color = stateColor;
+                targetDistance.text = $"{Vector2.Distance(new Vector2(st.gruntPosition.x, st.gruntPosition.z), new Vector2(st.mech.x, st.mech.z)):0}m";
+                targetDistance.color = stateColor;
             }
 
             // 알림.
@@ -291,6 +442,14 @@ namespace Anseong.Skirmish
             fade.a = Mathf.Clamp01(leftover / 0.25f) * 0.95f;
             alertText.color = fade;
 
+            // 번짐은 본체의 색과 채워진 양을 따라간다.
+            foreach (var (core, glow) in glows)
+            {
+                var c = core.color;
+                glow.color = new Color(c.r, c.g, c.b, c.a * glowStrength);
+                glow.enabled = core.enabled;
+                if (core is Image from && glow is Image to && to.type == Image.Type.Filled) to.fillAmount = from.fillAmount;
+            }
             if (!Application.isPlaying) Canvas.ForceUpdateCanvases();
         }
     }
