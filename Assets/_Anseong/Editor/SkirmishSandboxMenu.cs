@@ -710,6 +710,38 @@ namespace Anseong.EditorTools
         }
 
         /// <summary>
+        /// 배치 모드 확인용: 맵 위 장면 1을 실행 파일로 만든다(맵을 실행 중에 겹쳐 불러오는지, 두 창이 이어지는지, 한 장 그리는 시간).
+        /// -executeMethod Anseong.EditorTools.SkirmishSandboxMenu.BuildDuelOnMapPlayer
+        /// 실행: AnseongScene1.exe -mode solo|host|client -skirmishAuto 결과.json
+        /// </summary>
+        public static void BuildDuelOnMapPlayer()
+        {
+            try
+            {
+                Build(SkirmishSettings.Scene1(), true, out _, out _);
+                Directory.CreateDirectory(Path.GetDirectoryName(MapDuelScenePath));
+                if (!EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), MapDuelScenePath)) throw new System.Exception("scene save failed");
+                var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    // 맵 장면도 넣어야 실행 중에 겹쳐 불러올 수 있다. 프로젝트의 빌드 설정은 바꾸지 않는다.
+                    scenes = new[] { MapDuelScenePath, MapScenePath },
+                    locationPathName = "Builds/Scene1OnMap/AnseongScene1.exe",
+                    target = BuildTarget.StandaloneWindows64,
+                    options = BuildOptions.Development,
+                });
+                if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
+                    throw new System.Exception("build failed: " + report.summary.result);
+                Debug.Log($"{LogPrefix} DUEL_ONMAP_BUILD_OK {report.summary.totalSize / (1024 * 1024)} MB, {report.summary.totalTime.TotalSeconds:0} s");
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogException(e);
+                EditorApplication.Exit(1);
+            }
+        }
+
+        /// <summary>
         /// 배치 모드 확인용: 씬을 만들어 저장하고 개발 빌드를 만든다(한 PC에서 두 개를 띄워 접속을 확인).
         /// -executeMethod Anseong.EditorTools.SkirmishSandboxMenu.BuildPlayerForNetworkTest
         /// </summary>
