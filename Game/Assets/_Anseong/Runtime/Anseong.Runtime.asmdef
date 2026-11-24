@@ -1,0 +1,20 @@
+{
+    "name": "Anseong.Runtime",
+    "rootNamespace": "Anseong",
+    "references": [
+        "Unity.InputSystem",
+        "Unity.Netcode.Runtime",
+        "Unity.Networking.Transport",
+        "Unity.XR.CoreUtils",
+        "UnityEngine.UI"
+    ],
+    "includePlatforms": [],
+    "excludePlatforms": [],
+    "allowUnsafeCode": false,
+    "overrideReferences": false,
+    "precompiledReferences": [],
+    "autoReferenced": true,
+    "defineConstraints": [],
+    "versionDefines": [],
+    "noEngineReferences": false
+}

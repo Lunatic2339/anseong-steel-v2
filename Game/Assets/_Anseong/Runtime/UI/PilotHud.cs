@@ -1,0 +1,133 @@
+using System.Text;
+using Anseong.Boss;
+using Anseong.Combat;
+using Anseong.Flow;
+using Anseong.Net;
+using Anseong.Pilot;
+using UnityEngine;
+
+namespace Anseong.UI
+{
+    /// <summary>
+    /// 조종사 HUD(M4-06 프로토타입, 각 PC). 글자로 먼저: 공격 오는 쪽(오른쪽만), 드론 방향(왼쪽만), 기체 HP, 해킹 잡음.
+    /// 무엇을 누가 보는지는 <see cref="HudRules"/>. 윤주 HUD 시안이 오면 이 글자를 화살표·아이콘으로 바꾼다(같은 사건을 듣는다).
+    /// 메뉴 'Add Match Flow'가 XR 카메라 왼쪽 아래에 만든다.
+    /// </summary>
+    public class PilotHud : MonoBehaviour
+    {
+        [SerializeField] CombatDirector director;
+        [SerializeField] TextMesh text;
+        [SerializeField, Tooltip("한쪽에만 보이기를 끈다(시험용: 둘 다 모든 것을 봄).")]
+        bool showEverything;
+        [SerializeField, Min(0.3f), Tooltip("공격·드론 표시를 보여 주는 시간(초).")]
+        float calloutSeconds = 2f;
+        [SerializeField] string[] osFontNames = { "Malgun Gothic", "맑은 고딕", "Arial" };
+
+        readonly StringBuilder builder = new StringBuilder(128);
+        SessionBootstrap session;
+        TuningMenu tuningMenu;
+        MeshRenderer textRenderer;
+        Transform head;
+        string attack = string.Empty, drone = string.Empty;
+        float attackUntil, droneUntil, nextRefresh;
+        PilotSide? hacked;
+        bool subscribed;
+
+        void Start()
+        {
+            if (director == null) director = FindAnyObjectByType<CombatDirector>();
+            session = FindAnyObjectByType<SessionBootstrap>();
+            tuningMenu = FindAnyObjectByType<TuningMenu>();
+            head = transform.parent;
+            if (text == null)
+            {
+                enabled = false;
+                return;
+            }
+            textRenderer = text.GetComponent<MeshRenderer>();
+            var font = osFontNames != null && osFontNames.Length > 0 ? Font.CreateDynamicFontFromOSFont(osFontNames, text.fontSize > 0 ? text.fontSize : 32) : null;
+            if (font != null)
+            {
+                text.font = font;
+                if (textRenderer != null) textRenderer.sharedMaterial = font.material;
+            }
+            if (director != null)
+            {
+                director.Cue += OnCue;
+                subscribed = true;
+            }
+        }
+
+        void OnDestroy()
+        {
+            if (subscribed && director != null) director.Cue -= OnCue;
+        }
+
+        bool BothArms => showEverything || session == null || session.Mode == SessionMode.SoloBothArms;
+        PilotSide Viewer => session != null && session.Mode == SessionMode.Client ? PilotSide.Right : PilotSide.Left;
+        bool Sees(HudInfo info) => HudRules.Visible(info, Viewer, BothArms, hacked);
+
+        void OnCue(CombatEvent e)
+        {
+            switch (e.Cue)
+            {
+                case CombatCue.BossTelegraph:
+                    var kind = (BossAttackKind)e.Code;
+                    if (kind == BossAttackKind.SlamBoth) Show(ref attack, ref attackUntil, "두 팔 발광: 둘이 X자로 막아라");
+                    else if (kind == BossAttackKind.Charge)
+                    {
+                        if (Sees(HudInfo.DodgeSide)) Show(ref attack, ref attackUntil, "돌진! 같이 피할 쪽을 불러 줘라");
+                    }
+                    else if (Sees(HudInfo.AttackSide))
+                        Show(ref attack, ref attackUntil, e.Side == PilotSide.Left ? "◀◀ 왼쪽 공격" : "오른쪽 공격 ▶▶");
+                    break;
+                case CombatCue.DroneFire:
+                    if (Sees(HudInfo.DroneDirection) && head != null)
+                    {
+                        var local = head.InverseTransformPoint(e.Point);
+                        var yaw = Mathf.Atan2(local.x, local.z) * Mathf.Rad2Deg;
+                        var pitch = Mathf.Atan2(local.y, new Vector2(local.x, local.z).magnitude) * Mathf.Rad2Deg;
+                        Show(ref drone, ref droneUntil, "드론 사격: " + HudRules.Direction(yaw, pitch));
+                    }
+                    break;
+                case CombatCue.HackStart:
+                    hacked = e.Side;
+                    break;
+                case CombatCue.HackCleared:
+                case CombatCue.MatchScene:
+                    hacked = null;
+                    break;
+            }
+        }
+
+        void Show(ref string slot, ref float until, string value)
+        {
+            slot = value;
+            until = Time.unscaledTime + calloutSeconds;
+        }
+
+        void Update()
+        {
+            var hide = tuningMenu != null && tuningMenu.IsOpen;
+            if (textRenderer != null) textRenderer.enabled = !hide;
+            if (hide || Time.unscaledTime < nextRefresh) return;
+            nextRefresh = Time.unscaledTime + 0.1f;
+            builder.Clear();
+            if (hacked.HasValue && hacked.Value == Viewer && !BothArms)
+            {
+                builder.Append("<color=#ff5050>▒▒ 해킹 ▒▒ 동료가 떼어 줘야 한다 ▒▒</color>");
+                text.text = builder.ToString();
+                return;
+            }
+            if (Time.unscaledTime < attackUntil) builder.Append("<size=120><color=#ffcc33>").Append(attack).Append("</color></size>\n");
+            if (Time.unscaledTime < droneUntil) builder.Append("<color=#66ffcc>").Append(drone).Append("</color>\n");
+            if (director != null)
+            {
+                var s = director.State;
+                if (s.PilotMax > 0f) builder.Append("기체 HP ").Append(Mathf.RoundToInt(s.PilotHealth / s.PilotMax * 100f)).Append('%');
+            }
+            if (!BothArms) builder.Append("  <color=#888888>(").Append(Viewer == PilotSide.Left ? "왼팔" : "오른팔").Append(")</color>");
+            text.text = builder.ToString();
+        }
+    }
+}
