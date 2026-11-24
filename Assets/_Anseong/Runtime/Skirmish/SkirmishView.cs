@@ -38,6 +38,8 @@ namespace Anseong.Skirmish
         float cannonTracerUntil, mechTracerUntil, punchUntil;
 
         public Transform Mech => mech;
+        /// <summary>규칙은 1초에 50번 돌고 화면은 더 자주 그리므로, 그 사이를 이은 위치를 서버가 넣는다. null이면 상태의 위치.</summary>
+        public Vector3? MechPosition { get; set; }
         public Transform GunnerRig => gunnerRig;
 
         /// <summary>씬을 만드는 에디터 메뉴가 참조를 채운다.</summary>
@@ -72,7 +74,7 @@ namespace Anseong.Skirmish
             block ??= new MaterialPropertyBlock();
             if (gunnerBarrel != null && gunnerAim.sqrMagnitude > 1e-6f) gunnerBarrel.rotation = Quaternion.LookRotation(gunnerAim);
 
-            mech.position = st.mech;
+            mech.position = MechPosition ?? st.mech;
             if (mechRightArm != null && mechAim.sqrMagnitude > 1e-6f) mechRightArm.rotation = Quaternion.LookRotation(mechAim);
             for (int i = 0; events != null && i < events.Count; i++)
                 if (events[i].Kind == SkirmishEventKind.PunchHit || events[i].Kind == SkirmishEventKind.PunchBounced) punchUntil = now + 0.15f;

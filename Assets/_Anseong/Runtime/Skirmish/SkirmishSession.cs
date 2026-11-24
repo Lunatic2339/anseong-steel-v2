@@ -27,6 +27,7 @@ namespace Anseong.Skirmish
         GruntDuel grunt;
         float gruntWait;
         int lastPunchSeq;
+        Vector3 mechVelocity;
 
         /// <summary>P2가 없을 때 true. 돌격형의 가드가 스스로 더 빨리 풀린다.</summary>
         public bool Solo;
@@ -70,6 +71,7 @@ namespace Anseong.Skirmish
             grunt = null;
             gruntWait = 0f;
             lastPunchSeq = 0;
+            mechVelocity = Vector3.zero;
         }
 
         public void SetReady(bool mechReady, bool gunnerReady)
@@ -118,15 +120,25 @@ namespace Anseong.Skirmish
             var move = new Vector3(mech.move.x, 0f, mech.move.z);
             if (SkirmishMath.Finite(move))
             {
-                var p = st.mech + Vector3.ClampMagnitude(move, 1f) * (s.mechSpeed * dt);
-                p.x = Mathf.Clamp(p.x, s.mechArea.x, s.mechArea.z);
-                p.z = Mathf.Clamp(p.z, s.mechArea.y, s.mechArea.w);
-                st.mech = p;
+                // 속도를 바로 바꾸지 않고 올리고 내린다(출발·정지가 부드럽게).
+                var wanted = Vector3.ClampMagnitude(move, 1f) * s.mechSpeed;
+                bool slowing = wanted.sqrMagnitude < mechVelocity.sqrMagnitude;
+                float seconds = slowing ? s.mechStopSeconds : s.mechAccelSeconds;
+                mechVelocity = seconds <= 0f ? wanted : Vector3.MoveTowards(mechVelocity, wanted, s.mechSpeed / seconds * dt);
+                var p = st.mech + mechVelocity * dt;
+                float x = Mathf.Clamp(p.x, s.mechArea.x, s.mechArea.z), z = Mathf.Clamp(p.z, s.mechArea.y, s.mechArea.w);
+                // 벽에 닿으면 그 방향 속도는 버린다.
+                if (x != p.x) mechVelocity.x = 0f;
+                if (z != p.z) mechVelocity.z = 0f;
+                st.mech = new Vector3(x, p.y, z);
             }
             st.guarding = mech.guard;
             st.guardDirection = SkirmishMath.Flat(mech.guardDirection);
             st.guardSide = mech.guardSide;
         }
+
+        /// <summary>메카의 지금 속도(m/s).</summary>
+        public Vector3 MechVelocity => mechVelocity;
 
         /// <summary>돌격형은 한 번에 한 명. 앞의 적이 쓰러지면 gruntGap 뒤에 다음이 나온다.</summary>
         void TickGrunt(float dt)

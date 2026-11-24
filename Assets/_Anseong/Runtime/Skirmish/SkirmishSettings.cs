@@ -15,6 +15,10 @@ namespace Anseong.Skirmish
         [Tooltip("메카가 움직일 수 있는 범위(x 최소, z 최소, x 최대, z 최대).")]
         public Vector4 mechArea = new Vector4(-25f, 180f, 25f, 215f);
         [Min(0.5f)] public float mechSpeed = 4f;
+        [Min(0f), Tooltip("서 있다가 전속력이 되는 시간(초). 0 = 바로. 헤드셋에서 갑자기 출발하면 멀미가 난다.")]
+        public float mechAccelSeconds = 0.4f;
+        [Min(0f), Tooltip("전속력에서 멈추는 시간(초). 0 = 바로.")]
+        public float mechStopSeconds = 0.3f;
         [Min(1f)] public float mechHull = 100f;
         [Tooltip("메카 가슴 높이(m). 큰 탄이 여기로 온다.")]
         public float mechChestHeight = 24f;

@@ -33,6 +33,7 @@ namespace Anseong.Skirmish
         float remoteGunnerAt = -100f, accumulator, nextSend;
         bool gunnerConnected, forcedStart, soloAsGunner, watching;
         Vector3 mechAim = Vector3.forward, gunnerAim = Vector3.forward;
+        Vector3 mechBefore;     // 직전 틱의 메카 위치(틱 사이를 잇는 데 쓴다)
 
         /// <summary>클라이언트가 받은 상태 수 / 서버가 받은 사수 입력 수(연결 확인용).</summary>
         public int StatesReceived { get; private set; }
@@ -62,6 +63,7 @@ namespace Anseong.Skirmish
             if (IsServer)
             {
                 session = new SkirmishSession(settings);
+                mechBefore = session.State.mech;
                 gunnerConnected = forcedStart = soloAsGunner = false;
                 NetworkManager.OnClientConnectedCallback += OnClientConnected;
                 NetworkManager.OnClientDisconnectCallback += OnClientDisconnected;
@@ -153,6 +155,7 @@ namespace Anseong.Skirmish
             while (accumulator >= Step)
             {
                 accumulator -= Step;
+                mechBefore = session.State.mech;
                 session.Tick(Step);
                 foreach (var e in session.Events)
                 {
@@ -163,6 +166,11 @@ namespace Anseong.Skirmish
                 }
             }
 
+            // 규칙은 1초에 50번, 화면은 72~90번이라 틱 위치를 그대로 쓰면 달릴 때 화면이 떨린다. 두 틱 사이를 이어서 보여 준다.
+            var smooth = Vector3.Lerp(mechBefore, session.State.mech, accumulator / Step);
+            view.MechPosition = smooth;
+            local.React(pending);
+            local.FollowMech(smooth, Time.deltaTime);
             Present(session.State, seat, WaitingText());
             if (Time.unscaledTime < nextSend) return;
             nextSend = Time.unscaledTime + 1f / Mathf.Max(1, sendRate);
@@ -174,6 +182,7 @@ namespace Anseong.Skirmish
         void ResetSession()
         {
             session.Reset();
+            mechBefore = session.State.mech;
             forcedStart = false;
             pending.Clear();
             Debug.Log("[Skirmish] 교전 재시작", this);

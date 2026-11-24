@@ -37,6 +37,10 @@ namespace Anseong.Skirmish
         [SerializeField, Min(0.1f), Tooltip("오른손이 앞으로 이 속도(m/s)보다 빠르게 나가면 주먹.")] float punchSpeed = 1.5f;
         [SerializeField, Min(0.05f), Tooltip("주먹과 주먹 사이 최소 간격(초).")] float punchInterval = 0.35f;
         [SerializeField, Min(0f), Tooltip("주먹 한 대의 피해(잽).")] float punchDamage = 25f;
+        [SerializeField, Tooltip("P1 카메라가 걸음·충격에 반응하는 정도.")] CameraFeelSettings cameraFeel = new CameraFeelSettings();
+        [SerializeField, Range(0f, 1f), Tooltip("발을 디딜 때 두 컨트롤러 진동 세기. 0 = 끔.")] float stepHaptic = 0.25f;
+        [SerializeField, Range(0f, 1f), Tooltip("맞았을 때 진동 세기.")] float hitHaptic = 0.9f;
+        [SerializeField, Range(0f, 1f), Tooltip("막았을 때 진동 세기.")] float blockHaptic = 0.5f;
 
         InputAction rightRotation, rightPointer, rightPosition, rightTrigger, rightSecondary;
         InputAction leftRotation, leftPointer, leftPosition, leftTrigger, leftPrimary, leftStick, headPosition, headRotation;
@@ -47,6 +51,9 @@ namespace Anseong.Skirmish
         float nextPunchAt;
         Vector3 lastRightLocal;
         bool hasLastRight;
+        readonly MechCameraFeel feel = new MechCameraFeel();
+
+        public MechCameraFeel Feel => feel;
 
         public SkirmishSeat Seat { get; private set; }
         public MechInput Mech { get; private set; }
@@ -214,6 +221,41 @@ namespace Anseong.Skirmish
 
             Line(aimLine, rightHandMarker, rightDirection, VrActive);
             Line(pointerLine, leftHandMarker, leftDirection, VrActive);
+        }
+
+        /// <summary>
+        /// 이번 프레임의 로봇 위치(틱 사이를 이은 값)로 P1의 눈을 다시 놓는다. 규칙을 돌린 뒤, 화면을 그리기 전에 부른다.
+        /// 걸음·충격 반응은 여기서만 더한다(위치만, 회전 없음).
+        /// </summary>
+        public void FollowMech(Vector3 mechPosition, float dt)
+        {
+            if (rig == null || Seat != SkirmishSeat.Mech) { feel.Reset(); return; }
+            feel.Tick(mechPosition, dt, cameraFeel);
+            var anchor = mechPosition + mechEye + feel.Offset;
+            rig.position = VrActive ? anchor + rigOffset : anchor;
+            if (feel.Stepped) Rumble(stepHaptic * feel.StepWeight, 0.04f);
+        }
+
+        /// <summary>이번에 일어난 일 가운데 P1 몸에 닿은 것을 카메라와 진동으로 옮긴다.</summary>
+        public void React(System.Collections.Generic.IReadOnlyList<SkirmishEvent> events)
+        {
+            if (Seat != SkirmishSeat.Mech || events == null) return;
+            for (int i = 0; i < events.Count; i++)
+            {
+                var e = events[i];
+                bool hit = e.Kind == SkirmishEventKind.MechHit;
+                bool blocked = e.Kind == SkirmishEventKind.GruntBlocked || e.Kind == SkirmishEventKind.GruntPerfectBlock || e.Kind == SkirmishEventKind.ShellBlocked;
+                if (!hit && !blocked) continue;
+                feel.Impact(e.To - e.From, hit ? cameraFeel.hitPush : cameraFeel.blockPush);
+                Rumble(hit ? hitHaptic : blockHaptic, hit ? 0.15f : 0.08f);
+            }
+        }
+
+        void Rumble(float amplitude, float seconds)
+        {
+            if (!VrActive || amplitude <= 0f) return;
+            InputDevices.GetDeviceAtXRNode(XRNode.LeftHand).SendHapticImpulse(0, amplitude, seconds);
+            InputDevices.GetDeviceAtXRNode(XRNode.RightHand).SendHapticImpulse(0, amplitude, seconds);
         }
 
         static void Place(Transform marker, Vector3 position, Vector3 direction)
