@@ -23,6 +23,8 @@ namespace Anseong.MapShowcase.Editor
             { "booth", L + "ContainerYardEquipment/YardControlBooth.prefab" },
         };
 
+        const float LightYaw = 0f;   // turns the generated mast so its arm reaches over the lane
+
         static bool Blocked(float x, float z)
         {
             if (Mathf.Abs(x) < 18 && z > -5 && z < 410) return true;                 // central 32 m lane Z1..Z2..connector south
@@ -41,7 +43,9 @@ namespace Anseong.MapShowcase.Editor
         {
             // generated props (Meshy): built into prefabs once, then instanced many times
             var gen = new Dictionary<string, GameObject>();
-            foreach (var g in new[] { new { k = "truck", id = "Prop_CoilTruck", h = 4.2f, lz = true }, new { k = "dump", id = "Prop_DumpTruck", h = 5.0f, lz = true }, new { k = "wreck", id = "Prop_Wreckage", h = 5.0f, lz = false }, new { k = "stock", id = "Prop_SteelStock", h = 4.0f, lz = true } })
+            foreach (var g in new[] { new { k = "truck", id = "Prop_CoilTruck", h = 4.2f, lz = true }, new { k = "dump", id = "Prop_DumpTruck", h = 5.0f, lz = true }, new { k = "wreck", id = "Prop_Wreckage", h = 5.0f, lz = false }, new { k = "stock", id = "Prop_SteelStock", h = 4.0f, lz = true },
+                new { k = "car", id = "Prop_Sedan", h = 1.45f, lz = true }, new { k = "container", id = "Prop_Container", h = 2.6f, lz = true }, new { k = "light", id = "Prop_LightMast", h = 12f, lz = false },
+                new { k = "booth", id = "Prop_Booth", h = 3.3f, lz = true }, new { k = "barrier", id = "Prop_Barrier", h = 1.1f, lz = true } })
             {
                 var pfb = ShowcaseBuildings.BuildPrefab(g.id, "Assets/MapShowcase/Props/" + g.id, g.h, 2048, g.lz);
                 if (pfb != null) { gen[g.k] = pfb; var tb = Object.Instantiate(pfb); var trs = tb.GetComponentsInChildren<Renderer>(); var bb = trs[0].bounds; foreach (var r in trs) bb.Encapsulate(r.bounds); Debug.Log("SHOWCASE genprop " + g.id + " size " + bb.size.ToString("F1")); Object.DestroyImmediate(tb); }
@@ -56,10 +60,18 @@ namespace Anseong.MapShowcase.Editor
                 foreach (var r in Object.FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
                     if (r.enabled && (r.name.StartsWith("fractured slab") || r.name.StartsWith("Z2A") ))
                     { r.enabled = false; var c = r.bounds.center; c.y = 0; if (!wreckSpots.Exists(w => (w - c).magnitude < 28f)) wreckSpots.Add(c); }
+            // leftover grey scale-marker boxes ("service vehicle 6m", "1.8m person scale") are blockout aids, not scenery
+            foreach (var r in Object.FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                if (r.name == "service vehicle 6m" || r.name == "1.8m person scale") r.enabled = false;
+            var barriers = new List<Vector2>();
             int placed = 0, skipped = 0;
             System.Action<string, float, float, float> put = (kind, x, z, yaw) =>
             {
                 if (Blocked(x, z)) { skipped++; Debug.LogWarning("SHOWCASE prop blocked " + kind + " " + x + "," + z); return; }
+                bool g = gen.ContainsKey(kind);
+                if (g && (kind == "container" || kind == "booth")) yaw += 90;   // generated ones are long in Z, the old ones were long in X
+                if (g && kind == "light") yaw += LightYaw;
+                if (g && kind == "barrier") { var q = new Vector2(x, z); if (barriers.Exists(o => (o - q).magnitude < 9f)) return; barriers.Add(q); }   // one generated piece is a 9 m row of three
                 if ((kind == "tractor") && gen.ContainsKey("truck")) kind = "truck";
                 if ((kind == "stacker") && gen.ContainsKey("dump")) kind = "dump";
                 var pf = gen.ContainsKey(kind) ? gen[kind] : (Prefabs.ContainsKey(kind) ? AssetDatabase.LoadAssetAtPath<GameObject>(Prefabs[kind]) : null); if (pf == null) { Debug.LogWarning("SHOWCASE missing prop " + kind); return; }
@@ -83,6 +95,7 @@ namespace Anseong.MapShowcase.Editor
             for (int z = 20; z <= 400; z += 38) { put("light", -21, z, 90); put("light", 21, z, -90); }
             for (int x = 25; x <= 70; x += 40) { put("light", x, 426, 180); }
             for (int z = 430; z <= 505; z += 37) { put("light", 111, z, -90); put("light", 69, z, 90); }
+            put("car", 48, 55, 0); put("car", 53, 55, 180); put("car", 58, 55.5f, 0);   // where the scale-marker boxes stood
             // Z1 yard: parked service vehicles and cars by the buildings
             put("car", 34, 30, 0); put("car", 37.5f, 30, 0); put("car", 41, 30.5f, 4); put("car", 48, 30, 0);
             put("truck", -42, 72, 100); put("dump", -50, 86, 80); put("cabinet", 30, 62, 90); put("barrier", 24, 70, 0); put("barrier", 24, 74, 0); put("barrier", 24, 78, 0);

@@ -30,6 +30,7 @@ namespace Anseong.MapShowcase.Editor
             new Def{ id="B04_SteelHall", hideGroup="B04 transport plant", basePos=new Vector3(85,0,145), height=47, yaw=270, sink=0.4f, fitXZ=new Vector2(60,90) },
             new Def{ id="B05_DamagedWorkshop", hideGroup="B05 material warehouse", basePos=new Vector3(-155,0,235), height=27, yaw=90, sink=0.3f, fitXZ=new Vector2(64,112) },
             new Def{ id="B09_GasCleaning", hideGroup="B09 cooling / pipe hall", basePos=new Vector3(-110,0,556), height=32, yaw=90, sink=0.5f, fitXZ=new Vector2(40,54) },
+            new Def{ id="B02_Workshop", hideGroup="B02 damaged maintenance", basePos=new Vector3(-95,0,45), height=35, yaw=0, sink=0.3f, fitXZ=new Vector2(50,36) },
             new Def{ id="B01_Hangar", hideGroup="B01 Mech maintenance hangar", basePos=new Vector3(0,0,-27.5f), height=52f, yaw=270, sink=0.3f, fitXZ=new Vector2(67f,63f), shell=true },
             new Def{ id="B07_GantryCrane", hideGroup="B07 Crane 68m / underside 62m", basePos=new Vector3(90,0,555), height=69, yaw=0, sink=0.3f, fitXZ=new Vector2(108,66), keep=new[]{"coil","hoist","hook","trolley","latch","pin","cable"} },
         };

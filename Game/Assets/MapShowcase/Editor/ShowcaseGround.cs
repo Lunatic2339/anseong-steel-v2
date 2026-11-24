@@ -137,3 +137,30 @@ namespace Anseong.MapShowcase.Editor
         }
     }
 }
+namespace Anseong.MapShowcase.Editor
+{
+    public static class ShowcaseOldQuery
+    {
+        // what is still drawn with the old blockout shaders/materials, grouped by its two top hierarchy levels
+        public static void List()
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(ShowcaseCapture.WorkScene);
+            var groups = new System.Collections.Generic.Dictionary<string, System.Collections.Generic.List<UnityEngine.Renderer>>();
+            foreach (var r in UnityEngine.Object.FindObjectsByType<UnityEngine.Renderer>(UnityEngine.FindObjectsInactive.Exclude, UnityEngine.FindObjectsSortMode.None))
+            {
+                if (!r.enabled || r is UnityEngine.ParticleSystemRenderer) continue; var t = r.transform; var chain = new System.Collections.Generic.List<string>(); while (t) { chain.Insert(0, t.name); t = t.parent; }
+                if (chain[0].StartsWith("SC_")) continue;
+                var key = chain[0] + " / " + (chain.Count > 2 ? chain[1] : "");
+                if (!groups.TryGetValue(key, out var l)) groups[key] = l = new System.Collections.Generic.List<UnityEngine.Renderer>(); l.Add(r);
+            }
+            var sb = new System.Text.StringBuilder();
+            foreach (var g in System.Linq.Enumerable.OrderByDescending(groups, g => { var b = g.Value[0].bounds; foreach (var r in g.Value) b.Encapsulate(r.bounds); return b.size.y; }))
+            {
+                var b = g.Value[0].bounds; foreach (var r in g.Value) b.Encapsulate(r.bounds);
+                var big = System.Linq.Enumerable.First(System.Linq.Enumerable.OrderByDescending(g.Value, r => r.bounds.size.magnitude));
+                sb.AppendLine(g.Value.Count + " | " + g.Key + " | c " + b.center.ToString("F0") + " s " + b.size.ToString("F0") + " | biggest " + big.name + " s " + big.bounds.size.ToString("F0") + " " + (big.sharedMaterial ? big.sharedMaterial.shader.name : ""));
+            }
+            System.IO.File.WriteAllText(ShowcaseCapture.Arg("-dumpOut", "Temp/old.txt"), sb.ToString());
+        }
+    }
+}

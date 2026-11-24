@@ -183,7 +183,16 @@ namespace Anseong.MapShowcase.Editor
         {
             var holder = new GameObject("SC_DistantWorks"); holder.transform.SetParent(root, false);
             var ids = new[] { "B04_SteelHall", "B05_DamagedWorkshop", "B09_GasCleaning", "B04_SteelHall", "B05_DamagedWorkshop" };
-            var stack = AssetDatabase.LoadAssetAtPath<GameObject>("Assets/LegacySteelworks/Environment/Assets/Smokestack/Smokestack.prefab");
+            var stack = ShowcaseBuildings.BuildPrefab("Prop_Chimney", Root + "/Props/Prop_Chimney", 64f, 2048, false) ?? AssetDatabase.LoadAssetAtPath<GameObject>("Assets/LegacySteelworks/Environment/Assets/Smokestack/Smokestack.prefab");
+            // the three stacked-cylinder chimneys west of the yard become the generated chimney
+            if (stack != null && stack.name == "Prop_Chimney")
+                foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                    if (t.name.StartsWith("West damaged chimney"))
+                    {
+                        var rs0 = t.GetComponentsInChildren<Renderer>(); if (rs0.Length == 0) continue; var b0 = rs0[0].bounds; foreach (var r in rs0) { b0.Encapsulate(r.bounds); r.enabled = false; }
+                        var c = (GameObject)PrefabUtility.InstantiatePrefab(stack, holder.transform); float cz = t.name.EndsWith("0") ? 160f : t.name.EndsWith("1") ? 370f : 580f; b0.center = new Vector3(-220f, 0, cz);   /* blockout positions; the hidden shells report stale bounds */ c.transform.position = new Vector3(b0.center.x, -0.4f, b0.center.z); c.transform.rotation = Quaternion.Euler(0, (b0.center.z * 37f) % 360f, 0);
+                        var sh = new GameObject("shadow"); sh.transform.SetParent(c.transform, false); ShowcaseBuild.ContactShadow(sh.transform, new Vector3(0, 0.43f, 0), 16f, 16f, 0.6f);
+                    }
             var rng = new System.Random(911); int n = 0, st = 0;
             // (x, z) anchors: north-west and north behind the furnace, west behind the rolling mill, far north-east shore
             var anchors = new[] { new Vector2(-380, 980), new Vector2(-180, 1010), new Vector2(40, 1000), new Vector2(260, 990), new Vector2(-560, 900), new Vector2(-640, 620), new Vector2(-650, 330), new Vector2(-640, 60),
