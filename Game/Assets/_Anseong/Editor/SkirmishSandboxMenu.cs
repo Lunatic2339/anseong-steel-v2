@@ -497,6 +497,9 @@ namespace Anseong.EditorTools
             hud.BindCockpit(hudMount);
             var holo = viewRoot.AddComponent<MechHoloHud>();
             holo.Bind(cockpit, camera.transform, mechArms);
+            holo.BindGlow(Shader.Find("Anseong/HoloUI"));
+            // 테두리 빛이 되는 프로젝트(기본 렌더링)에서는 예고용 빨간 공을 뺀다: 몸의 붉은 빛과 표적 테두리로 충분하다.
+            view.TelegraphGlow = !BuiltIn;
             hud.BindHolo(holo);
 
             // 접속: 기존 세션·운영자 시작 화면을 그대로 쓴다(1 = 혼자, 2 = 호스트·메카, 3 = 클라이언트·공중포대).

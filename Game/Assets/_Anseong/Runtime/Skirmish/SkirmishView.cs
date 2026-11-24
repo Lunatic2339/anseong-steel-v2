@@ -35,6 +35,9 @@ namespace Anseong.Skirmish
         [SerializeField] Color furnaceWarn = new Color(1f, 0.6f, 0.1f);
         [SerializeField] Color furnaceDanger = new Color(1f, 0.1f, 0.05f);
 
+        [SerializeField, Tooltip("공격 예고를 큰 빛 덩어리로도 보여 준다. 테두리 빛이 되는 프로젝트에서는 끈다(표시가 겹친다).")] bool telegraphGlow = true;
+        public bool TelegraphGlow { get => telegraphGlow; set => telegraphGlow = value; }
+
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         static readonly int RimColorId = Shader.PropertyToID("_RimColor");
         Renderer[] gruntRenderers;
@@ -176,8 +179,8 @@ namespace Anseong.Skirmish
             foreach (var r in gruntRenderers) r.SetPropertyBlock(rimBlock);
             if (gruntTelegraph != null)
             {
-                gruntTelegraph.enabled = telegraph;
-                if (telegraph)
+                gruntTelegraph.enabled = telegraph && telegraphGlow;
+                if (telegraph && telegraphGlow)
                 {
                     // 내려치기는 적의 오른팔(로봇이 볼 때 왼쪽 위), 휘두르기는 적의 왼팔(로봇이 볼 때 오른쪽 옆)에서 온다.
                     bool slam = st.gruntAttack == GruntAttack.Slam;
