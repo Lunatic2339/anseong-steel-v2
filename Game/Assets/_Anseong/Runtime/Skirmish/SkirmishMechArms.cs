@@ -1,5 +1,6 @@
 using System;
 using System.Reflection;
+using Anseong.Core;
 using Anseong.Pilot;
 using UnityEngine;
 
@@ -22,7 +23,7 @@ namespace Anseong.Skirmish
     /// 뼈 참조는 메뉴 'Anseong → Sandbox → Build Scene 1 Duel'이 채운다.
     /// </summary>
     [DefaultExecutionOrder(RobotArmDriver.ExecutionOrder)]
-    public class SkirmishMechArms : MonoBehaviour
+    public class SkirmishMechArms : MonoBehaviour, ITunable
     {
         [Serializable]
         public class Arm
@@ -55,7 +56,8 @@ namespace Anseong.Skirmish
 
         readonly ArmSolverSettings settings = new ArmSolverSettings();
         bool handsTracked, guarding, punching, localPilot;
-        bool shieldOpen = true, shieldBroken;
+        bool shieldOpen = true, shieldBroken, menuOpen;
+        FieldInfo shieldInputBlocked;
         float holdRightUntil;
         Renderer shieldRenderer;
         PropertyInfo shieldDeployed;
@@ -77,6 +79,24 @@ namespace Anseong.Skirmish
 
         /// <summary>이 PC의 사람이 P1으로 직접 조종하는지. 아니면 차폐판 버튼을 받지 않고 펴 둔다.</summary>
         public void SetLocalPilot(bool value) => localPilot = value;
+
+        /// <summary>조절 메뉴가 열려 있는 동안에는 A 버튼이 메뉴 것이라 차폐판을 펴고 접지 않는다.</summary>
+        public void SetMenuOpen(bool value) => menuOpen = value;
+
+        public void AddTuning(TuningList list)
+        {
+            const string Group = "교전: 팔";
+            list.Describe(Group, "두 손을 앞·옆·위로 끝까지 뻗어 본다. 로봇 팔이 같은 방향으로 끝까지 가는지,\n꺾이거나 몸을 뚫지 않는지 본다. 팔이 덜 뻗으면 팔 길이를 줄인다.");
+            list.AddFloat(Group, "sk.arm.reach", "사람 팔 길이(m)", () => humanReach, v => humanReach = v, 0.4f, 0.9f, 0.01f);
+            list.AddFloat(Group, "sk.arm.shoulderOut", "눈에서 어깨: 바깥쪽(m)", () => eyeToShoulder.x, v => eyeToShoulder.x = v, 0f, 0.35f, 0.01f);
+            list.AddFloat(Group, "sk.arm.shoulderDown", "눈에서 어깨: 아래(m)", () => -eyeToShoulder.y, v => eyeToShoulder.y = -v, 0f, 0.45f, 0.01f);
+            list.AddFloat(Group, "sk.arm.shoulderBack", "눈에서 어깨: 뒤(m)", () => -eyeToShoulder.z, v => eyeToShoulder.z = -v, -0.15f, 0.25f, 0.01f);
+            list.AddChoice(Group, "sk.arm.shieldMode", "차폐판 쓰는 방식", () => (int)shieldMode, v => shieldMode = (ShieldMode)v, new[] { "늘 펴 둠", "A 버튼으로 폄" });
+            list.AddCheck(Group, "sk.armFollow", "팔이 내 손 방향으로 끝까지 뻗는다");
+            list.AddCheck(Group, "sk.armClean", "팔이 꺾이거나 몸·조종석을 뚫지 않는다");
+            list.AddCheck(Group, "sk.shieldButton", "차폐판이 A 버튼으로 펴지고 접힌다");
+            list.AddCheck(Group, "sk.shieldHand", "손이 차폐판을 뚫고 나오지 않는다");
+        }
 
         /// <summary>이 PC의 조종사가 버튼으로 차폐판을 접어 둔 상태. 서버를 거쳐 P2 화면의 로봇에도 전해진다.</summary>
         public bool FoldedByPilot => shield != null && shieldMode == ShieldMode.Button && localPilot && !shieldBroken
@@ -123,6 +143,7 @@ namespace Anseong.Skirmish
             shieldLocalInput = type.GetField("enableLocalInput");
             shieldProgress = type.GetProperty("Progress");
             shieldDeployed = type.GetProperty("Deployed");
+            shieldInputBlocked = type.GetField("inputBlocked");
             shieldRenderer = type.GetField("shield")?.GetValue(shield) as Renderer;
             shieldSetDeployed = type.GetMethod("SetDeployed");
         }
@@ -145,6 +166,7 @@ namespace Anseong.Skirmish
             {
                 bool byButton = shieldMode == ShieldMode.Button && localPilot && !shieldBroken;
                 shieldLocalInput?.SetValue(shield, byButton);
+                shieldInputBlocked?.SetValue(shield, menuOpen);
                 if (!byButton) shieldSetDeployed?.Invoke(shield, new object[] { shieldOpen && !shieldBroken });
                 if (shieldRenderer != null && shieldRenderer.enabled == shieldBroken) shieldRenderer.enabled = !shieldBroken;
             }

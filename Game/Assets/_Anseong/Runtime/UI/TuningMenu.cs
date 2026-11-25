@@ -65,6 +65,9 @@ namespace Anseong.UI
 
         [SerializeField, Tooltip("시작할 때 저장 파일 값을 적용한다. 끄면 늘 코드 기본값으로 시작.")]
         bool loadSaved = true;
+
+        [SerializeField, Tooltip("아래 안내 줄의 조작법. 열기 버튼을 바꾼 장면에서는 여기도 맞춘다.")]
+        string keysHint = "B 닫기    스틱 ↑↓ 고르기    ←→ 바꾸기    A 처음 값으로";
 #pragma warning restore 0414, 0649
 
         public bool IsOpen { get; private set; }
@@ -77,7 +80,8 @@ namespace Anseong.UI
 #if UNITY_EDITOR || DEVELOPMENT_BUILD
         readonly TuningList list = new TuningList();
         readonly StringBuilder builder = new StringBuilder(1024);
-        InputAction toggleAction, resetAction;
+        InputAction toggleAction, resetAction, leftStickAction, rightStickAction;
+        bool collected;
         readonly StringBuilder valueBuilder = new StringBuilder(512);
         // [0] = 위아래(고르기), [1] = 좌우(바꾸기)
         readonly int[] heldDirection = new int[2];
@@ -87,7 +91,7 @@ namespace Anseong.UI
         bool dirty = true;
 
         // 검증 순서(M1-04_검증_조절값.md)대로 묶음을 보여 준다.
-        static readonly string[] GroupOrder = { "몸 이동", "손목", "펀치 인식", "그립", "묵직함", "조종석 흔들림", "허리", "팔 매핑", "공격 보정", "연계·부스트", "보스 반응", "보스 HP", "소리·진동", "가드" };
+        static readonly string[] GroupOrder = { "교전: 팔", "교전: 주먹·막기", "교전: 카메라", "교전: 규칙·연출", "교전: 계기", "교전: 공중포대·성능", "몸 이동", "손목", "펀치 인식", "그립", "묵직함", "조종석 흔들림", "허리", "팔 매핑", "공격 보정", "연계·부스트", "보스 반응", "보스 HP", "소리·진동", "가드" };
 
         void Start()
         {
@@ -98,10 +102,7 @@ namespace Anseong.UI
                 enabled = false;
                 return;
             }
-            UseOsFont();
-            foreach (var behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
-                if (behaviour is ITunable tunable) tunable.AddTuning(list);
-            list.SortByGroup(GroupOrder);
+            Collect();
 
             path = Path.Combine(LogFolder.Root, fileName);
             MoveOldSave();
@@ -123,8 +124,38 @@ namespace Anseong.UI
 
             toggleAction = MakeAction("Tuning Toggle", toggleBindings);
             resetAction = MakeAction("Tuning Reset", resetBindings);
+            // 손 입력 컴포넌트가 없는 장면(교전 시험 장면)에서는 컨트롤러 스틱을 직접 읽는다.
+            leftStickAction = new InputAction("Tuning Left Stick", InputActionType.Value, "<XRController>{LeftHand}/thumbstick");
+            rightStickAction = new InputAction("Tuning Right Stick", InputActionType.Value, "<XRController>{RightHand}/thumbstick");
+            leftStickAction.Enable();
+            rightStickAction.Enable();
             SetOpen(false);
         }
+
+        /// <summary>장면의 조절 항목을 한 번 모은다.</summary>
+        void Collect()
+        {
+            if (collected) return;
+            collected = true;
+            UseOsFont();
+            foreach (var behaviour in FindObjectsByType<MonoBehaviour>(FindObjectsSortMode.None))
+                if (behaviour is ITunable tunable) tunable.AddTuning(list);
+            list.SortByGroup(GroupOrder);
+        }
+
+        /// <summary>에디터에서 화면을 찍을 때: Play 없이 항목을 모아 메뉴를 연 모습을 그린다. select번째 항목을 고른 상태로.</summary>
+        public void PreviewForCapture(bool open, int select = 0)
+        {
+            Collect();
+            list.Move(-list.Items.Count);
+            list.Move(select);
+            IsOpen = open;
+            screen.SetActive(open);
+            if (open) Redraw();
+        }
+
+        /// <summary>모은 항목 수(확인용).</summary>
+        public int ItemCount => list.Items.Count;
 
         static InputAction MakeAction(string name, string[] bindings)
         {
@@ -139,13 +170,25 @@ namespace Anseong.UI
         {
             toggleAction?.Dispose();
             resetAction?.Dispose();
+            leftStickAction?.Dispose();
+            rightStickAction?.Dispose();
         }
 
         void UseOsFont()
         {
+            // 메뉴는 장면의 다른 반투명 물체(계기, 표적 표시, 사격선)보다 늘 나중에 그린다: 어둡게 하는 막 → 글자 순서.
+            var dim = screen.transform.Find("Dim");
+            var dimRenderer = dim != null ? dim.GetComponent<MeshRenderer>() : null;
+            if (dimRenderer != null) dimRenderer.sortingOrder = 32000;
+            foreach (var mesh in new[] { title, labels, values, footer })
+                if (mesh != null) mesh.GetComponent<MeshRenderer>().sortingOrder = 32001;
+
             if (osFontNames == null || osFontNames.Length == 0) return;
             var font = Font.CreateDynamicFontFromOSFont(osFontNames, labels.fontSize > 0 ? labels.fontSize : 32);
             if (font == null) return;
+            font.material.renderQueue = 3999;
+            if (dimRenderer != null && dimRenderer.sharedMaterial != null)
+                dimRenderer.sharedMaterial = new Material(dimRenderer.sharedMaterial) { renderQueue = 3998 };
             foreach (var mesh in new[] { title, labels, values, footer })
             {
                 if (mesh == null) continue;
@@ -198,6 +241,13 @@ namespace Anseong.UI
             {
                 var left = input.Get(PilotSide.Left).Stick;
                 var right = input.Get(PilotSide.Right).Stick;
+                value.x = Mathf.Abs(left.x) > Mathf.Abs(right.x) ? left.x : right.x;
+                value.y = Mathf.Abs(left.y) > Mathf.Abs(right.y) ? left.y : right.y;
+            }
+            else if (leftStickAction != null)
+            {
+                var left = leftStickAction.ReadValue<Vector2>();
+                var right = rightStickAction.ReadValue<Vector2>();
                 value.x = Mathf.Abs(left.x) > Mathf.Abs(right.x) ? left.x : right.x;
                 value.y = Mathf.Abs(left.y) > Mathf.Abs(right.y) ? left.y : right.y;
             }
@@ -292,7 +342,7 @@ namespace Anseong.UI
                 title.text = $"<b>조절 · 검증 메뉴</b>   <color=#999999>{list.Selected + 1} / {items.Count}</color>" +
                              (checkTotal > 0 ? $"   확인 <color=#5BE37D>OK {checkOk}</color> · <color=#FF6B6B>문제 {checkProblem}</color> / {checkTotal}" : string.Empty);
             if (footer != null)
-                footer.text = "B 닫기    스틱 ↑↓ 고르기    ←→ 바꾸기    A 처음 값으로\n<color=#999999>바꾼 값은 자동 저장(다음 Play에도 남음)" +
+                footer.text = keysHint + "\n<color=#999999>바꾼 값은 자동 저장(다음 Play에도 남음)" +
                               (status.Length > 0 ? " · " + status : string.Empty) + "</color>";
         }
 

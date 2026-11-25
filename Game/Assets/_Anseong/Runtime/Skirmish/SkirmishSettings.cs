@@ -1,4 +1,5 @@
 using System;
+using Anseong.Core;
 using UnityEngine;
 
 namespace Anseong.Skirmish
@@ -107,6 +108,32 @@ namespace Anseong.Skirmish
         public Vector3 furnacePoint = new Vector3(100f, 45f, 715f);
         [Tooltip("고로가 버티는 피격 수.")]
         [Min(1)] public int furnaceHits = 3;
+
+        /// <summary>규칙 수치는 호스트(P1) PC에서 바꾼 것만 판정에 쓰인다. P2 PC에서는 화면 표시에만 쓰인다.</summary>
+        public void AddTuning(TuningList list)
+        {
+            const string Group = "교전: 규칙·연출", Team = "교전: 공중포대·성능";
+            var s = this;
+            list.Describe(Group, "호스트(P1) PC에서 바꾼 값만 판정에 쓰인다. 적을 때리고, 딱 맞춰 막아 본다.\n팔이 잠깐 서는 것과 시간이 느려지는 것이 어색하거나 어지럽지 않은지 본다.");
+            list.AddFloat(Group, "sk.mechSpeed", "로봇 속도(m/s)", () => s.mechSpeed, v => s.mechSpeed = v, 4f, 16f, 0.5f, 1);
+            list.AddFloat(Group, "sk.mechAccel", "전속력까지 걸리는 시간(초)", () => s.mechAccelSeconds, v => s.mechAccelSeconds = v, 0f, 1.5f, 0.05f);
+            list.AddFloat(Group, "sk.mechStop", "멈추는 데 걸리는 시간(초)", () => s.mechStopSeconds, v => s.mechStopSeconds = v, 0f, 1.5f, 0.05f);
+            list.AddFloat(Group, "sk.hitStop", "타격 멈춤(초)", () => s.grunt.hitStopSeconds, v => s.grunt.hitStopSeconds = v, 0f, 0.15f, 0.01f);
+            list.AddFloat(Group, "sk.finishStop", "마무리 한 방 멈춤(초)", () => s.grunt.finishStopSeconds, v => s.grunt.finishStopSeconds = v, 0f, 0.3f, 0.01f);
+            list.AddFloat(Group, "sk.slowSeconds", "딱 맞춰 막기: 느린 시간(초)", () => s.perfectSlowSeconds, v => s.perfectSlowSeconds = v, 0f, 0.4f, 0.01f);
+            list.AddFloat(Group, "sk.slowScale", "딱 맞춰 막기: 느린 동안 빠르기", () => s.perfectSlowScale, v => s.perfectSlowScale = v, 0.1f, 1f, 0.05f);
+            list.AddFloat(Group, "sk.perfectWindow", "딱 맞춰 막기로 쳐 주는 시간(초)", () => s.grunt.perfectWindow, v => s.grunt.perfectWindow = v, 0.1f, 0.6f, 0.05f);
+            list.AddFloat(Group, "sk.engage", "적이 서는 거리(m)", () => s.grunt.engageDistance, v => s.grunt.engageDistance = v, 15f, 30f, 0.5f, 1);
+            list.AddCheck(Group, "sk.hitStopFeel", "타격 순간 팔이 서는 것이 어색하지 않다");
+            list.AddCheck(Group, "sk.slowFeel", "딱 맞춰 막을 때 느려짐이 어지럽지 않다");
+            list.AddCheck(Group, "sk.enemySize", "맞붙은 적의 크기와 거리가 알맞다");
+
+            list.Describe(Team, "두 PC를 접속해 P2 자리에서 본다. 고개를 빠르게 돌려 화면이 끊기는지 본다.");
+            list.AddCheck(Team, "sk.p2View", "P2 자리에서 로봇과 적이 한눈에 보인다");
+            list.AddCheck(Team, "sk.p2Aim", "P2의 포가 손이 가리키는 곳으로 나간다");
+            list.AddCheck(Team, "sk.p2Shield", "P2 화면의 로봇도 차폐판을 펴고 접는다");
+            list.AddCheck(Team, "sk.smooth", "고개를 돌려도 화면이 끊기지 않는다");
+        }
 
         /// <summary>장면 1 "첫 상대": 정비고 앞 마당에서 돌격형 둘과 차례로 싸운다(제작 명세).</summary>
         public static SkirmishSettings Scene1() => new SkirmishSettings
