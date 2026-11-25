@@ -502,6 +502,17 @@ namespace Anseong.EditorTools
             view.TelegraphGlow = !BuiltIn;
             hud.BindHolo(holo);
 
+            // 헤드셋을 쓴 채 값을 바꾸고 확인 결과를 적는 메뉴. 오른손 B는 P2의 잠금 취소라서 왼손 메뉴 버튼으로 연다.
+            var tuning = SceneSetupMenu.AddTuningMenu(camera.transform, null);
+            var tuningFields = new SerializedObject(tuning);
+            var toggles = tuningFields.FindProperty("toggleBindings");
+            string[] toggleKeys = { "<XRController>{LeftHand}/menu", "<XRController>{LeftHand}/menuButton", "<Keyboard>/f1" };
+            toggles.arraySize = toggleKeys.Length;
+            for (int i = 0; i < toggleKeys.Length; i++) toggles.GetArrayElementAtIndex(i).stringValue = toggleKeys[i];
+            tuningFields.FindProperty("keysHint").stringValue = "왼손 메뉴 버튼(F1) 닫기    스틱 ↑↓ 고르기    ←→ 바꾸기    A(Backspace) 처음 값으로";
+            tuningFields.ApplyModifiedPropertiesWithoutUndo();
+            input.BindMenu(tuning);
+
             // 접속: 기존 세션·운영자 시작 화면을 그대로 쓴다(1 = 혼자, 2 = 호스트·메카, 3 = 클라이언트·공중포대).
             var sessionObject = new GameObject("Network Session");
             var network = sessionObject.AddComponent<NetworkManager>();
@@ -637,6 +648,16 @@ namespace Anseong.EditorTools
                 Shot("3-p1-guard", MechEye(), Center());
                 Pilot(false);
                 Shot("3-p2-guard", post, Center());
+                // 조절 메뉴를 연 모습(값 항목과 확인 항목).
+                var tuningMenu = Object.FindAnyObjectByType<Anseong.UI.TuningMenu>(FindObjectsInactive.Include);
+                Pilot(false);   // 메뉴가 열리면 조종석과 계기는 숨는다.
+                tuningMenu.PreviewForCapture(true, 2);
+                Shot("6-p1-menu-values", MechEye(), MechEye() + Vector3.forward);
+                tuningMenu.PreviewForCapture(true, 6);
+                Shot("6-p1-menu-checks", MechEye(), MechEye() + Vector3.forward);
+                Debug.Log($"{LogPrefix} 조절 메뉴 항목 {tuningMenu.ItemCount}개");
+                tuningMenu.PreviewForCapture(false);
+                Pilot(false);
                 // 차폐판 파손(장면 6의 규칙): 차폐판이 사라지고 계기에 "파손"이 뜬다.
                 session.BreakShield();
                 Tick();

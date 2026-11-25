@@ -236,6 +236,14 @@ namespace Anseong.EditorTools
         {
             var camera = origin.Camera != null ? origin.Camera.transform : null;
             if (camera == null) return "카메라가 없어 만들지 않음";
+            bool had = camera.GetComponentInChildren<TuningMenu>(true) != null;
+            AddTuningMenu(camera, origin.GetComponent<PilotHandInput>());
+            return had ? "새 화면으로 다시 만듦" : "XR 카메라 아래에 만듦";
+        }
+
+        /// <summary>카메라 아래에 조절 메뉴를 만든다. 교전 시험 장면처럼 손 입력 컴포넌트가 없으면 input은 null(메뉴가 스틱을 직접 읽는다).</summary>
+        internal static TuningMenu AddTuningMenu(Transform camera, PilotHandInput input)
+        {
             var old = camera.GetComponentInChildren<TuningMenu>(true);
             if (old != null)
             {
@@ -296,9 +304,9 @@ namespace Anseong.EditorTools
             serialized.FindProperty("labels").objectReferenceValue = labels;
             serialized.FindProperty("values").objectReferenceValue = values;
             serialized.FindProperty("footer").objectReferenceValue = footer;
-            serialized.FindProperty("input").objectReferenceValue = origin.GetComponent<PilotHandInput>();
+            serialized.FindProperty("input").objectReferenceValue = input;
             serialized.ApplyModifiedProperties();
-            return old != null ? "새 화면으로 다시 만듦" : "XR 카메라 아래에 만듦";
+            return menu;
         }
 
         /// <summary>화면을 어둡게 하는 반투명 검정(URP Unlit 투명). 글자보다 먼저 그리게 큐 2999.</summary>
@@ -308,8 +316,11 @@ namespace Anseong.EditorTools
             if (material != null) return material;
             // 에디터에서만 셰이더를 찾는다(런타임 Shader.Find 금지).
             var shader = Shader.Find("Universal Render Pipeline/Unlit");
+            // 기본 렌더링 프로젝트(맵 프로젝트)에는 URP 셰이더가 없다: 빛을 받아도 검정이라 반투명 기본 셰이더로 충분하다.
+            if (shader == null) shader = Shader.Find("Legacy Shaders/Transparent/Diffuse");
             if (shader == null) return null;
             material = new Material(shader);
+            if (material.HasProperty("_Color")) material.SetColor("_Color", new Color(0f, 0f, 0f, 0.85f));
             material.SetFloat("_Surface", 1f);
             material.SetFloat("_Blend", 0f);
             material.SetOverrideTag("RenderType", "Transparent");

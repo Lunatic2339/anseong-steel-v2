@@ -1,3 +1,4 @@
+using Anseong.Core;
 using Anseong.Pilot;
 using UnityEngine;
 using UnityEngine.InputSystem;
@@ -18,8 +19,10 @@ namespace Anseong.Skirmish
     /// 씬 구성은 메뉴 'Anseong → Sandbox → Build Z2 Skirmish'가 한다.
     /// </summary>
     [DefaultExecutionOrder(-50)]
-    public class SkirmishLocalInput : MonoBehaviour
+    public class SkirmishLocalInput : MonoBehaviour, ITunable
     {
+        [SerializeField, Tooltip("조절 메뉴. 열려 있는 동안에는 스틱·트리거를 게임에 넘기지 않는다.")] Anseong.UI.TuningMenu menu;
+
         [SerializeField, Tooltip("XR Origin 루트. 자리에 맞춰 옮긴다.")] Transform rig;
         [SerializeField, Tooltip("컨트롤러 좌표의 기준(XR Origin의 Camera Offset).")] Transform trackingSpace;
         [SerializeField, Tooltip("머리(카메라).")] Transform head;
@@ -78,6 +81,39 @@ namespace Anseong.Skirmish
         public void BindMech(SkirmishMechArms arms, Vector3 eye)
         {
             mechArms = arms; mechEye = eye;
+        }
+
+        public void BindMenu(Anseong.UI.TuningMenu tuningMenu) => menu = tuningMenu;
+
+        /// <summary>조절 메뉴가 열려 있다. 그동안 조종석과 계기는 숨긴다(메뉴 글자를 가린다).</summary>
+        public bool MenuOpen => menu != null && menu.IsOpen;
+
+        public void AddTuning(TuningList list)
+        {
+            const string Fist = "교전: 주먹·막기", Cam = "교전: 카메라";
+            list.Describe(Fist, "오른 트리거를 쥐고 주먹을 뻗는다. 왼 트리거를 쥐고 왼손을 얼굴 왼쪽·오른쪽에 둔다.\n한 번 뻗으면 한 대만 나가는지, 예고를 보고 막을 시간이 되는지 본다.");
+            list.AddFloat(Fist, "sk.punchSpeed", "주먹으로 치는 손 속도(m/s)", () => punchSpeed, v => punchSpeed = v, 0.5f, 4f, 0.1f, 1);
+            list.AddFloat(Fist, "sk.punchInterval", "주먹 사이 최소 간격(초)", () => punchInterval, v => punchInterval = v, 0.1f, 1f, 0.05f);
+            list.AddFloat(Fist, "sk.triggerPress", "트리거를 누른 것으로 보는 깊이", () => triggerPress, v => triggerPress = v, 0.1f, 0.9f, 0.05f);
+            list.AddCheck(Fist, "sk.punchOnce", "한 번 뻗으면 주먹이 한 대만 나간다");
+            list.AddCheck(Fist, "sk.guardSide", "왼손을 둔 쪽(왼쪽·오른쪽)이 막힌다");
+            list.AddCheck(Fist, "sk.guardTime", "예고를 보고 막을 시간이 충분하다");
+
+            list.Describe(Cam, "스틱으로 걷고, 한 대 맞아 보고, 한 번 막아 본다.\n어지러우면 걸음·충격 반응을 줄이거나 끈다.");
+            list.AddToggle(Cam, "sk.cam.steps", "걸음마다 내려앉기", () => cameraFeel.steps, v => cameraFeel.steps = v);
+            list.AddFloat(Cam, "sk.cam.stepDip", "걸음에 내려앉는 깊이(m)", () => cameraFeel.stepDip, v => cameraFeel.stepDip = v, 0f, 0.08f, 0.005f, 3);
+            list.AddToggle(Cam, "sk.cam.impacts", "맞거나 막을 때 밀림", () => cameraFeel.impacts, v => cameraFeel.impacts = v);
+            list.AddFloat(Cam, "sk.cam.hitPush", "맞았을 때 밀리는 거리(m)", () => cameraFeel.hitPush, v => cameraFeel.hitPush = v, 0f, 0.2f, 0.01f);
+            list.AddFloat(Cam, "sk.cam.blockPush", "막았을 때 밀리는 거리(m)", () => cameraFeel.blockPush, v => cameraFeel.blockPush = v, 0f, 0.2f, 0.01f);
+            list.AddFloat(Cam, "sk.hap.step", "걸음 진동", () => stepHaptic, v => stepHaptic = v, 0f, 1f, 0.05f);
+            list.AddFloat(Cam, "sk.hap.hit", "맞았을 때 진동", () => hitHaptic, v => hitHaptic = v, 0f, 1f, 0.05f);
+            list.AddFloat(Cam, "sk.hap.block", "막았을 때 진동", () => blockHaptic, v => blockHaptic = v, 0f, 1f, 0.05f);
+            list.AddCheck(Cam, "sk.walkComfort", "걷고 멈출 때 어지럽지 않다");
+            list.AddCheck(Cam, "sk.hitComfort", "맞았을 때 밀림이 불쾌하지 않다");
+            list.AddCheck(Cam, "sk.eyeHeight", "눈높이가 로봇 머리 높이로 느껴진다");
+
+            const string Hud = "교전: 계기";
+            list.AddCheck(Hud, "sk.cockpitView", "조종석 틀이 적과 앞을 가리지 않는다");
         }
 
         public void BindCockpit(Transform cockpitRoot, Renderer[] hidden)
@@ -226,14 +262,22 @@ namespace Anseong.Skirmish
                 Hide(rightHandMarker); Hide(leftHandMarker);
                 if (mechArms != null) mechArms.ClearHands();
             }
+            // 조절 메뉴가 열려 있으면 스틱과 버튼은 메뉴 것이다.
+            bool menuOpen = MenuOpen;
+            if (menuOpen)
+            {
+                move = Vector3.zero;
+                rightHeld = leftHeld = guardHeld = cancel = punched = false;
+            }
             if (mechArms != null)
             {
+                mechArms.SetMenuOpen(menuOpen);
                 mechArms.SetLocalPilot(Seat == SkirmishSeat.Mech && !useBot);
                 // 차폐판을 버튼으로 펴는 방식에서는 다 펴진 동안에만 막을 수 있다.
                 guardHeld &= ShieldBroken || mechArms.ShieldReady;
             }
 
-            PlaceCockpit(anchor, Seat == SkirmishSeat.Mech);
+            PlaceCockpit(anchor, Seat == SkirmishSeat.Mech && !menuOpen);
 
             if (punched && Time.unscaledTime >= nextPunchAt)
             {
@@ -263,7 +307,7 @@ namespace Anseong.Skirmish
             var anchor = mechPosition + mechEye + feel.Offset;
             rig.position = VrActive ? anchor + rigOffset : anchor;
             // 걸음·충격에는 조종석째로 같이 움직인다(눈만 움직이면 틀이 따로 논다).
-            PlaceCockpit(anchor, true);
+            PlaceCockpit(anchor, !MenuOpen);
             if (feel.Stepped) Rumble(stepHaptic * feel.StepWeight, 0.04f);
         }
 

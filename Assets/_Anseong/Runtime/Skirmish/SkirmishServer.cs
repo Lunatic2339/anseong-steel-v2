@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Anseong.Core;
 using Anseong.Net;
 using Unity.Netcode;
 using UnityEngine;
@@ -14,7 +15,7 @@ namespace Anseong.Skirmish
     /// K 차폐판 부수기(장면 6이 들어오기 전까지의 확인용).
     /// 메뉴 'Anseong → Sandbox → Build Z2 Skirmish'가 NetworkObject와 함께 씬에 놓는다.
     /// </summary>
-    public class SkirmishServer : NetworkBehaviour
+    public class SkirmishServer : NetworkBehaviour, ITunable
     {
         [SerializeField] SkirmishSettings settings = new SkirmishSettings();
         [SerializeField] SkirmishView view;
@@ -43,6 +44,8 @@ namespace Anseong.Skirmish
 
         /// <summary>씬을 만드는 에디터 메뉴가 장면별 수치를 넣는다.</summary>
         public void Configure(SkirmishSettings value) => settings = value;
+
+        public void AddTuning(TuningList list) => settings.AddTuning(list);
 
         public void Bind(SkirmishView skirmishView, SkirmishLocalInput input, SkirmishHud skirmishHud)
         {
@@ -220,7 +223,11 @@ namespace Anseong.Skirmish
         void Present(SkirmishState st, SkirmishSeat seat, string waiting)
         {
             view.Show(st, settings, pending, mechAim, gunnerAim, Time.time);
-            if (hud != null) hud.Show(st, settings, pending, seat, local.VrActive, waiting);
+            if (hud != null)
+            {
+                hud.HideForMenu = local.MenuOpen;
+                hud.Show(st, settings, pending, seat, local.VrActive, waiting);
+            }
             pending.Clear();
         }
 

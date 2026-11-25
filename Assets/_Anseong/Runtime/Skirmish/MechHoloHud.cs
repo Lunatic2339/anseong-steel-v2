@@ -14,8 +14,18 @@ namespace Anseong.Skirmish
     /// </list>
     /// 화면은 처음 보여 줄 때 만든다(씬·프리팹에 UI를 저장하지 않음).
     /// </summary>
-    public class MechHoloHud : MonoBehaviour
+    public class MechHoloHud : MonoBehaviour, Anseong.Core.ITunable
     {
+        public void AddTuning(Anseong.Core.TuningList list)
+        {
+            const string Group = "교전: 계기";
+            list.Describe(Group, "양옆 유리 패널의 글자를 읽어 보고, 적을 볼 때 표적 테두리가 몸을 가리는지 본다.");
+            list.AddFloat(Group, "sk.hud.bracketSize", "표적 테두리 크기(적 키 배수)", () => bracketSize, v => bracketSize = v, 0.2f, 1.3f, 0.05f);
+            list.AddFloat(Group, "sk.hud.bracketRaise", "표적 테두리 높이(적 키 배수)", () => bracketRaise, v => bracketRaise = v, -0.3f, 0.5f, 0.02f);
+            list.AddCheck(Group, "sk.hudRead", "양옆 패널의 글자와 숫자가 읽힌다");
+            list.AddCheck(Group, "sk.hudBracket", "표적 테두리가 적의 몸을 가리지 않는다");
+        }
+
         [SerializeField, Tooltip("P1 조종석(원점 = 발밑). 유리 패널과 알림이 여기에 붙는다.")] Transform cockpit;
         [SerializeField, Tooltip("머리(카메라). 표적 테두리가 이쪽을 본다.")] Transform head;
         [SerializeField, Tooltip("차폐판 상태를 읽을 로봇 팔(없으면 표시하지 않음).")] SkirmishMechArms arms;

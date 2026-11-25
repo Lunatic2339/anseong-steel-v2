@@ -21,6 +21,9 @@ namespace Anseong.Skirmish
 
         Text text;
         Transform panel;
+
+        /// <summary>조절 메뉴가 열려 있는 동안 계기를 숨긴다.</summary>
+        public bool HideForMenu { get; set; }
         string lastEvent = "";
 
         public void Bind(Transform rigRoot, Transform headTransform) { rig = rigRoot; head = headTransform; }
@@ -57,7 +60,8 @@ namespace Anseong.Skirmish
         public void Show(SkirmishState st, SkirmishSettings s, IReadOnlyList<SkirmishEvent> events, SkirmishSeat seat, bool vr, string waiting)
         {
             if (text == null) Build();
-            if (holo != null) holo.Show(st, s, events, seat == SkirmishSeat.Mech, Time.time);
+            if (holo != null) holo.Show(st, s, events, seat == SkirmishSeat.Mech && !HideForMenu, Time.time);
+            if (panel.gameObject.activeSelf == HideForMenu) panel.gameObject.SetActive(!HideForMenu);
             // 모니터로 볼 때는 고개를 숙일 수 없으니 계기판을 머리 앞에 그대로 둔다.
             bool onDash = vr && seat == SkirmishSeat.Mech && cockpitMount != null;
             var parent = onDash ? cockpitMount : vr ? rig : head;
