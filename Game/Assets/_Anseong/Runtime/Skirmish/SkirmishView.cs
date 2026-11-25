@@ -24,6 +24,7 @@ namespace Anseong.Skirmish
         [SerializeField, Tooltip("예고 표시: 공격이 오는 쪽에 뜨는 빛.")] Renderer gruntTelegraph;
         [SerializeField, Tooltip("가드 굳힘 표시: 가슴 앞을 막는 판.")] Renderer gruntGuard;
         [SerializeField, Tooltip("실제 로봇 모델의 팔(있으면 상자 팔 대신 쓴다).")] SkirmishMechArms mechArms;
+        [SerializeField, Tooltip("뒤에서 기다리는 돌격형(둘이 같이 오는 장면에서만).")] Transform gruntBack;
 
         [SerializeField, Min(0.01f), Tooltip("사격 궤적이 보이는 시간(초).")] float tracerSeconds = 0.06f;
         [Header("돌격형 테두리 빛(전용 셰이더가 있는 재질에서만 보인다)")]
@@ -66,6 +67,26 @@ namespace Anseong.Skirmish
         }
 
         public void BindMechArms(SkirmishMechArms arms) => mechArms = arms;
+
+        public void BindGruntBack(Transform root) => gruntBack = root;
+        Renderer[] backRenderers;
+
+        /// <summary>뒤에서 기다리는 돌격형. 큰 탄을 겨누는 동안 붉게 빛난다.</summary>
+        void ShowBack(SkirmishState st)
+        {
+            if (gruntBack == null) return;
+            bool present = st.backIndex >= 0;
+            if (gruntBack.gameObject.activeSelf != present) gruntBack.gameObject.SetActive(present);
+            if (!present) return;
+            gruntBack.position = st.backPosition;
+            var facing = st.mech - st.backPosition;
+            facing.y = 0f;
+            if (facing.sqrMagnitude > 1e-4f) gruntBack.rotation = Quaternion.LookRotation(facing);
+            backRenderers ??= gruntBack.GetComponentsInChildren<Renderer>(true);
+            rimBlock ??= new MaterialPropertyBlock();
+            rimBlock.SetColor(RimColorId, st.backShell > 0f ? gruntRimTelegraph : st.backStep == GruntStep.Frozen ? gruntRimStagger : gruntRim);
+            foreach (var r in backRenderers) r.SetPropertyBlock(rimBlock);
+        }
 
         public void BindGrunt(Transform root, Renderer telegraph, Renderer guardPlate)
         {
@@ -141,6 +162,7 @@ namespace Anseong.Skirmish
             }
 
             ShowGrunt(st, s);
+            ShowBack(st);
             SyncShells(st);
             ShowTracers(events, now);
 
@@ -175,7 +197,7 @@ namespace Anseong.Skirmish
             else if (st.gruntStep == GruntStep.Guard) pose *= Quaternion.Euler(10f, 0f, 0f);
             grunt.rotation = pose;
 
-            bool telegraph = st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike;
+            bool telegraph = st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike || st.gruntShell > 0f;
             // 상태를 몸의 테두리 색으로도 알린다(예고 = 붉게, 빈틈 = 희게, 가드 = 노랗게, 쓰러지면 꺼짐).
             gruntRenderers ??= grunt.GetComponentsInChildren<Renderer>(true);
             rimBlock ??= new MaterialPropertyBlock();

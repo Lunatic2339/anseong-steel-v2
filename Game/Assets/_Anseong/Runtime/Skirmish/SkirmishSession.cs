@@ -29,11 +29,16 @@ namespace Anseong.Skirmish
         int lastPunchSeq;
         Vector3 mechVelocity;
         bool shieldBreakPending;
+        GruntDuel back;         // 뒤에서 기다리는 돌격형
+        int nextWave;           // 다음에 내보낼 돌격형 번호
+        bool waveShellDone;     // 맞붙을 적의 "지나가면 한 발"을 이미 쐈는가
 
         /// <summary>P2가 없을 때 true. 돌격형의 가드가 스스로 더 빨리 풀린다.</summary>
         public bool Solo;
         /// <summary>지금 나와 있는 돌격형의 규칙(서버 전용). 없으면 null.</summary>
         public GruntDuel Grunt => grunt;
+        /// <summary>뒤에서 기다리는 돌격형(서버 전용). 없으면 null.</summary>
+        public GruntDuel WaitingGrunt => back;
 
         public SkirmishSession(SkirmishSettings settings = null)
         {
@@ -52,6 +57,7 @@ namespace Anseong.Skirmish
                 hull = s.mechHull,
                 missiles = s.missiles,
                 furnace = s.furnaceHits,
+                rebootsLeft = s.reboots,
                 enemies = new[]
                 {
                     new SkirmishEnemy { id = G3, position = s.g3Start, hp = s.rangedEnemies ? s.g3Hp : 0f, step = first },
@@ -74,6 +80,35 @@ namespace Anseong.Skirmish
             lastPunchSeq = 0;
             mechVelocity = Vector3.zero;
             shieldBreakPending = false;
+            back = null;
+            nextWave = 0;
+            waveShellDone = false;
+        }
+
+        /// <summary>재기동이 끝났을 때: 그 장면의 적과 탄을 처음으로 돌리고 로봇 내구도를 100으로. 재기동 횟수는 되돌리지 않는다.</summary>
+        void RestartScene()
+        {
+            var old = State;
+            int left = old.rebootsLeft;
+            Reset();
+            var st = State;
+            st.rebootsLeft = left;
+            st.mechReady = old.mechReady; st.gunnerReady = old.gunnerReady;
+            st.phase = SkirmishPhase.Fighting;
+            if (Settings.restartElsewhere) st.mech = Settings.mechRestart;
+            Emit(SkirmishEventKind.SceneRestarted, -1, st.mech, st.mech);
+        }
+
+        /// <summary>아군 드론이 돌격형을 멈춰 세운다. index는 돌격형 번호. 맞붙은 적도 기다리는 적도 된다. 그 번호의 적이 없으면 false.</summary>
+        public bool FreezeGrunt(int index, float seconds)
+        {
+            var st = State;
+            var target = grunt != null && grunt.Alive && st.gruntIndex == index ? grunt
+                : back != null && st.backIndex == index ? back : null;
+            if (target == null) return false;
+            target.Freeze(seconds);
+            if (target == grunt) CopyGrunt(); else CopyBack();
+            return true;
         }
 
         /// <summary>
@@ -108,6 +143,12 @@ namespace Anseong.Skirmish
         {
             Events.Clear();
             var st = State;
+            if (st.phase == SkirmishPhase.Rebooting && dt > 0f)
+            {
+                st.rebootTimer -= dt;
+                if (st.rebootTimer <= 0f) RestartScene();
+                return;
+            }
             if (st.phase != SkirmishPhase.Fighting || dt <= 0f) return;
 
             // 딱 맞춰 막은 직후에는 세상의 시간이 느리게 흐른다. 로봇의 이동만은 평소 속도다(눈이 타고 있는 몸의 속도가 갑자기 바뀌면 멀미가 난다).
@@ -153,7 +194,7 @@ namespace Anseong.Skirmish
                 float seconds = slowing ? s.mechStopSeconds : s.mechAccelSeconds;
                 mechVelocity = seconds <= 0f ? wanted : Vector3.MoveTowards(mechVelocity, wanted, s.mechSpeed / seconds * dt);
                 var p = st.mech + mechVelocity * dt;
-                float x = Mathf.Clamp(p.x, s.mechArea.x, s.mechArea.z), z = Mathf.Clamp(p.z, s.mechArea.y, s.mechArea.w);
+                Inside(s, p, out float x, out float z);
                 // 벽에 닿으면 그 방향 속도는 버린다.
                 if (x != p.x) mechVelocity.x = 0f;
                 if (z != p.z) mechVelocity.z = 0f;
@@ -163,6 +204,26 @@ namespace Anseong.Skirmish
             st.guardDirection = SkirmishMath.Flat(mech.guardDirection);
             st.guardSide = mech.guardSide;
             st.shieldOpen = !st.shieldBroken && !mech.shieldFolded;
+        }
+
+        /// <summary>갈 수 있는 곳 안에서 p와 가장 가까운 점. 범위가 여러 칸이면 그 가운데 가장 가까운 칸으로 붙는다.</summary>
+        static void Inside(SkirmishSettings s, Vector3 p, out float x, out float z)
+        {
+            if (s.mechZones == null || s.mechZones.Length == 0)
+            {
+                x = Mathf.Clamp(p.x, s.mechArea.x, s.mechArea.z);
+                z = Mathf.Clamp(p.z, s.mechArea.y, s.mechArea.w);
+                return;
+            }
+            x = p.x; z = p.z;
+            float best = float.MaxValue;
+            foreach (var zone in s.mechZones)
+            {
+                float cx = Mathf.Clamp(p.x, zone.x, zone.z), cz = Mathf.Clamp(p.z, zone.y, zone.w);
+                float d = (cx - p.x) * (cx - p.x) + (cz - p.z) * (cz - p.z);
+                if (d >= best) continue;
+                best = d; x = cx; z = cz;
+            }
         }
 
         /// <summary>메카의 지금 속도(m/s).</summary>
@@ -177,26 +238,106 @@ namespace Anseong.Skirmish
             if (s.grunts == null || s.grunts.Length == 0) return;
             if (grunt == null || !grunt.Alive)
             {
-                int next = st.gruntIndex + 1;
-                if (next >= s.grunts.Length) return;
-                gruntWait -= dt;
-                if (gruntWait > 0f) return;
-                var wave = s.grunts[next];
-                grunt = new GruntDuel(wave.start, wave.spec, s.grunt);
-                st.gruntIndex = next;
+                if (back != null)
+                {
+                    // 한 번에 한 명: 맞붙던 적이 쓰러지면 기다리던 적이 잠시 뒤에 들어온다. 그동안에도 큰 탄은 쏜다.
+                    gruntWait -= dt;
+                    if (gruntWait > 0f) { TickBack(dt); return; }
+                    grunt = back;
+                    back = null;
+                    grunt.Release();
+                    st.gruntIndex = st.backIndex;
+                    st.backIndex = -1;
+                    st.backShell = 0f;
+                    waveShellDone = true;
+                }
+                else
+                {
+                    if (nextWave >= s.grunts.Length) return;
+                    gruntWait -= dt;
+                    if (gruntWait > 0f) return;
+                    var wave = s.grunts[nextWave];
+                    grunt = new GruntDuel(wave.start, wave.spec, s.grunt);
+                    st.gruntIndex = nextWave++;
+                    waveShellDone = false;
+                    // 같이 출발하는 적은 35 거리에서 기다린다. 혼자 할 때는 앞의 적이 쓰러진 뒤에 따로 출발한다.
+                    if (!Solo && nextWave < s.grunts.Length && s.grunts[nextWave].withPrevious)
+                    {
+                        var behind = s.grunts[nextWave];
+                        back = new GruntDuel(behind.start, behind.spec, s.grunt);
+                        back.Hold();
+                        st.backIndex = nextWave++;
+                    }
+                }
             }
             grunt.Solo = Solo;
             grunt.Tick(dt, st.mech, st.guarding, st.guardSide);
             if (punched) grunt.Punch(mech.punchDamage);
-            foreach (var e in grunt.Events) OnGruntEvent(e);
+            // 서 있는 적: 로봇이 정해진 선을 지나면 큰 탄을 한 번 겨눈다.
+            float line = s.grunts[st.gruntIndex].shellWhenRobotPassesZ;
+            if (!waveShellDone && line > 0f && st.mech.z >= line)
+            {
+                waveShellDone = true;
+                grunt.BeginShell();
+            }
+            foreach (var e in grunt.Events)
+            {
+                if (!ShellEvent(grunt, st.gruntIndex, e)) OnGruntEvent(e);
+            }
             CopyGrunt();
+            TickBack(dt);
+        }
+
+        void TickBack(float dt)
+        {
+            if (back == null) return;
+            back.Solo = Solo;
+            back.FireShells = !Solo;
+            back.Tick(dt, State.mech, false, PilotSide.Left);
+            foreach (var e in back.Events) ShellEvent(back, State.backIndex, e);
+            CopyBack();
+        }
+
+        void CopyBack()
+        {
+            var st = State;
+            st.backPosition = back.Position; st.backHp = back.Hp; st.backStep = back.Step; st.backShell = back.ShellWindup;
+        }
+
+        /// <summary>돌격형의 큰 탄 사건이면 처리하고 true.</summary>
+        bool ShellEvent(GruntDuel from, int index, GruntEvent e)
+        {
+            var muzzle = from.Position + Vector3.up * (Settings.gruntHeight * 0.6f);
+            if (e.Kind == GruntEventKind.ShellWindupStarted)
+            {
+                Emit(SkirmishEventKind.GruntShellWindup, index, muzzle, MechChest);
+                return true;
+            }
+            if (e.Kind != GruntEventKind.ShellFired) return false;
+            FireBigShell(muzzle);
+            return true;
+        }
+
+        /// <summary>메카 가슴을 향해 느린 큰 탄을 쏜다. 옆으로 피하면 지나가서 사라진다.</summary>
+        void FireBigShell(Vector3 from)
+        {
+            var s = Settings;
+            var to = MechChest;
+            var shell = new SkirmishShell
+            {
+                id = nextShellId++, kind = ShellKind.BigShell, position = from,
+                velocity = (to - from).normalized * s.bigShellSpeed, target = -1, hitsLeft = s.bigShellHits,
+                life = Vector3.Distance(from, to) / s.bigShellSpeed + 1.5f,
+            };
+            State.shells.Add(shell);
+            Emit(SkirmishEventKind.ShellFired, shell.id, from, to);
         }
 
         void CopyGrunt()
         {
             var st = State;
             st.gruntPosition = grunt.Position; st.gruntHp = grunt.Hp; st.gruntStep = grunt.Step;
-            st.gruntTimer = grunt.Timer; st.gruntAttack = grunt.Attack;
+            st.gruntTimer = grunt.Timer; st.gruntAttack = grunt.Attack; st.gruntShell = grunt.ShellWindup;
         }
 
         void OnGruntEvent(GruntEvent e)
@@ -222,7 +363,7 @@ namespace Anseong.Skirmish
                 case GruntEventKind.GuardBroken: Emit(SkirmishEventKind.GuardBroken, st.gruntIndex, center, center); break;
                 case GruntEventKind.Down:
                     st.gruntsDown++;
-                    gruntWait = Settings.gruntGap;
+                    gruntWait = back != null ? Settings.gruntSwapSeconds : Settings.gruntGap;
                     Emit(SkirmishEventKind.GruntDown, st.gruntIndex, center, center);
                     break;
             }
@@ -521,6 +662,15 @@ namespace Anseong.Skirmish
             var st = State;
             if (st.hull <= 0f || st.furnace <= 0)
             {
+                if (st.rebootsLeft > 0)
+                {
+                    // 한 판에 한 번: 3초 "기체 재기동" 뒤에 그 장면의 처음부터.
+                    st.rebootsLeft--;
+                    st.rebootTimer = Settings.rebootSeconds;
+                    st.phase = SkirmishPhase.Rebooting;
+                    Emit(SkirmishEventKind.Rebooting, st.furnace <= 0 ? G4 : G3, st.mech, st.mech);
+                    return;
+                }
                 st.phase = SkirmishPhase.Failed;
                 Emit(SkirmishEventKind.Failed, st.furnace <= 0 ? G4 : G3, st.mech, st.mech);
                 return;

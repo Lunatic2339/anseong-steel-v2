@@ -86,7 +86,8 @@ namespace Anseong.Skirmish
                 ? $"잠금 {(st.lockTarget == SkirmishSession.G3 ? "정면 적" : "동쪽 적")} {st.lockProgress * 100f:0}%" + (st.lockProgress >= 1f ? " — 놓으면 발사" : "")
                 : "";
             string result = st.phase == SkirmishPhase.Cleared ? (s.rangedEnemies ? "적치장 확보" : "첫 상대 격파")
-                : st.phase == SkirmishPhase.Failed ? "실패 — 운영자가 R로 재시작" : "";
+                : st.phase == SkirmishPhase.Failed ? "실패 — 운영자가 R로 재시작"
+                : st.phase == SkirmishPhase.Rebooting ? $"기체 재기동 {Mathf.CeilToInt(st.rebootTimer)}" : "";
             text.text = $"{status}\n{lockLine}\n{lastEvent}\n{result}";
         }
 
@@ -109,6 +110,8 @@ namespace Anseong.Skirmish
                 case SkirmishEventKind.GuardClosed: return "가드가 단단하다. 지원, 열어 줘라!";
                 case SkirmishEventKind.GuardBroken: return "열렸다!";
                 case SkirmishEventKind.GruntDown: return "격파";
+                case SkirmishEventKind.GruntShellWindup: return "큰 탄이 온다. 막거나 피해라.";
+                case SkirmishEventKind.Rebooting: return "기체 재기동";
                 case SkirmishEventKind.MissileFired: return "미사일 발사";
                 case SkirmishEventKind.MissileHit: return who + " 미사일 명중";
                 case SkirmishEventKind.MissileLost: return "미사일 표적 없음";

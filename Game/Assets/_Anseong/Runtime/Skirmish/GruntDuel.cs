@@ -27,6 +27,8 @@ namespace Anseong.Skirmish
         /// <summary>아군 드론에 붙들려 멈춤.</summary>
         Frozen,
         Dead,
+        /// <summary>맞붙은 적이 따로 있어서 로봇에서 35 떨어져 기다림. 주먹이 닿지 않는다. 둘이 할 때는 6초마다 큰 탄을 쏜다.</summary>
+        Waiting,
     }
 
     public enum GruntAttack : byte
@@ -70,6 +72,10 @@ namespace Anseong.Skirmish
         Frozen,
         /// <summary>쓰러짐. Amount가 뒤로 밀려나는 거리.</summary>
         Down,
+        /// <summary>큰 탄을 쏘려고 멈춰 서서 겨누기 시작함.</summary>
+        ShellWindupStarted,
+        /// <summary>큰 탄이 나감.</summary>
+        ShellFired,
     }
 
     public struct GruntEvent
@@ -92,6 +98,15 @@ namespace Anseong.Skirmish
         [Min(0.1f)] public float sprintSpeed = 16f;
         [Tooltip("로봇이 물러나면 이 속도로 따라붙는다.")]
         [Min(0.1f)] public float chaseSpeed = 12f;
+
+        [Tooltip("맞붙은 적이 따로 있을 때 기다리는 거리.")]
+        [Min(1f)] public float waitDistance = 35f;
+
+        [Header("큰 탄 (기다리는 적, 서 있는 적)")]
+        [Tooltip("기다리는 적이 큰 탄을 쏘는 간격.")]
+        [Min(0.5f)] public float shellEvery = 6f;
+        [Tooltip("큰 탄을 쏘기 전에 멈춰 서서 겨누는 시간.")]
+        [Min(0f)] public float shellWindup = 2f;
 
         [Header("시간 (초)")]
         [Min(0f)] public float idleSeconds = 0.5f;
@@ -140,6 +155,8 @@ namespace Anseong.Skirmish
         [Min(0f)] public float firstGuardDamage;
         [Tooltip("가드와 가드 사이에 필요한 주먹 피해. 0이면 가드를 굳히지 않는다.")]
         [Min(0f)] public float guardEveryDamage = 60f;
+        [Tooltip("다가오지 않고 제자리에 서 있다가, 로봇이 맞붙는 거리 안으로 오면 싸운다(장면 2의 첫 적).")]
+        public bool standStill;
     }
 
     /// <summary>
@@ -166,7 +183,14 @@ namespace Anseong.Skirmish
         public float Stop { get; private set; }
         /// <summary>마무리 한 방을 맞고 멈춰 있는 중. 멈춤이 끝나면 밀려나며 쓰러진다.</summary>
         public bool Finishing { get; private set; }
+        /// <summary>맞붙은 적이 따로 있어서 뒤에서 기다리는 역할. <see cref="Hold"/>와 <see cref="Release"/>로 바꾼다.</summary>
+        public bool Held { get; private set; }
+        /// <summary>기다리는 동안 6초마다 큰 탄을 쏜다. 혼자 할 때는 끈다.</summary>
+        public bool FireShells;
+        /// <summary>큰 탄을 겨누는 중이면 발사까지 남은 초. 아니면 0.</summary>
+        public float ShellWindup { get; private set; }
         public readonly List<GruntEvent> Events = new List<GruntEvent>();
+        float shellCooldown;
 
         int attackIndex, guardsDone;
         float guardMeter, cannonMeter, guardHeldFor;
@@ -184,6 +208,36 @@ namespace Anseong.Skirmish
         }
 
         /// <summary>공격이 로봇의 어느 쪽으로 오는가.</summary>
+        /// <summary>맞붙지 말고 35 거리에서 기다리게 한다. 등장하자마자 부른다.</summary>
+        public void Hold() => Held = true;
+
+        /// <summary>기다리던 적이 싸우러 들어온다. 겨누던 큰 탄은 취소된다.</summary>
+        public void Release()
+        {
+            if (!Held) return;
+            Held = false;
+            ShellWindup = 0f;
+            if (Step == GruntStep.Waiting) { Step = GruntStep.Approach; sprinting = false; }
+        }
+
+        /// <summary>큰 탄 한 발을 겨누기 시작한다. 다가오는 중이거나 기다리는 중에만 된다.</summary>
+        public bool BeginShell()
+        {
+            if ((Step != GruntStep.Approach && Step != GruntStep.Waiting) || ShellWindup > 0f) return false;
+            ShellWindup = Mathf.Max(0.0001f, Settings.shellWindup);
+            Emit(GruntEventKind.ShellWindupStarted);
+            return true;
+        }
+
+        void TickShell(float dt)
+        {
+            if (ShellWindup <= 0f) return;
+            ShellWindup -= dt;
+            if (ShellWindup > 0f) return;
+            ShellWindup = 0f;
+            Emit(GruntEventKind.ShellFired);
+        }
+
         public static PilotSide IncomingSide(GruntAttack attack) => attack == GruntAttack.Slam ? PilotSide.Left : PilotSide.Right;
 
         /// <summary>이 상태에서 주먹이 들어가는 비율. 0이면 닿지 않거나 튕긴다.</summary>
@@ -194,6 +248,7 @@ namespace Anseong.Skirmish
                 case GruntStep.Approach:
                 case GruntStep.Guard:
                 case GruntStep.Dead:
+                case GruntStep.Waiting:
                     return 0f;
                 case GruntStep.Idle:
                 case GruntStep.Frozen:
@@ -228,7 +283,30 @@ namespace Anseong.Skirmish
                 if (Finishing) { Finish(); return; }
             }
 
-            if (Step == GruntStep.Approach) { Advance(dt, robot); return; }
+            if (Step == GruntStep.Approach)
+            {
+                // 겨누는 동안에는 멈춰 선다.
+                if (ShellWindup <= 0f)
+                {
+                    if (Spec.standStill && !Held) StandStill(robot); else Advance(dt, robot);
+                }
+                TickShell(dt);
+                return;
+            }
+            if (Step == GruntStep.Waiting)
+            {
+                if (ShellWindup <= 0f)
+                {
+                    Chase(dt, robot);
+                    if (FireShells)
+                    {
+                        shellCooldown -= dt;
+                        if (shellCooldown <= 0f && BeginShell()) shellCooldown = Settings.shellEvery - Settings.shellWindup;
+                    }
+                }
+                TickShell(dt);
+                return;
+            }
             if (Step != GruntStep.Frozen) Chase(dt, robot);
 
             Timer -= dt;
@@ -243,8 +321,12 @@ namespace Anseong.Skirmish
                     case GruntStep.Strike: Impact(guarding, guardSide); break;
                     case GruntStep.Recover:
                     case GruntStep.Stagger:
-                    case GruntStep.Frozen:
                         Enter(GruntStep.Idle, Settings.idleSeconds); break;
+                    case GruntStep.Frozen:
+                        // 기다리던 적은 풀려나도 다시 기다린다.
+                        if (Held) { Step = GruntStep.Waiting; Timer = 0f; shellCooldown = Settings.shellEvery - Settings.shellWindup; }
+                        else Enter(GruntStep.Idle, Settings.idleSeconds);
+                        break;
                     case GruntStep.Guard:
                         Emit(GruntEventKind.GuardReleased);
                         BeginTelegraph();
@@ -256,7 +338,7 @@ namespace Anseong.Skirmish
         /// <summary>P1의 주먹이 몸통에 닿았을 때. damage는 잽 25, 훅 35 같은 원래 피해.</summary>
         public PunchResult Punch(float damage)
         {
-            if (Step == GruntStep.Approach || Step == GruntStep.Dead || Finishing) return PunchResult.OutOfReach;
+            if (Step == GruntStep.Approach || Step == GruntStep.Waiting || Step == GruntStep.Dead || Finishing) return PunchResult.OutOfReach;
             if (Step == GruntStep.Guard)
             {
                 Emit(GruntEventKind.PunchBounced);
@@ -310,6 +392,7 @@ namespace Anseong.Skirmish
             if (!Alive || Finishing || seconds <= 0f) return;
             Step = GruntStep.Frozen;
             Timer = seconds;
+            ShellWindup = 0f;
             Emit(GruntEventKind.Frozen);
         }
 
@@ -329,7 +412,7 @@ namespace Anseong.Skirmish
         {
             var away = SkirmishMath.Flat(Position - robot);
             if (away == Vector3.zero) away = Vector3.forward;
-            var p = robot + away * Settings.engageDistance;
+            var p = robot + away * (Held ? Settings.waitDistance : Settings.engageDistance);
             p.y = Position.y;
             return p;
         }
@@ -347,8 +430,26 @@ namespace Anseong.Skirmish
             float step = (sprinting ? s.sprintSpeed : s.walkSpeed) * dt;
             if (left > step) { Position = Vector3.MoveTowards(Position, stand, step); return; }
             Position = stand;
+            if (Held)
+            {
+                Step = GruntStep.Waiting;
+                Timer = 0f;
+                shellCooldown = s.shellEvery - s.shellWindup;
+                return;
+            }
             Step = GruntStep.Idle;
             Timer = s.idleSeconds;
+            Emit(GruntEventKind.Arrived);
+        }
+
+        /// <summary>제자리에 서 있다가 로봇이 맞붙는 거리 안으로 오면 기본 자세로 싸움을 시작한다.</summary>
+        void StandStill(Vector3 robot)
+        {
+            var flat = Position - robot;
+            flat.y = 0f;
+            if (flat.magnitude > Settings.engageDistance) return;
+            Step = GruntStep.Idle;
+            Timer = Settings.idleSeconds;
             Emit(GruntEventKind.Arrived);
         }
 

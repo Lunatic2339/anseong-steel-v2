@@ -457,6 +457,14 @@ namespace Anseong.EditorTools
                 var guardPlate = Box("Charger guard plate", null, Vector3.zero, new Vector3(13f, 12f, 1.2f), Lit("GuardPlate", new Color(0.05f, 0.05f, 0.06f))).GetComponent<Renderer>();
                 telegraph.enabled = guardPlate.enabled = false;
                 view.BindGrunt(gruntRoot, telegraph, guardPlate);
+                // 둘이 같이 오는 장면: 뒤에서 기다리는 적을 하나 더 세운다.
+                if (settings.grunts.Any(w => w.withPrevious))
+                {
+                    var backRoot = new GameObject("Charger grunt waiting (기다리는 돌격형)").transform;
+                    Grunt(backRoot, settings.gruntHeight, enemy);
+                    backRoot.gameObject.SetActive(false);
+                    view.BindGruntBack(backRoot);
+                }
             }
 
             // XR 리그: 자리에 맞춰 SkirmishLocalInput이 옮긴다. 헤드셋이 없으면 같은 카메라를 마우스로 돌린다.
@@ -558,6 +566,109 @@ namespace Anseong.EditorTools
             Directory.CreateDirectory(Path.GetDirectoryName(MapDuelScenePath));
             EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), MapDuelScenePath);
             Debug.Log($"{LogPrefix} 장면 1(맵 위) 저장: {MapDuelScenePath}. Play를 누르면 맵 장면을 겹쳐 불러옵니다.");
+        }
+
+        public const string YardScenePath = "Assets/_Anseong/Scenes/Sandbox/Sandbox_Scene2Yard.unity";
+        public const string MapYardScenePath = "Assets/_Anseong/Scenes/Sandbox/Scene2Yard_OnMap.unity";
+
+        [MenuItem("Anseong/Sandbox/Build Scene 2 Yard")]
+        static void BuildYardFromMenu()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            Build(SkirmishSettings.Scene2(), out _, out _);
+            Debug.Log($"{LogPrefix} 장면 2(적치장, 돌격형 쪽) 씬 생성 완료. {YardScenePath}로 저장한 뒤 Play.");
+        }
+
+        [MenuItem("Anseong/Sandbox/Build Scene 2 Yard On Map")]
+        static void BuildYardOnMapFromMenu()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            Build(SkirmishSettings.Scene2(), true, out _, out _);
+            Directory.CreateDirectory(Path.GetDirectoryName(MapYardScenePath));
+            EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), MapYardScenePath);
+            Debug.Log($"{LogPrefix} 장면 2(맵 위) 저장: {MapYardScenePath}. Play를 누르면 맵 장면을 겹쳐 불러옵니다.");
+        }
+
+        /// <summary>장면 2의 돌격형 쪽을 자동 조작으로 돌리며 찍는다. -executeMethod Anseong.EditorTools.SkirmishSandboxMenu.CaptureYardForReview</summary>
+        public static void CaptureYardForReview() => CaptureYard(false);
+        public static void CaptureYardOnMap() => CaptureYard(true);
+
+        static void CaptureYard(bool onMap)
+        {
+            try
+            {
+                var settings = SkirmishSettings.Scene2();
+                Build(settings, onMap, out var view, out var camera);
+                string scenePath = onMap ? MapYardScenePath : YardScenePath;
+                Directory.CreateDirectory(Path.GetDirectoryName(scenePath));
+                if (!EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), scenePath)) throw new System.Exception("scene save failed");
+                if (onMap) OpenMapForCapture(camera);
+                var session = new SkirmishSession(settings);
+                session.SetReady(true, true);
+                string folder = onMap ? "Logs/YardCaptureOnMap" : "Logs/YardCapture";
+                Directory.CreateDirectory(folder);
+                var target = new RenderTexture(1600, 1000, 24) { antiAliasing = 4 };
+                var image = new Texture2D(1600, 1000, TextureFormat.RGB24, false);
+                camera.targetTexture = target;
+                var localInput = Object.FindAnyObjectByType<SkirmishLocalInput>();
+                var holoHud = Object.FindAnyObjectByType<MechHoloHud>();
+                var aim = Vector3.forward;
+                void Tick()
+                {
+                    var mech = SkirmishBots.Mech(session.State, settings);
+                    if (SkirmishMath.Direction(ref mech.aim)) aim = mech.aim;
+                    session.SetMech(mech);
+                    session.SetGunner(SkirmishBots.Gunner(session.State, settings));
+                    session.Tick(0.02f);
+                    view.Show(session, aim, 0f);
+                }
+                void Until(System.Func<SkirmishState, bool> reached, string what)
+                {
+                    for (int i = 0; i < 6000; i++) { Tick(); if (reached(session.State)) return; }
+                    throw new System.Exception("도달하지 못함: " + what + " / 상태 " + session.State.gruntStep);
+                }
+                Vector3 MechEye() => session.State.mech + LastMechEye;
+                void Pilot(bool on)
+                {
+                    localInput.PlaceCockpit(MechEye(), on);
+                    holoHud.Show(session.State, settings, session.Events, on, 0f);
+                }
+                void Shot(string name, Vector3 eye, Vector3 lookAt)
+                {
+                    camera.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(lookAt - eye));
+                    camera.Render();
+                    RenderTexture.active = target;
+                    image.ReadPixels(new Rect(0, 0, 1600, 1000), 0, 0);
+                    image.Apply();
+                    File.WriteAllBytes($"{folder}/{name}.png", image.EncodeToPNG());
+                }
+                var post = settings.gunnerPost;
+
+                Until(st => st.shells.Count > 0 && Vector3.Distance(st.shells[0].position, st.mech) < 70f, "서 있는 적의 큰 탄");
+                Pilot(true);
+                Shot("1-p1-big-shell", MechEye(), session.State.shells[0].position);
+                Pilot(false);
+                Until(st => st.gruntIndex == 0 && st.gruntStep == GruntStep.Hold, "돌격형 3의 예고");
+                Shot("2-p2-grunt3", post, SkirmishSession.GruntCenter(session.State, settings));
+                Until(st => st.backIndex >= 0 && st.backStep == GruntStep.Waiting && st.backShell > 0f && st.gruntStep != GruntStep.Approach, "기다리는 적의 큰 탄 예고");
+                Pilot(true);
+                Shot("3-p1-two-grunts", MechEye(), (SkirmishSession.GruntCenter(session.State, settings) + session.State.backPosition + Vector3.up * 15f) * 0.5f);
+                Pilot(false);
+                Shot("3-p2-two-grunts", post, SkirmishSession.GruntCenter(session.State, settings));
+                Shot("3-top-two-grunts", session.State.mech + new Vector3(0f, 150f, -40f), session.State.mech + new Vector3(0f, 0f, 25f));
+                Until(st => st.phase != SkirmishPhase.Fighting, "끝");
+                Shot("4-p2-end", post, session.State.mech + Vector3.up * 15f);
+
+                RenderTexture.active = null;
+                camera.targetTexture = null;
+                Debug.Log($"{LogPrefix} YARD_CAPTURE_OK phase={session.State.phase} elapsed={session.State.elapsed:0.0} hull={session.State.hull:0} down={session.State.gruntsDown}");
+                EditorApplication.Exit(session.State.phase == SkirmishPhase.Cleared ? 0 : 1);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogException(e);
+                EditorApplication.Exit(1);
+            }
         }
 
         /// <summary>에디터에서 화면을 찍으려고 맵 장면을 겹쳐 연다. 맵 장면은 저장하지 않는다(끈 물건이 저장되면 안 된다).</summary>

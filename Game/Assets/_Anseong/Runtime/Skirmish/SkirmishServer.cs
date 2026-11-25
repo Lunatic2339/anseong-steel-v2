@@ -153,7 +153,7 @@ namespace Anseong.Skirmish
             // 포가 없는 장면에서는 오른팔을 맞붙은 돌격형 쪽으로 보여 준다.
             if (!settings.mechGun && st.GruntAlive) mechAim = (SkirmishSession.GruntCenter(st, settings) - SkirmishSession.Gun(st, settings)).normalized;
             // 가드를 열어 줄 사람도 자동 조작도 없으면 가드가 스스로 더 빨리 풀린다.
-            session.Solo = localIsMech && !gunnerConnected && !botFillsEmptySeat;
+            session.Solo = Solo || (localIsMech && !gunnerConnected && !botFillsEmptySeat);
 
             session.SetMech(mechInput);
             session.SetGunner(gunnerInput);
