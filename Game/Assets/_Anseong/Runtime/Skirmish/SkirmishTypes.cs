@@ -67,6 +67,8 @@ namespace Anseong.Skirmish
         GuardClosed,
         GuardBroken,
         GruntDown,
+        /// <summary>차폐판이 부서짐. 이후로는 맨팔로 막는다(판정은 같다).</summary>
+        ShieldBroken,
     }
 
     /// <summary>한 틱에 일어난 일. 화면·소리·진동이 이것을 보고 반응한다.</summary>
@@ -123,6 +125,12 @@ namespace Anseong.Skirmish
         public Vector3 guardDirection;
         /// <summary>막는 팔이 덮고 있는 쪽(돌격형의 공격을 막을 때 본다).</summary>
         public PilotSide guardSide;
+        /// <summary>차폐판이 펴져 있다(P2 화면의 로봇도 같이 펴고 접는다). 부서지면 false.</summary>
+        public bool shieldOpen = true;
+        /// <summary>차폐판이 부서졌다(장면 6). 막기 판정은 그대로다.</summary>
+        public bool shieldBroken;
+        /// <summary>딱 맞춰 막은 뒤 느린 시간이 끝날 때까지 남은 실제 초. 0이면 평소 속도.</summary>
+        public float slowMotion;
 
         /// <summary>지금 나와 있는 돌격형 번호. 아직 없으면 -1.</summary>
         public int gruntIndex = -1;
@@ -166,6 +174,8 @@ namespace Anseong.Skirmish
         public int punchSeq;
         /// <summary>그 주먹의 피해(잽 25, 훅 35).</summary>
         public float punchDamage;
+        /// <summary>조종사가 차폐판을 접어 두었다(버튼으로 펴고 접는 방식일 때만 true가 된다).</summary>
+        public bool shieldFolded;
     }
 
     /// <summary>P2 공중포대 입력. 방향은 월드 기준.</summary>

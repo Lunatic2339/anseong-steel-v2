@@ -109,6 +109,10 @@ namespace Anseong.Skirmish
         [Tooltip("혼자 할 때 가드가 스스로 풀리는 시간.")]
         [Min(0.1f)] public float guardSecondsSolo = 3f;
         [Min(0.1f)] public float guardBreakStagger = 2.5f;
+        [Min(0f), Tooltip("주먹이 꽂힌 순간 적이 멈추는 시간. 튕길 때는 멈추지 않는다. 0 = 끔.")]
+        public float hitStopSeconds = 0.06f;
+        [Min(0f), Tooltip("마무리 한 방은 이만큼 멈춘 뒤에 밀려나며 쓰러진다. 0 = 바로.")]
+        public float finishStopSeconds = 0.1f;
 
         [Header("피해")]
         [Tooltip("막지 못했을 때 로봇이 받는 피해.")]
@@ -158,6 +162,10 @@ namespace Anseong.Skirmish
         /// <summary>지금 예고 중이거나 마지막으로 한 공격.</summary>
         public GruntAttack Attack { get; private set; }
         public bool Alive => Step != GruntStep.Dead;
+        /// <summary>타격 멈춤이 끝날 때까지 남은 초. 이 동안 적의 시간은 흐르지 않는다.</summary>
+        public float Stop { get; private set; }
+        /// <summary>마무리 한 방을 맞고 멈춰 있는 중. 멈춤이 끝나면 밀려나며 쓰러진다.</summary>
+        public bool Finishing { get; private set; }
         public readonly List<GruntEvent> Events = new List<GruntEvent>();
 
         int attackIndex, guardsDone;
@@ -210,6 +218,16 @@ namespace Anseong.Skirmish
             wasGuarding = guarding;
             lastGuardSide = guardSide;
 
+            if (Stop > 0f)
+            {
+                // 타격 멈춤: 남은 시간만큼 적의 시간을 세우고, 넘친 시간만 흘려보낸다.
+                Stop -= dt;
+                if (Stop > 0f) return;
+                dt = -Stop;
+                Stop = 0f;
+                if (Finishing) { Finish(); return; }
+            }
+
             if (Step == GruntStep.Approach) { Advance(dt, robot); return; }
             if (Step != GruntStep.Frozen) Chase(dt, robot);
 
@@ -238,7 +256,7 @@ namespace Anseong.Skirmish
         /// <summary>P1의 주먹이 몸통에 닿았을 때. damage는 잽 25, 훅 35 같은 원래 피해.</summary>
         public PunchResult Punch(float damage)
         {
-            if (Step == GruntStep.Approach || Step == GruntStep.Dead) return PunchResult.OutOfReach;
+            if (Step == GruntStep.Approach || Step == GruntStep.Dead || Finishing) return PunchResult.OutOfReach;
             if (Step == GruntStep.Guard)
             {
                 Emit(GruntEventKind.PunchBounced);
@@ -250,13 +268,12 @@ namespace Anseong.Skirmish
             if (Hp <= 0f)
             {
                 Hp = 0f;
-                Step = GruntStep.Dead;
-                Timer = 0f;
-                var away = SkirmishMath.Flat(Position - lastRobot);
-                Position += (away == Vector3.zero ? Vector3.forward : away) * Settings.finishKnockback;
-                Emit(GruntEventKind.Down, Settings.finishKnockback);
+                Finishing = true;
+                Stop = Settings.finishStopSeconds;
+                if (Stop <= 0f) Finish();
                 return PunchResult.Finished;
             }
+            Stop = Settings.hitStopSeconds;
             // 가드는 튕겨남이나 회복이 끝나기를 기다리지 않고 그 자리에서 바로 굳힌다.
             guardMeter += applied;
             float threshold = guardsDone == 0 && Spec.firstGuardDamage > 0f ? Spec.firstGuardDamage : Spec.guardEveryDamage;
@@ -275,7 +292,7 @@ namespace Anseong.Skirmish
         /// <summary>P2의 포가 맞았을 때. 체력은 조금만 깎고, 가드 중이면 가드를 연다.</summary>
         public void CannonHit(float damage)
         {
-            if (!Alive || damage <= 0f) return;
+            if (!Alive || Finishing || damage <= 0f) return;
             // 포로는 쓰러지지 않는다.
             Hp = Mathf.Max(1f, Hp - damage * Settings.cannonHpMultiplier);
             if (Step != GruntStep.Guard) return;
@@ -290,10 +307,22 @@ namespace Anseong.Skirmish
         /// <summary>아군 드론이 붙어 멈춰 세운다. 끝나면 기본 자세로 돌아간다.</summary>
         public void Freeze(float seconds)
         {
-            if (!Alive || seconds <= 0f) return;
+            if (!Alive || Finishing || seconds <= 0f) return;
             Step = GruntStep.Frozen;
             Timer = seconds;
             Emit(GruntEventKind.Frozen);
+        }
+
+        /// <summary>마무리 한 방의 멈춤이 끝난 순간: 뒤로 밀려나며 쓰러진다.</summary>
+        void Finish()
+        {
+            Finishing = false;
+            Stop = 0f;
+            Step = GruntStep.Dead;
+            Timer = 0f;
+            var away = SkirmishMath.Flat(Position - lastRobot);
+            Position += (away == Vector3.zero ? Vector3.forward : away) * Settings.finishKnockback;
+            Emit(GruntEventKind.Down, Settings.finishKnockback);
         }
 
         Vector3 StandPoint(Vector3 robot)

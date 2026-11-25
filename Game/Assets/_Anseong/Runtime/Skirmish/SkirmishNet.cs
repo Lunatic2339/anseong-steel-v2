@@ -44,6 +44,8 @@ namespace Anseong.Skirmish
         public Vector3 GruntPosition;
         public float GruntHp, GruntTimer;
         public byte GruntStep, GruntAttack, GruntsDown;
+        public bool ShieldOpen, ShieldBroken;
+        public float SlowMotion;
 
         public byte ShellCount;
         public int[] ShellId;
@@ -65,6 +67,7 @@ namespace Anseong.Skirmish
             s.SerializeValue(ref GuardSide); s.SerializeValue(ref GruntIndex); s.SerializeValue(ref GruntPosition);
             s.SerializeValue(ref GruntHp); s.SerializeValue(ref GruntTimer);
             s.SerializeValue(ref GruntStep); s.SerializeValue(ref GruntAttack); s.SerializeValue(ref GruntsDown);
+            s.SerializeValue(ref ShieldOpen); s.SerializeValue(ref ShieldBroken); s.SerializeValue(ref SlowMotion);
             s.SerializeValue(ref ShellCount);
             if (ShellCount > MaxShells) ShellCount = MaxShells;
             if (s.IsReader)
@@ -97,6 +100,7 @@ namespace Anseong.Skirmish
                 GuardSide = (byte)st.guardSide, GruntIndex = (sbyte)st.gruntIndex, GruntPosition = st.gruntPosition,
                 GruntHp = st.gruntHp, GruntTimer = st.gruntTimer,
                 GruntStep = (byte)st.gruntStep, GruntAttack = (byte)st.gruntAttack, GruntsDown = (byte)st.gruntsDown,
+                ShieldOpen = st.shieldOpen, ShieldBroken = st.shieldBroken, SlowMotion = st.slowMotion,
                 ShellCount = (byte)count,
                 ShellId = new int[count], ShellKind = new byte[count],
                 ShellPosition = new Vector3[count], ShellVelocity = new Vector3[count],
@@ -125,6 +129,7 @@ namespace Anseong.Skirmish
             st.guardSide = (Anseong.Pilot.PilotSide)GuardSide; st.gruntIndex = GruntIndex; st.gruntPosition = GruntPosition;
             st.gruntHp = GruntHp; st.gruntTimer = GruntTimer;
             st.gruntStep = (GruntStep)GruntStep; st.gruntAttack = (GruntAttack)GruntAttack; st.gruntsDown = GruntsDown;
+            st.shieldOpen = ShieldOpen; st.shieldBroken = ShieldBroken; st.slowMotion = SlowMotion;
             st.shells.Clear();
             for (int i = 0; i < ShellCount; i++)
                 st.shells.Add(new SkirmishShell

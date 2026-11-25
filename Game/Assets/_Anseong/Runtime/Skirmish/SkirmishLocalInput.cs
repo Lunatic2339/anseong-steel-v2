@@ -63,6 +63,8 @@ namespace Anseong.Skirmish
         public MechInput Mech { get; private set; }
         public GunnerInput Gunner { get; private set; }
         public bool UseBot { get => useBot; set => useBot = value; }
+        /// <summary>차폐판이 부서졌다(서버 상태). 부서진 뒤에는 차폐판이 펴졌는지와 상관없이 맨팔로 막는다.</summary>
+        public bool ShieldBroken { get; set; }
         /// <summary>헤드셋이 켜져 있어 컨트롤러 입력을 쓰는 중.</summary>
         public bool VrActive { get; private set; }
 
@@ -228,7 +230,7 @@ namespace Anseong.Skirmish
             {
                 mechArms.SetLocalPilot(Seat == SkirmishSeat.Mech && !useBot);
                 // 차폐판을 버튼으로 펴는 방식에서는 다 펴진 동안에만 막을 수 있다.
-                guardHeld &= mechArms.ShieldReady;
+                guardHeld &= ShieldBroken || mechArms.ShieldReady;
             }
 
             PlaceCockpit(anchor, Seat == SkirmishSeat.Mech);
@@ -242,6 +244,7 @@ namespace Anseong.Skirmish
             {
                 move = move, guard = guardHeld, guardDirection = leftDirection, fire = rightHeld, aim = rightDirection,
                 guardSide = guardSide, punchSeq = punchSeq, punchDamage = punchDamage,
+                shieldFolded = mechArms != null && mechArms.FoldedByPilot,
             };
             Gunner = new GunnerInput { aim = rightDirection, fire = rightHeld, pointer = leftDirection, lockHeld = leftHeld, cancel = cancel };
 

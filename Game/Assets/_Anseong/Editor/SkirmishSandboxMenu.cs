@@ -637,6 +637,13 @@ namespace Anseong.EditorTools
                 Shot("3-p1-guard", MechEye(), Center());
                 Pilot(false);
                 Shot("3-p2-guard", post, Center());
+                // 차폐판 파손(장면 6의 규칙): 차폐판이 사라지고 계기에 "파손"이 뜬다.
+                session.BreakShield();
+                Tick();
+                Pilot(true);
+                Shot("5-p1-shield-broken", MechEye(), MechEye() + new Vector3(-1f, -0.25f, 0.6f));
+                Pilot(false);
+                Shot("5-front-shield-broken", session.State.mech + new Vector3(8f, 24f, 42f), session.State.mech + Vector3.up * 19f);
                 Until(st => st.phase == SkirmishPhase.Cleared, "끝");
                 Shot("4-p2-cleared", post, Center());
 

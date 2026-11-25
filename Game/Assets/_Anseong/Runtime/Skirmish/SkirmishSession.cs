@@ -28,6 +28,7 @@ namespace Anseong.Skirmish
         float gruntWait;
         int lastPunchSeq;
         Vector3 mechVelocity;
+        bool shieldBreakPending;
 
         /// <summary>P2가 없을 때 true. 돌격형의 가드가 스스로 더 빨리 풀린다.</summary>
         public bool Solo;
@@ -72,7 +73,14 @@ namespace Anseong.Skirmish
             gruntWait = 0f;
             lastPunchSeq = 0;
             mechVelocity = Vector3.zero;
+            shieldBreakPending = false;
         }
+
+        /// <summary>
+        /// 차폐판을 부순다(장면 6의 보스 두 손 내려찍기가 부른다). 다음 틱에 반영되고 <see cref="SkirmishEventKind.ShieldBroken"/>이 한 번 나온다.
+        /// 부서진 뒤에도 막기 판정은 같다(같은 왼팔, 같은 자리).
+        /// </summary>
+        public void BreakShield() => shieldBreakPending = true;
 
         public void SetReady(bool mechReady, bool gunnerReady)
         {
@@ -101,16 +109,35 @@ namespace Anseong.Skirmish
             Events.Clear();
             var st = State;
             if (st.phase != SkirmishPhase.Fighting || dt <= 0f) return;
-            st.elapsed += dt;
+
+            // 딱 맞춰 막은 직후에는 세상의 시간이 느리게 흐른다. 로봇의 이동만은 평소 속도다(눈이 타고 있는 몸의 속도가 갑자기 바뀌면 멀미가 난다).
+            float world = dt;
+            if (st.slowMotion > 0f)
+            {
+                float slow = Mathf.Min(dt, st.slowMotion);
+                world = slow * Settings.perfectSlowScale + (dt - slow);
+                st.slowMotion -= slow;
+            }
+            st.elapsed += world;
 
             MoveMech(dt);
-            TickGrunt(dt);
-            TickEnemy(st.enemies[G3], dt);
-            TickEnemy(st.enemies[G4], dt);
-            MechGunFire(dt);
-            CannonFire(dt);
-            MissileLock(dt);
-            TickShells(dt);
+            if (shieldBreakPending)
+            {
+                shieldBreakPending = false;
+                if (!st.shieldBroken)
+                {
+                    st.shieldBroken = true;
+                    st.shieldOpen = false;
+                    Emit(SkirmishEventKind.ShieldBroken, -1, MechChest, MechChest);
+                }
+            }
+            TickGrunt(world);
+            TickEnemy(st.enemies[G3], world);
+            TickEnemy(st.enemies[G4], world);
+            MechGunFire(world);
+            CannonFire(world);
+            MissileLock(world);
+            TickShells(world);
             Resolve();
         }
 
@@ -135,6 +162,7 @@ namespace Anseong.Skirmish
             st.guarding = mech.guard;
             st.guardDirection = SkirmishMath.Flat(mech.guardDirection);
             st.guardSide = mech.guardSide;
+            st.shieldOpen = !st.shieldBroken && !mech.shieldFolded;
         }
 
         /// <summary>메카의 지금 속도(m/s).</summary>
@@ -180,7 +208,10 @@ namespace Anseong.Skirmish
                 case GruntEventKind.Arrived: Emit(SkirmishEventKind.GruntArrived, st.gruntIndex, center, MechChest); break;
                 case GruntEventKind.TelegraphStarted: Emit(SkirmishEventKind.GruntTelegraph, (int)e.Attack, center, MechChest); break;
                 case GruntEventKind.Blocked: Emit(SkirmishEventKind.GruntBlocked, (int)e.Attack, center, MechChest); break;
-                case GruntEventKind.PerfectBlocked: Emit(SkirmishEventKind.GruntPerfectBlock, (int)e.Attack, center, MechChest); break;
+                case GruntEventKind.PerfectBlocked:
+                    st.slowMotion = Settings.perfectSlowSeconds;
+                    Emit(SkirmishEventKind.GruntPerfectBlock, (int)e.Attack, center, MechChest);
+                    break;
                 case GruntEventKind.RobotHit:
                     st.hull = Mathf.Max(0f, st.hull - e.Amount);
                     Emit(SkirmishEventKind.MechHit, -1, center, MechChest);

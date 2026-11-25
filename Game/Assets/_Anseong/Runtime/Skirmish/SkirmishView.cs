@@ -88,7 +88,12 @@ namespace Anseong.Skirmish
             mech.position = MechPosition ?? st.mech;
             if (mechRightArm != null && mechAim.sqrMagnitude > 1e-6f) mechRightArm.rotation = Quaternion.LookRotation(mechAim);
             for (int i = 0; events != null && i < events.Count; i++)
+            {
                 if (events[i].Kind == SkirmishEventKind.PunchHit || events[i].Kind == SkirmishEventKind.PunchBounced) punchUntil = now + 0.15f;
+                // 타격 멈춤: 꽂힌 순간 적(규칙 쪽)과 함께 로봇 오른팔도 선다. 튕길 때는 서지 않는다.
+                if (events[i].Kind == SkirmishEventKind.PunchHit && mechArms != null)
+                    mechArms.HoldRight(st.gruntHp <= 0f ? s.grunt.finishStopSeconds : s.grunt.hitStopSeconds);
+            }
             // 임시 표현: 주먹을 낸 순간 오른팔이 앞으로 늘어난다.
             if (mechRightArm != null) mechRightArm.localScale = new Vector3(1f, 1f, now < punchUntil ? 1.6f : 1f);
             if (mechLeftArm != null)
@@ -99,6 +104,7 @@ namespace Anseong.Skirmish
             if (mechArms != null)
             {
                 mechArms.SetPose(st.guarding, st.guardSide, now < punchUntil);
+                mechArms.SetShield(st.shieldOpen, st.shieldBroken);
                 // 에디터에서 화면을 찍을 때는 LateUpdate가 돌지 않으므로 여기서 바로 자세를 잡는다.
                 if (!Application.isPlaying) mechArms.Apply(0f, true);
             }
