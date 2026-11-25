@@ -164,3 +164,29 @@ namespace Anseong.MapShowcase.Editor
         }
     }
 }
+namespace Anseong.MapShowcase.Editor
+{
+    public static class ShowcaseColliderQuery
+    {
+        // colliders per top-level group, text labels, and what stands inside each generated building's footprint
+        public static void List()
+        {
+            UnityEditor.SceneManagement.EditorSceneManager.OpenScene(ShowcaseCapture.WorkScene);
+            var sb = new System.Text.StringBuilder(); var groups = new System.Collections.Generic.Dictionary<string, int>();
+            var cols = UnityEngine.Object.FindObjectsByType<UnityEngine.Collider>(UnityEngine.FindObjectsInactive.Exclude, UnityEngine.FindObjectsSortMode.None);
+            foreach (var c in cols) { if (!c.enabled) continue; var t = c.transform; var chain = new System.Collections.Generic.List<string>(); while (t) { chain.Insert(0, t.name); t = t.parent; } var key = chain[0] + " / " + (chain.Count > 2 ? chain[1] : "") + " | " + c.GetType().Name; groups[key] = groups.TryGetValue(key, out var n) ? n + 1 : 1; }
+            foreach (var g in System.Linq.Enumerable.OrderByDescending(groups, g => g.Value)) sb.AppendLine("COL " + g.Value + " x " + g.Key);
+            foreach (var root in UnityEngine.SceneManagement.SceneManager.GetActiveScene().GetRootGameObjects())
+            {
+                if (!(root.name.StartsWith("B0") || root.name.StartsWith("SC_"))) continue;
+                var rs = root.GetComponentsInChildren<UnityEngine.Renderer>(); if (rs.Length == 0) continue; var b = rs[0].bounds; foreach (var r in rs) b.Encapsulate(r.bounds);
+                int inside = 0; foreach (var c in cols) if (c.enabled && !c.transform.IsChildOf(root.transform) && b.Contains(c.bounds.center) && c.bounds.size.y > 3) inside++;
+                sb.AppendLine("ROOT " + root.name + " own colliders " + root.GetComponentsInChildren<UnityEngine.Collider>().Length + " | other colliders inside its bounds " + inside + " | s " + b.size.ToString("F0"));
+            }
+            foreach (var tm in UnityEngine.Object.FindObjectsByType<UnityEngine.TextMesh>(UnityEngine.FindObjectsInactive.Exclude, UnityEngine.FindObjectsSortMode.None))
+            { var r = tm.GetComponent<UnityEngine.Renderer>(); if (r == null || !r.enabled) continue; sb.AppendLine("TEXT '" + tm.text.Replace("\n", " ") + "' pos " + tm.transform.position.ToString("F0") + " parent " + (tm.transform.parent ? tm.transform.parent.name : "")); }
+            foreach (var lr in UnityEngine.Object.FindObjectsByType<UnityEngine.LineRenderer>(UnityEngine.FindObjectsInactive.Exclude, UnityEngine.FindObjectsSortMode.None)) sb.AppendLine("LINE " + lr.name + " c " + lr.bounds.center.ToString("F0") + " s " + lr.bounds.size.ToString("F0") + " parent " + (lr.transform.parent ? lr.transform.parent.name : ""));
+            System.IO.File.WriteAllText(ShowcaseCapture.Arg("-dumpOut", "Temp/col.txt"), sb.ToString());
+        }
+    }
+}

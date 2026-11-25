@@ -23,6 +23,7 @@ namespace Anseong.MapShowcase.Editor
             { "booth", L + "ContainerYardEquipment/YardControlBooth.prefab" },
         };
 
+        const float HarborYaw = 270f;   // jib out over the water (east)
         const float LightYaw = 0f;   // turns the generated mast so its arm reaches over the lane
 
         static bool Blocked(float x, float z)
@@ -45,7 +46,8 @@ namespace Anseong.MapShowcase.Editor
             var gen = new Dictionary<string, GameObject>();
             foreach (var g in new[] { new { k = "truck", id = "Prop_CoilTruck", h = 4.2f, lz = true }, new { k = "dump", id = "Prop_DumpTruck", h = 5.0f, lz = true }, new { k = "wreck", id = "Prop_Wreckage", h = 5.0f, lz = false }, new { k = "stock", id = "Prop_SteelStock", h = 4.0f, lz = true },
                 new { k = "car", id = "Prop_Sedan", h = 1.45f, lz = true }, new { k = "container", id = "Prop_Container", h = 2.6f, lz = true }, new { k = "light", id = "Prop_LightMast", h = 12f, lz = false },
-                new { k = "booth", id = "Prop_Booth", h = 3.3f, lz = true }, new { k = "barrier", id = "Prop_Barrier", h = 1.1f, lz = true } })
+                new { k = "booth", id = "Prop_Booth", h = 3.3f, lz = true }, new { k = "barrier", id = "Prop_Barrier", h = 1.1f, lz = true },
+                new { k = "cabinet", id = "Prop_Transformer", h = 3.0f, lz = true }, new { k = "pipe", id = "Prop_PipeBridge", h = 11f, lz = true }, new { k = "conveyor", id = "Prop_Conveyor", h = 18f, lz = true }, new { k = "hcrane", id = "Prop_HarborCrane", h = 41f, lz = true } })
             {
                 var pfb = ShowcaseBuildings.BuildPrefab(g.id, "Assets/MapShowcase/Props/" + g.id, g.h, 2048, g.lz);
                 if (pfb != null) { gen[g.k] = pfb; var tb = Object.Instantiate(pfb); var trs = tb.GetComponentsInChildren<Renderer>(); var bb = trs[0].bounds; foreach (var r in trs) bb.Encapsulate(r.bounds); Debug.Log("SHOWCASE genprop " + g.id + " size " + bb.size.ToString("F1")); Object.DestroyImmediate(tb); }
@@ -82,6 +84,12 @@ namespace Anseong.MapShowcase.Editor
                     var holder = new GameObject("shadow"); holder.transform.SetParent(go.transform, false);
                     ShowcaseBuild.ContactShadow(holder.transform, new Vector3(pb.center.x - go.transform.position.x, 0.03f, pb.center.z - go.transform.position.z), pb.size.x * 1.5f + 1.2f, pb.size.z * 1.25f + 1.2f, 0.6f);
                 }
+                if (kind != "wreck")   // simple blocking volume so the mech and shots do not pass through; wreckage stays walk-over
+                {
+                    var crs = go.GetComponentsInChildren<Renderer>(); var cb = crs[0].bounds; foreach (var r in crs) if (r.name != "SC_ContactShadow") cb.Encapsulate(r.bounds);
+                    cb = crs[0].bounds; foreach (var r in crs) if (r.name != "SC_ContactShadow") cb.Encapsulate(r.bounds);
+                    var bc = go.AddComponent<BoxCollider>(); bc.center = cb.center - go.transform.position; bc.size = kind == "light" ? new Vector3(0.8f, cb.size.y, 0.8f) : cb.size;
+                }
                 go.transform.position = new Vector3(x, kind == "wreck" ? -0.25f : 0.02f, z); go.transform.rotation = Quaternion.Euler(0, yaw, 0); placed++;
             };
             foreach (var kv in Prefabs)
@@ -114,6 +122,16 @@ namespace Anseong.MapShowcase.Editor
             put("stacker", 160, 560, -90); put("container", 165, 585, 0); put("container", 165, 588, 0); put("container", 178, 586, 90);
             put("truck", 60, 612, 90); put("dump", 120, 615, 80); put("car", 70, 640, 90); put("car", 76, 640, 90); put("car", 82, 640.5f, 92); put("booth", 150, 610, 180);
             for (int x = 30; x <= 150; x += 40) put("light", x, 604, 180);
+            // large process structures along the yard edges, outside every lane, so the open concrete is framed by plant
+            for (int i = 0; i < 7; i++) put("pipe", -112, 305 + i * 30, 0);                       // pipe bridge run from the warehouse towards gas cleaning
+            for (int i = 0; i < 4; i++) put("pipe", 232 + i * 30, 262, 90);                       // east run towards the harbour
+            put("conveyor", 236, 205, 0); put("conveyor", -62, 662, 90); put("conveyor", -205, 95, 180);
+            // the blockout harbour cranes and the fractured pipe bridge
+            foreach (var r in Object.FindObjectsByType<Renderer>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+            {
+                if (!r.enabled) continue;
+                if (gen.ContainsKey("hcrane") && r.name.StartsWith("HARBOR crane")) { var c = r.bounds.center; r.enabled = false; put("hcrane", c.x, c.z, HarborYaw); }
+            }
             // steel stock where the primitive coils / slabs stood, plus more along the yard edges
             put("stock", -53, 232, 0); put("stock", -53, 248, 0); put("stock", 50, 250, 90); put("stock", 62, 262, 90); put("stock", -95, 320, 0); put("stock", 100, 240, 0);
             put("stock", 30, 100, 90); put("stock", 170, 610, 90); put("stock", -40, 330, 90); put("stock", 60, 180, 90);
@@ -122,6 +140,16 @@ namespace Anseong.MapShowcase.Editor
             put("wreck", 30, 500, 300); put("wreck", -100, 215, 100); put("wreck", 118, 380, 30); put("wreck", 25, 620, 170); put("wreck", -40, 40, 80);
             int wi = 0; foreach (var w in wreckSpots) { if (wi >= 14) break; put("wreck", w.x, w.z, (wi * 67) % 360); wi++; }
             Debug.Log("SHOWCASE wreck clusters " + wreckSpots.Count);
+            // the kept crane trolley / hoist blockout was flat pale yellow on top of the rusty generated crane
+            {
+                var mp = "Assets/MapShowcase/Materials/SC_CraneMachinery.mat"; var cm = AssetDatabase.LoadAssetAtPath<Material>(mp);
+                if (cm == null) { cm = new Material(Shader.Find("Standard")); AssetDatabase.CreateAsset(cm, mp); }
+                cm.SetTexture("_MainTex", AssetDatabase.LoadAssetAtPath<Texture2D>("Assets/MapShowcase/Textures/SC_GroundDetail_Concrete.png")); cm.SetTextureScale("_MainTex", new Vector2(3, 3));
+                cm.color = new Color(.62f, .46f, .22f); cm.SetFloat("_Metallic", 0.35f); cm.SetFloat("_Glossiness", 0.22f); EditorUtility.SetDirty(cm);
+                foreach (var t in Object.FindObjectsByType<Transform>(FindObjectsInactive.Exclude, FindObjectsSortMode.None))
+                    if (t.name == "B07 Crane 68m / underside 62m")
+                        foreach (var r in t.GetComponentsInChildren<Renderer>()) if (r.enabled) { var ms = r.sharedMaterials; for (int i = 0; i < ms.Length; i++) ms[i] = cm; r.sharedMaterials = ms; }
+            }
             var pp = "Assets/MapShowcase/Prefabs/SC_Props.prefab"; AssetDatabase.DeleteAsset(pp);
             PrefabUtility.SaveAsPrefabAssetAndConnect(root, pp, InteractionMode.AutomatedAction);
             Debug.Log("SHOWCASE props placed " + placed + " skipped " + skipped);

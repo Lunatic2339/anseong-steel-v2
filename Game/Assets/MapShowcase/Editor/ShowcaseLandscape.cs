@@ -191,7 +191,7 @@ namespace Anseong.MapShowcase.Editor
                     {
                         var rs0 = t.GetComponentsInChildren<Renderer>(); if (rs0.Length == 0) continue; var b0 = rs0[0].bounds; foreach (var r in rs0) { b0.Encapsulate(r.bounds); r.enabled = false; }
                         var c = (GameObject)PrefabUtility.InstantiatePrefab(stack, holder.transform); float cz = t.name.EndsWith("0") ? 160f : t.name.EndsWith("1") ? 370f : 580f; b0.center = new Vector3(-220f, 0, cz);   /* blockout positions; the hidden shells report stale bounds */ c.transform.position = new Vector3(b0.center.x, -0.4f, b0.center.z); c.transform.rotation = Quaternion.Euler(0, (b0.center.z * 37f) % 360f, 0);
-                        var sh = new GameObject("shadow"); sh.transform.SetParent(c.transform, false); ShowcaseBuild.ContactShadow(sh.transform, new Vector3(0, 0.43f, 0), 16f, 16f, 0.6f);
+                        var cc = c.AddComponent<CapsuleCollider>(); cc.direction = 1; cc.radius = 4.5f; cc.height = 64f; cc.center = new Vector3(0, 32f, 0); var sh = new GameObject("shadow"); sh.transform.SetParent(c.transform, false); ShowcaseBuild.ContactShadow(sh.transform, new Vector3(0, 0.43f, 0), 16f, 16f, 0.6f);
                     }
             var rng = new System.Random(911); int n = 0, st = 0;
             // (x, z) anchors: north-west and north behind the furnace, west behind the rolling mill, far north-east shore
