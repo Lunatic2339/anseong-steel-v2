@@ -349,7 +349,8 @@ namespace Anseong.Skirmish
             hullRing.fillAmount = hull;
             hullRing.color = hullNumber.color = hullColor;
             hullNumber.text = Mathf.CeilToInt(shownHull).ToString();
-            if (arms == null) shieldLine.text = "";
+            if (st.shieldBroken) { shieldLine.text = "차폐판  파손"; shieldLine.color = warn; }
+            else if (arms == null) shieldLine.text = "";
             else
             {
                 bool ready = arms.ShieldReady;

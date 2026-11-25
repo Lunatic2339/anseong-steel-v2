@@ -10,7 +10,8 @@ namespace Anseong.Skirmish
     /// Z2 교전을 두 PC에 맞춰 돌린다. 규칙(<see cref="SkirmishSession"/>)은 서버(호스트)에서만 돌고, 상태는 1초에 30번 모든 PC에 보낸다.
     /// 호스트 = 메카(P1), 접속한 PC = 공중포대(P2). 사수 입력은 접속한 PC가 서버에 보낸다(비신뢰, 늦게 온 것은 덮어씀).
     /// 접속·시작 화면은 기존 <see cref="SessionBootstrap"/>을 그대로 쓴다: 1인 = 혼자(빈 자리는 자동 조작), 호스트 = 메카, 클라이언트 = 공중포대.
-    /// 운영자 키(모니터 앞 키보드): R 재시작, Enter 사수 없이 시작, B 빈 자리 자동 켜고 끄기, C 착용자 정면 다시 맞추기, G 혼자일 때 자리 바꾸기.
+    /// 운영자 키(모니터 앞 키보드): R 재시작, Enter 사수 없이 시작, B 빈 자리 자동 켜고 끄기, C 착용자 정면 다시 맞추기, G 혼자일 때 자리 바꾸기,
+    /// K 차폐판 부수기(장면 6이 들어오기 전까지의 확인용).
     /// 메뉴 'Anseong → Sandbox → Build Z2 Skirmish'가 NetworkObject와 함께 씬에 놓는다.
     /// </summary>
     public class SkirmishServer : NetworkBehaviour
@@ -128,10 +129,12 @@ namespace Anseong.Skirmish
                 if (keyboard.bKey.wasPressedThisFrame) botFillsEmptySeat = !botFillsEmptySeat;
                 if (keyboard.cKey.wasPressedThisFrame && local.VrActive) local.Recenter();
                 if (keyboard.gKey.wasPressedThisFrame && Solo) soloAsGunner = !soloAsGunner;
+                if (keyboard.kKey.wasPressedThisFrame) session.BreakShield();
             }
             st = session.State;
             var seat = Solo && soloAsGunner ? SkirmishSeat.Gunner : SkirmishSeat.Mech;
             local.SetSeat(seat);
+            local.ShieldBroken = st.shieldBroken;
             local.Read(st.mech, settings.gunnerPost);
 
             if (st.phase == SkirmishPhase.Waiting && (Solo || gunnerConnected || forcedStart)) session.SetReady(true, true);
@@ -208,8 +211,9 @@ namespace Anseong.Skirmish
                 byte flags = (byte)((input.fire ? 1 : 0) | (input.lockHeld ? 2 : 0) | (input.cancel ? 4 : 0));
                 GunnerInputRpc(input.aim, input.pointer, flags);
             }
-            // 상태는 1초에 30번 오므로 그 사이 탄은 속도대로 미리 움직여 둔다.
-            foreach (var shell in shown.shells) shell.position += shell.velocity * Time.deltaTime;
+            // 상태는 1초에 30번 오므로 그 사이 탄은 속도대로 미리 움직여 둔다(느린 시간 동안에는 느리게).
+            float pace = shown.slowMotion > 0f ? settings.perfectSlowScale : 1f;
+            foreach (var shell in shown.shells) shell.position += shell.velocity * (Time.deltaTime * pace);
             Present(shown, SkirmishSeat.Gunner, StatesReceived == 0 ? "호스트 상태를 기다리는 중" : "메카 조종사를 기다리는 중");
         }
 

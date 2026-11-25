@@ -28,6 +28,10 @@ namespace Anseong.Skirmish
         [Min(0f)] public float mechGunDamage = 10f;
         [Tooltip("가드한 팔 방향과 탄이 오는 방향이 이 각도(°) 안이면 막는다.")]
         [Range(10f, 120f)] public float guardDegrees = 50f;
+        [Min(0f), Tooltip("딱 맞춰 막으면 이 시간(실제 초) 동안 시간이 느려진다. 두 사람 화면에 같이 적용된다. 0 = 끔.")]
+        public float perfectSlowSeconds = 0.15f;
+        [Range(0.05f, 1f), Tooltip("느려지는 동안의 빠르기(1 = 평소). 로봇의 이동은 느려지지 않는다(멀미).")]
+        public float perfectSlowScale = 0.3f;
 
         [Header("공중포대 (P2)")]
         [Tooltip("메카 오른쪽 뒤 위.")]

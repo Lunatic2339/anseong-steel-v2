@@ -55,6 +55,10 @@ namespace Anseong.Skirmish
 
         readonly ArmSolverSettings settings = new ArmSolverSettings();
         bool handsTracked, guarding, punching, localPilot;
+        bool shieldOpen = true, shieldBroken;
+        float holdRightUntil;
+        Renderer shieldRenderer;
+        PropertyInfo shieldDeployed;
         PilotSide guardSide;
         Vector3 leftHandLocal, rightHandLocal;
         FieldInfo shieldLocalInput;
@@ -73,6 +77,22 @@ namespace Anseong.Skirmish
 
         /// <summary>이 PC의 사람이 P1으로 직접 조종하는지. 아니면 차폐판 버튼을 받지 않고 펴 둔다.</summary>
         public void SetLocalPilot(bool value) => localPilot = value;
+
+        /// <summary>이 PC의 조종사가 버튼으로 차폐판을 접어 둔 상태. 서버를 거쳐 P2 화면의 로봇에도 전해진다.</summary>
+        public bool FoldedByPilot => shield != null && shieldMode == ShieldMode.Button && localPilot && !shieldBroken
+                                     && shieldDeployed != null && !(bool)shieldDeployed.GetValue(shield);
+
+        /// <summary>교전 상태에서 온 차폐판 상태. 조종사가 버튼으로 직접 다루는 PC가 아니면 이 값대로 펴고 접는다. 부서지면 숨긴다.</summary>
+        public void SetShield(bool open, bool broken)
+        {
+            shieldOpen = open; shieldBroken = broken;
+        }
+
+        /// <summary>주먹이 꽂힌 순간 오른팔을 그 자리에 잠깐 세운다(타격 멈춤).</summary>
+        public void HoldRight(float seconds)
+        {
+            if (seconds > 0f) holdRightUntil = Mathf.Max(holdRightUntil, Time.time + seconds);
+        }
 
         /// <summary>헤드셋의 두 손(월드)과 눈 위치, 몸 정면(XR Origin 회전).</summary>
         public void SetHands(Vector3 eye, Quaternion facing, Vector3 leftHand, Vector3 rightHand)
@@ -102,6 +122,8 @@ namespace Anseong.Skirmish
             var type = shield.GetType();
             shieldLocalInput = type.GetField("enableLocalInput");
             shieldProgress = type.GetProperty("Progress");
+            shieldDeployed = type.GetProperty("Deployed");
+            shieldRenderer = type.GetField("shield")?.GetValue(shield) as Renderer;
             shieldSetDeployed = type.GetMethod("SetDeployed");
         }
 
@@ -121,13 +143,15 @@ namespace Anseong.Skirmish
             Prepare();
             if (shield != null)
             {
-                bool byButton = shieldMode == ShieldMode.Button && localPilot;
+                bool byButton = shieldMode == ShieldMode.Button && localPilot && !shieldBroken;
                 shieldLocalInput?.SetValue(shield, byButton);
-                if (!byButton) shieldSetDeployed?.Invoke(shield, new object[] { true });
+                if (!byButton) shieldSetDeployed?.Invoke(shield, new object[] { shieldOpen && !shieldBroken });
+                if (shieldRenderer != null && shieldRenderer.enabled == shieldBroken) shieldRenderer.enabled = !shieldBroken;
             }
             Solve(left, -1f, handsTracked ? leftHandLocal : default,
                 guarding ? (guardSide == PilotSide.Left ? guardLeftPose : guardRightPose) : readyPose, dt, snap);
-            Solve(right, 1f, handsTracked ? rightHandLocal : default, punching ? punchPose : readyPose, dt, snap);
+            if (snap || !right.started || Time.time >= holdRightUntil)
+                Solve(right, 1f, handsTracked ? rightHandLocal : default, punching ? punchPose : readyPose, dt, snap);
         }
 
         void Solve(Arm arm, float sideSign, Vector3 handLocal, Vector3 pose, float dt, bool snap)

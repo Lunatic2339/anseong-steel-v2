@@ -204,10 +204,19 @@ namespace Anseong.Tests
             var g = Staggered(new GruntSpec { guardEveryDamage = 0f });
             for (int i = 0; i < 3; i++) Assert.AreEqual(PunchResult.Hit, g.Punch(25f));
             Assert.AreEqual(25f, g.Hp, 0.001f);
+            var before = g.Position;
             Assert.AreEqual(PunchResult.Finished, g.Punch(25f));
+            Assert.IsTrue(g.Finishing, "마무리 한 방은 0.1초 멈춘 뒤에 쓰러진다");
+            Assert.AreEqual(PunchResult.OutOfReach, g.Punch(25f), "멈춰 있는 동안에는 더 맞지 않는다");
+            RunFor(g, 0.08f);
+            Assert.IsTrue(g.Alive, "0.08초에는 아직 멈춰 있다");
+            Assert.AreEqual(before, g.Position);
+            var seen = new List<GruntEvent>();
+            for (int i = 0; i < 2; i++) { g.Tick(Dt, Robot, false, PilotSide.Left); seen.AddRange(g.Events); }
             Assert.IsFalse(g.Alive);
-            var down = g.Events.Single(e => e.Kind == GruntEventKind.Down);
+            var down = seen.Single(e => e.Kind == GruntEventKind.Down);
             Assert.AreEqual(15f, down.Amount, "마무리 한 방에 뒤로 15 밀려난다");
+            Assert.AreEqual(15f, Vector3.Distance(before, g.Position), 0.001f);
             Assert.AreEqual(PunchResult.OutOfReach, g.Punch(25f), "쓰러진 뒤에는 닿지 않는다");
         }
 
@@ -238,7 +247,8 @@ namespace Anseong.Tests
             CollectionAssert.Contains(g.Events.Select(e => e.Kind).ToList(), GruntEventKind.GuardBroken);
 
             float stagger = RunUntil(g, x => x.Step != GruntStep.Stagger);
-            Assert.AreEqual(2.5f, stagger, 0.03f);
+            // 타격 멈춤 0.06초 가운데 남은 0.04초만큼 늦어진다.
+            Assert.AreEqual(2.5f + 0.04f, stagger, 0.03f);
         }
 
         [Test]
@@ -248,7 +258,8 @@ namespace Anseong.Tests
             g.Punch(25f);
             var seen = new List<GruntEventKind>();
             float held = RunUntil(g, x => x.Step != GruntStep.Guard, seen);
-            Assert.AreEqual(4f, held, 0.03f);
+            // 주먹이 꽂힌 순간의 타격 멈춤(0.06초)만큼 늦어진다.
+            Assert.AreEqual(4f + 0.06f, held, 0.03f);
             Assert.AreEqual(GruntStep.Rise, g.Step, "기본 자세를 거치지 않고 바로 예고");
             CollectionAssert.Contains(seen, GruntEventKind.GuardReleased);
         }
@@ -260,7 +271,8 @@ namespace Anseong.Tests
             g.Solo = true;
             g.Punch(25f);
             float held = RunUntil(g, x => x.Step != GruntStep.Guard);
-            Assert.AreEqual(3f, held, 0.03f);
+            // 주먹이 꽂힌 순간의 타격 멈춤(0.06초)만큼 늦어진다.
+            Assert.AreEqual(3f + 0.06f, held, 0.03f);
         }
 
         [Test]
@@ -322,7 +334,8 @@ namespace Anseong.Tests
 
             var seen = new List<GruntEventKind>();
             float frozen = RunUntil(g, x => x.Step != GruntStep.Frozen, seen);
-            Assert.AreEqual(6f, frozen, 0.03f);
+            // 주먹이 꽂힌 순간의 타격 멈춤(0.06초)만큼 늦어진다.
+            Assert.AreEqual(6f + 0.06f, frozen, 0.03f);
             Assert.AreEqual(GruntStep.Idle, g.Step, "풀리면 기본 자세로");
             CollectionAssert.DoesNotContain(seen, GruntEventKind.RobotHit, "멈춘 동안에는 때리지 못한다");
         }
