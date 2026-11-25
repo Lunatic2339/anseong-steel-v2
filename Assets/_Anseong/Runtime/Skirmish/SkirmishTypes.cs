@@ -15,6 +15,8 @@ namespace Anseong.Skirmish
         Cleared,
         /// <summary>고로 내구도 또는 메카 내구도가 0.</summary>
         Failed,
+        /// <summary>내구도 0에서 한 판에 한 번 "기체 재기동". 끝나면 그 장면의 처음부터 다시 싸운다.</summary>
+        Rebooting,
     }
 
     public enum EnemyStep : byte
@@ -69,6 +71,12 @@ namespace Anseong.Skirmish
         GruntDown,
         /// <summary>차폐판이 부서짐. 이후로는 맨팔로 막는다(판정은 같다).</summary>
         ShieldBroken,
+        /// <summary>돌격형이 큰 탄을 겨누기 시작함. Id는 돌격형 번호.</summary>
+        GruntShellWindup,
+        /// <summary>내구도 0. 재기동이 시작됨.</summary>
+        Rebooting,
+        /// <summary>재기동이 끝나 그 장면의 처음으로 돌아감.</summary>
+        SceneRestarted,
     }
 
     /// <summary>한 틱에 일어난 일. 화면·소리·진동이 이것을 보고 반응한다.</summary>
@@ -140,6 +148,21 @@ namespace Anseong.Skirmish
         public GruntAttack gruntAttack;
         public int gruntsDown;
         public bool GruntAlive => gruntIndex >= 0 && gruntStep != GruntStep.Dead;
+        /// <summary>맞붙은 돌격형이 큰 탄을 겨누는 중이면 발사까지 남은 초(서 있는 적).</summary>
+        public float gruntShell;
+
+        /// <summary>뒤에서 기다리는 돌격형 번호. 없으면 -1.</summary>
+        public int backIndex = -1;
+        public Vector3 backPosition;
+        public float backHp;
+        public GruntStep backStep;
+        /// <summary>기다리는 돌격형이 큰 탄을 겨누는 중이면 발사까지 남은 초.</summary>
+        public float backShell;
+
+        /// <summary>남은 재기동 횟수(한 판에 한 번).</summary>
+        public int rebootsLeft;
+        /// <summary>재기동이 끝날 때까지 남은 초.</summary>
+        public float rebootTimer;
 
         public SkirmishEnemy[] enemies;
         public List<SkirmishShell> shells = new List<SkirmishShell>();

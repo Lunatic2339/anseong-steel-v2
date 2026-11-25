@@ -80,11 +80,15 @@ namespace Anseong.Tests
         public void 막지_않으면_맞고_내구도가_0이_되면_실패한다()
         {
             var s = Scene1();
-            for (int i = 0; i < 6000 && s.State.phase == SkirmishPhase.Fighting; i++)
+            // 첫 번째는 재기동(한 판에 한 번), 두 번째에 실패한다.
+            bool rebooted = false;
+            for (int i = 0; i < 9000 && s.State.phase != SkirmishPhase.Failed; i++)
             {
                 s.SetMech(default);
                 s.Tick(Dt);
+                rebooted |= s.State.phase == SkirmishPhase.Rebooting;
             }
+            Assert.IsTrue(rebooted);
             Assert.AreEqual(SkirmishPhase.Failed, s.State.phase);
             Assert.AreEqual(0f, s.State.hull);
         }

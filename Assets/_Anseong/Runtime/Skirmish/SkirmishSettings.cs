@@ -9,12 +9,21 @@ namespace Anseong.Skirmish
     /// 좌표는 확대 맵 기준(m, x 동서 / y 높이 / z 남북).
     /// </summary>
     [Serializable]
-    public class SkirmishSettings
+    public partial class SkirmishSettings
     {
         [Header("메카 (P1)")]
         public Vector3 mechStart = new Vector3(0f, 0f, 205f);
         [Tooltip("메카가 움직일 수 있는 범위(x 최소, z 최소, x 최대, z 최대).")]
         public Vector4 mechArea = new Vector4(-25f, 180f, 25f, 215f);
+        [Tooltip("범위가 여러 칸일 때(길 + 마당). 비어 있지 않으면 mechArea 대신 이것들을 합친 곳을 쓴다.")]
+        public Vector4[] mechZones = new Vector4[0];
+        [Tooltip("재기동 뒤에 로봇이 다시 서는 자리를 따로 정한다. 끄면 mechStart.")]
+        public bool restartElsewhere;
+        public Vector3 mechRestart;
+        [Min(0), Tooltip("내구도가 0이 되었을 때 그 장면을 다시 하는 횟수(명세: 한 판에 한 번). 0이면 바로 실패.")]
+        public int reboots;
+        [Min(0f), Tooltip("\"기체 재기동\" 시간(초).")]
+        public float rebootSeconds = 3f;
         [Min(0.5f)] public float mechSpeed = 4f;
         [Min(0f), Tooltip("서 있다가 전속력이 되는 시간(초). 0 = 바로. 헤드셋에서 갑자기 출발하면 멀미가 난다.")]
         public float mechAccelSeconds = 0.4f;
@@ -100,6 +109,8 @@ namespace Anseong.Skirmish
         public GruntWave[] grunts = new GruntWave[0];
         [Tooltip("앞의 돌격형이 쓰러지고 다음이 나올 때까지(초).")]
         [Min(0f)] public float gruntGap = 2f;
+        [Tooltip("맞붙던 적이 쓰러지고 기다리던 적이 들어올 때까지(초).")]
+        [Min(0f)] public float gruntSwapSeconds = 3f;
         public float gruntHeight = 30f;
         [Tooltip("포 조준 판정 반지름(m).")]
         public float gruntRadius = 6.5f;
@@ -145,6 +156,9 @@ namespace Anseong.Skirmish
             missiles = 3,
             rangedEnemies = false,
             mechGun = false,
+            reboots = 1,
+            restartElsewhere = true,
+            mechRestart = new Vector3(0f, 0f, 40f),
             grunts = new[]
             {
                 // 돌격형 1: 내려치기만, 가드를 굳히지 않음, 첫 적이라 예고가 길다.
@@ -155,10 +169,57 @@ namespace Anseong.Skirmish
         };
     }
 
+    public partial class SkirmishSettings
+    {
+        /// <summary>
+        /// 장면 2 "적치장"의 돌격형 쪽(제작 명세): 제강동 옆 길을 달려 서 있는 돌격형 3과 맞붙고, 이어서 돌격형 4와 5가 같이 온다.
+        /// 포격형 B·C와 고로 포격, 작업대 옮기기, 드론은 여기 넣지 않았다(P2 담당 몫).
+        /// </summary>
+        public static SkirmishSettings Scene2() => new SkirmishSettings
+        {
+            mechStart = new Vector3(0f, 0f, 65f),
+            // 길(폭 28)과 적치장 마당.
+            mechZones = new[] { new Vector4(-14f, 40f, 14f, 185f), new Vector4(-60f, 185f, 60f, 260f) },
+            mechSpeed = 10f,
+            gunnerPost = new Vector3(20f, 50f, 180f),
+            missiles = 3,
+            rangedEnemies = false,
+            mechGun = false,
+            reboots = 1,
+            restartElsewhere = true,
+            mechRestart = new Vector3(0f, 0f, 70f),
+            grunts = new[]
+            {
+                // 돌격형 3: 제자리에서 큰 탄을 한 번 쏘고 기다린다. 내려치기와 휘두르기를 번갈아.
+                new GruntWave
+                {
+                    start = new Vector3(0f, 0f, 222f), shellWhenRobotPassesZ = 90f,
+                    spec = new GruntSpec { standStill = true, attacks = new[] { GruntAttack.Slam, GruntAttack.Swing } },
+                },
+                // 돌격형 4: 먼저 맞붙는다.
+                new GruntWave
+                {
+                    start = new Vector3(-25f, 0f, 275f),
+                    spec = new GruntSpec { attacks = new[] { GruntAttack.Slam, GruntAttack.Slam, GruntAttack.Swing } },
+                },
+                // 돌격형 5: 4와 같이 출발해 35 거리에서 기다리며 큰 탄을 쏜다.
+                new GruntWave
+                {
+                    start = new Vector3(25f, 0f, 280f), withPrevious = true,
+                    spec = new GruntSpec { attacks = new[] { GruntAttack.Swing, GruntAttack.Slam } },
+                },
+            },
+        };
+    }
+
     [Serializable]
     public class GruntWave
     {
         public Vector3 start;
         public GruntSpec spec = new GruntSpec();
+        [Tooltip("앞 번호의 돌격형과 동시에 출발해 35 거리에서 기다린다. 혼자 할 때는 앞의 적이 쓰러진 뒤에 출발한다.")]
+        public bool withPrevious;
+        [Tooltip("로봇이 이 남북 좌표를 지나면 큰 탄을 한 번 겨눈다. 0이면 안 쏜다.")]
+        public float shellWhenRobotPassesZ;
     }
 }
