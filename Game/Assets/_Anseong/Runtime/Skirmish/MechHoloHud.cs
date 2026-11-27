@@ -387,7 +387,7 @@ namespace Anseong.Skirmish
             if (present)
             {
                 float maxHp = Mathf.Max(1f, s.grunts[st.gruntIndex].spec.hp);
-                enemyTitle.text = $"상대 {st.gruntIndex + 1} / {s.grunts.Length}";
+                enemyTitle.text = SkirmishSettings.IsBoss(s, st.gruntIndex) ? "보스" : $"상대 {st.gruntIndex + 1} / {s.grunts.Length}";
                 enemyRing.fillAmount = alive ? Mathf.Clamp01(st.gruntHp / maxHp) : 0f;
                 enemyNumber.text = alive ? Mathf.CeilToInt(st.gruntHp).ToString() : "격파";
             }

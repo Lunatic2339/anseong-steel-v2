@@ -30,6 +30,10 @@ namespace Anseong.Skirmish
         public void BindCockpit(Transform mount) => cockpitMount = mount;
         [SerializeField, Tooltip("P1 조종석의 홀로그램 HUD(있으면 같이 갱신한다).")] MechHoloHud holo;
         public void BindHolo(MechHoloHud value) => holo = value;
+        [SerializeField, Tooltip("보스전의 간결한 화면 표시(있으면 보스전에서는 글자 계기와 홀로그램 대신 이것만 보인다).")] BossFightHud bossHud;
+        public void BindBossHud(BossFightHud value) => bossHud = value;
+        /// <summary>운영자가 착용자 정면을 다시 맞췄을 때 화면 표시도 다시 놓는다.</summary>
+        public void Replace() { if (bossHud != null) bossHud.Replace(); }
 
         void Build()
         {
@@ -60,6 +64,18 @@ namespace Anseong.Skirmish
         public void Show(SkirmishState st, SkirmishSettings s, IReadOnlyList<SkirmishEvent> events, SkirmishSeat seat, bool vr, string waiting)
         {
             if (text == null) Build();
+            if (bossHud != null && SkirmishSettings.IsBoss(s, 0))
+            {
+                // 보스전: 얇은 줄 몇 개만 보인다. 글자 계기와 홀로그램은 숨긴다.
+                if (holo != null) holo.Show(st, s, events, false, Time.time);
+                if (panel.gameObject.activeSelf) panel.gameObject.SetActive(false);
+                string note = st.phase == SkirmishPhase.Waiting ? waiting
+                    : st.phase == SkirmishPhase.Cleared ? "1막 끝"
+                    : st.phase == SkirmishPhase.Failed ? "고로를 지키지 못했다"
+                    : st.phase == SkirmishPhase.Rebooting ? $"기체 재기동 {Mathf.CeilToInt(st.rebootTimer)}" : "";
+                bossHud.Show(st, s, seat, vr, HideForMenu, note, Time.deltaTime);
+                return;
+            }
             if (holo != null) holo.Show(st, s, events, seat == SkirmishSeat.Mech && !HideForMenu, Time.time);
             if (panel.gameObject.activeSelf == HideForMenu) panel.gameObject.SetActive(!HideForMenu);
             // 모니터로 볼 때는 고개를 숙일 수 없으니 계기판을 머리 앞에 그대로 둔다.
@@ -82,10 +98,14 @@ namespace Anseong.Skirmish
                 ? $"메카 내구도 {st.hull:0}    고로 {st.furnace}/{s.furnaceHits}"
                 : $"고로 {st.furnace}/{s.furnaceHits}    미사일 {st.missiles}    포열 {st.cannonHeat * 100f:0}%{(st.cannonOverheated ? " 과열" : "")}";
             if (st.gruntIndex >= 0) status += $"    적 {st.gruntIndex + 1} 체력 {st.gruntHp:0}{(st.gruntStep == GruntStep.Guard ? " 가드" : "")}";
-            string lockLine = seat == SkirmishSeat.Gunner && st.lockTarget >= 0
-                ? $"잠금 {(st.lockTarget == SkirmishSession.G3 ? "정면 적" : "동쪽 적")} {st.lockProgress * 100f:0}%" + (st.lockProgress >= 1f ? " — 놓으면 발사" : "")
+            string lockLine = seat == SkirmishSeat.Gunner && st.weakTimer > 0f
+                ? $"약점 표시 {st.weakTimer:0.0}초 — 약점을 겨누고 놓으면 강한 탄"
+                : seat == SkirmishSeat.Gunner && st.lockTarget == SkirmishSession.GruntTarget
+                ? $"스캔 {st.lockProgress * 100f:0}% — 조준을 보스에 두고 버튼을 누르고 있어라"
+                : seat == SkirmishSeat.Gunner && st.lockTarget >= 0
+                ? $"잠금 {(st.lockTarget == SkirmishSession.GruntTarget ? "보스" : st.lockTarget == SkirmishSession.G3 ? "정면 적" : "동쪽 적")} {st.lockProgress * 100f:0}%" + (st.lockProgress >= 1f ? " — 놓으면 발사" : "")
                 : "";
-            string result = st.phase == SkirmishPhase.Cleared ? (s.rangedEnemies ? "적치장 확보" : "첫 상대 격파")
+            string result = st.phase == SkirmishPhase.Cleared ? (s.rangedEnemies ? "적치장 확보" : SkirmishSettings.IsBoss(s, st.gruntIndex) ? "1막 끝 — 보스가 물러선다" : "첫 상대 격파")
                 : st.phase == SkirmishPhase.Failed ? "실패 — 운영자가 R로 재시작"
                 : st.phase == SkirmishPhase.Rebooting ? $"기체 재기동 {Mathf.CeilToInt(st.rebootTimer)}" : "";
             text.text = $"{status}\n{lockLine}\n{lastEvent}\n{result}";
@@ -102,7 +122,7 @@ namespace Anseong.Skirmish
                 case SkirmishEventKind.ShellBlocked: return "메카가 막았다";
                 case SkirmishEventKind.ShellMissed: return "큰 탄 빗나감";
                 case SkirmishEventKind.MechHit: return "메카 피격!";
-                case SkirmishEventKind.GruntTelegraph: return e.Id == (int)GruntAttack.Slam ? "치켜든 팔! 왼쪽으로 막아!" : "옆으로 벌린 팔! 오른쪽으로 막아!";
+                case SkirmishEventKind.GruntTelegraph: return e.Id == (int)GruntAttack.Slam ? "치켜든 팔! 왼쪽으로 막아!" : "옆으로 젖힌 팔! 오른쪽으로 막아!";
                 case SkirmishEventKind.GruntBlocked: return "막았다 — 지금 쳐라!";
                 case SkirmishEventKind.GruntPerfectBlock: return "딱 맞춰 막았다 — 지금 쳐라!";
                 case SkirmishEventKind.PunchHit: return "주먹 명중";

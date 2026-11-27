@@ -13,6 +13,10 @@ namespace Anseong.Skirmish
     public sealed class SkirmishSession
     {
         public const int G3 = 0, G4 = 1;
+        /// <summary>강한 탄(미사일)이 맞붙은 적(보스)을 잠갔을 때의 표적 번호.</summary>
+        public const int GruntTarget = 2;
+        /// <summary>빗나간 강한 탄: 표적 없이 곧게 날아가다 사라진다.</summary>
+        const int NoTarget = -2;
 
         public readonly SkirmishSettings Settings;
         public SkirmishState State { get; private set; }
@@ -32,6 +36,10 @@ namespace Anseong.Skirmish
         GruntDuel back;         // 뒤에서 기다리는 돌격형
         int nextWave;           // 다음에 내보낼 돌격형 번호
         bool waveShellDone;     // 맞붙을 적의 "지나가면 한 발"을 이미 쐈는가
+        bool actEnded;          // 맞붙은 적의 체력이 endAtHp까지 내려가 싸움이 끝남
+        float droneTimer;       // 다음 자폭 드론까지 남은 초
+        int weakIndex = -1;     // 지금(또는 마지막으로) 표시된 약점 번호. 스캔할 때마다 다음 것으로 넘어간다
+        bool scanSpent;         // 약점 표시가 시간이 다 돼 꺼짐. 버튼을 놓았다가 다시 눌러야 스캔한다
 
         /// <summary>P2가 없을 때 true. 돌격형의 가드가 스스로 더 빨리 풀린다.</summary>
         public bool Solo;
@@ -83,6 +91,10 @@ namespace Anseong.Skirmish
             back = null;
             nextWave = 0;
             waveShellDone = false;
+            actEnded = false;
+            droneTimer = 0f;
+            weakIndex = -1;
+            scanSpent = false;
         }
 
         /// <summary>재기동이 끝났을 때: 그 장면의 적과 탄을 처음으로 돌리고 로봇 내구도를 100으로. 재기동 횟수는 되돌리지 않는다.</summary>
@@ -235,7 +247,7 @@ namespace Anseong.Skirmish
             var st = State; var s = Settings;
             bool punched = mech.punchSeq != lastPunchSeq && mech.punchDamage > 0f;
             lastPunchSeq = mech.punchSeq;
-            if (s.grunts == null || s.grunts.Length == 0) return;
+            if (s.grunts == null || s.grunts.Length == 0 || EndAct()) return;
             if (grunt == null || !grunt.Alive)
             {
                 if (back != null)
@@ -257,9 +269,10 @@ namespace Anseong.Skirmish
                     gruntWait -= dt;
                     if (gruntWait > 0f) return;
                     var wave = s.grunts[nextWave];
-                    grunt = new GruntDuel(wave.start, wave.spec, s.grunt);
+                    grunt = new GruntDuel(wave.start, wave.spec, s.grunt, Solo);
                     st.gruntIndex = nextWave++;
                     waveShellDone = false;
+                    droneTimer = DroneInterval;
                     // 같이 출발하는 적은 35 거리에서 기다린다. 혼자 할 때는 앞의 적이 쓰러진 뒤에 따로 출발한다.
                     if (!Solo && nextWave < s.grunts.Length && s.grunts[nextWave].withPrevious)
                     {
@@ -271,8 +284,11 @@ namespace Anseong.Skirmish
                 }
             }
             grunt.Solo = Solo;
+            // 위태로울수록 조금 쉬워진다: 내구도가 낮으면 예고가 길어진다.
+            grunt.TelegraphScale = s.lowHullBelow > 0f && st.hull < s.lowHullBelow ? s.lowHullTelegraphScale : 1f;
             grunt.Tick(dt, st.mech, st.guarding, st.guardSide);
-            if (punched) grunt.Punch(mech.punchDamage);
+            if (punched) grunt.Punch(s.swordDamage > 0f ? s.swordDamage : mech.punchDamage);
+            TickDrones(dt);
             // 서 있는 적: 로봇이 정해진 선을 지나면 큰 탄을 한 번 겨눈다.
             float line = s.grunts[st.gruntIndex].shellWhenRobotPassesZ;
             if (!waveShellDone && line > 0f && st.mech.z >= line)
@@ -286,6 +302,143 @@ namespace Anseong.Skirmish
             }
             CopyGrunt();
             TickBack(dt);
+        }
+
+        float DroneInterval => Settings.droneEvery * (Solo ? 2f : 1f);
+
+        /// <summary>맞붙은 동안 자폭 드론이 하나씩 로봇 가슴으로 온다. 큰 탄과 같은 규칙이다(P2가 2발로 요격, P1이 막으면 피해 없음).</summary>
+        void TickDrones(float dt)
+        {
+            if (Settings.droneEvery <= 0f || grunt == null || !grunt.Alive || grunt.Step == GruntStep.Approach) return;
+            droneTimer -= dt;
+            if (droneTimer > 0f) return;
+            droneTimer += DroneInterval;
+            FireBigShell(Settings.droneFrom);
+        }
+
+        /// <summary>맞붙은 적의 체력이 그 막의 끝(endAtHp)까지 내려갔으면 싸움을 끝낸다. 끝났으면 true.</summary>
+        bool EndAct()
+        {
+            if (actEnded) return true;
+            var st = State;
+            if (grunt == null || !grunt.Alive || st.gruntIndex < 0) return false;
+            var wave = Settings.grunts[st.gruntIndex];
+            if (wave.endAtHp <= 0f) return false;
+            // 혼자 할 때는 체력이 낮게 시작하므로 끝도 같은 비율로 낮춘다.
+            float end = wave.endAtHp * grunt.MaxHp / Mathf.Max(1f, wave.spec.hp);
+            if (grunt.Hp > end) return false;
+            actEnded = true;
+            st.gruntsDown++;
+            CopyGrunt();
+            // 날아오던 자폭 드론은 같이 사라진다(막이 끝난 뒤에 맞지 않게).
+            st.shells.RemoveAll(x => x.kind == ShellKind.BigShell);
+            return true;
+        }
+
+        bool GruntLockable => grunt != null && grunt.Alive && !actEnded && grunt.Spec.strongShotTarget && grunt.Step != GruntStep.Approach;
+
+        /// <summary>강한 탄이 잠글 수 있는 것 가운데 지시선이 처음 닿는 것. 없으면 -1.</summary>
+        int LockOnRay(Vector3 origin, Vector3 direction)
+        {
+            int enemy = EnemyOnRay(origin, direction, out float enemyDistance);
+            return GruntLockable && GruntOnRay(origin, direction, out float gruntDistance) && gruntDistance < enemyDistance ? GruntTarget : enemy;
+        }
+
+        Vector3 TargetCenter(int id) => id != GruntTarget ? EnemyCenter(id) : weakIndex >= 0 ? WeakPoint(weakIndex) : GruntCenter(State, Settings);
+
+        /// <summary>
+        /// 약점 자리: 등, 어깨, 옆구리를 차례로 돈다. 셋 다 허리 위다(P2의 헬기에서는 보스의 다리가 기수에 가린다). 보스 기준(x 보스의 오른쪽, z 로봇 쪽)이고 P2가 있는 쪽(로봇의 오른쪽 = 보스의 왼쪽)을 쓴다.
+        /// </summary>
+        Vector3 WeakPoint(int index)
+        {
+            float h = Settings.gruntHeight;
+            Vector3 local;
+            switch (index % 3)
+            {
+                case 0: local = new Vector3(-1.5f, h * 0.8f, -4f); break;      // 등 위쪽
+                case 1: local = new Vector3(-7f, h * 0.78f, 0f); break;        // 어깨
+                // 옆구리: 키의 0.55 높이에서는 P2 헬기의 기수에 가렸다(11/27 사진). 팔 아래 0.66 높이로 올렸다.
+                default: local = new Vector3(-6f, h * 0.66f, 2.5f); break;
+            }
+            var forward = SkirmishMath.Flat(State.mech - grunt.Position);
+            if (forward == Vector3.zero) forward = Vector3.back;
+            return grunt.Position + Quaternion.LookRotation(forward) * local;
+        }
+
+        /// <summary>보스처럼 스캔해서 약점을 쏘는 적과 맞붙어 있다(강한 탄을 그냥 잠가 쏘지 않는다).</summary>
+        bool ScanMode => grunt != null && grunt.Spec.strongShotTarget;
+
+        /// <summary>
+        /// 스캔과 약점 사격(기획안 2026-11-27). 버튼을 누른 채 포 조준이 보스 위에 scanSeconds 머물면 약점이 weakPointSeconds 동안 뜬다.
+        /// 뜬 동안 버튼을 놓으면 강한 탄이 나간다. 놓는 순간 조준이 약점 반지름 안이면 맞고, 아니면 한 발만 줄어든다.
+        /// 혼자 할 때는 없다.
+        /// </summary>
+        void Scan(float dt)
+        {
+            var st = State; var s = Settings;
+            bool can = GruntLockable && !Solo && st.missiles > 0;
+            if (st.weakTimer > 0f)
+            {
+                st.weakTimer -= dt;
+                st.weakPoint = can ? WeakPoint(weakIndex) : st.weakPoint;
+                if (st.weakTimer <= 0f || !can) { st.weakTimer = 0f; scanSpent = true; }
+            }
+            if (gunner.cancel) lockCancelled = true;
+            if (lockCancelled || !can) { st.weakTimer = 0f; st.lockTarget = -1; st.lockProgress = 0f; }
+
+            if (gunner.lockHeld)
+            {
+                if (!lockCancelled && can && !scanSpent && st.weakTimer <= 0f)
+                {
+                    var aim = gunner.aim;
+                    if (!SkirmishMath.Direction(ref aim) || !GruntOnRay(s.gunnerPost, aim, out _))
+                    {
+                        // 조준이 벗어나면 처음부터.
+                        st.lockTarget = -1; st.lockProgress = 0f;
+                    }
+                    else
+                    {
+                        st.lockTarget = GruntTarget;
+                        st.lockProgress += dt / s.scanSeconds;
+                        if (st.lockProgress >= 1f)
+                        {
+                            st.lockProgress = 1f;
+                            weakIndex++;
+                            st.weakTimer = s.weakPointSeconds;
+                            st.weakPoint = WeakPoint(weakIndex);
+                            Emit(SkirmishEventKind.WeakPointShown, weakIndex % 3, s.gunnerPost, st.weakPoint);
+                        }
+                    }
+                }
+                else if (scanSpent) { st.lockTarget = -1; st.lockProgress = 0f; }
+            }
+            else
+            {
+                if (lockWasHeld && !lockCancelled && can && st.weakTimer > 0f) FireStrongShot();
+                st.weakTimer = 0f;
+                st.lockTarget = -1;
+                st.lockProgress = 0f;
+                lockCancelled = scanSpent = false;
+            }
+            lockWasHeld = gunner.lockHeld;
+        }
+
+        void FireStrongShot()
+        {
+            var st = State; var s = Settings;
+            st.missiles--;
+            var aim = gunner.aim;
+            bool hit = SkirmishMath.Direction(ref aim) &&
+                       SkirmishMath.RayToSegment(s.gunnerPost, aim, st.weakPoint, st.weakPoint, out _) <= s.weakPointRadius;
+            if (!hit && aim.sqrMagnitude < 0.5f) aim = (st.weakPoint - s.gunnerPost).normalized;
+            var shell = new SkirmishShell
+            {
+                id = nextShellId++, kind = ShellKind.Missile, position = s.gunnerPost,
+                velocity = (hit ? (st.weakPoint - s.gunnerPost).normalized : aim) * s.missileSpeed,
+                target = hit ? GruntTarget : NoTarget, life = hit ? 12f : 3f,
+            };
+            st.shells.Add(shell);
+            Emit(SkirmishEventKind.MissileFired, shell.id, s.gunnerPost, hit ? st.weakPoint : s.gunnerPost + aim * 200f);
         }
 
         void TickBack(float dt)
@@ -522,6 +675,8 @@ namespace Anseong.Skirmish
             cannonCooldown -= dt;
             var aim = gunner.aim;
             if (!gunner.fire || st.cannonOverheated || cannonCooldown > 0f || !SkirmishMath.Direction(ref aim)) return;
+            // 스캔하는 동안에는 포가 나가지 않는다.
+            if (ScanMode && !Solo && gunner.lockHeld) return;
             cannonCooldown = s.cannonInterval;
             st.cannonHeat += s.cannonHeatPerShot;
             if (st.cannonHeat >= 1f) { st.cannonHeat = 1f; st.cannonOverheated = true; }
@@ -533,6 +688,8 @@ namespace Anseong.Skirmish
             if (GruntOnRay(s.gunnerPost, aim, out float gruntDistance) && gruntDistance < Mathf.Min(enemyDistance, shellDistance))
             {
                 Emit(SkirmishEventKind.CannonShot, -1, s.gunnerPost, s.gunnerPost + aim * gruntDistance);
+                // 막이 끝난 뒤에는 더 깎이지 않는다.
+                if (actEnded) return;
                 grunt.CannonHit(s.cannonDamage);
                 foreach (var e in grunt.Events)
                     if (e.Kind == GruntEventKind.GuardBroken) OnGruntEvent(e);
@@ -553,13 +710,14 @@ namespace Anseong.Skirmish
         void MissileLock(float dt)
         {
             var st = State; var s = Settings;
+            if (ScanMode) { Scan(dt); return; }
             if (gunner.cancel) { lockCancelled = true; st.lockTarget = -1; st.lockProgress = 0f; }
             if (gunner.lockHeld)
             {
                 if (!lockCancelled)
                 {
                     var pointer = gunner.pointer;
-                    int target = SkirmishMath.Direction(ref pointer) ? EnemyOnRay(s.gunnerPost, pointer, out _) : -1;
+                    int target = SkirmishMath.Direction(ref pointer) ? LockOnRay(s.gunnerPost, pointer) : -1;
                     if (target < 0 || st.missiles <= 0) { st.lockTarget = -1; st.lockProgress = 0f; }
                     else if (target != st.lockTarget) { st.lockTarget = target; st.lockProgress = 0f; }
                     else st.lockProgress = Mathf.Min(1f, st.lockProgress + dt / s.lockSeconds);
@@ -574,11 +732,11 @@ namespace Anseong.Skirmish
                     var shell = new SkirmishShell
                     {
                         id = nextShellId++, kind = ShellKind.Missile, position = s.gunnerPost,
-                        velocity = (EnemyCenter(st.lockTarget) - s.gunnerPost).normalized * s.missileSpeed,
+                        velocity = (TargetCenter(st.lockTarget) - s.gunnerPost).normalized * s.missileSpeed,
                         target = st.lockTarget, life = 12f,
                     };
                     st.shells.Add(shell);
-                    Emit(SkirmishEventKind.MissileFired, shell.id, s.gunnerPost, EnemyCenter(st.lockTarget));
+                    Emit(SkirmishEventKind.MissileFired, shell.id, s.gunnerPost, TargetCenter(st.lockTarget));
                 }
                 st.lockTarget = -1;
                 st.lockProgress = 0f;
@@ -630,20 +788,37 @@ namespace Anseong.Skirmish
                         break;
 
                     case ShellKind.Missile:
-                        var enemy = st.enemies[shell.target];
-                        if (!enemy.Alive || shell.life <= 0f)
+                        if (shell.target == NoTarget)
+                        {
+                            shell.position += shell.velocity * dt;
+                            if (shell.life <= 0f)
+                            {
+                                Emit(SkirmishEventKind.MissileLost, shell.id, shell.position, shell.position);
+                                done = true;
+                            }
+                            break;
+                        }
+                        bool atGrunt = shell.target == GruntTarget;
+                        var enemy = atGrunt ? null : st.enemies[shell.target];
+                        if (!(atGrunt ? GruntLockable : enemy.Alive) || shell.life <= 0f)
                         {
                             // 표적이 먼저 쓰러졌으면 미사일은 그대로 소모된다.
                             Emit(SkirmishEventKind.MissileLost, shell.id, shell.position, shell.position);
                             done = true;
                             break;
                         }
-                        var center = EnemyCenter(shell.target);
+                        var center = TargetCenter(shell.target);
                         float step = s.missileSpeed * dt;
-                        if (Vector3.Distance(shell.position, center) <= step + s.enemyRadius)
+                        if (Vector3.Distance(shell.position, center) <= step + (!atGrunt ? s.enemyRadius : ScanMode ? 1f : s.gruntRadius))
                         {
                             Emit(SkirmishEventKind.MissileHit, shell.target, shell.position, center);
-                            Damage(enemy, s.missileDamage, true);
+                            if (!atGrunt) Damage(enemy, s.missileDamage, true);
+                            else if (grunt.StrongHit(s.missileDamage, ScanMode ? s.weakPointStagger : s.staggerSeconds))
+                            {
+                                // 강한 탄은 끊는 패다: 어떤 예고든 끊기고 튕겨난다.
+                                Emit(SkirmishEventKind.EnemyStaggered, GruntTarget, center, center);
+                                CopyGrunt();
+                            }
                             done = true;
                         }
                         else

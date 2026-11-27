@@ -18,7 +18,7 @@ namespace Anseong.EditorTools
     /// Z2 교전 회색 상자 씬(공중포대 사수 + 메카 + 일반병 둘). 건물은 확대 맵 좌표의 상자 대역이다.
     /// 씬 저장은 사람이 한다. 권장 위치: Assets/_Anseong/Scenes/Sandbox/Sandbox_Z2Skirmish.unity
     /// </summary>
-    public static class SkirmishSandboxMenu
+    public static partial class SkirmishSandboxMenu
     {
         const string LogPrefix = "[SkirmishSandboxMenu]";
         const string DebugFolder = "Assets/_Anseong/Art/Debug";
@@ -400,6 +400,7 @@ namespace Anseong.EditorTools
             var mech = new GameObject("Mech 35m").transform;
             var mechArms = Robot(mech, out var mechEye);
             LastMechEye = mechEye;
+            if (mechArms != null && settings.swordDamage > 0f) RobotSword(mech);
             Transform rightArm = null, leftArm = null;
             if (mechArms == null)
             {
@@ -434,14 +435,22 @@ namespace Anseong.EditorTools
             // 공중포대 조종석. 사수 머리가 원점이고, 아래·앞 시야가 핵심이라 앞쪽 바닥은 비운다
             // (첫 캡처에서 바닥판이 메카와 G3를 가렸다). 바깥에서 보이는 큰 몸체는 뒤 아래에 둔다.
             var gunner = new GameObject("Gunship cockpit (P2)").transform;
-            gunner.position = settings.gunnerPost;
+            // 숙인 각도는 헬기를 놓은 뒤에 준다(상자 조종석은 숙이지 않는다).
+            gunner.SetPositionAndRotation(settings.gunnerPost, Quaternion.Euler(0f, settings.gunnerYaw, 0f));
             Box("Rear footplate", gunner, new Vector3(0f, -1.5f, -0.6f), new Vector3(1.6f, 0.08f, 1.4f), steel);
-            foreach (float x in new[] { -0.9f, 0.9f })
-                Box("Side frame", gunner, new Vector3(x, -0.75f, 0.5f), new Vector3(0.06f, 0.06f, 2.2f), steel);
+            // 보스전의 P2는 싸움을 가파르게 내려다봐서 앞으로 뻗은 옆 틀이 보스를 가로지른다. 그 장면에서는 뺀다.
+            if (!SkirmishSettings.IsBoss(settings, 0))
+                foreach (float x in new[] { -0.9f, 0.9f })
+                    Box("Side frame", gunner, new Vector3(x, -0.75f, 0.5f), new Vector3(0.06f, 0.06f, 2.2f), steel);
             Box("Hull", gunner, new Vector3(0f, -2.8f, -4f), new Vector3(5f, 1.6f, 7f), steel);
             var barrel = new GameObject("Cannon pivot").transform;
             barrel.SetParent(gunner, false); barrel.localPosition = new Vector3(0.7f, -0.9f, 0.5f);
             Box("Cannon barrel", barrel, new Vector3(0f, 0f, 1.6f), new Vector3(0.22f, 0.22f, 3f), steel);
+            // 보스전의 P2는 싸움을 가파르게 내려다봐서 포신이 눈앞을 가로지른다. 더 아래 오른쪽으로 내린다.
+            if (SkirmishSettings.IsBoss(settings, 0)) barrel.localPosition = new Vector3(1.3f, -1.9f, 0.2f);
+            // 보스전의 P2는 헬기를 탄다(모델이 있으면 상자 조종석을 헬기로 바꾼다).
+            if (SkirmishSettings.IsBoss(settings, 0) && Helicopter(gunner, barrel))
+                gunner.rotation = Quaternion.Euler(settings.gunnerPitch, settings.gunnerYaw, 0f);
 
             view = viewRoot.AddComponent<SkirmishView>();
             view.Bind(mech, rightArm, leftArm, enemyRoots, glows, bigShell, furnaceShell, missile,
@@ -451,8 +460,16 @@ namespace Anseong.EditorTools
 
             if (settings.grunts != null && settings.grunts.Length > 0)
             {
-                var gruntRoot = new GameObject("Charger grunt (돌격형)").transform;
-                Grunt(gruntRoot, settings.gruntHeight, enemy);
+                bool isBoss = SkirmishSettings.IsBoss(settings, 0);
+                var gruntRoot = new GameObject(isBoss ? "Boss (보스)" : "Charger grunt (돌격형)").transform;
+                if (isBoss)
+                {
+                    view.BindBossPuppet(Boss(gruntRoot, settings.gruntHeight, enemy));
+                    var weak = Shape(PrimitiveType.Sphere, "Boss weak point marker (약점 표시)", null, Vector3.zero, Vector3.one * 6f, Unlit("WeakPoint", new Color(1f, 0.9f, 0.1f)));
+                    weak.gameObject.SetActive(false);
+                    view.BindWeakMarker(weak);
+                }
+                else Grunt(gruntRoot, settings.gruntHeight, enemy);
                 var telegraph = Shape(PrimitiveType.Sphere, "Charger telegraph glow", null, Vector3.zero, Vector3.one * 3f, danger).GetComponent<Renderer>();
                 var guardPlate = Box("Charger guard plate", null, Vector3.zero, new Vector3(13f, 12f, 1.2f), Lit("GuardPlate", new Color(0.05f, 0.05f, 0.06f))).GetComponent<Renderer>();
                 telegraph.enabled = guardPlate.enabled = false;
@@ -483,7 +500,8 @@ namespace Anseong.EditorTools
             var driver = camera.gameObject.AddComponent<TrackedPoseDriver>();
             driver.positionInput = new InputActionProperty(new InputAction("Head position", InputActionType.Value, "<XRHMD>/centerEyePosition", expectedControlType: "Vector3"));
             driver.rotationInput = new InputActionProperty(new InputAction("Head rotation", InputActionType.Value, "<XRHMD>/centerEyeRotation", expectedControlType: "Quaternion"));
-            rig.transform.position = settings.mechStart + mechEye;
+            var mechFacing = Quaternion.Euler(0f, settings.mechYaw, 0f);
+            rig.transform.SetPositionAndRotation(settings.mechStart + mechFacing * mechEye, mechFacing);
 
             var handMaterial = Unlit("Hand", new Color(0.3f, 0.9f, 1f));
             var leftHand = Box("Left hand marker", rig.transform, Vector3.zero, new Vector3(0.06f, 0.06f, 0.12f), handMaterial);
@@ -499,16 +517,28 @@ namespace Anseong.EditorTools
             LastCockpit = cockpit;
             var headMeshes = mech.GetComponentsInChildren<Renderer>(true).Where(r => r.name.EndsWith("_Head")).ToArray();
             input.BindCockpit(cockpit, headMeshes);
-            input.PlaceCockpit(settings.mechStart + mechEye, true);
+            input.MechYaw = settings.mechYaw;
+            input.PlaceCockpit(settings.mechStart + mechFacing * mechEye, true);
             var hud = viewRoot.AddComponent<SkirmishHud>();
             hud.Bind(rig.transform, camera.transform);
             hud.BindCockpit(hudMount);
-            var holo = viewRoot.AddComponent<MechHoloHud>();
-            holo.Bind(cockpit, camera.transform, mechArms);
-            holo.BindGlow(Shader.Find("Anseong/HoloUI"));
+            // 보스전은 얇은 줄 화면 표시만 쓴다. 홀로그램 계기는 만들지 않는다.
+            bool bossScene = SkirmishSettings.IsBoss(settings, 0);
+            var holo = bossScene ? null : viewRoot.AddComponent<MechHoloHud>();
+            if (holo != null)
+            {
+                holo.Bind(cockpit, camera.transform, mechArms);
+                holo.BindGlow(Shader.Find("Anseong/HoloUI"));
+            }
             // 테두리 빛이 되는 프로젝트(기본 렌더링)에서는 예고용 빨간 공을 뺀다: 몸의 붉은 빛과 표적 테두리로 충분하다.
             view.TelegraphGlow = !BuiltIn;
-            hud.BindHolo(holo);
+            if (holo != null) hud.BindHolo(holo);
+            if (bossScene)
+            {
+                var bossHud = viewRoot.AddComponent<BossFightHud>();
+                bossHud.Bind(rig.transform, camera.transform);
+                hud.BindBossHud(bossHud);
+            }
 
             // 헤드셋을 쓴 채 값을 바꾸고 확인 결과를 적는 메뉴. 오른손 B는 P2의 잠금 취소라서 왼손 메뉴 버튼으로 연다.
             var tuning = SceneSetupMenu.AddTuningMenu(camera.transform, null);
@@ -663,6 +693,47 @@ namespace Anseong.EditorTools
                 camera.targetTexture = null;
                 Debug.Log($"{LogPrefix} YARD_CAPTURE_OK phase={session.State.phase} elapsed={session.State.elapsed:0.0} hull={session.State.hull:0} down={session.State.gruntsDown}");
                 EditorApplication.Exit(session.State.phase == SkirmishPhase.Cleared ? 0 : 1);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogException(e);
+                EditorApplication.Exit(1);
+            }
+        }
+
+        /// <summary>
+        /// 맵 전체를 바로 위에서 찍는다(북쪽이 위, 원근 없음). 경로 그림의 바탕으로 쓴다. 맵 장면은 저장하지 않는다.
+        /// 찍는 범위: 동서 -230~370, 남북 -100~800. -executeMethod Anseong.EditorTools.SkirmishSandboxMenu.CaptureMapTopDown
+        /// </summary>
+        public static void CaptureMapTopDown()
+        {
+            try
+            {
+                var map = EditorSceneManager.OpenScene(MapScenePath, OpenSceneMode.Single);
+                SkirmishMapLoader.Prepare(map, MapReviewRoots);
+                var camera = new GameObject("Top-down capture camera").AddComponent<Camera>();
+                camera.orthographic = true;
+                camera.orthographicSize = 450f;
+                camera.aspect = 600f / 900f;
+                camera.nearClipPlane = 1f; camera.farClipPlane = 2000f;
+                camera.transform.SetPositionAndRotation(new Vector3(70f, 900f, 350f), Quaternion.Euler(90f, 0f, 0f));
+                camera.clearFlags = CameraClearFlags.SolidColor;
+                camera.backgroundColor = new Color(0.18f, 0.2f, 0.22f);
+                bool fog = RenderSettings.fog;
+                RenderSettings.fog = false;
+                var target = new RenderTexture(1600, 2400, 24) { antiAliasing = 4 };
+                camera.targetTexture = target;
+                camera.Render();
+                RenderTexture.active = target;
+                var image = new Texture2D(1600, 2400, TextureFormat.RGB24, false);
+                image.ReadPixels(new Rect(0, 0, 1600, 2400), 0, 0);
+                image.Apply();
+                Directory.CreateDirectory("Logs/MapTopDown");
+                File.WriteAllBytes("Logs/MapTopDown/map-top.png", image.EncodeToPNG());
+                RenderTexture.active = null;
+                RenderSettings.fog = fog;
+                Debug.Log($"{LogPrefix} MAP_TOP_OK");
+                EditorApplication.Exit(0);
             }
             catch (System.Exception e)
             {

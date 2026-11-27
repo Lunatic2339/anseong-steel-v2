@@ -106,6 +106,8 @@ namespace Anseong.Skirmish
         void Update()
         {
             if (view == null || local == null) return;
+            local.GunnerYaw = settings.gunnerYaw;
+            local.MechYaw = settings.mechYaw;
             if (!IsSpawned)
             {
                 // 운영자가 시작 화면에서 고르기 전: 처음 상태만 보여 준다.
@@ -130,7 +132,7 @@ namespace Anseong.Skirmish
                 if (keyboard.rKey.wasPressedThisFrame) ResetSession();
                 if (keyboard.enterKey.wasPressedThisFrame) forcedStart = true;
                 if (keyboard.bKey.wasPressedThisFrame) botFillsEmptySeat = !botFillsEmptySeat;
-                if (keyboard.cKey.wasPressedThisFrame && local.VrActive) local.Recenter();
+                if (keyboard.cKey.wasPressedThisFrame && local.VrActive) { local.Recenter(); if (hud != null) hud.Replace(); }
                 if (keyboard.gKey.wasPressedThisFrame && Solo) soloAsGunner = !soloAsGunner;
                 if (keyboard.kKey.wasPressedThisFrame) session.BreakShield();
             }
@@ -284,6 +286,8 @@ namespace Anseong.Skirmish
             public int furnace, statesReceived, gunnerInputsReceived;
             public bool g3Alive, g4Alive;
             public int gruntsDown;
+            public float gruntHp;
+            public int missiles;
             // 화면 그리는 시간(교전 중, 맵이 다 불러와진 뒤). 헤드셋은 한 장에 13.9ms(72Hz) 안쪽이어야 한다.
             public bool mapLoaded;
             public int frames, screenWidth, screenHeight;
@@ -330,6 +334,7 @@ namespace Anseong.Skirmish
                 hull = st.hull, elapsed = st.elapsed, furnace = st.furnace,
                 statesReceived = StatesReceived, gunnerInputsReceived = GunnerInputsReceived,
                 g3Alive = st.enemies[0].Alive, g4Alive = st.enemies[1].Alive, gruntsDown = st.gruntsDown,
+                gruntHp = st.gruntHp, missiles = st.missiles,
                 mapLoaded = mapLoader != null && mapLoader.Loaded, frames = frameMs.Count,
                 screenWidth = Screen.width, screenHeight = Screen.height,
             };

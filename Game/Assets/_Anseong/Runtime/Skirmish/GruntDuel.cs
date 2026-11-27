@@ -76,6 +76,8 @@ namespace Anseong.Skirmish
         ShellWindupStarted,
         /// <summary>큰 탄이 나감.</summary>
         ShellFired,
+        /// <summary>P2의 강한 탄에 맞아 예고가 끊기고 튕겨남(보스).</summary>
+        StrongHit,
     }
 
     public struct GruntEvent
@@ -157,6 +159,16 @@ namespace Anseong.Skirmish
         [Min(0f)] public float guardEveryDamage = 60f;
         [Tooltip("다가오지 않고 제자리에 서 있다가, 로봇이 맞붙는 거리 안으로 오면 싸운다(장면 2의 첫 적).")]
         public bool standStill;
+
+        [Header("보스 (기획안 2026-11-26)")]
+        [Tooltip("튕겨난 동안에만 주먹과 포가 체력을 깎는다. 그 밖에는 튕긴다.")]
+        public bool openOnlyWhenStaggered;
+        [Tooltip("공격마다 처음 나올 때 예고를 이만큼 늘린다. 1 = 그대로.")]
+        [Min(1f)] public float firstTimeScale = 1f;
+        [Tooltip("혼자 할 때의 체력. 0이면 hp와 같다.")]
+        [Min(0f)] public float soloHp;
+        [Tooltip("P2의 강한 탄이 잠글 수 있다. 맞으면 어떤 예고든 끊기고 튕겨난다.")]
+        public bool strongShotTarget;
     }
 
     /// <summary>
@@ -192,18 +204,27 @@ namespace Anseong.Skirmish
         public readonly List<GruntEvent> Events = new List<GruntEvent>();
         float shellCooldown;
 
+        /// <summary>처음 체력(혼자 할 때는 soloHp).</summary>
+        public float MaxHp { get; private set; }
+        /// <summary>예고 길이에 곱하는 값. 로봇 내구도가 낮을 때 교전 규칙이 올린다. 다음 예고부터 적용된다.</summary>
+        public float TelegraphScale = 1f;
+
         int attackIndex, guardsDone;
+        int attacksSeen;        // 한 번이라도 나온 공격(비트)
+        float phaseScale = 1f;  // 지금 예고에 적용된 배율
         float guardMeter, cannonMeter, guardHeldFor;
         bool wasGuarding, sprinting;
         Vector3 lastRobot;
         PilotSide lastGuardSide;
 
-        public GruntDuel(Vector3 start, GruntSpec spec = null, GruntSettings settings = null)
+        /// <param name="solo">혼자 하는 판이면 true. soloHp가 있으면 그 체력으로 시작한다.</param>
+        public GruntDuel(Vector3 start, GruntSpec spec = null, GruntSettings settings = null, bool solo = false)
         {
             Settings = settings ?? new GruntSettings();
             Spec = spec ?? new GruntSpec();
+            Solo = solo;
             Position = start;
-            Hp = Spec.hp;
+            Hp = MaxHp = solo && Spec.soloHp > 0f ? Spec.soloHp : Spec.hp;
             Step = GruntStep.Approach;
         }
 
@@ -250,11 +271,13 @@ namespace Anseong.Skirmish
                 case GruntStep.Dead:
                 case GruntStep.Waiting:
                     return 0f;
+                case GruntStep.Stagger:
+                    return 1f;
                 case GruntStep.Idle:
                 case GruntStep.Frozen:
-                    return Settings.halfOpenMultiplier;
+                    return Spec.openOnlyWhenStaggered ? 0f : Settings.halfOpenMultiplier;
                 default:
-                    return 1f;
+                    return Spec.openOnlyWhenStaggered ? 0f : 1f;
             }
         }
 
@@ -316,8 +339,8 @@ namespace Anseong.Skirmish
                 switch (Step)
                 {
                     case GruntStep.Idle: BeginTelegraph(); break;
-                    case GruntStep.Rise: Enter(GruntStep.Hold, Spec.holdSeconds); break;
-                    case GruntStep.Hold: Enter(GruntStep.Strike, Settings.strikeSeconds); break;
+                    case GruntStep.Rise: Enter(GruntStep.Hold, Spec.holdSeconds * phaseScale); break;
+                    case GruntStep.Hold: Enter(GruntStep.Strike, Settings.strikeSeconds * phaseScale); break;
                     case GruntStep.Strike: Impact(guarding, guardSide); break;
                     case GruntStep.Recover:
                     case GruntStep.Stagger:
@@ -339,7 +362,7 @@ namespace Anseong.Skirmish
         public PunchResult Punch(float damage)
         {
             if (Step == GruntStep.Approach || Step == GruntStep.Waiting || Step == GruntStep.Dead || Finishing) return PunchResult.OutOfReach;
-            if (Step == GruntStep.Guard)
+            if (Step == GruntStep.Guard || PunchMultiplier() <= 0f)
             {
                 Emit(GruntEventKind.PunchBounced);
                 return PunchResult.Bounced;
@@ -375,8 +398,10 @@ namespace Anseong.Skirmish
         public void CannonHit(float damage)
         {
             if (!Alive || Finishing || damage <= 0f) return;
+            // 보스는 튕겨난 동안에만, 그 대신 온전히 들어간다.
+            float share = !Spec.openOnlyWhenStaggered ? Settings.cannonHpMultiplier : Step == GruntStep.Stagger ? 1f : 0f;
             // 포로는 쓰러지지 않는다.
-            Hp = Mathf.Max(1f, Hp - damage * Settings.cannonHpMultiplier);
+            Hp = Mathf.Max(1f, Hp - damage * share);
             if (Step != GruntStep.Guard) return;
             cannonMeter += damage;
             if (cannonMeter < Settings.guardBreakDamage) return;
@@ -384,6 +409,21 @@ namespace Anseong.Skirmish
             Step = GruntStep.Stagger;
             Timer = Settings.guardBreakStagger;
             Emit(GruntEventKind.GuardBroken);
+        }
+
+        /// <summary>
+        /// P2의 강한 탄이 맞았을 때(보스). 피해는 언제나 들어가고, 예고 중이든 아니든 seconds 동안 튕겨난다.
+        /// 아직 다가오는 중이면 안 맞는다.
+        /// </summary>
+        public bool StrongHit(float damage, float seconds)
+        {
+            if (!Alive || Finishing || Step == GruntStep.Approach || Step == GruntStep.Waiting) return false;
+            // 쓰러뜨리는 것은 P1의 몫이다.
+            Hp = Mathf.Max(1f, Hp - Mathf.Max(0f, damage));
+            Timer = Step == GruntStep.Stagger ? Mathf.Max(Timer, seconds) : seconds;
+            Step = GruntStep.Stagger;
+            Emit(GruntEventKind.StrongHit, damage);
+            return true;
         }
 
         /// <summary>아군 드론이 붙어 멈춰 세운다. 끝나면 기본 자세로 돌아간다.</summary>
@@ -465,7 +505,10 @@ namespace Anseong.Skirmish
             var attacks = Spec.attacks != null && Spec.attacks.Length > 0 ? Spec.attacks : new[] { GruntAttack.Slam };
             Attack = attacks[attackIndex % attacks.Length];
             attackIndex++;
-            Enter(GruntStep.Rise, Settings.riseSeconds);
+            int bit = 1 << (int)Attack;
+            phaseScale = Mathf.Max(0.1f, TelegraphScale) * ((attacksSeen & bit) == 0 ? Mathf.Max(1f, Spec.firstTimeScale) : 1f);
+            attacksSeen |= bit;
+            Enter(GruntStep.Rise, Settings.riseSeconds * phaseScale);
             Emit(GruntEventKind.TelegraphStarted);
         }
 
