@@ -82,7 +82,11 @@ namespace Anseong.Skirmish
                 ? $"메카 내구도 {st.hull:0}    고로 {st.furnace}/{s.furnaceHits}"
                 : $"고로 {st.furnace}/{s.furnaceHits}    미사일 {st.missiles}    포열 {st.cannonHeat * 100f:0}%{(st.cannonOverheated ? " 과열" : "")}";
             if (st.gruntIndex >= 0) status += $"    적 {st.gruntIndex + 1} 체력 {st.gruntHp:0}{(st.gruntStep == GruntStep.Guard ? " 가드" : "")}";
-            string lockLine = seat == SkirmishSeat.Gunner && st.lockTarget >= 0
+            string lockLine = seat == SkirmishSeat.Gunner && st.weakTimer > 0f
+                ? $"약점 표시 {st.weakTimer:0.0}초 — 약점을 겨누고 놓으면 강한 탄"
+                : seat == SkirmishSeat.Gunner && st.lockTarget == SkirmishSession.GruntTarget
+                ? $"스캔 {st.lockProgress * 100f:0}% — 조준을 보스에 두고 버튼을 누르고 있어라"
+                : seat == SkirmishSeat.Gunner && st.lockTarget >= 0
                 ? $"잠금 {(st.lockTarget == SkirmishSession.GruntTarget ? "보스" : st.lockTarget == SkirmishSession.G3 ? "정면 적" : "동쪽 적")} {st.lockProgress * 100f:0}%" + (st.lockProgress >= 1f ? " — 놓으면 발사" : "")
                 : "";
             string result = st.phase == SkirmishPhase.Cleared ? (s.rangedEnemies ? "적치장 확보" : SkirmishSettings.IsBoss(s, st.gruntIndex) ? "1막 끝 — 보스가 물러선다" : "첫 상대 격파")

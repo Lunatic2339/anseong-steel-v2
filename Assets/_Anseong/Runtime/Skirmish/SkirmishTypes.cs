@@ -77,6 +77,8 @@ namespace Anseong.Skirmish
         Rebooting,
         /// <summary>재기동이 끝나 그 장면의 처음으로 돌아감.</summary>
         SceneRestarted,
+        /// <summary>P2의 스캔이 끝나 보스의 약점이 표시됨. To가 약점 자리.</summary>
+        WeakPointShown,
     }
 
     /// <summary>한 틱에 일어난 일. 화면·소리·진동이 이것을 보고 반응한다.</summary>
@@ -178,6 +180,11 @@ namespace Anseong.Skirmish
 
         /// <summary>고로가 더 버틸 수 있는 피격 수.</summary>
         public int furnace;
+
+        /// <summary>보스의 약점 표시가 꺼질 때까지 남은 초. 0이면 표시가 없다. 스캔 진행은 lockProgress(표적은 GruntTarget)를 쓴다.</summary>
+        public float weakTimer;
+        /// <summary>표시된 약점의 자리.</summary>
+        public Vector3 weakPoint;
     }
 
     /// <summary>P1 메카 입력. 방향은 월드 기준.</summary>

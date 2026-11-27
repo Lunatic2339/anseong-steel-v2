@@ -14,7 +14,94 @@ namespace Anseong.EditorTools
         /// <summary>선우가 내려받은 메카 모델(OSCAR CREATIVO, CC BY-NC 4.0). 없으면 상자로 세운다.</summary>
         const string BossModel = "Assets/_Anseong/Art/BossMecha/BossMecha.fbx";
         public const string BossAct1ScenePath = "Assets/_Anseong/Scenes/Sandbox/Sandbox_BossAct1.unity";
+        public const string MapBossAct1ScenePath = "Assets/_Anseong/Scenes/Sandbox/BossAct1_OnMap.unity";
         const float BossSwordLength = 26f;
+
+        /// <summary>선우가 내려받은 헬기 모델(AH-55 Shoebill)을 Blender에서 합쳐 FBX로 바꾼 것. 없으면 상자 조종석을 그대로 쓴다.</summary>
+        const string HeliModel = "Assets/_Anseong/Art/Heli/Heli_AH55.fbx";
+        /// <summary>
+        /// 헬기를 P2 자리에 놓을지. 2026-11-27 선우 결정: 기수를 30° 숙인 채 떠 있게 한다(수평이면 계기판이 싸움을 가린다).
+        /// 끄면 상자 조종석을 쓴다.
+        /// </summary>
+        public static bool UseHelicopter = true;
+
+        /// <summary>
+        /// P2 자리(사수의 머리가 원점)에 헬기를 놓는다. 모델의 gunner_eye가 원점에 오고 기수가 자리의 정면을 향한다.
+        /// 포탑(GunTurret)은 조준을 따라 도는 포신 축에 붙이고, 로터 셋은 돌게 한다. 상자 조종석은 지운다.
+        /// </summary>
+        static bool Helicopter(Transform gunner, Transform barrelPivot)
+        {
+            if (!UseHelicopter) return false;
+            var model = AssetDatabase.LoadAssetAtPath<GameObject>(HeliModel);
+            if (model == null) return false;
+            var heli = (GameObject)PrefabUtility.InstantiatePrefab(model);
+            heli.name = "Helicopter AH-55 (P2)";
+            var all = heli.GetComponentsInChildren<Transform>(true);
+            Transform Part(string name) => all.FirstOrDefault(t => t.name == name);
+            var eye = Part("gunner_eye"); var rotor = Part("MainRotorLower");
+            if (eye == null || rotor == null)
+            {
+                Debug.LogWarning($"{LogPrefix} 헬기 모델에 gunner_eye나 MainRotorLower가 없어 상자 조종석을 씁니다.");
+                Object.DestroyImmediate(heli);
+                return false;
+            }
+            UseBuiltInMaterials(heli);
+            // 사수는 로터 축보다 앞에 앉는다. 그 방향을 기수로 삼아 자리의 정면에 맞춘다.
+            var nose = eye.position - rotor.position;
+            nose.y = 0f;
+            heli.transform.rotation = Quaternion.FromToRotation(nose.normalized, gunner.forward) * heli.transform.rotation;
+            heli.transform.position += gunner.position - eye.position;
+
+            for (int i = gunner.childCount - 1; i >= 0; i--)
+                if (gunner.GetChild(i) != barrelPivot) Object.DestroyImmediate(gunner.GetChild(i).gameObject);
+            for (int i = barrelPivot.childCount - 1; i >= 0; i--) Object.DestroyImmediate(barrelPivot.GetChild(i).gameObject);
+            heli.transform.SetParent(gunner, true);
+
+            var turret = Part("GunTurret");
+            if (turret != null)
+            {
+                barrelPivot.SetPositionAndRotation(turret.position, gunner.rotation);
+                turret.SetParent(barrelPivot, true);
+            }
+            foreach (var (name, axis, speed) in new[] { ("MainRotorLower", Vector3.up, 1400f), ("MainRotorUpper", Vector3.up, -1400f), ("Propeller", Vector3.forward, 2200f) })
+            {
+                var part = Part(name);
+                if (part != null) part.gameObject.AddComponent<SpinPart>().Bind(gunner, axis, speed);
+            }
+            MeasureHeli(heli, gunner, eye);
+            return true;
+        }
+
+        /// <summary>헬기의 크기와 사수 눈 주변을 기록한다(확인용).</summary>
+        static void MeasureHeli(GameObject heli, Transform gunner, Transform eye)
+        {
+            var bounds = new Bounds(gunner.position, Vector3.zero);
+            int triangles = 0, renderers = 0, slots = 0;
+            var names = new System.Collections.Generic.List<string>();
+            foreach (var r in gunner.GetComponentsInChildren<MeshRenderer>(true))
+            {
+                bounds.Encapsulate(r.bounds);
+                renderers++; slots += r.sharedMaterials.Length;
+                var filter = r.GetComponent<MeshFilter>();
+                if (filter != null && filter.sharedMesh != null) triangles += filter.sharedMesh.triangles.Length / 3;
+                if (r.name.StartsWith("Canopy")) names.Add(r.name + ": " + string.Join(", ", r.sharedMaterials.Select(m => m != null ? m.name : "없음")));
+            }
+            var local = gunner.InverseTransformPoint(bounds.center);
+            Debug.Log($"{LogPrefix} HELI_FIT 크기 {bounds.size} / 사수 눈 기준 가운데 {local} / 삼각형 {triangles} / 렌더러 {renderers} / 재질 칸 {slots}");
+            foreach (var n in names) Debug.Log($"{LogPrefix} HELI_CANOPY {n}");
+        }
+
+        /// <summary>우리 로봇의 오른손에 임시 검(날 길이 14)을 붙인다. 유진의 검 모델이 오면 대체한다. 팔 뼈가 없으면 아무것도 하지 않는다.</summary>
+        static void RobotSword(Transform mech)
+        {
+            if (!ArmBones(mech, false, out var arm)) return;
+            var along = arm.hand.TransformDirection(arm.fistForwardLocal).normalized;
+            var steel = Lit("RobotBlade", new Color(0.7f, 0.74f, 0.78f));
+            steel.SetFloat("_Metallic", 0.8f);
+            var blade = Box("Robot sword (임시)", null, Vector3.zero, new Vector3(0.35f, 1.6f, 14f), steel);
+            blade.SetPositionAndRotation(arm.hand.position + along * 7.5f, Quaternion.LookRotation(along, Vector3.up));
+            blade.SetParent(arm.hand, true);
+        }
 
         static Transform BossBone(Transform[] all, string prefix) =>
             all.FirstOrDefault(t => t.name.StartsWith(prefix) && !t.name.Contains("scaleCompensation"));
@@ -43,6 +130,8 @@ namespace Anseong.EditorTools
             }
             var instance = (GameObject)PrefabUtility.InstantiatePrefab(model);
             instance.transform.SetParent(root, false);
+            // 맵 프로젝트는 기본 렌더링이라 재질을 그쪽 것으로 바꿔 끼운다(URP에서는 아무것도 하지 않는다).
+            UseBuiltInMaterials(instance);
             foreach (var skin in instance.GetComponentsInChildren<SkinnedMeshRenderer>()) skin.updateWhenOffscreen = true;
             if (MeasureHeight(instance, out float min, out float max))
             {
@@ -91,17 +180,66 @@ namespace Anseong.EditorTools
         /// 배치 모드 확인용: 보스전 1막 장면을 만들어 저장하고, 자동 조작으로 돌리며 몇 순간을 P1 눈·P2 눈·옆에서 찍어 Logs/BossAct1Capture에 저장한다.
         /// -executeMethod Anseong.EditorTools.SkirmishSandboxMenu.CaptureBossAct1
         /// </summary>
-        public static void CaptureBossAct1()
+        public static void CaptureBossAct1() => CaptureBossAct1(false);
+
+        /// <summary>같은 확인을 실제 맵 위 고로 앞에서 한다(맵 프로젝트에서만). -executeMethod Anseong.EditorTools.SkirmishSandboxMenu.CaptureBossAct1OnMap</summary>
+        public static void CaptureBossAct1OnMap() => CaptureBossAct1(true);
+
+        [MenuItem("Anseong/Sandbox/Build Boss Act 1 On Map")]
+        static void BuildBossAct1OnMapFromMenu()
+        {
+            if (!EditorSceneManager.SaveCurrentModifiedScenesIfUserWantsTo()) return;
+            Build(SkirmishSettings.BossAct1OnMap(), true, out _, out _);
+            Directory.CreateDirectory(Path.GetDirectoryName(MapBossAct1ScenePath));
+            EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), MapBossAct1ScenePath);
+            Debug.Log($"{LogPrefix} 보스전 1막(맵 위) 저장: {MapBossAct1ScenePath}. Play를 누르면 맵 장면을 겹쳐 불러옵니다.");
+        }
+
+        /// <summary>
+        /// 배치 모드 확인용: 보스전 1막(회색 상자) 장면을 만들어 저장하고 개발 빌드를 만든다. 한 PC에서 둘을 띄워 접속을 확인한다.
+        /// 실행: AnseongBossAct1.exe -mode solo|host|client [-ip 127.0.0.1] -skirmishAuto 결과.json
+        /// -executeMethod Anseong.EditorTools.SkirmishSandboxMenu.BuildBossAct1Player
+        /// </summary>
+        public static void BuildBossAct1Player()
         {
             try
             {
-                var settings = SkirmishSettings.BossAct1();
-                Build(settings, false, out var view, out var camera);
+                Build(SkirmishSettings.BossAct1(), false, out _, out _);
                 Directory.CreateDirectory(Path.GetDirectoryName(BossAct1ScenePath));
                 if (!EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), BossAct1ScenePath)) throw new System.Exception("scene save failed");
+                var report = BuildPipeline.BuildPlayer(new BuildPlayerOptions
+                {
+                    scenes = new[] { BossAct1ScenePath },
+                    locationPathName = "Builds/BossAct1/AnseongBossAct1.exe",
+                    target = BuildTarget.StandaloneWindows64,
+                    options = BuildOptions.Development,
+                });
+                if (report.summary.result != UnityEditor.Build.Reporting.BuildResult.Succeeded)
+                    throw new System.Exception("build failed: " + report.summary.result);
+                Debug.Log($"{LogPrefix} BOSS_ACT1_BUILD_OK {report.summary.totalSize / (1024 * 1024)} MB, {report.summary.totalTime.TotalSeconds:0} s");
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e)
+            {
+                Debug.LogException(e);
+                EditorApplication.Exit(1);
+            }
+        }
+
+        static void CaptureBossAct1(bool onMap)
+        {
+            try
+            {
+                var settings = onMap ? SkirmishSettings.BossAct1OnMap() : SkirmishSettings.BossAct1();
+                Build(settings, onMap, out var view, out var camera);
+                string scenePath = onMap ? MapBossAct1ScenePath : BossAct1ScenePath;
+                Directory.CreateDirectory(Path.GetDirectoryName(scenePath));
+                if (!EditorSceneManager.SaveScene(EditorSceneManager.GetActiveScene(), scenePath)) throw new System.Exception("scene save failed");
+                if (onMap) OpenMapForCapture(camera);
                 var session = new SkirmishSession(settings);
                 session.SetReady(true, true);
-                const string folder = "Logs/BossAct1Capture";
+                string folder = onMap ? "Logs/BossAct1CaptureOnMap" : "Logs/BossAct1Capture";
+                var facing = Quaternion.Euler(0f, settings.mechYaw, 0f);
                 Directory.CreateDirectory(folder);
                 const int W = 1600, H = 1000;
                 var target = new RenderTexture(W, H, 24) { antiAliasing = 4 };
@@ -124,7 +262,7 @@ namespace Anseong.EditorTools
                     session.Tick(0.02f);
                     view.Show(session, aim, 0f);
                 }
-                Vector3 MechEye() => session.State.mech + LastMechEye;
+                Vector3 MechEye() => session.State.mech + facing * LastMechEye;
                 Vector3 Center() => SkirmishSession.GruntCenter(session.State, settings);
                 void Pilot(bool on)
                 {
@@ -175,8 +313,8 @@ namespace Anseong.EditorTools
                     Pilot(true);
                     Shot(name + "-p1", MechEye(), Center() + Vector3.up * 6f, 90f);
                     Pilot(false);
-                    Shot(name + "-p2", settings.gunnerPost, mech + new Vector3(0f, 22f, 11f), 90f);
-                    Shot(name + "-side", mech + new Vector3(-70f, 24f, 11f), mech + new Vector3(0f, 19f, 11f), 60f);
+                    Shot(name + "-p2", settings.gunnerPost, mech + facing * new Vector3(0f, 22f, 11f), 90f);
+                    Shot(name + "-side", mech + facing * new Vector3(-70f, 24f, 11f), mech + facing * new Vector3(0f, 19f, 11f), 60f);
                 }
 
                 Until(st => st.gruntStep == GruntStep.Idle, "보스가 섬");
@@ -194,6 +332,24 @@ namespace Anseong.EditorTools
                 attack = true;
                 Until(st => st.phase == SkirmishPhase.Cleared, "1막 끝");
                 Three("6-act-end");
+                // P2의 헬기를 밖에서 본 모습과, 사수 자리에서 정면·아래를 본 모습(헬기를 켰을 때만).
+                if (UseHelicopter)
+                {
+                var seat = Quaternion.Euler(0f, settings.gunnerYaw, 0f);
+                Shot("8-heli-outside", settings.gunnerPost + seat * new Vector3(16f, 4f, 12f), settings.gunnerPost + seat * new Vector3(0f, 0f, -4f), 60f);
+                Shot("8-heli-seat-level", settings.gunnerPost, settings.gunnerPost + seat * Vector3.forward, 90f);
+                Shot("8-heli-seat-down", settings.gunnerPost, settings.gunnerPost + seat * new Vector3(0f, -1f, 0.35f), 90f);
+                Shot("8-heli-and-robot", session.State.mech + facing * new Vector3(90f, 45f, -60f), (session.State.mech + settings.gunnerPost) * 0.5f + Vector3.up * 5f, 60f);
+                }
+                if (onMap)
+                {
+                    // 자리 확인: P1이 고개를 왼쪽(고로 쪽)·오른쪽으로 돌렸을 때와 위에서 본 모습.
+                    Pilot(true);
+                    Shot("7-p1-look-left", MechEye(), MechEye() + facing * new Vector3(-1f, 0.1f, 0.5f), 90f);
+                    Shot("7-p1-look-right", MechEye(), MechEye() + facing * new Vector3(1f, -0.1f, 0.5f), 90f);
+                    Pilot(false);
+                    Shot("7-top", session.State.mech + new Vector3(0f, 190f, -1f) + facing * new Vector3(0f, 0f, 11f), session.State.mech + facing * new Vector3(0f, 0f, 11f), 60f);
+                }
 
                 RenderTexture.active = null;
                 camera.targetTexture = null;

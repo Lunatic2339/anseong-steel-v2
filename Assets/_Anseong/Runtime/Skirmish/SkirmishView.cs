@@ -90,6 +90,8 @@ namespace Anseong.Skirmish
 
         [SerializeField, Tooltip("보스의 팔과 대검 자세(임시 표현). 없으면 몸을 기울이는 것만 한다.")] BossPuppet bossPuppet;
         public void BindBossPuppet(BossPuppet puppet) => bossPuppet = puppet;
+        [SerializeField, Tooltip("P2의 스캔이 끝났을 때 보스의 약점 자리에 뜨는 표시.")] Transform weakMarker;
+        public void BindWeakMarker(Transform marker) => weakMarker = marker;
 
         public void BindGrunt(Transform root, Renderer telegraph, Renderer guardPlate)
         {
@@ -109,7 +111,7 @@ namespace Anseong.Skirmish
             block ??= new MaterialPropertyBlock();
             if (gunnerBarrel != null && gunnerAim.sqrMagnitude > 1e-6f) gunnerBarrel.rotation = Quaternion.LookRotation(gunnerAim);
 
-            mech.position = MechPosition ?? st.mech;
+            mech.SetPositionAndRotation(MechPosition ?? st.mech, Quaternion.Euler(0f, s.mechYaw, 0f));
             if (mechRightArm != null && mechAim.sqrMagnitude > 1e-6f) mechRightArm.rotation = Quaternion.LookRotation(mechAim);
             for (int i = 0; events != null && i < events.Count; i++)
             {
@@ -166,6 +168,12 @@ namespace Anseong.Skirmish
 
             ShowGrunt(st, s);
             ShowBack(st);
+            if (weakMarker != null)
+            {
+                bool shown = st.weakTimer > 0f;
+                if (weakMarker.gameObject.activeSelf != shown) weakMarker.gameObject.SetActive(shown);
+                if (shown) weakMarker.position = st.weakPoint;
+            }
             SyncShells(st);
             ShowTracers(events, now);
 

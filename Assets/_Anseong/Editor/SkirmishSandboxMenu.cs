@@ -400,6 +400,7 @@ namespace Anseong.EditorTools
             var mech = new GameObject("Mech 35m").transform;
             var mechArms = Robot(mech, out var mechEye);
             LastMechEye = mechEye;
+            if (mechArms != null && settings.swordDamage > 0f) RobotSword(mech);
             Transform rightArm = null, leftArm = null;
             if (mechArms == null)
             {
@@ -434,6 +435,7 @@ namespace Anseong.EditorTools
             // 공중포대 조종석. 사수 머리가 원점이고, 아래·앞 시야가 핵심이라 앞쪽 바닥은 비운다
             // (첫 캡처에서 바닥판이 메카와 G3를 가렸다). 바깥에서 보이는 큰 몸체는 뒤 아래에 둔다.
             var gunner = new GameObject("Gunship cockpit (P2)").transform;
+            // 숙인 각도는 헬기를 놓은 뒤에 준다(상자 조종석은 숙이지 않는다).
             gunner.SetPositionAndRotation(settings.gunnerPost, Quaternion.Euler(0f, settings.gunnerYaw, 0f));
             Box("Rear footplate", gunner, new Vector3(0f, -1.5f, -0.6f), new Vector3(1.6f, 0.08f, 1.4f), steel);
             // 보스전의 P2는 싸움을 가파르게 내려다봐서 앞으로 뻗은 옆 틀이 보스를 가로지른다. 그 장면에서는 뺀다.
@@ -446,6 +448,9 @@ namespace Anseong.EditorTools
             Box("Cannon barrel", barrel, new Vector3(0f, 0f, 1.6f), new Vector3(0.22f, 0.22f, 3f), steel);
             // 보스전의 P2는 싸움을 가파르게 내려다봐서 포신이 눈앞을 가로지른다. 더 아래 오른쪽으로 내린다.
             if (SkirmishSettings.IsBoss(settings, 0)) barrel.localPosition = new Vector3(1.3f, -1.9f, 0.2f);
+            // 보스전의 P2는 헬기를 탄다(모델이 있으면 상자 조종석을 헬기로 바꾼다).
+            if (SkirmishSettings.IsBoss(settings, 0) && Helicopter(gunner, barrel))
+                gunner.rotation = Quaternion.Euler(settings.gunnerPitch, settings.gunnerYaw, 0f);
 
             view = viewRoot.AddComponent<SkirmishView>();
             view.Bind(mech, rightArm, leftArm, enemyRoots, glows, bigShell, furnaceShell, missile,
@@ -457,7 +462,13 @@ namespace Anseong.EditorTools
             {
                 bool isBoss = SkirmishSettings.IsBoss(settings, 0);
                 var gruntRoot = new GameObject(isBoss ? "Boss (보스)" : "Charger grunt (돌격형)").transform;
-                if (isBoss) view.BindBossPuppet(Boss(gruntRoot, settings.gruntHeight, enemy));
+                if (isBoss)
+                {
+                    view.BindBossPuppet(Boss(gruntRoot, settings.gruntHeight, enemy));
+                    var weak = Shape(PrimitiveType.Sphere, "Boss weak point marker (약점 표시)", null, Vector3.zero, Vector3.one * 6f, Unlit("WeakPoint", new Color(1f, 0.9f, 0.1f)));
+                    weak.gameObject.SetActive(false);
+                    view.BindWeakMarker(weak);
+                }
                 else Grunt(gruntRoot, settings.gruntHeight, enemy);
                 var telegraph = Shape(PrimitiveType.Sphere, "Charger telegraph glow", null, Vector3.zero, Vector3.one * 3f, danger).GetComponent<Renderer>();
                 var guardPlate = Box("Charger guard plate", null, Vector3.zero, new Vector3(13f, 12f, 1.2f), Lit("GuardPlate", new Color(0.05f, 0.05f, 0.06f))).GetComponent<Renderer>();
@@ -489,7 +500,8 @@ namespace Anseong.EditorTools
             var driver = camera.gameObject.AddComponent<TrackedPoseDriver>();
             driver.positionInput = new InputActionProperty(new InputAction("Head position", InputActionType.Value, "<XRHMD>/centerEyePosition", expectedControlType: "Vector3"));
             driver.rotationInput = new InputActionProperty(new InputAction("Head rotation", InputActionType.Value, "<XRHMD>/centerEyeRotation", expectedControlType: "Quaternion"));
-            rig.transform.position = settings.mechStart + mechEye;
+            var mechFacing = Quaternion.Euler(0f, settings.mechYaw, 0f);
+            rig.transform.SetPositionAndRotation(settings.mechStart + mechFacing * mechEye, mechFacing);
 
             var handMaterial = Unlit("Hand", new Color(0.3f, 0.9f, 1f));
             var leftHand = Box("Left hand marker", rig.transform, Vector3.zero, new Vector3(0.06f, 0.06f, 0.12f), handMaterial);
@@ -505,7 +517,8 @@ namespace Anseong.EditorTools
             LastCockpit = cockpit;
             var headMeshes = mech.GetComponentsInChildren<Renderer>(true).Where(r => r.name.EndsWith("_Head")).ToArray();
             input.BindCockpit(cockpit, headMeshes);
-            input.PlaceCockpit(settings.mechStart + mechEye, true);
+            input.MechYaw = settings.mechYaw;
+            input.PlaceCockpit(settings.mechStart + mechFacing * mechEye, true);
             var hud = viewRoot.AddComponent<SkirmishHud>();
             hud.Bind(rig.transform, camera.transform);
             hud.BindCockpit(hudMount);

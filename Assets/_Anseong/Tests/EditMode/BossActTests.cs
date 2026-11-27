@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Anseong.Tests
 {
-    /// <summary>보스전 1막(기획안 2026-11-26 4절·5절): 대검 왼쪽 베기와 오른쪽 베기(방패 없음), 튕겨난 동안에만 피해, 강한 탄, 자폭 드론, 체력 800에서 끝.</summary>
+    /// <summary>보스전 1막(기획안 2026-11-26 4절·5절): 대검 왼쪽 베기와 오른쪽 베기(방패 없음), 튕겨난 동안에만 피해, 스캔과 약점 사격, 자폭 드론, 체력 800에서 끝.</summary>
     public class BossActTests
     {
         const float Dt = 0.02f;
@@ -204,7 +204,6 @@ namespace Anseong.Tests
             Assert.AreEqual(100f, s.State.hull, "전부 막았으면 피해가 없다");
             CollectionAssert.Contains(seen, SkirmishEventKind.GruntBlocked);
             CollectionAssert.Contains(seen, SkirmishEventKind.PunchHit);
-            CollectionAssert.Contains(seen, SkirmishEventKind.ShellFired, "자폭 드론이 온다");
             Debug.Log($"[BossActTests] 자동 조작 둘이서 1막: {s.State.elapsed:0.0}초");
         }
 
@@ -240,28 +239,186 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void 강한_탄_세_발을_보스에게_잠가_쏠_수_있다()
+        public void P1의_검은_틈에_한_번_40이_들어간다()
         {
             var s = Act1();
-            Assert.AreEqual(3, s.State.missiles);
-            Play(s, 1f, mech: false, gunner: false);
-            var seen = new List<SkirmishEventKind>();
-            bool held = true;
-            for (int i = 0; i < Mathf.RoundToInt(6f / Dt) && s.State.missiles == 3 || s.State.shells.Any(x => x.kind == ShellKind.Missile); i++)
+            Assert.AreEqual(40f, s.Settings.swordDamage);
+            // 막기만 하다가 튕겨난 틈에 한 번 벤다(입력에 실린 주먹 피해 25는 쓰이지 않는다).
+            int seq = 0;
+            for (int i = 0; i < 2000 && !(s.State.gruntHp > 0f && s.State.gruntHp < 1200f); i++)
             {
-                var aim = (SkirmishSession.GruntCenter(s.State, s.Settings) - s.Settings.gunnerPost).normalized;
-                if (s.State.lockProgress >= 1f) held = false;
+                var input = SkirmishBots.Mech(s.State, s.Settings);
+                if (s.State.gruntStep == GruntStep.Stagger) seq = 1;
+                input.punchSeq = seq; input.punchDamage = 25f;
+                s.SetMech(input);
+                s.SetGunner(default);
+                s.Tick(Dt);
+            }
+            Assert.AreEqual(1160f, s.State.gruntHp);
+        }
+
+        [Test]
+        public void 맵_위_자리는_기획안_2절의_좌표와_같다()
+        {
+            var s = SkirmishSettings.BossAct1OnMap();
+            Assert.AreEqual(90f, s.mechYaw, "동쪽을 본다");
+            Assert.Less(Vector3.Distance(new Vector3(100f, 0f, 632f), s.mechStart), 0.01f);
+            Assert.Less(Vector3.Distance(new Vector3(122f, 0f, 632f), s.grunts[0].start), 0.01f, "보스는 로봇 앞 22");
+            Assert.Less(Vector3.Distance(new Vector3(111f, 50f, 595f), s.gunnerPost), 0.01f, "P2 드론 자리");
+            Assert.AreEqual(0f, s.gunnerYaw, 0.01f, "P2는 북쪽을 본다");
+            Assert.Greater(s.droneFrom.x, 200f, "자폭 드론은 동쪽에서 온다");
+        }
+
+        [Test]
+        public void 맵_위_자리에서도_1막이_끝까지_간다()
+        {
+            var s = new SkirmishSession(SkirmishSettings.BossAct1OnMap());
+            s.SetReady(true, true);
+            var seen = Play(s, 240f, until: x => x.State.phase != SkirmishPhase.Fighting);
+            Assert.AreEqual(SkirmishPhase.Cleared, s.State.phase);
+            Assert.AreEqual(100f, s.State.hull);
+            CollectionAssert.Contains(seen, SkirmishEventKind.GruntBlocked);
+            Assert.Less(Vector3.Distance(new Vector3(122f, 0f, 632f), s.State.gruntPosition), 0.5f, "보스는 제자리에 서 있다");
+        }
+
+        // ── 스캔과 약점 사격 (기획안 2026-11-27) ──
+
+        static Vector3 AtBoss(SkirmishSession s) => (SkirmishSession.GruntCenter(s.State, s.Settings) - s.Settings.gunnerPost).normalized;
+        static Vector3 AtWeakPoint(SkirmishSession s) => (s.State.weakPoint - s.Settings.gunnerPost).normalized;
+
+        /// <summary>P2 입력을 정해 주며 돌린다. P1은 아무것도 하지 않는다.</summary>
+        static List<SkirmishEventKind> Gun(SkirmishSession s, float seconds, System.Func<SkirmishSession, GunnerInput> input, System.Func<SkirmishSession, bool> until = null)
+        {
+            var seen = new List<SkirmishEventKind>();
+            for (int i = 0; i < Mathf.RoundToInt(seconds / Dt); i++)
+            {
                 s.SetMech(default);
-                s.SetGunner(new GunnerInput { aim = aim, pointer = aim, lockHeld = held });
+                s.SetGunner(input(s));
                 s.Tick(Dt);
                 seen.AddRange(s.Events.Select(e => e.Kind));
-                if (i > 2000) break;
+                if (until != null && until(s)) break;
             }
+            return seen;
+        }
+
+        /// <summary>보스가 선 뒤 버튼을 누른 채 보스를 겨눠 약점이 뜬 상태.</summary>
+        static SkirmishSession Scanned()
+        {
+            var s = Act1();
+            Gun(s, 0.1f, _ => default);
+            Gun(s, 3f, x => new GunnerInput { aim = AtBoss(x), lockHeld = true }, x => x.State.weakTimer > 0f);
+            Assert.Greater(s.State.weakTimer, 0f, "스캔이 끝나면 약점이 뜬다");
+            return s;
+        }
+
+        [Test]
+        public void 버튼을_누른_채_2초_겨누면_약점이_4초_뜬다()
+        {
+            var s = Act1();
+            Gun(s, 0.1f, _ => default);
+            var seen = Gun(s, 1.9f, x => new GunnerInput { aim = AtBoss(x), lockHeld = true });
+            Assert.AreEqual(0f, s.State.weakTimer, "2초가 되기 전에는 안 뜬다");
+            Assert.AreEqual(SkirmishSession.GruntTarget, s.State.lockTarget);
+            Assert.Greater(s.State.lockProgress, 0.9f);
+            seen = Gun(s, 0.2f, x => new GunnerInput { aim = AtBoss(x), lockHeld = true });
+            CollectionAssert.Contains(seen, SkirmishEventKind.WeakPointShown);
+            Assert.AreEqual(4f, s.State.weakTimer, 0.15f);
+
+            // 누른 채 4초가 지나면 꺼지고, 놓았다가 다시 눌러야 스캔이 된다.
+            Gun(s, 4.2f, x => new GunnerInput { aim = AtBoss(x), lockHeld = true });
+            Assert.AreEqual(0f, s.State.weakTimer);
+            Assert.AreEqual(0f, s.State.lockProgress);
+            Assert.AreEqual(3, s.State.missiles, "쏘지 않았으면 줄지 않는다");
+        }
+
+        [Test]
+        public void 조준이_벗어나면_스캔은_처음부터다()
+        {
+            var s = Act1();
+            Gun(s, 0.1f, _ => default);
+            Gun(s, 1.5f, x => new GunnerInput { aim = AtBoss(x), lockHeld = true });
+            Assert.Greater(s.State.lockProgress, 0.7f);
+            Gun(s, 0.1f, x => new GunnerInput { aim = Vector3.up, lockHeld = true });
+            Assert.AreEqual(0f, s.State.lockProgress);
+            Gun(s, 1.5f, x => new GunnerInput { aim = AtBoss(x), lockHeld = true });
+            Assert.AreEqual(0f, s.State.weakTimer, "다시 2초를 채워야 한다");
+        }
+
+        [Test]
+        public void 스캔하는_동안에는_포가_나가지_않는다()
+        {
+            var s = Act1();
+            Gun(s, 0.1f, _ => default);
+            var seen = Gun(s, 1f, x => new GunnerInput { aim = AtBoss(x), lockHeld = true, fire = true });
+            CollectionAssert.DoesNotContain(seen, SkirmishEventKind.CannonShot);
+            seen = Gun(s, 0.5f, x => new GunnerInput { aim = AtBoss(x), fire = true });
+            CollectionAssert.Contains(seen, SkirmishEventKind.CannonShot);
+        }
+
+        [Test]
+        public void 약점을_겨누고_놓으면_강한_탄이_맞아_예고를_끊고_4초_튕겨난다()
+        {
+            var s = Scanned();
+            float before = s.State.gruntHp;
+            // 약점으로 조준을 옮긴 뒤 놓는다.
+            Gun(s, 0.2f, x => new GunnerInput { aim = AtWeakPoint(x), lockHeld = true });
+            var seen = Gun(s, 3f, x => new GunnerInput { aim = AtWeakPoint(x) }, x => x.State.gruntStep == GruntStep.Stagger);
+
             Assert.AreEqual(2, s.State.missiles);
+            CollectionAssert.Contains(seen, SkirmishEventKind.MissileFired);
             CollectionAssert.Contains(seen, SkirmishEventKind.MissileHit);
             CollectionAssert.Contains(seen, SkirmishEventKind.EnemyStaggered);
             Assert.AreEqual(GruntStep.Stagger, s.State.gruntStep);
-            Assert.AreEqual(1110f, s.State.gruntHp, 0.001f);
+            Assert.AreEqual(4f, s.State.gruntTimer, 0.05f);
+            Assert.AreEqual(before - 90f, s.State.gruntHp, 0.001f);
+            Assert.AreEqual(0f, s.State.weakTimer, "쏘면 표시는 꺼진다");
+        }
+
+        [Test]
+        public void 약점을_벗어나_놓으면_한_발만_줄어든다()
+        {
+            var s = Scanned();
+            float before = s.State.gruntHp;
+            var away = Quaternion.Euler(0f, 25f, 0f) * AtWeakPoint(s);
+            Gun(s, 0.1f, x => new GunnerInput { aim = away, lockHeld = true });
+            var seen = Gun(s, 4f, x => new GunnerInput { aim = away });
+
+            Assert.AreEqual(2, s.State.missiles);
+            CollectionAssert.Contains(seen, SkirmishEventKind.MissileFired);
+            CollectionAssert.Contains(seen, SkirmishEventKind.MissileLost);
+            CollectionAssert.DoesNotContain(seen, SkirmishEventKind.MissileHit);
+            Assert.AreEqual(before, s.State.gruntHp);
+        }
+
+        [Test]
+        public void 약점은_등_어깨_무릎을_차례로_돈다()
+        {
+            var s = Act1();
+            Gun(s, 0.1f, _ => default);
+            var heights = new List<float>();
+            for (int i = 0; i < 3; i++)
+            {
+                Gun(s, 3f, x => new GunnerInput { aim = AtBoss(x), lockHeld = true }, x => x.State.weakTimer > 0f);
+                heights.Add(s.State.weakPoint.y);
+                Assert.Less(Vector3.Distance(s.State.weakPoint, SkirmishSession.GruntCenter(s.State, s.Settings)), 20f, "약점은 보스 몸에 있다");
+                // 취소하고 놓으면 쏘지 않고 다음 스캔으로.
+                Gun(s, 0.1f, x => new GunnerInput { aim = AtBoss(x), lockHeld = true, cancel = true });
+                Gun(s, 0.1f, _ => default);
+            }
+            Assert.AreEqual(3, s.State.missiles, "취소하면 쓰지 않는다");
+            Assert.Greater(heights[0], 20f, "등");
+            Assert.Greater(heights[1], 20f, "어깨");
+            Assert.Less(heights[2], 15f, "무릎");
+        }
+
+        [Test]
+        public void 혼자_할_때는_스캔이_없다()
+        {
+            var s = Act1(solo: true);
+            Gun(s, 0.1f, _ => default);
+            Gun(s, 3f, x => new GunnerInput { aim = AtBoss(x), lockHeld = true });
+            Assert.AreEqual(0f, s.State.weakTimer);
+            Assert.AreEqual(0f, s.State.lockProgress);
         }
 
         [Test]

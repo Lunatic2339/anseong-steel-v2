@@ -127,7 +127,7 @@ namespace Anseong.Skirmish
             if (cockpit != null)
             {
                 if (cockpit.gameObject.activeSelf != asPilot) cockpit.gameObject.SetActive(asPilot);
-                if (asPilot) cockpit.position = eye + Vector3.down * eyeHeight;
+                if (asPilot) cockpit.SetPositionAndRotation(eye + Vector3.down * eyeHeight, Quaternion.Euler(0f, mechYaw, 0f));
             }
             if (pilotViewSet && pilotView == asPilot) return;
             pilotView = asPilot; pilotViewSet = true;
@@ -147,7 +147,12 @@ namespace Anseong.Skirmish
 
         /// <summary>P2 자리에서 정면으로 삼는 방향(°, 0 = 북쪽). 장면 수치에서 온다.</summary>
         public float GunnerYaw { get; set; }
-        float SeatYaw => Seat == SkirmishSeat.Gunner ? GunnerYaw : 0f;
+        /// <summary>로봇이 바라보는 방향(°). 조종석과 P1의 정면이 이쪽을 본다. 장면 수치에서 온다.</summary>
+        public float MechYaw { get => mechYaw; set => mechYaw = value; }
+        [SerializeField, HideInInspector] float mechYaw;
+        float SeatYaw => Seat == SkirmishSeat.Gunner ? GunnerYaw : mechYaw;
+        /// <summary>로봇 발밑에서 조종사 눈까지(로봇 방향을 반영한 월드 벡터).</summary>
+        Vector3 MechEyeWorld => Quaternion.Euler(0f, mechYaw, 0f) * mechEye;
 
         /// <summary>운영자가 착용자 정면을 다시 맞출 때.</summary>
         public void Recenter() => recentered = false;
@@ -188,7 +193,7 @@ namespace Anseong.Skirmish
         public void Read(Vector3 mechPosition, Vector3 gunnerPost)
         {
             if (rig == null || head == null) return;
-            var anchor = Seat == SkirmishSeat.Mech ? mechPosition + mechEye : gunnerPost;
+            var anchor = Seat == SkirmishSeat.Mech ? mechPosition + MechEyeWorld : gunnerPost;
             VrActive = XRSettings.isDeviceActive && headRotation.controls.Count > 0;
 
             Vector3 rightDirection, leftDirection, move;
@@ -260,7 +265,7 @@ namespace Anseong.Skirmish
                 guardSide = right ? PilotSide.Right : PilotSide.Left;
                 punched = mouse != null && mouse.leftButton.wasPressedThisFrame && Cursor.lockState == CursorLockMode.Locked;
                 hasLastRight = false;
-                move = keyboard == null ? Vector3.zero : Quaternion.Euler(0f, yaw, 0f) * new Vector3(
+                move = keyboard == null ? Vector3.zero : Quaternion.Euler(0f, SeatYaw + yaw, 0f) * new Vector3(
                     (keyboard.dKey.isPressed ? 1 : 0) - (keyboard.aKey.isPressed ? 1 : 0), 0f,
                     (keyboard.wKey.isPressed ? 1 : 0) - (keyboard.sKey.isPressed ? 1 : 0));
                 Hide(rightHandMarker); Hide(leftHandMarker);
@@ -308,7 +313,7 @@ namespace Anseong.Skirmish
         {
             if (rig == null || Seat != SkirmishSeat.Mech) { feel.Reset(); return; }
             feel.Tick(mechPosition, dt, cameraFeel);
-            var anchor = mechPosition + mechEye + feel.Offset;
+            var anchor = mechPosition + MechEyeWorld + feel.Offset;
             rig.position = VrActive ? anchor + rigOffset : anchor;
             // 걸음·충격에는 조종석째로 같이 움직인다(눈만 움직이면 틀이 따로 논다).
             PlaceCockpit(anchor, !MenuOpen);
