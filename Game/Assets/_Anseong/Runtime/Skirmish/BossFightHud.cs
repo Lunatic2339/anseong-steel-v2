@@ -67,6 +67,9 @@ namespace Anseong.Skirmish
         public void Say(string line, float seconds = 3f) { pendingLine = line; subtitleLeft = seconds; }
         string pendingLine = "";
         bool saidGuard, saidOpen, saidDrone, saidBroken;
+        int saidAttacks;    // 처음 나올 때 대사를 한 특별한 공격(비트)
+        Image thrustLeft, thrustRight;
+        GameObject stepArrows, heliWarn;
         int saidAct;
         readonly List<Image> shieldLines = new List<Image>(), swordLines = new List<Image>();
         bool gearLost;
@@ -89,6 +92,20 @@ namespace Anseong.Skirmish
                 if (st.act > saidAct) bright = brightSeconds;
                 if (st.act == 1 && saidAct == 0) Say("지원, 보스를 스캔해라. 약점이 뜨면 강한 탄을 꽂아라. 기체, 그동안 드론을 막아 줘라.", 4f);
                 saidAct = st.act;
+            }
+            // 특별한 공격이 처음 나올 때 답을 말해 준다(대사 표 3-3 ~ 3-7).
+            bool special = st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike;
+            if (st.gruntIndex >= 0 && special && st.gruntAttack > GruntAttack.Swing && (saidAttacks & (1 << (int)st.gruntAttack)) == 0)
+            {
+                saidAttacks |= 1 << (int)st.gruntAttack;
+                switch (st.gruntAttack)
+                {
+                    case GruntAttack.Feint: Say("속임수다. 앞에서는 안 보인다. 지원, 등 뒤의 불이다. 붉으면 왼쪽, 희면 오른쪽!", 4f); break;
+                    case GruntAttack.AimHeli: Say("지원이 노려진다. 기체, 오른쪽으로 막아 줘라!", 4f); break;
+                    case GruntAttack.CallSwarm: Say("드론을 부른다. 넷이다!", 4f); break;
+                    case GruntAttack.BigSlam: Say("큰 게 온다. 지원, 등 뒤의 불 셋이다. 세어 줘라!", 4f); break;
+                    case GruntAttack.Thrust: Say("저건 못 막는다. 기체, 옆으로 비켜라!", 4f); break;
+                }
             }
             if (st.swordBroken && !saidBroken) Say("검과 방패가 나갔다. 기체, 팔로 막아라. 주먹으로 끝낸다.", 4f);
             saidBroken = st.swordBroken;
@@ -211,6 +228,31 @@ namespace Anseong.Skirmish
             arcLeft.rectTransform.localRotation = Quaternion.Euler(0f, 0f, 110f);
             arcRight.rectTransform.localRotation = Quaternion.Euler(0f, 0f, -70f);
 
+            // P1: 찌르며 돌진. 막을 수 없으니 붉은색이 아니라 노란 호와 옆으로 비키라는 화살표.
+            thrustLeft = Ring("Thrust left", root, 1240f, thinRing, yellowColor);
+            thrustRight = Ring("Thrust right", root, 1240f, thinRing, yellowColor);
+            thrustLeft.fillAmount = thrustRight.fillAmount = 0.11f;
+            thrustLeft.rectTransform.localRotation = arcLeft.rectTransform.localRotation;
+            thrustRight.rectTransform.localRotation = arcRight.rectTransform.localRotation;
+            var arrows = Group("Step arrows", root, Vector2.zero);
+            stepArrows = arrows.gameObject;
+            foreach (int sign in new[] { -1, 1 })
+            {
+                var arrow = Label(sign < 0 ? "Step left" : "Step right", arrows, new Vector2(sign * 540f, 0f), new Vector2(90f, 90f), font, 60, TextAnchor.MiddleCenter);
+                arrow.text = sign < 0 ? "◀" : "▶";
+                arrow.color = yellowColor;
+            }
+
+            // P2: 헬기가 노려질 때. 가장자리가 붉어지고 아래 화살표(숙여라).
+            var warn = Group("Heli warning", root, Vector2.zero);
+            heliWarn = warn.gameObject;
+            var warnLines = new List<Image>();
+            Frame(warnLines, "Heli edge", warn, Vector2.zero, new Vector2(1180f, 640f), 8f);
+            foreach (var line in warnLines) line.color = redColor;
+            var down = Label("Duck", warn, new Vector2(0f, -110f), new Vector2(90f, 90f), font, 60, TextAnchor.MiddleCenter);
+            down.text = "▼";
+            down.color = redColor;
+
             // P1: 조종석 왼쪽 아래의 로봇 상태판. 뒤에서 본 선 그림이라 왼팔(방패)이 왼쪽이다.
             var panel = Group("Robot status", root, new Vector2(-520f, -335f));
             statusPanel = panel.gameObject;
@@ -317,6 +359,7 @@ namespace Anseong.Skirmish
                 epoch = st.epoch; maxHp = 0f; ghost = lastFraction = 1f; ghostWait = 0f; lastHull = st.hull; openMax = 0f;
                 for (int i = 0; i < flash.Length; i++) flash[i] = 0f;
                 saidGuard = saidOpen = saidDrone = false; subtitleLeft = 0f;
+                saidAttacks = 0;
                 saidAct = st.act; saidBroken = st.swordBroken; gearLost = st.shieldBroken || st.swordBroken; gearOffIn = 0f;
             }
             Lines(st);
@@ -366,6 +409,13 @@ namespace Anseong.Skirmish
             arcLeft.enabled = telegraph && st.gruntAttack == GruntAttack.Slam;
             arcRight.enabled = telegraph && st.gruntAttack == GruntAttack.Swing;
 
+            // 특별한 공격의 표시: P1의 돌진(노란 호와 화살표), P2의 헬기 조준(붉은 가장자리와 아래 화살표).
+            bool winding = boss && (st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike);
+            bool thrust = mech && winding && st.gruntAttack == GruntAttack.Thrust;
+            thrustLeft.enabled = thrustRight.enabled = thrust;
+            Active(stepArrows, thrust);
+            Active(heliWarn, !mech && winding && st.gruntAttack == GruntAttack.AimHeli);
+
             // P1: 로봇 상태판. 선 색이 내구도다.
             Active(statusPanel, mech);
             if (mech)
@@ -397,6 +447,12 @@ namespace Anseong.Skirmish
                 reticle.anchoredPosition = aimAt;
                 heatRing.fillAmount = Mathf.Clamp01(st.cannonHeat);
                 heatRing.color = st.cannonOverheated ? redColor : whiteColor;
+                // 보스의 일격을 맞아 포가 멈춘 동안: 고리가 가득 찬 채 붉게 깜박인다.
+                if (st.cannonJam > 0f)
+                {
+                    heatRing.fillAmount = 1f;
+                    heatRing.color = new Color(redColor.r, redColor.g, redColor.b, 0.4f + 0.6f * Mathf.Abs(Mathf.Sin(now * 6f)));
+                }
                 for (int i = 0; i < shots.Length; i++) shots[i].enabled = i < st.missiles;
                 bool scanning = boss && st.weakTimer <= 0f && st.lockTarget == SkirmishSession.GruntTarget;
                 scanRing.enabled = scanning;

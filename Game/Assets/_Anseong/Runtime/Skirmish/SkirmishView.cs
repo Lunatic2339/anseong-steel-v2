@@ -200,7 +200,8 @@ namespace Anseong.Skirmish
             // 마무리 한 방에 밀려나는 것은 순간 이동하지 않고 미끄러지게 한다.
             float glide = 60f * (Application.isPlaying ? Time.deltaTime : 1f);
             grunt.position = dead ? Vector3.MoveTowards(grunt.position, st.gruntPosition, glide) : st.gruntPosition;
-            var facing = st.mech - st.gruntPosition;
+            // 로봇이 옆으로 비켜도 따라 돌지 않는다(비키기 전의 자리를 본다).
+            var facing = st.mech - Quaternion.Euler(0f, s.mechYaw, 0f) * Vector3.right * st.sideStep - st.gruntPosition;
             facing.y = 0f;
             var rotation = facing.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(facing) : grunt.rotation;
             var pose = rotation;
@@ -208,7 +209,7 @@ namespace Anseong.Skirmish
             else if (st.gruntStep == GruntStep.Stagger) pose *= Quaternion.Euler(-16f, 0f, 0f);
             else if (st.gruntStep == GruntStep.Guard) pose *= Quaternion.Euler(10f, 0f, 0f);
             grunt.rotation = pose;
-            if (bossPuppet != null) bossPuppet.Show(st.gruntStep, st.gruntAttack, st.gruntTimer, s.grunt);
+            if (bossPuppet != null) bossPuppet.Show(st.gruntStep, st.gruntAttack, st.gruntTimer, s.grunt, st.gruntSide);
 
             bool telegraph = st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike || st.gruntShell > 0f;
             // 상태를 몸의 테두리 색으로도 알린다(예고 = 붉게, 빈틈 = 희게, 가드 = 노랗게, 쓰러지면 꺼짐).
@@ -218,10 +219,14 @@ namespace Anseong.Skirmish
                 : st.gruntStep == GruntStep.Stagger || st.gruntStep == GruntStep.Frozen ? gruntRimStagger
                 : st.gruntStep == GruntStep.Guard ? gruntRimGuard : gruntRim);
             foreach (var r in gruntRenderers) r.SetPropertyBlock(rimBlock);
+            // 등 뒤의 불은 자기 색을 쓴다(위의 테두리 색을 덮어쓴다).
+            if (bossPuppet != null) bossPuppet.Signals(st.gruntStep, st.gruntAttack, st.gruntSide, st.gruntImpactIn, s.gunnerPost);
             if (gruntTelegraph != null)
             {
-                gruntTelegraph.enabled = telegraph && telegraphGlow;
-                if (telegraph && telegraphGlow)
+                // 빛 덩어리는 기본 두 공격의 것이다. 특별한 공격은 대검의 자세와 등 뒤 불로 알린다.
+                bool glow = telegraph && telegraphGlow && st.gruntAttack <= GruntAttack.Swing;
+                gruntTelegraph.enabled = glow;
+                if (glow)
                 {
                     // 내려치기는 적의 오른팔(로봇이 볼 때 왼쪽 위), 휘두르기는 적의 왼팔(로봇이 볼 때 오른쪽 옆)에서 온다.
                     bool slam = st.gruntAttack == GruntAttack.Slam;

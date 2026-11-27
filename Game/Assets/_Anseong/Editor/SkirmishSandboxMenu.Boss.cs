@@ -201,6 +201,24 @@ namespace Anseong.EditorTools
 
             var puppet = root.gameObject.AddComponent<BossPuppet>();
             puppet.Bind(swordArm, shieldArm, sword, null, BossSwordLength);
+            // 등 뒤의 불 셋(P2가 옆에서 본다. P1 눈에서는 몸통에 가려야 한다)과 헬기를 노릴 때의 붉은 선.
+            var lightMaterial = Unlit("BossBackLight", Color.white);
+            var lights = new Renderer[3];
+            for (int i = 0; i < lights.Length; i++)
+            {
+                lights[i] = Shape(PrimitiveType.Sphere, "Back light " + (i + 1), root, new Vector3(0f, height * 0.66f + i * 3f, -11f), Vector3.one * 2.4f, lightMaterial).GetComponent<Renderer>();
+                lights[i].shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+                lights[i].enabled = false;
+            }
+            var line = new GameObject("Heli aim line").AddComponent<LineRenderer>();
+            line.transform.SetParent(root, false);
+            line.sharedMaterial = Unlit("BossAimLine", new Color(1f, 0.1f, 0.05f));
+            line.useWorldSpace = true;
+            line.positionCount = 2;
+            line.widthMultiplier = 0.5f;
+            line.shadowCastingMode = UnityEngine.Rendering.ShadowCastingMode.Off;
+            line.enabled = false;
+            puppet.BindSignals(lights, line);
             puppet.Show(GruntStep.Idle, GruntAttack.Slam, 0f, new GruntSettings());
             return puppet;
         }
@@ -442,6 +460,46 @@ namespace Anseong.EditorTools
                     Pilot(false);
                     Shot("7-top", session.State.mech + new Vector3(0f, 190f, -1f) + facing * new Vector3(0f, 0f, 11f), session.State.mech + facing * new Vector3(0f, 0f, 11f), 60f);
                 }
+
+                // 특별한 공격 다섯: 그 공격만 하는 싸움을 따로 돌려 예고를 찍는다(막기만 하고 치지 않는다).
+                int round = 0;
+                void Special(params GruntAttack[] attacks)
+                {
+                    var custom = onMap ? SkirmishSettings.BossAct1OnMap() : SkirmishSettings.BossAct1();
+                    custom.grunts[0].spec.attacks = attacks;
+                    custom.droneEvery = 0f;
+                    session = new SkirmishSession(custom);
+                    // 화면 표시가 새 판으로 알아보게 판 번호를 다르게 한다.
+                    for (int i = 0; i <= round; i++) session.Reset();
+                    round++;
+                    session.SetReady(true, true);
+                    attack = false;
+                }
+                bool Telegraph(SkirmishState st, GruntAttack what) => st.gruntAttack == what && st.gruntStep == GruntStep.Hold;
+                Special(GruntAttack.Feint);
+                Until(st => Telegraph(st, GruntAttack.Feint), "속임 베기 예고(오른쪽 = 흰 불)");
+                Three("9a-feint-white");
+                Until(st => st.gruntStep == GruntStep.Idle, "속임 베기 끝");
+                Until(st => Telegraph(st, GruntAttack.Feint), "속임 베기 예고(왼쪽 = 붉은 불)");
+                Three("9a-feint-red");
+                Special(GruntAttack.AimHeli, GruntAttack.Slam);
+                Until(st => Telegraph(st, GruntAttack.AimHeli), "헬기를 노림 예고");
+                Three("9b-aim-heli");
+                Special(GruntAttack.CallSwarm, GruntAttack.Slam);
+                Until(st => Telegraph(st, GruntAttack.CallSwarm), "자폭 떼 부르기 예고");
+                Three("9c-swarm-call");
+                Until(st => st.shells.Count(x => x.kind == ShellKind.BigShell) >= 4, "자폭 떼가 뜸");
+                for (int i = 0; i < 200; i++) Tick();
+                Three("9c-swarm-coming");
+                Special(GruntAttack.BigSlam);
+                Until(st => st.gruntAttack == GruntAttack.BigSlam && st.gruntImpactIn > 1f && st.gruntImpactIn < 1.4f, "큰 내려베기 예고(불 둘)");
+                Three("9d-big-slam");
+                Special(GruntAttack.Thrust);
+                Until(st => Telegraph(st, GruntAttack.Thrust), "찌르며 돌진 예고");
+                Three("9e-thrust");
+                Until(st => st.gruntAttack == GruntAttack.Thrust && st.gruntStep == GruntStep.Stagger, "돌진이 지나침");
+                for (int i = 0; i < 5; i++) Tick();
+                Three("9e-thrust-passed");
 
                 RenderTexture.active = null;
                 camera.targetTexture = null;

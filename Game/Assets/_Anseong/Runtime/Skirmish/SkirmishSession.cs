@@ -41,6 +41,10 @@ namespace Anseong.Skirmish
         int weakIndex = -1;     // 지금(또는 마지막으로) 표시된 약점 번호. 스캔할 때마다 다음 것으로 넘어간다
         bool scanSpent;         // 약점 표시가 시간이 다 돼 꺼짐. 버튼을 놓았다가 다시 눌러야 스캔한다
         int startAct;           // 재기동 뒤에 다시 시작할 막. 0이면 처음부터
+        Vector3 home;           // 옆으로 비키기 전의 로봇 자리. 적은 이 자리를 보고 선다
+        float stepTime = -1f;   // 옆으로 한 걸음을 시작한 뒤 흐른 초. 안 하는 중이면 음수
+        int stepSign;
+        bool stepHeld;          // 스틱이 아직 옆으로 넘어가 있다(한 번 튕길 때 한 걸음만)
 
         /// <summary>P2가 없을 때 true. 돌격형의 가드가 스스로 더 빨리 풀린다.</summary>
         public bool Solo;
@@ -53,6 +57,7 @@ namespace Anseong.Skirmish
         {
             Settings = settings ?? new SkirmishSettings();
             State = NewState(1);
+            home = State.mech;
         }
 
         SkirmishState NewState(int epoch)
@@ -97,6 +102,9 @@ namespace Anseong.Skirmish
             weakIndex = -1;
             scanSpent = false;
             startAct = 0;
+            home = State.mech;
+            stepTime = -1f;
+            stepHeld = false;
         }
 
         /// <summary>재기동이 끝났을 때: 그 장면의 적과 탄을 처음으로 돌리고 로봇 내구도를 100으로. 재기동 횟수는 되돌리지 않는다. 보스전은 하던 막의 처음으로 돌아간다.</summary>
@@ -110,7 +118,7 @@ namespace Anseong.Skirmish
             st.rebootsLeft = left;
             st.mechReady = old.mechReady; st.gunnerReady = old.gunnerReady;
             st.phase = SkirmishPhase.Fighting;
-            if (Settings.restartElsewhere) st.mech = Settings.mechRestart;
+            if (Settings.restartElsewhere) st.mech = home = Settings.mechRestart;
             Emit(SkirmishEventKind.SceneRestarted, -1, st.mech, st.mech);
         }
 
@@ -208,17 +216,44 @@ namespace Anseong.Skirmish
                 bool slowing = wanted.sqrMagnitude < mechVelocity.sqrMagnitude;
                 float seconds = slowing ? s.mechStopSeconds : s.mechAccelSeconds;
                 mechVelocity = seconds <= 0f ? wanted : Vector3.MoveTowards(mechVelocity, wanted, s.mechSpeed / seconds * dt);
-                var p = st.mech + mechVelocity * dt;
+                var p = home + mechVelocity * dt;
                 Inside(s, p, out float x, out float z);
                 // 벽에 닿으면 그 방향 속도는 버린다.
                 if (x != p.x) mechVelocity.x = 0f;
                 if (z != p.z) mechVelocity.z = 0f;
-                st.mech = new Vector3(x, p.y, z);
+                home = new Vector3(x, p.y, z);
             }
+            st.sideStep = SideStep(dt, move);
+            st.mech = home + Quaternion.Euler(0f, s.mechYaw, 0f) * Vector3.right * st.sideStep;
             st.guarding = mech.guard;
             st.guardDirection = SkirmishMath.Flat(mech.guardDirection);
             st.guardSide = mech.guardSide;
             st.shieldOpen = !st.shieldBroken && !mech.shieldFolded;
+        }
+
+        /// <summary>
+        /// 옆으로 한 걸음(기획안 3절): 스틱을 왼쪽이나 오른쪽으로 튕기면 sideStepSeconds에 sideStepDistance만큼 비켰다가 sideStepHold 뒤에 제자리로 돌아온다.
+        /// 지금 비켜 있는 거리(오른쪽이 +)를 돌려준다. 한 걸음이 끝나기 전에는 다시 튕겨도 받지 않는다.
+        /// </summary>
+        float SideStep(float dt, Vector3 move)
+        {
+            var s = Settings;
+            if (s.sideStepDistance <= 0f) return 0f;
+            float lateral = SkirmishMath.Finite(move) ? Vector3.Dot(Vector3.ClampMagnitude(move, 1f), Quaternion.Euler(0f, s.mechYaw, 0f) * Vector3.right) : 0f;
+            bool flick = Mathf.Abs(lateral) > 0.6f;
+            if (stepTime < 0f && flick && !stepHeld)
+            {
+                stepTime = 0f;
+                stepSign = lateral > 0f ? 1 : -1;
+                Emit(SkirmishEventKind.SideStep, stepSign, home, home);
+            }
+            stepHeld = flick;
+            if (stepTime < 0f) return 0f;
+            stepTime += dt;
+            float go = s.sideStepSeconds, stay = s.sideStepHold;
+            if (stepTime >= go * 2f + stay) { stepTime = -1f; return 0f; }
+            float k = stepTime < go ? stepTime / go : stepTime < go + stay ? 1f : 1f - (stepTime - go - stay) / go;
+            return stepSign * s.sideStepDistance * Mathf.SmoothStep(0f, 1f, k);
         }
 
         /// <summary>갈 수 있는 곳 안에서 p와 가장 가까운 점. 범위가 여러 칸이면 그 가운데 가장 가까운 칸으로 붙는다.</summary>
@@ -289,7 +324,9 @@ namespace Anseong.Skirmish
             grunt.Solo = Solo;
             // 위태로울수록 조금 쉬워진다: 내구도가 낮으면 예고가 길어진다.
             grunt.TelegraphScale = s.lowHullBelow > 0f && st.hull < s.lowHullBelow ? s.lowHullTelegraphScale : 1f;
-            grunt.Tick(dt, st.mech, st.guarding, st.guardSide);
+            // 적은 로봇이 옆으로 비킨 것을 따라오지 않는다(비키기 전의 자리를 보고 선다).
+            grunt.Dodge = Mathf.Abs(st.sideStep);
+            grunt.Tick(dt, home, st.guarding, st.guardSide);
             if (punched) grunt.Punch(s.swordDamage > 0f && !st.swordBroken ? s.swordDamage : mech.punchDamage);
             TickDrones(dt);
             // 서 있는 적: 로봇이 정해진 선을 지나면 큰 탄을 한 번 겨눈다.
@@ -389,6 +426,8 @@ namespace Anseong.Skirmish
         void TickDrones(float dt)
         {
             if (DroneEvery <= 0f || grunt == null || !grunt.Alive || grunt.Step == GruntStep.Approach) return;
+            // P2가 보고 말해 줘야 하는 예고 중에는 띄우지 않는다.
+            if (grunt.NeedsCall) return;
             droneTimer -= dt;
             if (droneTimer > 0f) return;
             droneTimer += DroneInterval;
@@ -440,7 +479,7 @@ namespace Anseong.Skirmish
                 // 옆구리: 키의 0.55 높이에서는 P2 헬기의 기수에 가렸다(11/27 사진). 팔 아래 0.66 높이로 올렸다.
                 default: local = new Vector3(-6f, h * 0.66f, 2.5f); break;
             }
-            var forward = SkirmishMath.Flat(State.mech - grunt.Position);
+            var forward = SkirmishMath.Flat(home - grunt.Position);
             if (forward == Vector3.zero) forward = Vector3.back;
             return grunt.Position + Quaternion.LookRotation(forward) * local;
         }
@@ -571,6 +610,7 @@ namespace Anseong.Skirmish
             var st = State;
             st.gruntPosition = grunt.Position; st.gruntHp = grunt.Hp; st.gruntStep = grunt.Step;
             st.gruntTimer = grunt.Timer; st.gruntAttack = grunt.Attack; st.gruntShell = grunt.ShellWindup;
+            st.gruntSide = grunt.Side; st.gruntImpactIn = grunt.ImpactIn;
         }
 
         void OnGruntEvent(GruntEvent e)
@@ -590,6 +630,28 @@ namespace Anseong.Skirmish
                     st.hull = Mathf.Max(0f, st.hull - e.Amount);
                     Emit(SkirmishEventKind.MechHit, -1, center, MechChest);
                     break;
+                case GruntEventKind.HeliShot:
+                {
+                    // 붉은 선이 가던 P2의 얼굴로 나간다. 숨어 있지 않으면 포가 멈춘다.
+                    bool hit = !Solo && !gunner.hide;
+                    if (hit) st.cannonJam = Settings.heliJamSeconds;
+                    Emit(SkirmishEventKind.HeliShot, hit ? 1 : 0, center, Settings.gunnerPost);
+                    break;
+                }
+                case GruntEventKind.SwarmCalled:
+                {
+                    // 동쪽에서 한꺼번에: 옆으로 벌리고 조금씩 뒤로 물려서, 차례로 닿게 한다.
+                    Emit(SkirmishEventKind.SwarmCalled, st.gruntIndex, center, Settings.droneFrom);
+                    int count = Solo ? Mathf.Max(1, Settings.swarmCount / 2) : Settings.swarmCount;
+                    var from = Settings.droneFrom;
+                    var behind = (from - MechChest).normalized;
+                    var side = Vector3.Cross(Vector3.up, behind).normalized;
+                    for (int i = 0; i < count; i++)
+                        FireBigShell(from + side * ((i - (count - 1) * 0.5f) * 24f) + behind * (i * 12f));
+                    droneTimer = Mathf.Max(droneTimer, DroneInterval);
+                    break;
+                }
+                case GruntEventKind.ThrustPassed: Emit(SkirmishEventKind.ThrustPassed, st.gruntIndex, center, MechChest); break;
                 case GruntEventKind.WeaponsBroken:
                     // 보스의 일격에 방패가 부서지고 검이 부러진다. 막기 판정은 그대로고, 이후로는 주먹으로 친다.
                     st.shieldBroken = st.swordBroken = true;
@@ -759,10 +821,13 @@ namespace Anseong.Skirmish
         {
             var st = State; var s = Settings;
             st.cannonHeat = Mathf.Max(0f, st.cannonHeat - s.cannonCooling * dt);
+            st.cannonJam = Mathf.Max(0f, st.cannonJam - dt);
             if (st.cannonOverheated && st.cannonHeat <= s.cannonResumeHeat) st.cannonOverheated = false;
             cannonCooldown -= dt;
             var aim = gunner.aim;
             if (!gunner.fire || st.cannonOverheated || cannonCooldown > 0f || !SkirmishMath.Direction(ref aim)) return;
+            // 보스의 일격을 맞은 뒤에는 잠시 포가 멈춘다.
+            if (st.cannonJam > 0f) return;
             // 스캔하는 동안에는 포가 나가지 않는다.
             if (ScanMode && !Solo && gunner.lockHeld) return;
             cannonCooldown = s.cannonInterval;

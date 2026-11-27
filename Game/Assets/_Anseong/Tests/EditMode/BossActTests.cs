@@ -276,7 +276,11 @@ namespace Anseong.Tests
         [Test]
         public void 막마다_자폭_드론이_잦아진다()
         {
-            var s = Act1();
+            var settings = SkirmishSettings.BossAct1();
+            // 말이 필요한 예고 중에는 드론이 뜨지 않으니 기본 공격만 남기고 본다.
+            settings.grunts[0].acts[0].attacks = new[] { GruntAttack.Slam, GruntAttack.Swing };
+            var s = new SkirmishSession(settings);
+            s.SetReady(true, true);
             PlayUntil(s, st => st.act == 1, "2막");
             // 막기만 하고 치지 않아 2막에 머문다.
             float waited = 0f;
@@ -452,6 +456,191 @@ namespace Anseong.Tests
             Assert.AreEqual(SkirmishPhase.Cleared, s.State.phase);
             CollectionAssert.Contains(seen, SkirmishEventKind.GruntBlocked);
             Assert.Less(Vector3.Distance(new Vector3(122f, 0f, 632f), s.State.gruntPosition), 0.5f, "보스는 제자리에 서 있다");
+        }
+
+        // ── 특별한 공격 다섯 (기획안 4절의 표) ──
+
+        /// <summary>그 공격만 되풀이하는 보스. 처음 나올 때 예고가 길어지는 것은 끈다.</summary>
+        static GruntDuel Only(params GruntAttack[] attacks)
+        {
+            var spec = BossSpec();
+            spec.attacks = attacks;
+            spec.firstTimeScale = 1f;
+            return Boss(spec);
+        }
+
+        static bool Has(GruntDuel g, GruntEventKind kind) => g.Events.Any(e => e.Kind == kind);
+
+        [Test]
+        public void 속임_베기는_2초2_뒤에_오고_숨겨진_쪽으로_막아야_튕겨난다()
+        {
+            var g = Only(GruntAttack.Feint);
+            RunUntil(g, x => x.Step == GruntStep.Rise);
+            Assert.AreEqual(2.2f, g.ImpactIn, 0.03f);
+            Assert.AreEqual(PilotSide.Right, g.Side, "첫 속임 베기는 오른쪽");
+            // 틀린 쪽으로 막으면 맞는다.
+            RunUntil(g, x => x.Step == GruntStep.Recover, guarding: true, side: PilotSide.Left);
+            Assert.IsTrue(Has(g, GruntEventKind.RobotHit));
+            Assert.AreEqual(15f, g.Events.First(e => e.Kind == GruntEventKind.RobotHit).Amount);
+            // 둘째는 왼쪽. 맞는 쪽으로 막으면 튕겨난다.
+            RunUntil(g, x => x.Step == GruntStep.Rise);
+            Assert.AreEqual(PilotSide.Left, g.Side);
+            RunUntil(g, x => x.Step == GruntStep.Stagger, guarding: true, side: PilotSide.Left);
+            Assert.AreEqual(2f, g.Timer, 0.05f);
+        }
+
+        [Test]
+        public void 큰_내려베기는_딱_맞춰_막아야만_4초_틈이_난다()
+        {
+            var g = Only(GruntAttack.BigSlam);
+            // 첫째(3.0초): 처음부터 막고 있으면 피해도 틈도 없다.
+            RunUntil(g, x => x.Step == GruntStep.Rise);
+            Assert.AreEqual(3.0f, g.ImpactIn, 0.03f);
+            RunUntil(g, x => x.Step == GruntStep.Recover, guarding: true);
+            Assert.IsTrue(Has(g, GruntEventKind.Blocked));
+            Assert.IsFalse(Has(g, GruntEventKind.RobotHit));
+            // 둘째(2.4초): 못 막으면 40.
+            RunUntil(g, x => x.Step == GruntStep.Rise);
+            Assert.AreEqual(2.4f, g.ImpactIn, 0.03f);
+            RunUntil(g, x => x.Step == GruntStep.Recover);
+            Assert.AreEqual(40f, g.Events.First(e => e.Kind == GruntEventKind.RobotHit).Amount);
+            // 셋째(3.6초): 닿기 0.2초 전에 막으면 4초 튕겨난다.
+            RunUntil(g, x => x.Step == GruntStep.Rise);
+            Assert.AreEqual(3.6f, g.ImpactIn, 0.03f);
+            RunUntil(g, x => x.ImpactIn <= 0.2f);
+            RunUntil(g, x => x.Step == GruntStep.Stagger, guarding: true, side: PilotSide.Right);
+            Assert.IsTrue(Has(g, GruntEventKind.PerfectBlocked));
+            Assert.AreEqual(4f, g.Timer, 0.05f);
+        }
+
+        [Test]
+        public void 돌진은_막아도_30을_맞고_옆으로_비켜_있으면_지나쳐서_3초_멈춘다()
+        {
+            var g = Only(GruntAttack.Thrust);
+            RunUntil(g, x => x.Step == GruntStep.Rise);
+            Assert.AreEqual(1.6f, g.ImpactIn, 0.03f);
+            RunUntil(g, x => x.Step == GruntStep.Recover, guarding: true);
+            Assert.AreEqual(30f, g.Events.First(e => e.Kind == GruntEventKind.RobotHit).Amount);
+
+            g.Dodge = 8f;
+            RunUntil(g, x => x.Step == GruntStep.Stagger);
+            Assert.IsTrue(Has(g, GruntEventKind.ThrustPassed));
+            Assert.IsTrue(g.Passed);
+            Assert.AreEqual(3f, g.Timer, 0.05f);
+            Assert.AreEqual(8f, Vector3.Distance(Robot, g.Position), 0.1f, "22에서 14 나아가 로봇 자리 옆에 선다");
+            Assert.AreEqual(PunchResult.Hit, g.Punch(25f), "등을 보인 동안은 틈이다");
+            // 끝나면 제자리로 돌아온다.
+            g.Dodge = 0f;
+            RunUntil(g, x => x.Step == GruntStep.Rise);
+            Assert.AreEqual(22f, Vector3.Distance(Robot, g.Position), 0.5f);
+        }
+
+        [Test]
+        public void 헬기를_노림은_오른쪽으로_막아_주면_튕겨나고_한_번만_나온다()
+        {
+            var g = Only(GruntAttack.AimHeli, GruntAttack.Slam);
+            RunUntil(g, x => x.Step == GruntStep.Rise);
+            Assert.AreEqual(GruntAttack.AimHeli, g.Attack);
+            Assert.AreEqual(2.5f, g.ImpactIn, 0.03f);
+            RunUntil(g, x => x.Step == GruntStep.Stagger, guarding: true, side: PilotSide.Right);
+            // 그 뒤로는 내려베기만 나온다.
+            for (int i = 0; i < 3; i++)
+            {
+                RunUntil(g, x => x.Step == GruntStep.Rise);
+                Assert.AreEqual(GruntAttack.Slam, g.Attack);
+                RunUntil(g, x => x.Step == GruntStep.Recover);
+            }
+
+            var h = Only(GruntAttack.AimHeli, GruntAttack.Slam);
+            RunUntil(h, x => x.Step == GruntStep.Recover, guarding: true, side: PilotSide.Left);
+            Assert.IsTrue(Has(h, GruntEventKind.HeliShot), "왼쪽으로 막으면 헬기로 나간다");
+            Assert.IsFalse(Has(h, GruntEventKind.RobotHit));
+        }
+
+        static SkirmishSession Fight(GruntAttack[] attacks, bool solo = false)
+        {
+            var settings = SkirmishSettings.BossAct1();
+            settings.grunts[0].spec.attacks = attacks;
+            settings.grunts[0].spec.firstTimeScale = 1f;
+            settings.droneEvery = 0f;
+            var s = new SkirmishSession(settings) { Solo = solo };
+            s.SetReady(true, true);
+            return s;
+        }
+
+        [Test]
+        public void 헬기를_노린_일격은_숨지_않으면_포를_5초_멈춘다()
+        {
+            var s = Fight(new[] { GruntAttack.AimHeli, GruntAttack.Slam });
+            Play(s, 10f, mech: false, gunner: false, until: x => x.Events.Any(e => e.Kind == SkirmishEventKind.HeliShot));
+            Assert.AreEqual(5f, s.State.cannonJam, 0.05f);
+            Assert.AreEqual(100f, s.State.hull, "로봇은 피해가 없다");
+            // 멈춘 동안에는 포가 나가지 않는다.
+            var shots = Gun(s, 1f, x => new GunnerInput { fire = true, aim = AtBoss(x), pointer = AtBoss(x) });
+            CollectionAssert.DoesNotContain(shots, SkirmishEventKind.CannonShot);
+
+            var hidden = Fight(new[] { GruntAttack.AimHeli, GruntAttack.Slam });
+            Gun(hidden, 10f, x => new GunnerInput { hide = true }, x => x.Events.Any(e => e.Kind == SkirmishEventKind.HeliShot));
+            Assert.IsTrue(hidden.Events.Any(e => e.Kind == SkirmishEventKind.HeliShot));
+            Assert.AreEqual(0f, hidden.State.cannonJam, "숨으면 피한다");
+        }
+
+        [Test]
+        public void 자폭_떼는_3초_뒤에_넷이_한꺼번에_오고_혼자_할_때는_둘이다()
+        {
+            var s = Fight(new[] { GruntAttack.CallSwarm, GruntAttack.Slam });
+            var seen = Play(s, 10f, mech: false, gunner: false, until: x => x.Events.Any(e => e.Kind == SkirmishEventKind.SwarmCalled));
+            Assert.AreEqual(4, seen.Count(k => k == SkirmishEventKind.ShellFired));
+            Assert.AreEqual(4, s.State.shells.Count(x => x.kind == ShellKind.BigShell));
+            Assert.AreEqual(3.5f, s.State.elapsed, 0.2f, "자세 0.5초 뒤 예고 3초");
+
+            var solo = Fight(new[] { GruntAttack.CallSwarm, GruntAttack.Slam }, solo: true);
+            var alone = Play(solo, 10f, mech: false, gunner: false, until: x => x.Events.Any(e => e.Kind == SkirmishEventKind.SwarmCalled));
+            Assert.AreEqual(2, alone.Count(k => k == SkirmishEventKind.ShellFired));
+        }
+
+        [Test]
+        public void 스틱을_옆으로_튕기면_0초4에_8_비켰다가_1초5_뒤에_돌아온다()
+        {
+            var s = Fight(new[] { GruntAttack.Slam });
+            Play(s, 1f, mech: false, gunner: false);
+            var start = s.State.mech;
+            var boss = s.State.gruntPosition;
+            var right = Quaternion.Euler(0f, s.Settings.mechYaw, 0f) * Vector3.right;
+            float t = 0f;
+            float At(float until)
+            {
+                // 스틱은 계속 넘어가 있어도 한 걸음만 나온다.
+                for (; t < until - 1e-4f; t += Dt) { s.SetMech(new MechInput { move = right }); s.SetGunner(default); s.Tick(Dt); }
+                return Vector3.Dot(s.State.mech - start, right);
+            }
+            Assert.AreEqual(4f, At(0.2f), 0.3f, "절반쯤");
+            Assert.AreEqual(8f, At(0.4f), 0.05f);
+            Assert.AreEqual(8f, At(1.9f), 0.05f);
+            Assert.AreEqual(0f, At(2.3f), 0.05f);
+            Assert.AreEqual(0f, At(4f), 0.05f, "넘어간 채로는 다시 비키지 않는다");
+            Assert.Less(Vector3.Distance(boss, s.State.gruntPosition), 0.01f, "보스는 따라오지 않는다");
+        }
+
+        [Test]
+        public void 말이_필요한_예고_중에는_자폭_드론이_뜨지_않는다()
+        {
+            var settings = SkirmishSettings.BossAct1();
+            settings.grunts[0].spec.attacks = new[] { GruntAttack.Feint };
+            settings.droneEvery = 1f;
+            var s = new SkirmishSession(settings);
+            s.SetReady(true, true);
+            int fired = 0;
+            for (int i = 0; i < Mathf.RoundToInt(20f / Dt); i++)
+            {
+                s.SetMech(default); s.SetGunner(default);
+                bool calling = s.Grunt != null && s.Grunt.NeedsCall;
+                s.Tick(Dt);
+                bool shot = s.Events.Any(e => e.Kind == SkirmishEventKind.ShellFired);
+                if (shot) fired++;
+                if (calling && s.Grunt.NeedsCall) Assert.IsFalse(shot, "속임 베기 예고 중에 드론이 떴다");
+            }
+            Assert.Greater(fired, 0, "예고 사이에는 뜬다");
         }
 
         // ── 스캔과 약점 사격 (기획안 2026-11-27) ──

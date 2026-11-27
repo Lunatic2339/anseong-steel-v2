@@ -38,6 +38,8 @@ namespace Anseong.Skirmish
         [SerializeField, Range(0.02f, 0.5f)] float mouseSensitivity = 0.12f;
         [SerializeField, Tooltip("이 자리를 자동 조작이 대신한다(혼자 구경·자동 시험용).")] bool useBot;
         [SerializeField, Min(0.1f), Tooltip("오른손이 앞으로 이 속도(m/s)보다 빠르게 나가면 주먹.")] float punchSpeed = 1.5f;
+        [SerializeField, Min(0.05f), Tooltip("P2 숨기: 머리를 이만큼(m) 넘게 숙이면 숨은 것으로 본다.")] float hideDuck = 0.25f;
+        [SerializeField, Min(0.05f), Tooltip("P2 숨기: 머리를 옆으로 이만큼(m) 넘게 비키면 숨은 것으로 본다.")] float hideSide = 0.4f;
         [SerializeField, Min(0.05f), Tooltip("주먹과 주먹 사이 최소 간격(초).")] float punchInterval = 0.35f;
         [SerializeField, Min(0f), Tooltip("주먹 한 대의 피해(잽).")] float punchDamage = 25f;
         [SerializeField, Tooltip("P1 조종석(사람 크기, 원점 = 조종사 발밑). P1일 때만 보인다.")] Transform cockpit;
@@ -197,7 +199,7 @@ namespace Anseong.Skirmish
             VrActive = XRSettings.isDeviceActive && headRotation.controls.Count > 0;
 
             Vector3 rightDirection, leftDirection, move;
-            bool rightHeld, leftHeld, cancel, guardHeld, punched = false;
+            bool rightHeld, leftHeld, cancel, guardHeld, punched = false, hide;
             var guardSide = PilotSide.Left;
             if (VrActive)
             {
@@ -213,6 +215,9 @@ namespace Anseong.Skirmish
                     recentered = true;
                 }
                 rig.position = anchor + rigOffset;
+                // 숨기(P2): 정면을 맞췄을 때의 머리 자리에서 아래로 숙였거나 옆으로 비켰는가.
+                var lean = rig.rotation * headPosition.ReadValue<Vector3>() + rigOffset;
+                hide = lean.y < -hideDuck || Mathf.Abs(Vector3.Dot(lean, Quaternion.Euler(0f, SeatYaw, 0f) * Vector3.right)) > hideSide;
                 rightDirection = space.rotation * (Rotation(rightPointer, rightRotation) * Vector3.forward);
                 leftDirection = space.rotation * (Rotation(leftPointer, leftRotation) * Vector3.forward);
                 rightHeld = rightTrigger.ReadValue<float>() >= triggerPress;
@@ -260,6 +265,7 @@ namespace Anseong.Skirmish
                 rightHeld = mouse != null && mouse.leftButton.isPressed;
                 leftHeld = mouse != null && mouse.rightButton.isPressed;
                 cancel = keyboard != null && keyboard.cKey.isPressed;
+                hide = keyboard != null && keyboard.leftCtrlKey.isPressed;
                 bool right = keyboard != null && keyboard.eKey.isPressed;
                 guardHeld = leftHeld || right || (keyboard != null && keyboard.qKey.isPressed);
                 guardSide = right ? PilotSide.Right : PilotSide.Left;
@@ -299,7 +305,7 @@ namespace Anseong.Skirmish
                 guardSide = guardSide, punchSeq = punchSeq, punchDamage = punchDamage,
                 shieldFolded = mechArms != null && mechArms.FoldedByPilot,
             };
-            Gunner = new GunnerInput { aim = rightDirection, fire = rightHeld, pointer = leftDirection, lockHeld = leftHeld, cancel = cancel };
+            Gunner = new GunnerInput { aim = rightDirection, fire = rightHeld, pointer = leftDirection, lockHeld = leftHeld, cancel = cancel, hide = hide };
 
             Line(aimLine, rightHandMarker, rightDirection, VrActive);
             Line(pointerLine, leftHandMarker, leftDirection, VrActive);

@@ -140,6 +140,16 @@ namespace Anseong.Skirmish
         public float droneEvery;
         [Tooltip("자폭 드론이 뜨는 곳.")]
         public Vector3 droneFrom;
+        [Min(0f), Tooltip("P1이 스틱을 옆으로 튕기면 비키는 거리(m). 0 = 옆으로 한 걸음 없음.")]
+        public float sideStepDistance;
+        [Min(0.05f), Tooltip("비키는 데(돌아오는 데) 걸리는 시간(초).")]
+        public float sideStepSeconds = 0.4f;
+        [Min(0f), Tooltip("비킨 자리에 머무는 시간(초). 그 뒤 제자리로 돌아온다.")]
+        public float sideStepHold = 1.5f;
+        [Min(0f), Tooltip("보스가 헬기를 노린 일격에 맞으면 P2의 포가 멈추는 시간(초).")]
+        public float heliJamSeconds = 5f;
+        [Min(1), Tooltip("자폭 떼 부르기에 한꺼번에 오는 드론 수. 혼자 할 때는 절반.")]
+        public int swarmCount = 4;
         [Min(0f), Tooltip("막이 바뀔 때 보스가 물러서서 자세를 다시 잡는 시간(초). 그동안 서로 피해가 없다.")]
         public float actBreakSeconds = 2f;
         [Min(0f), Tooltip("검과 방패가 부서지는 순간 시간이 느려지는 길이(실제 초). 빠르기는 perfectSlowScale. 0 = 끔.")]
@@ -246,7 +256,7 @@ namespace Anseong.Skirmish
     {
         /// <summary>
         /// 보스전(기획안 2026-11-26): 보스가 22 앞에 서서 대검으로 왼쪽 베기(내려베기)와 오른쪽 베기를 한다. 방패는 없다. 튕겨난 동안에만 피해가 들어간다.
-        /// 체력 800에서 2막, 400에서 3막(검과 방패를 잃는다), 60에서 끝난다. 2·3막의 특별한 공격과 마지막 일격은 아직 없다(이름의 Act1은 1막만 있던 때의 것).
+        /// 체력 800에서 2막(속임 베기, 헬기를 노림, 자폭 떼), 400에서 3막(검과 방패를 잃고 큰 내려베기와 찌르며 돌진이 더해진다), 60에서 끝난다. 마지막 일격은 아직 없다(이름의 Act1은 1막만 있던 때의 것).
         /// 회색 상자 장면용 자리다. 로봇이 북쪽(+Z)을 본다.
         /// </summary>
         public static SkirmishSettings BossAct1() => BossAct1At(new Vector3(-350f, 0f, 450f), 0f);
@@ -270,7 +280,8 @@ namespace Anseong.Skirmish
             {
                 mechStart = mech,
                 mechYaw = yaw,
-                // 걷지 않는다(옆으로 한 걸음은 아직 없다).
+                // 걷지 않는다. 스틱을 옆으로 튕기면 8 비켰다가 돌아온다.
+                sideStepDistance = 8f,
                 mechArea = new Vector4(mech.x, mech.z, mech.x, mech.z),
                 gunnerPost = mech + facing * new Vector3(37f, 40f, 11f),
                 gunnerYaw = yaw - 90f,
@@ -294,8 +305,25 @@ namespace Anseong.Skirmish
                         start = mech + facing * new Vector3(0f, 0f, 22f), endAtHp = 60f,
                         acts = new[]
                         {
-                            new GruntAct { belowHp = 800f, droneEvery = 10f },
-                            new GruntAct { belowHp = 400f, droneEvery = 6f, breakWeapons = true },
+                            // 같은 특별한 공격이 두 번 이어지지 않게 기본 공격 사이에 끼운다. 헬기를 노림과 자폭 떼는 한 번씩만 나온다.
+                            new GruntAct
+                            {
+                                belowHp = 800f, droneEvery = 10f,
+                                attacks = new[]
+                                {
+                                    GruntAttack.Slam, GruntAttack.Feint, GruntAttack.Swing, GruntAttack.AimHeli, GruntAttack.Slam, GruntAttack.Feint,
+                                    GruntAttack.CallSwarm, GruntAttack.Swing, GruntAttack.Feint, GruntAttack.Slam, GruntAttack.Swing, GruntAttack.Feint,
+                                },
+                            },
+                            new GruntAct
+                            {
+                                belowHp = 400f, droneEvery = 6f, breakWeapons = true,
+                                attacks = new[]
+                                {
+                                    GruntAttack.Slam, GruntAttack.BigSlam, GruntAttack.Swing, GruntAttack.Thrust, GruntAttack.Feint,
+                                    GruntAttack.Slam, GruntAttack.BigSlam, GruntAttack.Swing, GruntAttack.Feint, GruntAttack.Thrust,
+                                },
+                            },
                         },
                         spec = new GruntSpec
                         {
