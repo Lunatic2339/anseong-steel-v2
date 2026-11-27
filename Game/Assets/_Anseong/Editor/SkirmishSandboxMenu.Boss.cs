@@ -272,7 +272,13 @@ namespace Anseong.EditorTools
                 }
                 var bossHud = Object.FindAnyObjectByType<BossFightHud>();
                 // 화면 표시: 자리에 맞는 것을 띄우거나(P1, P2) 밖에서 찍을 때는 숨긴다.
-                void Hud(SkirmishSeat seat, bool hide = false) => bossHud.Show(session.State, settings, seat, false, hide, "", 0.02f);
+                // 조준점과 약점 표시는 카메라가 보는 쪽을 기준으로 놓이므로, 찍을 방향으로 카메라를 먼저 돌린 뒤에 부른다.
+                void Hud(SkirmishSeat seat, bool hide = false)
+                {
+                    bossHud.Aim = Center() - settings.gunnerPost;
+                    bossHud.Show(session.State, settings, seat, false, hide, "", 0.02f);
+                }
+                void Look(Vector3 eye, Vector3 lookAt) => camera.transform.SetPositionAndRotation(eye, Quaternion.LookRotation(lookAt - eye));
                 void Until(System.Func<SkirmishState, bool> reached, string what)
                 {
                     for (int i = 0; i < 6000; i++) { Tick(); if (reached(session.State)) return; }
@@ -314,9 +320,11 @@ namespace Anseong.EditorTools
                 {
                     var mech = session.State.mech;
                     Pilot(true);
+                    Look(MechEye(), Center() + Vector3.up * 6f);
                     Hud(SkirmishSeat.Mech);
                     Shot(name + "-p1", MechEye(), Center() + Vector3.up * 6f, 90f);
                     Pilot(false);
+                    Look(settings.gunnerPost, mech + facing * new Vector3(0f, 22f, 11f));
                     Hud(SkirmishSeat.Gunner);
                     Shot(name + "-p2", settings.gunnerPost, mech + facing * new Vector3(0f, 22f, 11f), 90f);
                     Hud(SkirmishSeat.Gunner, true);

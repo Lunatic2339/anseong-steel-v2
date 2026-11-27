@@ -34,6 +34,8 @@ namespace Anseong.Skirmish
         public void BindBossHud(BossFightHud value) => bossHud = value;
         /// <summary>운영자가 착용자 정면을 다시 맞췄을 때 화면 표시도 다시 놓는다.</summary>
         public void Replace() { if (bossHud != null) bossHud.Replace(); }
+        /// <summary>P2가 겨누는 방향(보스전 화면 표시의 조준점 자리).</summary>
+        public Vector3 GunnerAim { set { if (bossHud != null) bossHud.Aim = value; } }
 
         void Build()
         {
