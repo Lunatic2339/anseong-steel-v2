@@ -29,6 +29,7 @@ namespace Anseong.Skirmish
         [SerializeField, Tooltip("로봇 내구도가 이 비율 아래면 상태판이 노란색.")] float warnBelow = 0.6f;
         [SerializeField, Tooltip("로봇 내구도가 이 비율 아래면 상태판이 붉게 깜빡인다.")] float dangerBelow = 0.3f;
         [SerializeField, Min(0f), Tooltip("맞은 부위가 번쩍이는 시간(초).")] float flashSeconds = 0.3f;
+        [SerializeField, Min(0f), Tooltip("잃은 방패와 검이 붉게 남아 있다가 꺼지는 시간(초).")] float gearOffSeconds = 1.5f;
         [SerializeField, Min(0f), Tooltip("맞았을 때 화면 표시가 흔들리는 폭(캔버스 칸). 시야는 흔들지 않는다.")] float shake = 10f;
         [SerializeField] Color redColor = new Color(0.86f, 0.12f, 0.08f);
         [SerializeField] Color yellowColor = new Color(1f, 0.8f, 0.15f);
@@ -65,7 +66,11 @@ namespace Anseong.Skirmish
         /// <summary>사령관 대사 한 줄을 두 사람 모두에게 띄운다.</summary>
         public void Say(string line, float seconds = 3f) { pendingLine = line; subtitleLeft = seconds; }
         string pendingLine = "";
-        bool saidGuard, saidOpen, saidDrone;
+        bool saidGuard, saidOpen, saidDrone, saidBroken;
+        int saidAct;
+        readonly List<Image> shieldLines = new List<Image>(), swordLines = new List<Image>();
+        bool gearLost;
+        float gearOffIn;
 
         /// <summary>1막에서 이미 일어나는 일에 붙는 사령관 대사(기획안 대사 표 1-1, 3-1, 3-2). 상태만 보고 띄우므로 두 PC에서 같이 나온다.</summary>
         void Lines(SkirmishState st)
@@ -78,6 +83,15 @@ namespace Anseong.Skirmish
             if (!saidDrone)
                 foreach (var shell in st.shells)
                     if (shell.kind == ShellKind.BigShell) { saidDrone = true; Say("동쪽에서 자폭 드론. 지원, 쏴서 떨어뜨려라."); break; }
+            // 막이 바뀔 때(대사 표 3-12, 3-13). 체력 줄도 같이 밝힌다.
+            if (st.act != saidAct)
+            {
+                if (st.act > saidAct) bright = brightSeconds;
+                if (st.act == 1 && saidAct == 0) Say("지원, 보스를 스캔해라. 약점이 뜨면 강한 탄을 꽂아라. 기체, 그동안 드론을 막아 줘라.", 4f);
+                saidAct = st.act;
+            }
+            if (st.swordBroken && !saidBroken) Say("검과 방패가 나갔다. 기체, 팔로 막아라. 주먹으로 끝낸다.", 4f);
+            saidBroken = st.swordBroken;
         }
 
         Image Box(string name, Transform parent, Vector2 position, Vector2 size, Color color)
@@ -217,9 +231,12 @@ namespace Anseong.Skirmish
             Piece(Part.Head, new Vector2(0f, 72f), new Vector2(24f, 22f));
             Piece(Part.Body, new Vector2(0f, 30f), new Vector2(46f, 52f));
             Piece(Part.LeftArm, new Vector2(-37f, 30f), new Vector2(14f, 52f));
+            int before = partLines[(int)Part.LeftArm].Count;
             Piece(Part.LeftArm, new Vector2(-58f, 22f), new Vector2(12f, 66f), false);   // 방패
+            shieldLines.AddRange(partLines[(int)Part.LeftArm].GetRange(before, partLines[(int)Part.LeftArm].Count - before));
             Piece(Part.RightArm, new Vector2(37f, 30f), new Vector2(14f, 52f));
-            partLines[(int)Part.RightArm].Add(Box("Sword", panel, new Vector2(56f, 48f), new Vector2(4f, 84f), whiteColor));   // 검
+            swordLines.Add(Box("Sword", panel, new Vector2(56f, 48f), new Vector2(4f, 84f), whiteColor));   // 검
+            partLines[(int)Part.RightArm].AddRange(swordLines);
             Piece(Part.Legs, new Vector2(-12f, -42f), new Vector2(16f, 76f));
             Piece(Part.Legs, new Vector2(12f, -42f), new Vector2(16f, 76f), false);
 
@@ -300,6 +317,7 @@ namespace Anseong.Skirmish
                 epoch = st.epoch; maxHp = 0f; ghost = lastFraction = 1f; ghostWait = 0f; lastHull = st.hull; openMax = 0f;
                 for (int i = 0; i < flash.Length; i++) flash[i] = 0f;
                 saidGuard = saidOpen = saidDrone = false; subtitleLeft = 0f;
+                saidAct = st.act; saidBroken = st.swordBroken; gearLost = st.shieldBroken || st.swordBroken; gearOffIn = 0f;
             }
             Lines(st);
 
@@ -343,7 +361,8 @@ namespace Anseong.Skirmish
                 : Vector2.zero;
 
             // P1: 막을 쪽. 보스가 칼을 드는 동안 그쪽 가장자리에 붉은 호.
-            bool telegraph = mech && boss && (st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike);
+            // 2막부터는 P2가 불러 줘야 한다(속임 베기). 1막에서만 보여 준다.
+            bool telegraph = mech && boss && st.act == 0 && (st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike);
             arcLeft.enabled = telegraph && st.gruntAttack == GruntAttack.Slam;
             arcRight.enabled = telegraph && st.gruntAttack == GruntAttack.Swing;
 
@@ -360,6 +379,13 @@ namespace Anseong.Skirmish
                     flash[i] -= dt;
                     partFlash[i].enabled = flash[i] > 0f;
                 }
+                // 잃은 방패와 검은 붉게 됐다가 꺼진다.
+                bool lost = st.shieldBroken || st.swordBroken;
+                if (lost && !gearLost) gearOffIn = gearOffSeconds;
+                gearLost = lost;
+                gearOffIn -= dt;
+                foreach (var line in shieldLines) { line.enabled = !st.shieldBroken || gearOffIn > 0f; if (st.shieldBroken) line.color = redColor; }
+                foreach (var line in swordLines) { line.enabled = !st.swordBroken || gearOffIn > 0f; if (st.swordBroken) line.color = redColor; }
             }
 
             // P2: 조준점과 그 둘레.

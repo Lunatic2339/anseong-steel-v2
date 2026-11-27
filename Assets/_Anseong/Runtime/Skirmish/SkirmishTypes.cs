@@ -79,6 +79,10 @@ namespace Anseong.Skirmish
         SceneRestarted,
         /// <summary>P2의 스캔이 끝나 보스의 약점이 표시됨. To가 약점 자리.</summary>
         WeakPointShown,
+        /// <summary>보스전의 막이 바뀜. Id가 새 막(1 = 2막, 2 = 3막). 로봇 내구도가 가득 찬다.</summary>
+        ActChanged,
+        /// <summary>오른팔 검이 부러짐. 이후로는 주먹으로 친다. 방패도 같이 부서지면 ShieldBroken이 같이 나온다.</summary>
+        SwordBroken,
     }
 
     /// <summary>한 틱에 일어난 일. 화면·소리·진동이 이것을 보고 반응한다.</summary>
@@ -139,6 +143,10 @@ namespace Anseong.Skirmish
         public bool shieldOpen = true;
         /// <summary>차폐판이 부서졌다(장면 6). 막기 판정은 그대로다.</summary>
         public bool shieldBroken;
+        /// <summary>오른팔 검이 부러졌다(보스 3막). 이후로는 입력에 실린 주먹 피해를 쓴다.</summary>
+        public bool swordBroken;
+        /// <summary>맞붙은 적(보스)과의 싸움이 지금 몇 막인가. 0 = 1막.</summary>
+        public int act;
         /// <summary>딱 맞춰 막은 뒤 느린 시간이 끝날 때까지 남은 실제 초. 0이면 평소 속도.</summary>
         public float slowMotion;
 

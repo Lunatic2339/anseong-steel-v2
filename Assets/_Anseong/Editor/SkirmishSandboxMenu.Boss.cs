@@ -119,7 +119,7 @@ namespace Anseong.EditorTools
         }
 
         /// <summary>우리 로봇의 오른손에 임시 검(날 길이 14)을 붙인다. 유진의 검 모델이 오면 대체한다. 팔 뼈가 없으면 아무것도 하지 않는다.</summary>
-        static void RobotSword(Transform mech)
+        static void RobotSword(Transform mech, SkirmishMechArms arms)
         {
             if (!ArmBones(mech, false, out var arm)) return;
             var along = arm.hand.TransformDirection(arm.fistForwardLocal).normalized;
@@ -128,6 +128,7 @@ namespace Anseong.EditorTools
             var blade = Box("Robot sword (임시)", null, Vector3.zero, new Vector3(0.35f, 1.6f, 14f), steel);
             blade.SetPositionAndRotation(arm.hand.position + along * 7.5f, Quaternion.LookRotation(along, Vector3.up));
             blade.SetParent(arm.hand, true);
+            arms.BindSword(blade.GetComponent<Renderer>());
         }
 
         static Transform BossBone(Transform[] all, string prefix) =>
@@ -288,7 +289,7 @@ namespace Anseong.EditorTools
                 var holoHud = Object.FindAnyObjectByType<MechHoloHud>();
                 var skins = Object.FindObjectsByType<SkinnedMeshRenderer>(FindObjectsInactive.Include, FindObjectsSortMode.None);
 
-                // 자폭 드론이 뜨는 12초까지는 막기만 한다(자동 조작이 다 하면 12초에 1막이 끝나 버린다).
+                // 자폭 드론이 뜨는 12초까지는 막기만 한다(자동 조작이 다 하면 12초에 1막이 지나가 버린다).
                 bool attack = false;
                 void Tick()
                 {
@@ -412,7 +413,16 @@ namespace Anseong.EditorTools
                     session.Tick(0.02f);
                 }
                 attack = true;
-                Until(st => st.phase == SkirmishPhase.Cleared, "1막 끝");
+                // 막 전환: 2막에 들어가 물러선 순간, 3막에 들어가며 검·방패를 부수는 일격, 맨손이 된 뒤, 싸움 끝.
+                Until(st => st.act == 1, "2막 시작");
+                for (int i = 0; i < 25; i++) Tick();
+                Three("6a-act2-regroup");
+                Until(st => st.act == 2 && st.gruntStep == GruntStep.Hold, "검과 방패를 부수는 일격의 예고");
+                Three("6b-act3-breaker");
+                Until(st => st.swordBroken, "검과 방패를 잃음");
+                for (int i = 0; i < 10; i++) Tick();
+                Three("6c-act3-bare");
+                Until(st => st.phase == SkirmishPhase.Cleared, "싸움 끝");
                 Three("6-act-end");
                 // P2의 헬기를 밖에서 본 모습과, 사수 자리에서 정면·아래를 본 모습(헬기를 켰을 때만).
                 if (UseHelicopter)

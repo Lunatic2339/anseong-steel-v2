@@ -140,6 +140,10 @@ namespace Anseong.Skirmish
         public float droneEvery;
         [Tooltip("자폭 드론이 뜨는 곳.")]
         public Vector3 droneFrom;
+        [Min(0f), Tooltip("막이 바뀔 때 보스가 물러서서 자세를 다시 잡는 시간(초). 그동안 서로 피해가 없다.")]
+        public float actBreakSeconds = 2f;
+        [Min(0f), Tooltip("검과 방패가 부서지는 순간 시간이 느려지는 길이(실제 초). 빠르기는 perfectSlowScale. 0 = 끔.")]
+        public float breakSlowSeconds = 0.4f;
 
         [Header("고로 (B08)")]
         public Vector3 furnacePoint = new Vector3(100f, 45f, 715f);
@@ -241,7 +245,8 @@ namespace Anseong.Skirmish
     public partial class SkirmishSettings
     {
         /// <summary>
-        /// 보스전 1막(기획안 2026-11-26): 보스가 22 앞에 서서 대검으로 왼쪽 베기(내려베기)와 오른쪽 베기만 한다. 방패는 없다. 튕겨난 동안에만 피해가 들어가고, 체력 800에서 끝난다.
+        /// 보스전(기획안 2026-11-26): 보스가 22 앞에 서서 대검으로 왼쪽 베기(내려베기)와 오른쪽 베기를 한다. 방패는 없다. 튕겨난 동안에만 피해가 들어간다.
+        /// 체력 800에서 2막, 400에서 3막(검과 방패를 잃는다), 60에서 끝난다. 2·3막의 특별한 공격과 마지막 일격은 아직 없다(이름의 Act1은 1막만 있던 때의 것).
         /// 회색 상자 장면용 자리다. 로봇이 북쪽(+Z)을 본다.
         /// </summary>
         public static SkirmishSettings BossAct1() => BossAct1At(new Vector3(-350f, 0f, 450f), 0f);
@@ -271,7 +276,7 @@ namespace Anseong.Skirmish
                 gunnerYaw = yaw - 90f,
                 // 2026-11-27 선우 확정: 높이 40, 기수 15° 숙임. 수평이면 계기판과 기수가 싸움을 가린다.
                 gunnerPitch = 15f,
-                // 우리 로봇은 왼팔 방패와 오른팔 검으로 시작한다(3막에서 잃는 것은 아직 없다).
+                // 우리 로봇은 왼팔 방패와 오른팔 검으로 시작한다. 3막에 들어갈 때 둘 다 잃는다.
                 swordDamage = 40f,
                 missiles = 3,
                 rangedEnemies = false,
@@ -286,7 +291,12 @@ namespace Anseong.Skirmish
                 {
                     new GruntWave
                     {
-                        start = mech + facing * new Vector3(0f, 0f, 22f), endAtHp = 800f,
+                        start = mech + facing * new Vector3(0f, 0f, 22f), endAtHp = 60f,
+                        acts = new[]
+                        {
+                            new GruntAct { belowHp = 800f, droneEvery = 10f },
+                            new GruntAct { belowHp = 400f, droneEvery = 6f, breakWeapons = true },
+                        },
                         spec = new GruntSpec
                         {
                             hp = 1200f, soloHp = 900f,
@@ -301,9 +311,25 @@ namespace Anseong.Skirmish
         }
     }
 
+    /// <summary>보스전의 둘째 막부터, 막 하나의 설정.</summary>
+    [Serializable]
+    public class GruntAct
+    {
+        [Min(1f), Tooltip("체력이 이 값까지 내려가면 이 막이 시작된다. 한 방에 넘겨도 체력은 여기서 멈춘다. 혼자 할 때는 체력 비율만큼 낮아진다.")]
+        public float belowHp = 1f;
+        [Min(0f), Tooltip("이 막에서 자폭 드론이 오는 간격(초). 0이면 droneEvery 그대로.")]
+        public float droneEvery;
+        [Tooltip("이 막의 공격 순서. 비어 있으면 앞의 것을 그대로 쓴다.")]
+        public GruntAttack[] attacks = new GruntAttack[0];
+        [Tooltip("이 막에 들어갈 때 물러서는 대신 한 번 크게 내려쳐 로봇의 검과 방패를 부순다(피해 없음).")]
+        public bool breakWeapons;
+    }
+
     [Serializable]
     public class GruntWave
     {
+        [Tooltip("둘째 막부터 차례로. 비어 있으면 막이 하나다.")]
+        public GruntAct[] acts = new GruntAct[0];
         [Min(0f), Tooltip("체력이 이 값까지 내려가면 이 적과의 싸움을 끝낸다(보스전의 한 막). 0이면 쓰러질 때까지. 혼자 할 때는 체력 비율만큼 낮아진다.")]
         public float endAtHp;
         public Vector3 start;

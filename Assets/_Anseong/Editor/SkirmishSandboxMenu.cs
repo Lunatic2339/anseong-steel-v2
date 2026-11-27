@@ -400,7 +400,7 @@ namespace Anseong.EditorTools
             var mech = new GameObject("Mech 35m").transform;
             var mechArms = Robot(mech, out var mechEye);
             LastMechEye = mechEye;
-            if (mechArms != null && settings.swordDamage > 0f) RobotSword(mech);
+            if (mechArms != null && settings.swordDamage > 0f) RobotSword(mech, mechArms);
             Transform rightArm = null, leftArm = null;
             if (mechArms == null)
             {

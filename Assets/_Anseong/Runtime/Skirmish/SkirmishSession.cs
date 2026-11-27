@@ -40,6 +40,7 @@ namespace Anseong.Skirmish
         float droneTimer;       // 다음 자폭 드론까지 남은 초
         int weakIndex = -1;     // 지금(또는 마지막으로) 표시된 약점 번호. 스캔할 때마다 다음 것으로 넘어간다
         bool scanSpent;         // 약점 표시가 시간이 다 돼 꺼짐. 버튼을 놓았다가 다시 눌러야 스캔한다
+        int startAct;           // 재기동 뒤에 다시 시작할 막. 0이면 처음부터
 
         /// <summary>P2가 없을 때 true. 돌격형의 가드가 스스로 더 빨리 풀린다.</summary>
         public bool Solo;
@@ -95,14 +96,16 @@ namespace Anseong.Skirmish
             droneTimer = 0f;
             weakIndex = -1;
             scanSpent = false;
+            startAct = 0;
         }
 
-        /// <summary>재기동이 끝났을 때: 그 장면의 적과 탄을 처음으로 돌리고 로봇 내구도를 100으로. 재기동 횟수는 되돌리지 않는다.</summary>
+        /// <summary>재기동이 끝났을 때: 그 장면의 적과 탄을 처음으로 돌리고 로봇 내구도를 100으로. 재기동 횟수는 되돌리지 않는다. 보스전은 하던 막의 처음으로 돌아간다.</summary>
         void RestartScene()
         {
             var old = State;
             int left = old.rebootsLeft;
             Reset();
+            startAct = old.act;
             var st = State;
             st.rebootsLeft = left;
             st.mechReady = old.mechReady; st.gunnerReady = old.gunnerReady;
@@ -272,7 +275,7 @@ namespace Anseong.Skirmish
                     grunt = new GruntDuel(wave.start, wave.spec, s.grunt, Solo);
                     st.gruntIndex = nextWave++;
                     waveShellDone = false;
-                    droneTimer = DroneInterval;
+                    StartActs();
                     // 같이 출발하는 적은 35 거리에서 기다린다. 혼자 할 때는 앞의 적이 쓰러진 뒤에 따로 출발한다.
                     if (!Solo && nextWave < s.grunts.Length && s.grunts[nextWave].withPrevious)
                     {
@@ -287,7 +290,7 @@ namespace Anseong.Skirmish
             // 위태로울수록 조금 쉬워진다: 내구도가 낮으면 예고가 길어진다.
             grunt.TelegraphScale = s.lowHullBelow > 0f && st.hull < s.lowHullBelow ? s.lowHullTelegraphScale : 1f;
             grunt.Tick(dt, st.mech, st.guarding, st.guardSide);
-            if (punched) grunt.Punch(s.swordDamage > 0f ? s.swordDamage : mech.punchDamage);
+            if (punched) grunt.Punch(s.swordDamage > 0f && !st.swordBroken ? s.swordDamage : mech.punchDamage);
             TickDrones(dt);
             // 서 있는 적: 로봇이 정해진 선을 지나면 큰 탄을 한 번 겨눈다.
             float line = s.grunts[st.gruntIndex].shellWhenRobotPassesZ;
@@ -300,16 +303,92 @@ namespace Anseong.Skirmish
             {
                 if (!ShellEvent(grunt, st.gruntIndex, e)) OnGruntEvent(e);
             }
+            // 막이 바뀌며 시작한 일(검·방패를 부수는 일격의 예고)도 같은 틱에 알린다.
+            int seen = grunt.Events.Count;
+            if (NextAct())
+                for (int i = seen; i < grunt.Events.Count; i++) OnGruntEvent(grunt.Events[i]);
             CopyGrunt();
             TickBack(dt);
         }
 
-        float DroneInterval => Settings.droneEvery * (Solo ? 2f : 1f);
+        /// <summary>지금 막의 자폭 드론 간격. 0이면 안 온다.</summary>
+        float DroneEvery
+        {
+            get
+            {
+                var st = State;
+                var acts = st.gruntIndex >= 0 ? Settings.grunts[st.gruntIndex].acts : null;
+                bool own = acts != null && st.act > 0 && st.act <= acts.Length && acts[st.act - 1].droneEvery > 0f;
+                return own ? acts[st.act - 1].droneEvery : Settings.droneEvery;
+            }
+        }
+
+        float DroneInterval => DroneEvery * (Solo ? 2f : 1f);
+
+        /// <summary>그 번호의 막이 시작되는 체력. 혼자 할 때는 체력이 낮게 시작하므로 같은 비율로 낮춘다.</summary>
+        float ActHp(int index)
+        {
+            var wave = Settings.grunts[State.gruntIndex];
+            return wave.acts[index].belowHp * grunt.MaxHp / Mathf.Max(1f, wave.spec.hp);
+        }
+
+        /// <summary>적이 새로 나왔을 때: 막을 처음으로(재기동 뒤면 하던 막으로) 맞춘다. 3막부터 다시 하면 검과 방패는 이미 없다.</summary>
+        void StartActs()
+        {
+            var st = State;
+            var acts = Settings.grunts[st.gruntIndex].acts;
+            st.act = 0;
+            if (startAct > 0 && acts != null && acts.Length > 0)
+            {
+                st.act = Mathf.Min(startAct, acts.Length);
+                grunt.StartAt(ActHp(st.act - 1));
+                for (int i = 0; i < st.act; i++)
+                    if (acts[i].breakWeapons) { st.shieldBroken = st.swordBroken = true; st.shieldOpen = false; }
+            }
+            startAct = 0;
+            ApplyAct();
+        }
+
+        /// <summary>지금 막의 공격 순서, 체력이 멈추는 선, 드론 간격을 적용한다.</summary>
+        void ApplyAct()
+        {
+            var st = State;
+            var wave = Settings.grunts[st.gruntIndex];
+            var acts = wave.acts;
+            bool more = acts != null && st.act < acts.Length;
+            if (acts != null && st.act > 0 && st.act <= acts.Length && acts[st.act - 1].attacks != null && acts[st.act - 1].attacks.Length > 0)
+                grunt.SetAttacks(acts[st.act - 1].attacks);
+            // 한 방에 선을 넘겨도 체력은 다음 막의 선(마지막 막은 싸움이 끝나는 선)에서 멈춘다.
+            grunt.HpFloor = more ? ActHp(st.act) : wave.endAtHp * grunt.MaxHp / Mathf.Max(1f, wave.spec.hp);
+            droneTimer = DroneInterval;
+        }
+
+        /// <summary>
+        /// 체력이 다음 막의 선까지 내려갔으면 막을 넘긴다: 로봇 내구도를 가득 채우고, 날아오던 드론과 약점 표시를 치우고,
+        /// 보스는 하던 공격을 끊고 물러서서 자세를 다시 잡는다(검과 방패를 부수는 막이면 그 일격을 시작한다). 넘겼으면 true.
+        /// </summary>
+        bool NextAct()
+        {
+            var st = State; var s = Settings;
+            if (grunt == null || !grunt.Alive || st.gruntIndex < 0 || grunt.Step == GruntStep.Approach) return false;
+            var acts = s.grunts[st.gruntIndex].acts;
+            if (acts == null || st.act >= acts.Length || grunt.Hp > ActHp(st.act)) return false;
+            var act = acts[st.act];
+            st.act++;
+            st.hull = s.mechHull;
+            st.shells.RemoveAll(x => x.kind == ShellKind.BigShell);
+            st.weakTimer = 0f; st.lockTarget = -1; st.lockProgress = 0f;
+            if (act.breakWeapons && !st.swordBroken) grunt.BeginBreaker(); else grunt.Regroup(s.actBreakSeconds);
+            ApplyAct();
+            var center = grunt.Position + Vector3.up * (s.gruntHeight * 0.5f);
+            Emit(SkirmishEventKind.ActChanged, st.act, center, MechChest);
+            return true;
+        }
 
         /// <summary>맞붙은 동안 자폭 드론이 하나씩 로봇 가슴으로 온다. 큰 탄과 같은 규칙이다(P2가 2발로 요격, P1이 막으면 피해 없음).</summary>
         void TickDrones(float dt)
         {
-            if (Settings.droneEvery <= 0f || grunt == null || !grunt.Alive || grunt.Step == GruntStep.Approach) return;
+            if (DroneEvery <= 0f || grunt == null || !grunt.Alive || grunt.Step == GruntStep.Approach) return;
             droneTimer -= dt;
             if (droneTimer > 0f) return;
             droneTimer += DroneInterval;
@@ -335,7 +414,8 @@ namespace Anseong.Skirmish
             return true;
         }
 
-        bool GruntLockable => grunt != null && grunt.Alive && !actEnded && grunt.Spec.strongShotTarget && grunt.Step != GruntStep.Approach;
+        bool GruntLockable => grunt != null && grunt.Alive && !actEnded && grunt.Spec.strongShotTarget && grunt.Step != GruntStep.Approach
+                              && grunt.Step != GruntStep.Regroup && !grunt.Breaker;
 
         /// <summary>강한 탄이 잠글 수 있는 것 가운데 지시선이 처음 닿는 것. 없으면 -1.</summary>
         int LockOnRay(Vector3 origin, Vector3 direction)
@@ -509,6 +589,14 @@ namespace Anseong.Skirmish
                 case GruntEventKind.RobotHit:
                     st.hull = Mathf.Max(0f, st.hull - e.Amount);
                     Emit(SkirmishEventKind.MechHit, -1, center, MechChest);
+                    break;
+                case GruntEventKind.WeaponsBroken:
+                    // 보스의 일격에 방패가 부서지고 검이 부러진다. 막기 판정은 그대로고, 이후로는 주먹으로 친다.
+                    st.shieldBroken = st.swordBroken = true;
+                    st.shieldOpen = false;
+                    st.slowMotion = Settings.breakSlowSeconds;
+                    Emit(SkirmishEventKind.ShieldBroken, -1, center, MechChest);
+                    Emit(SkirmishEventKind.SwordBroken, -1, center, MechGun);
                     break;
                 case GruntEventKind.PunchHit: Emit(SkirmishEventKind.PunchHit, st.gruntIndex, MechChest, center); break;
                 case GruntEventKind.PunchBounced: Emit(SkirmishEventKind.PunchBounced, st.gruntIndex, MechChest, center); break;

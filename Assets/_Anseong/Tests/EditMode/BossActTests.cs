@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Anseong.Tests
 {
-    /// <summary>보스전 1막(기획안 2026-11-26 4절·5절): 대검 왼쪽 베기와 오른쪽 베기(방패 없음), 튕겨난 동안에만 피해, 스캔과 약점 사격, 자폭 드론, 체력 800에서 끝.</summary>
+    /// <summary>보스전 1막(기획안 2026-11-26 4절·5절): 대검 왼쪽 베기와 오른쪽 베기(방패 없음), 튕겨난 동안에만 피해, 스캔과 약점 사격, 자폭 드론. 체력 800에서 2막, 400에서 3막(검과 방패를 잃음), 60에서 끝.</summary>
     public class BossActTests
     {
         const float Dt = 0.02f;
@@ -192,19 +192,192 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void 두_사람이_1막을_끝까지_한다()
+        public void 두_사람이_세_막을_끝까지_한다()
         {
             var s = Act1();
-            var seen = Play(s, 240f, until: x => x.State.phase != SkirmishPhase.Fighting);
+            var seen = Play(s, 900f, until: x => x.State.phase != SkirmishPhase.Fighting);
 
             Assert.AreEqual(SkirmishPhase.Cleared, s.State.phase);
-            Assert.LessOrEqual(s.State.gruntHp, 800f, "체력 800에서 1막이 끝난다");
-            Assert.Greater(s.State.gruntHp, 700f);
+            Assert.AreEqual(60f, s.State.gruntHp, "체력 60에서 끝난다");
+            Assert.AreEqual(2, s.State.act, "3막까지 갔다");
             Assert.AreNotEqual(GruntStep.Dead, s.State.gruntStep, "보스는 쓰러지지 않고 남아 있다");
-            Assert.AreEqual(100f, s.State.hull, "전부 막았으면 피해가 없다");
+            Assert.AreEqual(2, seen.Count(k => k == SkirmishEventKind.ActChanged));
+            Assert.AreEqual(1, seen.Count(k => k == SkirmishEventKind.SwordBroken));
             CollectionAssert.Contains(seen, SkirmishEventKind.GruntBlocked);
             CollectionAssert.Contains(seen, SkirmishEventKind.PunchHit);
-            Debug.Log($"[BossActTests] 자동 조작 둘이서 1막: {s.State.elapsed:0.0}초");
+            Debug.Log($"[BossActTests] 자동 조작 둘이서 세 막: {s.State.elapsed:0.0}초, 남은 내구도 {s.State.hull:0}");
+        }
+
+        // ── 막 전환 (기획안 2026-11-26 4절, 넘어가는 순간은 2026-11-27 선우 확인) ──
+
+        static void PlayUntil(SkirmishSession s, System.Func<SkirmishState, bool> until, string what, bool mech = true)
+        {
+            Play(s, 900f, mech: mech, until: x => until(x.State));
+            Assert.IsTrue(until(s.State), "도달하지 못함: " + what);
+        }
+
+        [Test]
+        public void 한_방에_선을_넘겨도_체력은_그_선에서_멈춘다()
+        {
+            var g = Boss();
+            g.HpFloor = 800f;
+            RunUntil(g, x => x.Step == GruntStep.Stagger, guarding: true);
+            g.Punch(1000f);
+            Assert.AreEqual(800f, g.Hp);
+            Assert.IsTrue(g.Alive);
+        }
+
+        [Test]
+        public void 체력_800에서_2막이_되고_내구도가_100으로_돌아온다()
+        {
+            var s = Act1();
+            // 처음 몇 초는 막지 않아 내구도를 깎아 둔다.
+            Play(s, 6f, mech: false, gunner: false);
+            Assert.Less(s.State.hull, 100f);
+            PlayUntil(s, st => st.act == 1, "2막");
+
+            Assert.AreEqual(800f, s.State.gruntHp, "넘치는 피해는 버린다");
+            Assert.AreEqual(100f, s.State.hull);
+            Assert.AreEqual(GruntStep.Regroup, s.State.gruntStep);
+            Assert.AreEqual(2f, s.State.gruntTimer, 0.05f, "2초 물러선다");
+            Assert.IsFalse(s.State.shells.Any(x => x.kind == ShellKind.BigShell), "날아오던 드론은 치운다");
+            Assert.IsFalse(s.State.swordBroken);
+        }
+
+        [Test]
+        public void 물러서는_동안에는_서로_피해가_없고_끝나면_다시_싸운다()
+        {
+            var s = Act1();
+            PlayUntil(s, st => st.act == 1, "2막");
+            var seen = new List<SkirmishEventKind>();
+            float far = 0f;
+            int seq = 1000;
+            for (int i = 0; i < Mathf.RoundToInt(1.9f / Dt); i++)
+            {
+                // 막지 않고 계속 벤다.
+                s.SetMech(new MechInput { punchSeq = ++seq, punchDamage = 25f });
+                var aim = (SkirmishSession.GruntCenter(s.State, s.Settings) - s.Settings.gunnerPost).normalized;
+                s.SetGunner(new GunnerInput { fire = true, aim = aim, pointer = aim });
+                s.Tick(Dt);
+                seen.AddRange(s.Events.Select(e => e.Kind));
+                far = Mathf.Max(far, Vector3.Distance(s.State.mech, s.State.gruntPosition));
+            }
+            Assert.AreEqual(GruntStep.Regroup, s.State.gruntStep);
+            Assert.AreEqual(800f, s.State.gruntHp);
+            Assert.AreEqual(100f, s.State.hull);
+            CollectionAssert.DoesNotContain(seen, SkirmishEventKind.PunchHit);
+            CollectionAssert.DoesNotContain(seen, SkirmishEventKind.ShellFired);
+            Assert.AreEqual(28f, far, 0.1f, "22에서 6 물러선다");
+
+            PlayUntil(s, st => st.gruntStep == GruntStep.Rise, "다시 공격");
+            Assert.AreEqual(1, s.State.act);
+        }
+
+        [Test]
+        public void 막마다_자폭_드론이_잦아진다()
+        {
+            var s = Act1();
+            PlayUntil(s, st => st.act == 1, "2막");
+            // 막기만 하고 치지 않아 2막에 머문다.
+            float waited = 0f;
+            bool fired = false;
+            while (waited < 60f && !fired)
+            {
+                var input = SkirmishBots.Mech(s.State, s.Settings);
+                input.punchDamage = 0f;
+                s.SetMech(input);
+                s.SetGunner(default);
+                s.Tick(Dt);
+                waited += Dt;
+                fired = s.Events.Any(e => e.Kind == SkirmishEventKind.ShellFired);
+            }
+            Assert.IsTrue(fired);
+            Assert.AreEqual(1, s.State.act);
+            Assert.AreEqual(10f, waited, 0.5f, "2막은 10초마다");
+        }
+
+        [Test]
+        public void 체력_400에서_3막이_되고_일격에_검과_방패를_잃는다()
+        {
+            var s = Act1();
+            PlayUntil(s, st => st.act == 2, "3막");
+            Assert.AreEqual(400f, s.State.gruntHp);
+            Assert.AreEqual(100f, s.State.hull);
+            Assert.AreEqual(GruntStep.Rise, s.State.gruntStep, "물러서지 않고 바로 크게 든다");
+            Assert.AreEqual(GruntAttack.Slam, s.State.gruntAttack);
+            Assert.IsFalse(s.State.swordBroken, "일격이 닿기 전에는 아직 들고 있다");
+
+            // 막지 않아도 피해가 없다.
+            var seen = Play(s, 5f, mech: false, gunner: false, until: x => x.State.swordBroken);
+            Assert.IsTrue(s.State.swordBroken);
+            Assert.IsTrue(s.State.shieldBroken);
+            Assert.IsFalse(s.State.shieldOpen);
+            Assert.AreEqual(100f, s.State.hull);
+            Assert.AreEqual(400f, s.State.gruntHp);
+            Assert.AreEqual(s.Settings.breakSlowSeconds, s.State.slowMotion, 1e-4f, "부서지는 순간 느려진다");
+            CollectionAssert.Contains(seen, SkirmishEventKind.ShieldBroken);
+            CollectionAssert.Contains(seen, SkirmishEventKind.SwordBroken);
+            CollectionAssert.DoesNotContain(seen, SkirmishEventKind.MechHit);
+        }
+
+        [Test]
+        public void 검을_잃은_뒤에는_주먹_피해가_들어간다()
+        {
+            var s = Act1();
+            PlayUntil(s, st => st.swordBroken, "검을 잃음");
+            int seq = 5000;
+            for (int i = 0; i < 3000 && s.State.gruntHp >= 400f; i++)
+            {
+                var input = SkirmishBots.Mech(s.State, s.Settings);
+                if (s.State.gruntStep == GruntStep.Stagger) seq = 5001;
+                input.punchSeq = seq; input.punchDamage = 35f;
+                s.SetMech(input);
+                s.SetGunner(default);
+                s.Tick(Dt);
+            }
+            Assert.AreEqual(365f, s.State.gruntHp, "검 40이 아니라 훅 35");
+        }
+
+        [Test]
+        public void 강한_탄은_물러서는_보스와_부수는_일격을_끊지_못한다()
+        {
+            var g = Boss();
+            g.Regroup(2f);
+            Assert.IsFalse(g.StrongHit(90f, 4f));
+            Assert.AreEqual(GruntStep.Regroup, g.Step);
+            g.BeginBreaker();
+            Assert.IsFalse(g.StrongHit(90f, 4f));
+            Assert.IsTrue(g.Breaker);
+            Assert.AreEqual(1200f, g.Hp);
+        }
+
+        [Test]
+        public void 삼막에서_재기동하면_3막의_처음부터_맨손으로_다시_한다()
+        {
+            var s = Act1();
+            PlayUntil(s, st => st.swordBroken, "검을 잃음");
+            PlayUntil(s, st => st.gruntHp < 400f, "3막에서 조금 깎음");
+            // 아무것도 하지 않아 내구도가 0이 된다.
+            var seen = Play(s, 300f, mech: false, gunner: false, until: x => x.Events.Any(e => e.Kind == SkirmishEventKind.SceneRestarted));
+            CollectionAssert.Contains(seen, SkirmishEventKind.Rebooting);
+            Play(s, 1f, mech: false, gunner: false);
+
+            Assert.AreEqual(SkirmishPhase.Fighting, s.State.phase);
+            Assert.AreEqual(2, s.State.act);
+            Assert.AreEqual(400f, s.State.gruntHp);
+            Assert.AreEqual(100f, s.State.hull);
+            Assert.IsTrue(s.State.swordBroken && s.State.shieldBroken, "다시 해도 맨손이다");
+            Assert.AreEqual(0, s.State.rebootsLeft);
+        }
+
+        [Test]
+        public void 혼자_할_때는_막의_선도_같은_비율로_낮다()
+        {
+            var s = Act1(solo: true);
+            PlayUntil(s, st => st.act == 1, "2막");
+            Assert.AreEqual(600f, s.State.gruntHp);
+            PlayUntil(s, st => st.act == 2, "3막");
+            Assert.AreEqual(300f, s.State.gruntHp);
         }
 
         [Test]
@@ -271,13 +444,12 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void 맵_위_자리에서도_1막이_끝까지_간다()
+        public void 맵_위_자리에서도_끝까지_간다()
         {
             var s = new SkirmishSession(SkirmishSettings.BossAct1OnMap());
             s.SetReady(true, true);
-            var seen = Play(s, 240f, until: x => x.State.phase != SkirmishPhase.Fighting);
+            var seen = Play(s, 900f, until: x => x.State.phase != SkirmishPhase.Fighting);
             Assert.AreEqual(SkirmishPhase.Cleared, s.State.phase);
-            Assert.AreEqual(100f, s.State.hull);
             CollectionAssert.Contains(seen, SkirmishEventKind.GruntBlocked);
             Assert.Less(Vector3.Distance(new Vector3(122f, 0f, 632f), s.State.gruntPosition), 0.5f, "보스는 제자리에 서 있다");
         }
@@ -450,15 +622,14 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void 혼자_할_때는_체력_900에서_시작해_600에서_끝난다()
+        public void 혼자_할_때는_체력_900에서_시작해_45에서_끝난다()
         {
             var s = Act1(solo: true);
             Play(s, 1f);
             Assert.AreEqual(900f, s.State.gruntHp);
-            Play(s, 240f, until: x => x.State.phase != SkirmishPhase.Fighting);
+            Play(s, 900f, until: x => x.State.phase != SkirmishPhase.Fighting);
             Assert.AreEqual(SkirmishPhase.Cleared, s.State.phase);
-            Assert.LessOrEqual(s.State.gruntHp, 600f);
-            Assert.Greater(s.State.gruntHp, 500f);
+            Assert.AreEqual(45f, s.State.gruntHp);
         }
 
         [Test]
@@ -475,12 +646,14 @@ namespace Anseong.Tests
         public void 다시_시작하면_1막도_처음으로_돌아간다()
         {
             var s = Act1();
-            Play(s, 240f, until: x => x.State.phase != SkirmishPhase.Fighting);
+            Play(s, 900f, until: x => x.State.phase != SkirmishPhase.Fighting);
             s.Reset();
             s.SetReady(true, true);
             Play(s, 1f, mech: false, gunner: false);
             Assert.AreEqual(SkirmishPhase.Fighting, s.State.phase);
             Assert.AreEqual(1200f, s.State.gruntHp);
+            Assert.AreEqual(0, s.State.act);
+            Assert.IsFalse(s.State.swordBroken || s.State.shieldBroken, "검과 방패도 돌아온다");
             Assert.AreEqual(0, s.State.gruntsDown);
         }
     }
