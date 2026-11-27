@@ -45,7 +45,8 @@ namespace Anseong.Skirmish
         public float GruntHp, GruntTimer;
         public byte GruntStep, GruntAttack, GruntsDown;
         public bool ShieldOpen, ShieldBroken, SwordBroken;
-        public byte Act;
+        public byte Act, GruntSide;
+        public float GruntImpactIn, CannonJam, SideStep;
         public float SlowMotion;
         public float GruntShell, BackHp, BackShell, RebootTimer;
         public sbyte BackIndex;
@@ -78,7 +79,8 @@ namespace Anseong.Skirmish
             s.SerializeValue(ref GruntShell); s.SerializeValue(ref BackHp); s.SerializeValue(ref BackShell); s.SerializeValue(ref RebootTimer);
             s.SerializeValue(ref BackIndex); s.SerializeValue(ref BackPosition); s.SerializeValue(ref BackStep); s.SerializeValue(ref RebootsLeft);
             s.SerializeValue(ref WeakTimer); s.SerializeValue(ref WeakPoint);
-            s.SerializeValue(ref SwordBroken); s.SerializeValue(ref Act);
+            s.SerializeValue(ref SwordBroken); s.SerializeValue(ref Act); s.SerializeValue(ref GruntSide);
+            s.SerializeValue(ref GruntImpactIn); s.SerializeValue(ref CannonJam); s.SerializeValue(ref SideStep);
             s.SerializeValue(ref ShellCount);
             if (ShellCount > MaxShells) ShellCount = MaxShells;
             if (s.IsReader)
@@ -115,7 +117,8 @@ namespace Anseong.Skirmish
                 GruntShell = st.gruntShell, BackHp = st.backHp, BackShell = st.backShell, RebootTimer = st.rebootTimer,
                 BackIndex = (sbyte)st.backIndex, BackPosition = st.backPosition, BackStep = (byte)st.backStep, RebootsLeft = (byte)st.rebootsLeft,
                 WeakTimer = st.weakTimer, WeakPoint = st.weakPoint,
-                SwordBroken = st.swordBroken, Act = (byte)st.act,
+                SwordBroken = st.swordBroken, Act = (byte)st.act, GruntSide = (byte)st.gruntSide,
+                GruntImpactIn = st.gruntImpactIn, CannonJam = st.cannonJam, SideStep = st.sideStep,
                 ShellCount = (byte)count,
                 ShellId = new int[count], ShellKind = new byte[count],
                 ShellPosition = new Vector3[count], ShellVelocity = new Vector3[count],
@@ -148,7 +151,8 @@ namespace Anseong.Skirmish
             st.gruntShell = GruntShell; st.backHp = BackHp; st.backShell = BackShell; st.rebootTimer = RebootTimer;
             st.backIndex = BackIndex; st.backPosition = BackPosition; st.backStep = (GruntStep)BackStep; st.rebootsLeft = RebootsLeft;
             st.weakTimer = WeakTimer; st.weakPoint = WeakPoint;
-            st.swordBroken = SwordBroken; st.act = Act;
+            st.swordBroken = SwordBroken; st.act = Act; st.gruntSide = (Anseong.Pilot.PilotSide)GruntSide;
+            st.gruntImpactIn = GruntImpactIn; st.cannonJam = CannonJam; st.sideStep = SideStep;
             st.shells.Clear();
             for (int i = 0; i < ShellCount; i++)
                 st.shells.Add(new SkirmishShell
@@ -178,12 +182,19 @@ namespace Anseong.Skirmish
                 toGrunt.y = 0f;
                 bool walk = st.gruntStep == GruntStep.Approach && s.grunts != null && st.gruntIndex < s.grunts.Length
                             && s.grunts[st.gruntIndex].spec.standStill && toGrunt.magnitude > s.grunt.engageDistance - 1f;
+                // 보스의 특별한 공격: 답을 아는 채로 한다(속임 베기의 쪽, 큰 내려베기의 때). 돌진은 닿기 1초 전에 옆으로 비킨다.
+                var attack = st.gruntAttack;
+                bool big = telegraph && attack == GruntAttack.BigSlam;
+                bool guard = big ? st.gruntImpactIn <= 0.2f
+                    : telegraph ? attack != GruntAttack.Thrust && attack != GruntAttack.CallSwarm : incoming != null;
+                bool step = telegraph && attack == GruntAttack.Thrust && st.gruntImpactIn <= 1f;
+                bool atShell = incoming != null && !telegraph;
                 return new MechInput
                 {
-                    move = walk ? toGrunt.normalized : Vector3.zero,
-                    guard = telegraph || incoming != null,
-                    guardDirection = incoming != null ? incoming.position - SkirmishSession.Chest(st, s) : st.gruntPosition - st.mech,
-                    guardSide = GruntDuel.IncomingSide(st.gruntAttack),
+                    move = walk ? toGrunt.normalized : step ? Quaternion.Euler(0f, s.mechYaw, 0f) * Vector3.right : Vector3.zero,
+                    guard = guard,
+                    guardDirection = atShell ? incoming.position - SkirmishSession.Chest(st, s) : st.gruntPosition - st.mech,
+                    guardSide = st.gruntSide,
                     aim = (SkirmishSession.GruntCenter(st, s) - SkirmishSession.Gun(st, s)).normalized,
                     punchSeq = Mathf.FloorToInt(st.elapsed / 0.6f), punchDamage = st.gruntStep == GruntStep.Stagger ? 25f : 0f,
                 };

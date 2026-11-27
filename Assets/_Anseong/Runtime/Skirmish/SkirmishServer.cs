@@ -213,7 +213,7 @@ namespace Anseong.Skirmish
             if (Time.unscaledTime >= nextSend)
             {
                 nextSend = Time.unscaledTime + 1f / Mathf.Max(1, sendRate);
-                byte flags = (byte)((input.fire ? 1 : 0) | (input.lockHeld ? 2 : 0) | (input.cancel ? 4 : 0));
+                byte flags = (byte)((input.fire ? 1 : 0) | (input.lockHeld ? 2 : 0) | (input.cancel ? 4 : 0) | (input.hide ? 8 : 0));
                 GunnerInputRpc(input.aim, input.pointer, flags);
             }
             // 상태는 1초에 30번 오므로 그 사이 탄은 속도대로 미리 움직여 둔다(느린 시간 동안에는 느리게).
@@ -243,7 +243,7 @@ namespace Anseong.Skirmish
             remoteGunner = new GunnerInput
             {
                 aim = aim, pointer = pointer,
-                fire = (flags & 1) != 0, lockHeld = (flags & 2) != 0, cancel = (flags & 4) != 0,
+                fire = (flags & 1) != 0, lockHeld = (flags & 2) != 0, cancel = (flags & 4) != 0, hide = (flags & 8) != 0,
             };
             remoteGunnerAt = Time.unscaledTime;
             GunnerInputsReceived++;

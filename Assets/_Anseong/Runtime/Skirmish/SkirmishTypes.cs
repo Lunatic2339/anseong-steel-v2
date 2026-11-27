@@ -83,6 +83,14 @@ namespace Anseong.Skirmish
         ActChanged,
         /// <summary>오른팔 검이 부러짐. 이후로는 주먹으로 친다. 방패도 같이 부서지면 ShieldBroken이 같이 나온다.</summary>
         SwordBroken,
+        /// <summary>보스가 헬기를 노린 일격이 나감. Id 1 = P2가 맞아 포가 멈춤, 0 = 숨어서 피함.</summary>
+        HeliShot,
+        /// <summary>보스가 자폭 떼를 부름. 드론마다 ShellFired가 따로 나온다.</summary>
+        SwarmCalled,
+        /// <summary>보스의 돌진이 빗나가 로봇을 지나침.</summary>
+        ThrustPassed,
+        /// <summary>P1이 옆으로 한 걸음 비키기 시작함. Id -1 = 왼쪽, 1 = 오른쪽.</summary>
+        SideStep,
     }
 
     /// <summary>한 틱에 일어난 일. 화면·소리·진동이 이것을 보고 반응한다.</summary>
@@ -156,6 +164,10 @@ namespace Anseong.Skirmish
         public float gruntHp, gruntTimer;
         public GruntStep gruntStep;
         public GruntAttack gruntAttack;
+        /// <summary>지금 공격을 막아야 하는 쪽. 속임 베기의 답이기도 하다(P2 화면의 등 뒤 불이 이것을 본다. P1에게는 보여 주지 않는다).</summary>
+        public PilotSide gruntSide;
+        /// <summary>공격이 닿을 때까지 남은 초. 예고 중이 아니면 0.</summary>
+        public float gruntImpactIn;
         public int gruntsDown;
         public bool GruntAlive => gruntIndex >= 0 && gruntStep != GruntStep.Dead;
         /// <summary>맞붙은 돌격형이 큰 탄을 겨누는 중이면 발사까지 남은 초(서 있는 적).</summary>
@@ -185,6 +197,10 @@ namespace Anseong.Skirmish
         /// <summary>기관포 열(0~1). 1에 닿으면 식을 때까지 못 쏜다.</summary>
         public float cannonHeat;
         public bool cannonOverheated;
+        /// <summary>보스의 일격을 맞아 포가 멈춰 있는 남은 초.</summary>
+        public float cannonJam;
+        /// <summary>로봇이 옆으로 비켜 있는 거리(오른쪽이 +). mech에 이미 들어 있다.</summary>
+        public float sideStep;
 
         /// <summary>고로가 더 버틸 수 있는 피격 수.</summary>
         public int furnace;
@@ -228,5 +244,7 @@ namespace Anseong.Skirmish
         public bool lockHeld;
         /// <summary>잠금 취소. 미사일을 쓰지 않는다.</summary>
         public bool cancel;
+        /// <summary>조종석 턱 아래로 숙였거나 옆으로 비켜 있다(보스가 헬기를 노릴 때 피한다).</summary>
+        public bool hide;
     }
 }

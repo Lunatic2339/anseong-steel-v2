@@ -124,7 +124,7 @@ namespace Anseong.Skirmish
                 case SkirmishEventKind.ShellBlocked: return "메카가 막았다";
                 case SkirmishEventKind.ShellMissed: return "큰 탄 빗나감";
                 case SkirmishEventKind.MechHit: return "메카 피격!";
-                case SkirmishEventKind.GruntTelegraph: return e.Id == (int)GruntAttack.Slam ? "치켜든 팔! 왼쪽으로 막아!" : "옆으로 젖힌 팔! 오른쪽으로 막아!";
+                case SkirmishEventKind.GruntTelegraph: return e.Id > (int)GruntAttack.Swing ? "특별한 공격!" : e.Id == (int)GruntAttack.Slam ? "치켜든 팔! 왼쪽으로 막아!" : "옆으로 젖힌 팔! 오른쪽으로 막아!";
                 case SkirmishEventKind.GruntBlocked: return "막았다 — 지금 쳐라!";
                 case SkirmishEventKind.GruntPerfectBlock: return "딱 맞춰 막았다 — 지금 쳐라!";
                 case SkirmishEventKind.PunchHit: return "주먹 명중";

@@ -39,6 +39,17 @@ namespace Anseong.Skirmish
         Slam,
         /// <summary>휘두르기. 적의 왼팔, 로봇의 오른쪽으로 온다.</summary>
         Swing,
+        // 아래는 보스의 특별한 공격(기획안 4절의 표).
+        /// <summary>속임 베기. 어느 쪽인지는 등 뒤 불의 색으로만 나온다. 그쪽으로 막으면 튕겨난다.</summary>
+        Feint,
+        /// <summary>헬기를 노림. P1이 오른쪽으로 막아 주면 튕겨난다. 아니면 P2가 숨어야 한다. 한 막에 한 번.</summary>
+        AimHeli,
+        /// <summary>자폭 떼 부르기. 대검을 땅에 꽂고, 끝나면 자폭 드론 넷이 한꺼번에 온다. 한 막에 한 번.</summary>
+        CallSwarm,
+        /// <summary>큰 내려베기. 딱 맞춰 막아야만 틈이 난다. 미리 막고 있으면 피해만 없다.</summary>
+        BigSlam,
+        /// <summary>찌르며 돌진. 막을 수 없다. 옆으로 비켜 있으면 지나쳐서 등을 보인다.</summary>
+        Thrust,
     }
 
     public enum PunchResult : byte
@@ -82,6 +93,12 @@ namespace Anseong.Skirmish
         StrongHit,
         /// <summary>검과 방패를 부수는 일격이 닿음(보스 3막에 들어갈 때). 막든 안 막든 피해는 없다.</summary>
         WeaponsBroken,
+        /// <summary>헬기를 노린 일격이 막히지 않고 나감. P2가 숨었는지는 교전 규칙이 본다.</summary>
+        HeliShot,
+        /// <summary>대검을 땅에 꽂아 자폭 떼를 부름.</summary>
+        SwarmCalled,
+        /// <summary>돌진이 빗나가 로봇을 지나침. 등을 보인 채 멈춘다.</summary>
+        ThrustPassed,
     }
 
     public struct GruntEvent
@@ -176,6 +193,22 @@ namespace Anseong.Skirmish
         [Min(0f)] public float soloHp;
         [Tooltip("P2의 강한 탄이 잠글 수 있다. 맞으면 어떤 예고든 끊기고 튕겨난다.")]
         public bool strongShotTarget;
+
+        [Header("보스의 특별한 공격 (예고 = 올림 0.4 + 멈춤 + 내려침 0.3)")]
+        [Min(0f), Tooltip("속임 베기의 멈춤. 예고 2.2초.")] public float feintHold = 1.5f;
+        [Tooltip("속임 베기가 오는 쪽의 순서(난수 없이 차례로 돈다).")]
+        public PilotSide[] feintSides = { PilotSide.Right, PilotSide.Left, PilotSide.Left, PilotSide.Right, PilotSide.Left, PilotSide.Right, PilotSide.Right };
+        [Min(0f), Tooltip("헬기를 노림의 멈춤. 예고 2.5초.")] public float aimHold = 1.8f;
+        [Min(0f), Tooltip("자폭 떼 부르기의 멈춤. 3초 뒤에 온다.")] public float swarmHold = 2.3f;
+        [Tooltip("큰 내려베기의 멈춤 순서. 예고 3.0, 2.4, 3.6초.")]
+        public float[] bigHolds = { 2.3f, 1.7f, 2.9f };
+        [Min(0f), Tooltip("큰 내려베기를 딱 맞춰 막았을 때 튕겨나는 시간.")] public float bigStagger = 4f;
+        [Min(0f), Tooltip("큰 내려베기를 못 막았을 때의 피해.")] public float bigDamage = 40f;
+        [Min(0f), Tooltip("찌르며 돌진의 멈춤. 예고 1.6초.")] public float thrustHold = 0.9f;
+        [Min(0f), Tooltip("돌진에 맞았을 때의 피해. 막아도 들어온다.")] public float thrustDamage = 30f;
+        [Min(0f), Tooltip("돌진의 순간 로봇이 옆으로 이만큼 넘게 비켜 있으면 빗나간다.")] public float dodgeDistance = 6f;
+        [Min(0f), Tooltip("빗나간 돌진이 앞으로 나가는 거리.")] public float thrustLunge = 14f;
+        [Min(0f), Tooltip("돌진이 빗나간 뒤 등을 보인 채 멈춰 있는 시간(긴 틈).")] public float thrustStagger = 3f;
     }
 
     /// <summary>
@@ -220,7 +253,26 @@ namespace Anseong.Skirmish
         /// <summary>검과 방패를 부수는 일격을 예고하거나 내려치는 중. 끊을 수 없고 피해가 없다.</summary>
         public bool Breaker { get; private set; }
 
+        /// <summary>로봇이 지금 옆으로 비켜 있는 거리. 교전 규칙이 매 틱 넣는다(돌진 판정에 쓴다).</summary>
+        public float Dodge;
+        /// <summary>지금 공격을 막아야 하는 쪽(속임 베기는 숨겨진 답). 큰 내려베기는 어느 쪽이든 된다.</summary>
+        public PilotSide Side => Attack == GruntAttack.Feint ? feintSide : Attack == GruntAttack.Slam || Attack == GruntAttack.BigSlam ? PilotSide.Left : PilotSide.Right;
+        /// <summary>예고하는 중(팔을 올림, 멈춤, 내려침).</summary>
+        public bool Telegraphing => Step == GruntStep.Rise || Step == GruntStep.Hold || Step == GruntStep.Strike;
+        /// <summary>P2가 보고 말해 줘야 하는 예고 중. 이 동안에는 자폭 드론을 띄우지 않는다.</summary>
+        public bool NeedsCall => Telegraphing && !Breaker && (Attack == GruntAttack.Feint || Attack == GruntAttack.BigSlam || Attack == GruntAttack.AimHeli);
+        /// <summary>공격이 닿을 때까지 남은 초. 예고 중이 아니면 0. 큰 내려베기의 불 셋이 이것을 보고 꺼진다.</summary>
+        public float ImpactIn => Step == GruntStep.Rise ? Timer + (holdFor + Settings.strikeSeconds) * phaseScale
+            : Step == GruntStep.Hold ? Timer + Settings.strikeSeconds * phaseScale
+            : Step == GruntStep.Strike ? Timer : 0f;
+        /// <summary>돌진이 빗나가 로봇을 지나쳐 등을 보이고 있다.</summary>
+        public bool Passed => passed;
+
         GruntAttack[] attackList;   // 막이 바뀌며 갈아 끼운 공격 순서. 없으면 Spec.attacks
+        PilotSide feintSide;
+        int feintCount, bigCount, onceUsed;
+        float holdFor;              // 지금 예고의 멈춤 시간(배율 적용 전)
+        bool passed;
         int attackIndex, guardsDone;
         int attacksSeen;        // 한 번이라도 나온 공격(비트)
         float phaseScale = 1f;  // 지금 예고에 적용된 배율
@@ -275,7 +327,7 @@ namespace Anseong.Skirmish
         public void Regroup(float seconds)
         {
             if (!Alive || Finishing) return;
-            Stop = 0f; ShellWindup = 0f; Breaker = false;
+            Stop = 0f; ShellWindup = 0f; Breaker = false; passed = false;
             Step = GruntStep.Regroup;
             Timer = Mathf.Max(0.0001f, seconds);
         }
@@ -284,8 +336,9 @@ namespace Anseong.Skirmish
         public void BeginBreaker()
         {
             if (!Alive || Finishing) return;
-            Stop = 0f; ShellWindup = 0f; Breaker = true;
+            Stop = 0f; ShellWindup = 0f; Breaker = true; passed = false;
             Attack = GruntAttack.Slam;
+            holdFor = Spec.holdSeconds;
             phaseScale = Mathf.Max(1f, Spec.firstTimeScale);
             Step = GruntStep.Rise;
             Timer = Settings.riseSeconds * phaseScale;
@@ -297,6 +350,7 @@ namespace Anseong.Skirmish
         {
             attackList = attacks;
             attackIndex = 0;
+            onceUsed = 0;
         }
 
         /// <summary>재기동 뒤에 막의 처음 체력에서 다시 시작할 때.</summary>
@@ -382,7 +436,8 @@ namespace Anseong.Skirmish
                 TickShell(dt);
                 return;
             }
-            if (Step != GruntStep.Frozen) Chase(dt, robot);
+            // 돌진이 빗나가 지나친 동안에는 그 자리에 멈춰 있다.
+            if (Step != GruntStep.Frozen && !(passed && Step == GruntStep.Stagger)) Chase(dt, robot);
 
             Timer -= dt;
             // 한 틱에 여러 단계가 끝날 수 있다. 남은 시간은 다음 단계로 넘긴다.
@@ -391,11 +446,14 @@ namespace Anseong.Skirmish
                 switch (Step)
                 {
                     case GruntStep.Idle: BeginTelegraph(); break;
-                    case GruntStep.Rise: Enter(GruntStep.Hold, Spec.holdSeconds * phaseScale); break;
+                    case GruntStep.Rise: Enter(GruntStep.Hold, holdFor * phaseScale); break;
                     case GruntStep.Hold: Enter(GruntStep.Strike, Settings.strikeSeconds * phaseScale); break;
                     case GruntStep.Strike: Impact(guarding, guardSide); break;
-                    case GruntStep.Recover:
                     case GruntStep.Stagger:
+                        // 지나쳤던 돌진은 돌아서서 제자리로 걸어온다.
+                        if (passed) { passed = false; Enter(GruntStep.Recover, Settings.recoverSeconds); break; }
+                        Enter(GruntStep.Idle, Settings.idleSeconds); break;
+                    case GruntStep.Recover:
                     case GruntStep.Regroup:
                         Enter(GruntStep.Idle, Settings.idleSeconds); break;
                     case GruntStep.Frozen:
@@ -559,8 +617,32 @@ namespace Anseong.Skirmish
         {
             var attacks = attackList != null && attackList.Length > 0 ? attackList
                 : Spec.attacks != null && Spec.attacks.Length > 0 ? Spec.attacks : new[] { GruntAttack.Slam };
-            Attack = attacks[attackIndex % attacks.Length];
-            attackIndex++;
+            Attack = GruntAttack.Slam;
+            for (int tries = 0; tries < attacks.Length; tries++)
+            {
+                var next = attacks[attackIndex % attacks.Length];
+                attackIndex++;
+                // 헬기를 노림과 자폭 떼 부르기는 한 막에 한 번. 혼자 할 때는 헬기를 노리지 않는다.
+                bool once = next == GruntAttack.AimHeli || next == GruntAttack.CallSwarm;
+                if (once && ((onceUsed & (1 << (int)next)) != 0 || (Solo && next == GruntAttack.AimHeli))) continue;
+                if (once) onceUsed |= 1 << (int)next;
+                Attack = next;
+                break;
+            }
+            switch (Attack)
+            {
+                case GruntAttack.Feint:
+                    holdFor = Spec.feintHold;
+                    feintSide = Spec.feintSides != null && Spec.feintSides.Length > 0 ? Spec.feintSides[feintCount++ % Spec.feintSides.Length] : PilotSide.Left;
+                    break;
+                case GruntAttack.AimHeli: holdFor = Spec.aimHold; break;
+                case GruntAttack.CallSwarm: holdFor = Spec.swarmHold; break;
+                case GruntAttack.BigSlam:
+                    holdFor = Spec.bigHolds != null && Spec.bigHolds.Length > 0 ? Spec.bigHolds[bigCount++ % Spec.bigHolds.Length] : Spec.holdSeconds;
+                    break;
+                case GruntAttack.Thrust: holdFor = Spec.thrustHold; break;
+                default: holdFor = Spec.holdSeconds; break;
+            }
             int bit = 1 << (int)Attack;
             phaseScale = Mathf.Max(0.1f, TelegraphScale) * ((attacksSeen & bit) == 0 ? Mathf.Max(1f, Spec.firstTimeScale) : 1f);
             attacksSeen |= bit;
@@ -578,7 +660,51 @@ namespace Anseong.Skirmish
                 Emit(GruntEventKind.WeaponsBroken);
                 return;
             }
-            if (guarding && guardSide == IncomingSide(Attack))
+            switch (Attack)
+            {
+                case GruntAttack.CallSwarm:
+                    Enter(GruntStep.Recover, s.recoverSeconds);
+                    Emit(GruntEventKind.SwarmCalled);
+                    return;
+                case GruntAttack.AimHeli:
+                    // P1이 오른쪽(헬기 쪽)으로 막아 주면 튕겨난다. 아니면 헬기로 나간다(로봇 피해는 없다).
+                    if (guarding && guardSide == PilotSide.Right)
+                    {
+                        Enter(GruntStep.Stagger, s.staggerSeconds);
+                        Emit(GruntEventKind.Blocked);
+                        return;
+                    }
+                    Enter(GruntStep.Recover, s.recoverSeconds);
+                    Emit(GruntEventKind.HeliShot);
+                    return;
+                case GruntAttack.Thrust:
+                    // 막을 수 없다. 옆으로 비켜 있으면 지나쳐서 등을 보인 채 멈춘다(긴 틈).
+                    if (Dodge > Spec.dodgeDistance)
+                    {
+                        var toward = SkirmishMath.Flat(lastRobot - Position);
+                        Position += toward * Spec.thrustLunge;
+                        passed = true;
+                        Step = GruntStep.Stagger;
+                        Timer = Spec.thrustStagger;
+                        Emit(GruntEventKind.ThrustPassed);
+                        return;
+                    }
+                    Enter(GruntStep.Recover, s.recoverSeconds);
+                    Emit(GruntEventKind.RobotHit, Spec.thrustDamage);
+                    return;
+                case GruntAttack.BigSlam:
+                    // 딱 맞춰 막아야만 틈이 난다. 미리 막고 있으면 피해만 없다.
+                    if (guarding && guardHeldFor <= s.perfectWindow)
+                    {
+                        Enter(GruntStep.Stagger, Spec.bigStagger);
+                        Emit(GruntEventKind.PerfectBlocked);
+                        return;
+                    }
+                    Enter(GruntStep.Recover, s.recoverSeconds);
+                    if (guarding) Emit(GruntEventKind.Blocked); else Emit(GruntEventKind.RobotHit, Spec.bigDamage);
+                    return;
+            }
+            if (guarding && guardSide == Side)
             {
                 bool perfect = guardHeldFor <= s.perfectWindow;
                 Enter(GruntStep.Stagger, s.staggerSeconds + (perfect ? s.perfectBonus : 0f));

@@ -377,7 +377,16 @@ namespace Anseong.Skirmish
                 switch (st.gruntStep)
                 {
                     case GruntStep.Rise: case GruntStep.Hold: case GruntStep.Strike:
-                        state = GruntDuel.IncomingSide(st.gruntAttack) == Pilot.PilotSide.Left ? "왼쪽\n막아라" : "오른쪽\n막아라";
+                        // 속임 베기의 쪽과 큰 내려베기의 때는 P2가 불러 줘야 한다. 여기서는 알려 주지 않는다.
+                        switch (st.gruntAttack)
+                        {
+                            case GruntAttack.Feint: state = "속임수\n지원을 들어라"; break;
+                            case GruntAttack.AimHeli: state = "헬기 조준\n오른쪽 막아라"; break;
+                            case GruntAttack.CallSwarm: state = "드론 떼\n온다"; break;
+                            case GruntAttack.BigSlam: state = "큰 일격\n맞춰 막아라"; break;
+                            case GruntAttack.Thrust: state = "돌진\n옆으로 비켜라"; break;
+                            default: state = GruntDuel.IncomingSide(st.gruntAttack) == Pilot.PilotSide.Left ? "왼쪽\n막아라" : "오른쪽\n막아라"; break;
+                        }
                         stateColor = danger; break;
                     case GruntStep.Stagger: case GruntStep.Frozen: state = "빈틈\n쳐라"; stateColor = strike; break;
                     case GruntStep.Guard: state = "가드\n포격 요청"; stateColor = warn; break;
@@ -415,6 +424,7 @@ namespace Anseong.Skirmish
                 target.localScale = Vector3.one * (s.gruntHeight * bracketSize / 1000f);
                 foreach (var line in targetLines) line.color = stateColor;
                 bool telegraph = st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike;
+                telegraph &= st.gruntAttack == GruntAttack.Slam || st.gruntAttack == GruntAttack.Swing || st.gruntAttack == GruntAttack.AimHeli;
                 sideBar.enabled = telegraph;
                 if (telegraph)
                 {
