@@ -307,15 +307,17 @@ namespace Anseong.Skirmish
 
         /// <summary>
         /// 이번 프레임의 로봇 위치(틱 사이를 이은 값)로 P1의 눈을 다시 놓는다. 규칙을 돌린 뒤, 화면을 그리기 전에 부른다.
-        /// 걸음·충격 반응은 여기서만 더한다(위치만, 회전 없음).
+        /// 걸음·충격 반응은 여기서만 더한다(위치만, 회전 없음). 헤드셋에서는 눈이 아니라 조종석 틀에만 더한다.
         /// </summary>
         public void FollowMech(Vector3 mechPosition, float dt)
         {
             if (rig == null || Seat != SkirmishSeat.Mech) { feel.Reset(); return; }
             feel.Tick(mechPosition, dt, cameraFeel);
-            var anchor = mechPosition + MechEyeWorld + feel.Offset;
-            rig.position = VrActive ? anchor + rigOffset : anchor;
-            // 걸음·충격에는 조종석째로 같이 움직인다(눈만 움직이면 틀이 따로 논다).
+            var eye = mechPosition + MechEyeWorld;
+            var anchor = eye + feel.Offset;
+            // 헤드셋: 시야는 게임이 움직이지 않는다(멀미, 선우 2026-11-27). 걸음·충격에는 조종석 틀만 움직인다.
+            // 모니터: 고개가 없으니 눈과 조종석이 같이 움직인다.
+            rig.position = VrActive ? eye + rigOffset : anchor;
             PlaceCockpit(anchor, !MenuOpen);
             if (feel.Stepped) Rumble(stepHaptic * feel.StepWeight, 0.04f);
         }
