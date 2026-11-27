@@ -1,4 +1,5 @@
 using System;
+using Anseong.Pilot;
 using UnityEngine;
 
 namespace Anseong.Skirmish
@@ -66,6 +67,115 @@ namespace Anseong.Skirmish
             shieldUpper = new Vector3(-0.95f, 0.25f, -0.25f), shieldFore = new Vector3(-0.85f, 0.45f, -0.2f), shieldFace = new Vector3(-0.8f, 0.1f, 0.5f),
         };
 
+        // 속임 베기 예고: 대검을 몸 앞에 곧게 세운다. 어느 쪽으로 벨지는 여기서 안 보인다.
+        static readonly Pose SwordFront = new Pose
+        {
+            swordUpper = new Vector3(0.3f, -0.5f, 0.8f), swordFore = new Vector3(-0.25f, 0.3f, 0.9f), blade = new Vector3(0f, 1f, 0.05f),
+            shieldUpper = Stance.shieldUpper, shieldFore = Stance.shieldFore, shieldFace = Stance.shieldFace,
+        };
+        // 헬기를 노림 예고: 칼끝이 P2 쪽(보스의 왼쪽 위)으로.
+        static readonly Pose SwordPoint = new Pose
+        {
+            swordUpper = new Vector3(0.2f, 0f, 0.95f), swordFore = new Vector3(-0.6f, 0.15f, 0.6f), blade = new Vector3(-1f, 0.3f, 0.1f),
+            shieldUpper = Stance.shieldUpper, shieldFore = Stance.shieldFore, shieldFace = Stance.shieldFace,
+        };
+        // 헬기 쪽으로 내지른 끝.
+        static readonly Pose SwordPointOut = new Pose
+        {
+            swordUpper = new Vector3(-0.5f, 0.15f, 0.8f), swordFore = new Vector3(-0.9f, 0.2f, 0.3f), blade = new Vector3(-1f, 0.3f, 0f),
+            shieldUpper = Stance.shieldUpper, shieldFore = Stance.shieldFore, shieldFace = Stance.shieldFace,
+        };
+        // 자폭 떼 부르기: 대검을 땅에 꽂는다.
+        static readonly Pose SwordGround = new Pose
+        {
+            swordUpper = new Vector3(0.4f, -0.6f, 0.6f), swordFore = new Vector3(0.1f, -0.5f, 0.85f), blade = new Vector3(0f, -1f, 0.12f),
+            shieldUpper = Stance.shieldUpper, shieldFore = Stance.shieldFore, shieldFace = Stance.shieldFace,
+        };
+        // 큰 내려베기 예고: 두 손으로 머리 위에 들고 멈춘다.
+        static readonly Pose SwordHigh = new Pose
+        {
+            swordUpper = new Vector3(0.25f, 0.95f, 0f), swordFore = new Vector3(-0.3f, 0.95f, -0.05f), blade = new Vector3(0f, 0.9f, -0.45f),
+            shieldUpper = new Vector3(-0.25f, 0.95f, 0f), shieldFore = new Vector3(0.3f, 0.95f, -0.05f), shieldFace = Stance.shieldFace,
+        };
+        // 찌르며 돌진 예고: 대검을 허리 옆으로 당긴다.
+        static readonly Pose SwordHip = new Pose
+        {
+            swordUpper = new Vector3(0.5f, -0.6f, -0.5f), swordFore = new Vector3(0.2f, -0.1f, 0.95f), blade = new Vector3(0f, 0.05f, 1f),
+            shieldUpper = Stance.shieldUpper, shieldFore = Stance.shieldFore, shieldFace = Stance.shieldFace,
+        };
+        // 앞으로 길게 찌른 끝.
+        static readonly Pose SwordOut = new Pose
+        {
+            swordUpper = new Vector3(0.2f, 0f, 1f), swordFore = new Vector3(0f, 0f, 1f), blade = new Vector3(0f, 0f, 1f),
+            shieldUpper = Stance.shieldUpper, shieldFore = Stance.shieldFore, shieldFace = Stance.shieldFace,
+        };
+
+        static Pose Ready(GruntAttack attack)
+        {
+            switch (attack)
+            {
+                case GruntAttack.Swing: return SwordSide;
+                case GruntAttack.Feint: return SwordFront;
+                case GruntAttack.AimHeli: return SwordPoint;
+                case GruntAttack.CallSwarm: return SwordGround;
+                case GruntAttack.BigSlam: return SwordHigh;
+                case GruntAttack.Thrust: return SwordHip;
+                default: return SwordUp;
+            }
+        }
+
+        static Pose End(GruntAttack attack, PilotSide side)
+        {
+            switch (attack)
+            {
+                case GruntAttack.Swing: return SwordAcross;
+                case GruntAttack.Feint: return side == PilotSide.Left ? SwordDown : SwordAcross;
+                case GruntAttack.AimHeli: return SwordPointOut;
+                case GruntAttack.CallSwarm: return SwordGround;
+                case GruntAttack.Thrust: return SwordOut;
+                default: return SwordDown;
+            }
+        }
+
+        [Header("신호 (P2가 보고 불러 주는 것)")]
+        [SerializeField, Tooltip("등 뒤의 불 셋. 0이 맨 아래. 큰 내려베기 때 위에서부터 꺼진다.")] Renderer[] backLights = new Renderer[0];
+        [SerializeField, Tooltip("헬기를 노릴 때 칼끝에서 P2 얼굴로 가는 붉은 선.")] LineRenderer aimLine;
+        [SerializeField, ColorUsage(false, true), Tooltip("속임 베기: 왼쪽으로 온다.")] Color lightLeft = new Color(2.4f, 0.08f, 0.05f);
+        [SerializeField, ColorUsage(false, true), Tooltip("속임 베기: 오른쪽으로 온다.")] Color lightRight = new Color(2.2f, 2.2f, 2.2f);
+        [SerializeField, ColorUsage(false, true), Tooltip("큰 내려베기: 하나씩 꺼지는 불.")] Color lightCount = new Color(2.4f, 1.5f, 0.25f);
+        MaterialPropertyBlock lightBlock;
+        static readonly int BaseColorId = Shader.PropertyToID("_BaseColor"), ColorId = Shader.PropertyToID("_Color");
+
+        public void BindSignals(Renderer[] lights, LineRenderer line) { backLights = lights; aimLine = line; }
+
+        /// <summary>
+        /// 등 뒤의 불과 헬기 조준선. 속임 베기 예고 중에는 셋이 같이 붉거나(왼쪽) 희게(오른쪽) 켜지고,
+        /// 큰 내려베기 예고 중에는 닿기 1.5초, 1.0초, 0.5초 전에 위에서부터 하나씩 꺼진다. 자세를 잡은 뒤에 부른다.
+        /// </summary>
+        public void Signals(GruntStep step, GruntAttack attack, PilotSide side, float impactIn, Vector3 heli)
+        {
+            bool telegraph = step == GruntStep.Rise || step == GruntStep.Hold || step == GruntStep.Strike;
+            int lit = 0;
+            var color = lightCount;
+            if (telegraph && attack == GruntAttack.Feint) { lit = 3; color = side == PilotSide.Left ? lightLeft : lightRight; }
+            else if (telegraph && attack == GruntAttack.BigSlam) lit = impactIn > 1.5f ? 3 : impactIn > 1f ? 2 : impactIn > 0.5f ? 1 : 0;
+            lightBlock ??= new MaterialPropertyBlock();
+            lightBlock.SetColor(BaseColorId, color);
+            lightBlock.SetColor(ColorId, color);
+            for (int i = 0; i < backLights.Length; i++)
+            {
+                if (backLights[i] == null) continue;
+                backLights[i].enabled = i < lit;
+                if (i < lit) backLights[i].SetPropertyBlock(lightBlock);
+            }
+            if (aimLine == null) return;
+            bool aim = telegraph && attack == GruntAttack.AimHeli && sword != null;
+            aimLine.enabled = aim;
+            if (!aim) return;
+            aimLine.SetPosition(0, sword.position + sword.forward * (swordLength * 0.5f));
+            aimLine.SetPosition(1, heli);
+        }
+
         Pose target = Stance, shown = Stance;
         bool started;
 
@@ -83,10 +193,11 @@ namespace Anseong.Skirmish
         }
 
         /// <summary>싸움 상태를 자세로 옮긴다. 화면을 그리는 쪽이 매번 부른다.</summary>
-        public void Show(GruntStep step, GruntAttack attack, float timer, GruntSettings s)
+        /// <param name="side">속임 베기가 실제로 오는 쪽(내려치는 순간부터만 자세에 드러난다).</param>
+        public void Show(GruntStep step, GruntAttack attack, float timer, GruntSettings s, PilotSide side = PilotSide.Left)
         {
-            bool slam = attack == GruntAttack.Slam;
-            var ready = slam ? SwordUp : SwordSide;
+            var ready = Ready(attack);
+            var end = End(attack, side);
             switch (step)
             {
                 case GruntStep.Rise:
@@ -96,10 +207,10 @@ namespace Anseong.Skirmish
                 case GruntStep.Strike:
                     // 내려치는 구간은 남은 시간으로 직접 잇는다(끝나는 순간이 막기 판정이다).
                     float k = 1f - Mathf.Clamp01(timer / Mathf.Max(0.01f, s.strikeSeconds));
-                    target = shown = Blend(ready, slam ? SwordDown : SwordAcross, k * k);
+                    target = shown = Blend(ready, end, k * k);
                     break;
                 case GruntStep.Recover:
-                    target = slam ? SwordDown : SwordAcross;
+                    target = end;
                     break;
                 case GruntStep.Stagger:
                     target = Open;
