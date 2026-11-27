@@ -228,6 +228,7 @@ namespace Anseong.Skirmish
             if (hud != null)
             {
                 hud.HideForMenu = local.MenuOpen;
+                hud.GunnerAim = local.Gunner.aim;
                 hud.Show(st, settings, pending, seat, local.VrActive, waiting);
             }
             pending.Clear();

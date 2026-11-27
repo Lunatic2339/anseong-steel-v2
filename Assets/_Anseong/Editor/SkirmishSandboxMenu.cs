@@ -465,7 +465,7 @@ namespace Anseong.EditorTools
                 if (isBoss)
                 {
                     view.BindBossPuppet(Boss(gruntRoot, settings.gruntHeight, enemy));
-                    var weak = Shape(PrimitiveType.Sphere, "Boss weak point marker (약점 표시)", null, Vector3.zero, Vector3.one * 6f, Unlit("WeakPoint", new Color(1f, 0.9f, 0.1f)));
+                    var weak = Shape(PrimitiveType.Sphere, "Boss weak point marker (약점 표시)", null, Vector3.zero, Vector3.one * 1.5f, Unlit("WeakPoint", new Color(0.3f, 0.95f, 0.45f)));
                     weak.gameObject.SetActive(false);
                     view.BindWeakMarker(weak);
                 }
