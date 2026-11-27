@@ -44,7 +44,8 @@ namespace Anseong.Skirmish
         public Vector3 GruntPosition;
         public float GruntHp, GruntTimer;
         public byte GruntStep, GruntAttack, GruntsDown;
-        public bool ShieldOpen, ShieldBroken;
+        public bool ShieldOpen, ShieldBroken, SwordBroken;
+        public byte Act;
         public float SlowMotion;
         public float GruntShell, BackHp, BackShell, RebootTimer;
         public sbyte BackIndex;
@@ -77,6 +78,7 @@ namespace Anseong.Skirmish
             s.SerializeValue(ref GruntShell); s.SerializeValue(ref BackHp); s.SerializeValue(ref BackShell); s.SerializeValue(ref RebootTimer);
             s.SerializeValue(ref BackIndex); s.SerializeValue(ref BackPosition); s.SerializeValue(ref BackStep); s.SerializeValue(ref RebootsLeft);
             s.SerializeValue(ref WeakTimer); s.SerializeValue(ref WeakPoint);
+            s.SerializeValue(ref SwordBroken); s.SerializeValue(ref Act);
             s.SerializeValue(ref ShellCount);
             if (ShellCount > MaxShells) ShellCount = MaxShells;
             if (s.IsReader)
@@ -113,6 +115,7 @@ namespace Anseong.Skirmish
                 GruntShell = st.gruntShell, BackHp = st.backHp, BackShell = st.backShell, RebootTimer = st.rebootTimer,
                 BackIndex = (sbyte)st.backIndex, BackPosition = st.backPosition, BackStep = (byte)st.backStep, RebootsLeft = (byte)st.rebootsLeft,
                 WeakTimer = st.weakTimer, WeakPoint = st.weakPoint,
+                SwordBroken = st.swordBroken, Act = (byte)st.act,
                 ShellCount = (byte)count,
                 ShellId = new int[count], ShellKind = new byte[count],
                 ShellPosition = new Vector3[count], ShellVelocity = new Vector3[count],
@@ -145,6 +148,7 @@ namespace Anseong.Skirmish
             st.gruntShell = GruntShell; st.backHp = BackHp; st.backShell = BackShell; st.rebootTimer = RebootTimer;
             st.backIndex = BackIndex; st.backPosition = BackPosition; st.backStep = (GruntStep)BackStep; st.rebootsLeft = RebootsLeft;
             st.weakTimer = WeakTimer; st.weakPoint = WeakPoint;
+            st.swordBroken = SwordBroken; st.act = Act;
             st.shells.Clear();
             for (int i = 0; i < ShellCount; i++)
                 st.shells.Add(new SkirmishShell

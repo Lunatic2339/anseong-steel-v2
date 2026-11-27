@@ -131,6 +131,7 @@ namespace Anseong.Skirmish
             {
                 mechArms.SetPose(st.guarding, st.guardSide, now < punchUntil);
                 mechArms.SetShield(st.shieldOpen, st.shieldBroken);
+                mechArms.SetSword(!st.swordBroken);
                 // 에디터에서 화면을 찍을 때는 LateUpdate가 돌지 않으므로 여기서 바로 자세를 잡는다.
                 if (!Application.isPlaying) mechArms.Apply(0f, true);
             }

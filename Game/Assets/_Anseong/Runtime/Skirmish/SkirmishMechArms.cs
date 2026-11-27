@@ -108,6 +108,17 @@ namespace Anseong.Skirmish
             shieldOpen = open; shieldBroken = broken;
         }
 
+        [SerializeField, Tooltip("오른손에 든 검(있으면). 부러지면 숨긴다.")] Renderer sword;
+
+        /// <summary>장면을 만드는 에디터 메뉴가 오른손의 검을 넣는다.</summary>
+        public void BindSword(Renderer blade) => sword = blade;
+
+        /// <summary>교전 상태에서 온 검 상태. 부러졌으면 숨긴다.</summary>
+        public void SetSword(bool whole)
+        {
+            if (sword != null && sword.enabled != whole) sword.enabled = whole;
+        }
+
         /// <summary>주먹이 꽂힌 순간 오른팔을 그 자리에 잠깐 세운다(타격 멈춤).</summary>
         public void HoldRight(float seconds)
         {

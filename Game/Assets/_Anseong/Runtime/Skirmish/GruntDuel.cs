@@ -29,6 +29,8 @@ namespace Anseong.Skirmish
         Dead,
         /// <summary>맞붙은 적이 따로 있어서 로봇에서 35 떨어져 기다림. 주먹이 닿지 않는다. 둘이 할 때는 6초마다 큰 탄을 쏜다.</summary>
         Waiting,
+        /// <summary>막이 바뀌는 사이: 한 발 물러서서 자세를 다시 잡는다. 서로 피해가 없다(보스).</summary>
+        Regroup,
     }
 
     public enum GruntAttack : byte
@@ -78,6 +80,8 @@ namespace Anseong.Skirmish
         ShellFired,
         /// <summary>P2의 강한 탄에 맞아 예고가 끊기고 튕겨남(보스).</summary>
         StrongHit,
+        /// <summary>검과 방패를 부수는 일격이 닿음(보스 3막에 들어갈 때). 막든 안 막든 피해는 없다.</summary>
+        WeaponsBroken,
     }
 
     public struct GruntEvent
@@ -100,6 +104,9 @@ namespace Anseong.Skirmish
         [Min(0.1f)] public float sprintSpeed = 16f;
         [Tooltip("로봇이 물러나면 이 속도로 따라붙는다.")]
         [Min(0.1f)] public float chaseSpeed = 12f;
+
+        [Tooltip("막이 바뀌는 사이에 맞붙는 거리에서 이만큼 더 물러선다(보스).")]
+        [Min(0f)] public float regroupBack = 6f;
 
         [Tooltip("맞붙은 적이 따로 있을 때 기다리는 거리.")]
         [Min(1f)] public float waitDistance = 35f;
@@ -208,7 +215,12 @@ namespace Anseong.Skirmish
         public float MaxHp { get; private set; }
         /// <summary>예고 길이에 곱하는 값. 로봇 내구도가 낮을 때 교전 규칙이 올린다. 다음 예고부터 적용된다.</summary>
         public float TelegraphScale = 1f;
+        /// <summary>체력이 이 값 아래로는 내려가지 않는다(보스: 한 방에 막 하나를 건너뛰지 않게). 교전 규칙이 막마다 정한다. 0 = 없음.</summary>
+        public float HpFloor;
+        /// <summary>검과 방패를 부수는 일격을 예고하거나 내려치는 중. 끊을 수 없고 피해가 없다.</summary>
+        public bool Breaker { get; private set; }
 
+        GruntAttack[] attackList;   // 막이 바뀌며 갈아 끼운 공격 순서. 없으면 Spec.attacks
         int attackIndex, guardsDone;
         int attacksSeen;        // 한 번이라도 나온 공격(비트)
         float phaseScale = 1f;  // 지금 예고에 적용된 배율
@@ -259,6 +271,45 @@ namespace Anseong.Skirmish
             Emit(GruntEventKind.ShellFired);
         }
 
+        /// <summary>막이 바뀌는 사이: seconds 동안 물러서서 자세를 다시 잡는다. 하던 공격은 끊긴다.</summary>
+        public void Regroup(float seconds)
+        {
+            if (!Alive || Finishing) return;
+            Stop = 0f; ShellWindup = 0f; Breaker = false;
+            Step = GruntStep.Regroup;
+            Timer = Mathf.Max(0.0001f, seconds);
+        }
+
+        /// <summary>검과 방패를 부수는 일격을 시작한다(왼쪽 내려베기, 예고는 처음 나오는 공격만큼 길다). 하던 공격은 끊긴다.</summary>
+        public void BeginBreaker()
+        {
+            if (!Alive || Finishing) return;
+            Stop = 0f; ShellWindup = 0f; Breaker = true;
+            Attack = GruntAttack.Slam;
+            phaseScale = Mathf.Max(1f, Spec.firstTimeScale);
+            Step = GruntStep.Rise;
+            Timer = Settings.riseSeconds * phaseScale;
+            Emit(GruntEventKind.TelegraphStarted);
+        }
+
+        /// <summary>다음 예고부터 이 순서로 공격한다(막마다 공격 목록이 다르다).</summary>
+        public void SetAttacks(GruntAttack[] attacks)
+        {
+            attackList = attacks;
+            attackIndex = 0;
+        }
+
+        /// <summary>재기동 뒤에 막의 처음 체력에서 다시 시작할 때.</summary>
+        public void StartAt(float hp) => Hp = Mathf.Clamp(hp, 1f, MaxHp);
+
+        /// <summary>체력을 깎되 least와 <see cref="HpFloor"/> 아래로는 내리지 않는다. 실제로 깎인 양을 돌려준다.</summary>
+        float Lose(float amount, float least)
+        {
+            float before = Hp;
+            Hp = Mathf.Max(Mathf.Min(Hp, Mathf.Max(least, HpFloor)), Hp - Mathf.Max(0f, amount));
+            return before - Hp;
+        }
+
         public static PilotSide IncomingSide(GruntAttack attack) => attack == GruntAttack.Slam ? PilotSide.Left : PilotSide.Right;
 
         /// <summary>이 상태에서 주먹이 들어가는 비율. 0이면 닿지 않거나 튕긴다.</summary>
@@ -270,6 +321,7 @@ namespace Anseong.Skirmish
                 case GruntStep.Guard:
                 case GruntStep.Dead:
                 case GruntStep.Waiting:
+                case GruntStep.Regroup:
                     return 0f;
                 case GruntStep.Stagger:
                     return 1f;
@@ -344,6 +396,7 @@ namespace Anseong.Skirmish
                     case GruntStep.Strike: Impact(guarding, guardSide); break;
                     case GruntStep.Recover:
                     case GruntStep.Stagger:
+                    case GruntStep.Regroup:
                         Enter(GruntStep.Idle, Settings.idleSeconds); break;
                     case GruntStep.Frozen:
                         // 기다리던 적은 풀려나도 다시 기다린다.
@@ -367,8 +420,7 @@ namespace Anseong.Skirmish
                 Emit(GruntEventKind.PunchBounced);
                 return PunchResult.Bounced;
             }
-            float applied = Mathf.Max(0f, damage) * PunchMultiplier();
-            Hp -= applied;
+            float applied = Lose(damage * PunchMultiplier(), 0f);
             Emit(GruntEventKind.PunchHit, applied);
             if (Hp <= 0f)
             {
@@ -401,7 +453,7 @@ namespace Anseong.Skirmish
             // 보스는 튕겨난 동안에만, 그 대신 온전히 들어간다.
             float share = !Spec.openOnlyWhenStaggered ? Settings.cannonHpMultiplier : Step == GruntStep.Stagger ? 1f : 0f;
             // 포로는 쓰러지지 않는다.
-            Hp = Mathf.Max(1f, Hp - damage * share);
+            Lose(damage * share, 1f);
             if (Step != GruntStep.Guard) return;
             cannonMeter += damage;
             if (cannonMeter < Settings.guardBreakDamage) return;
@@ -418,8 +470,10 @@ namespace Anseong.Skirmish
         public bool StrongHit(float damage, float seconds)
         {
             if (!Alive || Finishing || Step == GruntStep.Approach || Step == GruntStep.Waiting) return false;
+            // 막이 바뀌는 사이와 검·방패를 부수는 일격은 끊지 못한다.
+            if (Step == GruntStep.Regroup || Breaker) return false;
             // 쓰러뜨리는 것은 P1의 몫이다.
-            Hp = Mathf.Max(1f, Hp - Mathf.Max(0f, damage));
+            Lose(damage, 1f);
             Timer = Step == GruntStep.Stagger ? Mathf.Max(Timer, seconds) : seconds;
             Step = GruntStep.Stagger;
             Emit(GruntEventKind.StrongHit, damage);
@@ -452,7 +506,8 @@ namespace Anseong.Skirmish
         {
             var away = SkirmishMath.Flat(Position - robot);
             if (away == Vector3.zero) away = Vector3.forward;
-            var p = robot + away * (Held ? Settings.waitDistance : Settings.engageDistance);
+            float distance = Held ? Settings.waitDistance : Settings.engageDistance + (Step == GruntStep.Regroup ? Settings.regroupBack : 0f);
+            var p = robot + away * distance;
             p.y = Position.y;
             return p;
         }
@@ -502,7 +557,8 @@ namespace Anseong.Skirmish
 
         void BeginTelegraph()
         {
-            var attacks = Spec.attacks != null && Spec.attacks.Length > 0 ? Spec.attacks : new[] { GruntAttack.Slam };
+            var attacks = attackList != null && attackList.Length > 0 ? attackList
+                : Spec.attacks != null && Spec.attacks.Length > 0 ? Spec.attacks : new[] { GruntAttack.Slam };
             Attack = attacks[attackIndex % attacks.Length];
             attackIndex++;
             int bit = 1 << (int)Attack;
@@ -515,6 +571,13 @@ namespace Anseong.Skirmish
         void Impact(bool guarding, PilotSide guardSide)
         {
             var s = Settings;
+            if (Breaker)
+            {
+                Breaker = false;
+                Enter(GruntStep.Recover, s.recoverSeconds);
+                Emit(GruntEventKind.WeaponsBroken);
+                return;
+            }
             if (guarding && guardSide == IncomingSide(Attack))
             {
                 bool perfect = guardHeldFor <= s.perfectWindow;
