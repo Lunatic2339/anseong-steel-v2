@@ -72,6 +72,27 @@ namespace Anseong.EditorTools
             return true;
         }
 
+        /// <summary>
+        /// 싸우는 자리의 색을 살리는 불 둘(맵은 건드리지 않고 이 장면에만 둔다).
+        /// 고로 쪽(로봇의 왼쪽)에서 오는 주황빛과, 보스 뒤 오른쪽 위에서 윤곽을 따는 푸른빛.
+        /// </summary>
+        static void FightLights(SkirmishSettings settings)
+        {
+            var facing = Quaternion.Euler(0f, settings.mechYaw, 0f);
+            var root = new GameObject("Fight lights (고로 불빛, 윤곽빛)").transform;
+            void Glow(string name, Vector3 local, Color color, float intensity, float range)
+            {
+                var light = new GameObject(name).AddComponent<Light>();
+                light.transform.SetParent(root, false);
+                light.transform.position = settings.mechStart + facing * local;
+                light.type = LightType.Point; light.color = color; light.intensity = intensity; light.range = range;
+                light.shadows = LightShadows.None;
+                light.renderMode = LightRenderMode.ForcePixel;
+            }
+            Glow("Furnace glow", new Vector3(-30f, 38f, 11f), new Color(1f, 0.55f, 0.22f), 2.4f, 75f);
+            Glow("Rim light", new Vector3(26f, 46f, 36f), new Color(0.5f, 0.72f, 1f), 2.6f, 75f);
+        }
+
         /// <summary>헬기의 크기와 사수 눈 주변을 기록한다(확인용).</summary>
         static void MeasureHeli(GameObject heli, Transform gunner, Transform eye)
         {

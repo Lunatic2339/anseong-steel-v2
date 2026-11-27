@@ -449,6 +449,7 @@ namespace Anseong.EditorTools
             // 보스전의 P2는 싸움을 가파르게 내려다봐서 포신이 눈앞을 가로지른다. 더 아래 오른쪽으로 내린다.
             if (SkirmishSettings.IsBoss(settings, 0)) barrel.localPosition = new Vector3(1.3f, -1.9f, 0.2f);
             // 보스전의 P2는 헬기를 탄다(모델이 있으면 상자 조종석을 헬기로 바꾼다).
+            if (SkirmishSettings.IsBoss(settings, 0)) FightLights(settings);
             if (SkirmishSettings.IsBoss(settings, 0) && Helicopter(gunner, barrel))
                 gunner.rotation = Quaternion.Euler(settings.gunnerPitch, settings.gunnerYaw, 0f);
 
