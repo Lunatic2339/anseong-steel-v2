@@ -115,6 +115,18 @@ namespace Anseong.Skirmish
         [Tooltip("포 조준 판정 반지름(m).")]
         public float gruntRadius = 6.5f;
 
+        [Header("보스전 (기획안 2026-11-26)")]
+        [Tooltip("P2가 자리에서 바라보는 방향(°, 0 = 북쪽). 싸움을 옆에서 볼 때 쓴다.")]
+        public float gunnerYaw;
+        [Min(0f), Tooltip("로봇 내구도가 이 값 아래면 적의 예고가 길어진다. 0 = 끔.")]
+        public float lowHullBelow;
+        [Min(1f), Tooltip("내구도가 낮을 때 예고에 곱하는 값.")]
+        public float lowHullTelegraphScale = 1.3f;
+        [Min(0f), Tooltip("맞붙은 동안 자폭 드론이 하나씩 오는 간격(초). 0 = 안 온다. 혼자 할 때는 두 배로 뜸하다. 큰 탄의 속도·요격·피해를 그대로 쓴다.")]
+        public float droneEvery;
+        [Tooltip("자폭 드론이 뜨는 곳.")]
+        public Vector3 droneFrom;
+
         [Header("고로 (B08)")]
         public Vector3 furnacePoint = new Vector3(100f, 45f, 715f);
         [Tooltip("고로가 버티는 피격 수.")]
@@ -212,9 +224,59 @@ namespace Anseong.Skirmish
         };
     }
 
+    public partial class SkirmishSettings
+    {
+        /// <summary>
+        /// 보스전 1막(기획안 2026-11-26): 보스가 22 앞에 서서 대검으로 왼쪽 베기(내려베기)와 오른쪽 베기만 한다. 방패는 없다. 튕겨난 동안에만 피해가 들어가고, 체력 800에서 끝난다.
+        /// 회색 상자 장면용 자리다. 로봇이 북쪽(+Z)을 보고, P2는 로봇 오른쪽 37·앞 11·높이 50에서 싸움을 옆으로 본다(기획안의 자리를 로봇 기준으로 옮긴 것).
+        /// </summary>
+        /// <summary>그 번호의 적이 보스인가(튕겨난 동안에만 피해가 들어가는 적).</summary>
+        public static bool IsBoss(SkirmishSettings s, int index) =>
+            s.grunts != null && index >= 0 && index < s.grunts.Length && s.grunts[index].spec.openOnlyWhenStaggered;
+
+        public static SkirmishSettings BossAct1()
+        {
+            var mech = new Vector3(-350f, 0f, 450f);
+            return new SkirmishSettings
+            {
+                mechStart = mech,
+                // 걷지 않는다(옆으로 한 걸음은 아직 없다).
+                mechArea = new Vector4(mech.x, mech.z, mech.x, mech.z),
+                gunnerPost = mech + new Vector3(37f, 50f, 11f),
+                gunnerYaw = -90f,
+                missiles = 3,
+                rangedEnemies = false,
+                mechGun = false,
+                reboots = 1,
+                gruntHeight = 35f,
+                gruntRadius = 8f,
+                lowHullBelow = 30f,
+                droneEvery = 12f,
+                droneFrom = mech + new Vector3(-25f, 45f, 170f),
+                grunts = new[]
+                {
+                    new GruntWave
+                    {
+                        start = mech + new Vector3(0f, 0f, 22f), endAtHp = 800f,
+                        spec = new GruntSpec
+                        {
+                            hp = 1200f, soloHp = 900f,
+                            // 예고 1.2초 = 올림 0.4 + 멈춤 0.5 + 내려침 0.3.
+                            holdSeconds = 0.5f, guardEveryDamage = 0f,
+                            attacks = new[] { GruntAttack.Slam, GruntAttack.Swing, GruntAttack.Swing, GruntAttack.Slam, GruntAttack.Slam, GruntAttack.Swing, GruntAttack.Slam },
+                            openOnlyWhenStaggered = true, firstTimeScale = 1.5f, strongShotTarget = true,
+                        },
+                    },
+                },
+            };
+        }
+    }
+
     [Serializable]
     public class GruntWave
     {
+        [Min(0f), Tooltip("체력이 이 값까지 내려가면 이 적과의 싸움을 끝낸다(보스전의 한 막). 0이면 쓰러질 때까지. 혼자 할 때는 체력 비율만큼 낮아진다.")]
+        public float endAtHp;
         public Vector3 start;
         public GruntSpec spec = new GruntSpec();
         [Tooltip("앞 번호의 돌격형과 동시에 출발해 35 거리에서 기다린다. 혼자 할 때는 앞의 적이 쓰러진 뒤에 출발한다.")]

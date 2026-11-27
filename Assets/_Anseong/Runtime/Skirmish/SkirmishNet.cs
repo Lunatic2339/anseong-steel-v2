@@ -193,6 +193,16 @@ namespace Anseong.Skirmish
         /// <summary>G4(없으면 G3)를 기관포로 쏜다. 요격과 미사일은 쓰지 않는다.</summary>
         public static GunnerInput Gunner(SkirmishState st, SkirmishSettings s)
         {
+            if (st.GruntAlive && SkirmishSettings.IsBoss(s, st.gruntIndex))
+            {
+                // 보스: 튕겨난 틈에는 가슴을 쏘고, 그 밖에는 날아오는 자폭 드론을 쏜다.
+                var chest = (SkirmishSession.GruntCenter(st, s) - s.gunnerPost).normalized;
+                if (st.gruntStep == GruntStep.Stagger) return new GunnerInput { fire = true, aim = chest, pointer = chest };
+                var drone = st.shells.FirstOrDefault(x => x.kind == ShellKind.BigShell);
+                if (drone == null) return new GunnerInput { aim = chest, pointer = chest };
+                var at = (drone.position - s.gunnerPost).normalized;
+                return new GunnerInput { fire = true, aim = at, pointer = chest };
+            }
             if (st.GruntAlive && st.gruntStep == GruntStep.Guard)
             {
                 // 가드를 굳힌 돌격형을 쏴서 연다.

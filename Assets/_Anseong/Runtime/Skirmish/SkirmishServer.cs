@@ -106,6 +106,7 @@ namespace Anseong.Skirmish
         void Update()
         {
             if (view == null || local == null) return;
+            local.GunnerYaw = settings.gunnerYaw;
             if (!IsSpawned)
             {
                 // 운영자가 시작 화면에서 고르기 전: 처음 상태만 보여 준다.

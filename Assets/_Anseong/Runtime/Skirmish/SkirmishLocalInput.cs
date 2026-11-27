@@ -145,6 +145,10 @@ namespace Anseong.Skirmish
             yaw = 0f;
         }
 
+        /// <summary>P2 자리에서 정면으로 삼는 방향(°, 0 = 북쪽). 장면 수치에서 온다.</summary>
+        public float GunnerYaw { get; set; }
+        float SeatYaw => Seat == SkirmishSeat.Gunner ? GunnerYaw : 0f;
+
         /// <summary>운영자가 착용자 정면을 다시 맞출 때.</summary>
         public void Recenter() => recentered = false;
 
@@ -195,10 +199,10 @@ namespace Anseong.Skirmish
                 var space = trackingSpace != null ? trackingSpace : rig;
                 if (!recentered)
                 {
-                    // 지금 보는 쪽을 북쪽(+Z)으로, 지금 머리 위치를 자리의 눈 위치로.
+                    // 지금 보는 쪽을 자리의 정면(P1은 북쪽 +Z)으로, 지금 머리 위치를 자리의 눈 위치로.
                     var headLocal = headPosition.ReadValue<Vector3>();
                     float headYaw = headRotation.ReadValue<Quaternion>().eulerAngles.y;
-                    rig.rotation = Quaternion.Euler(0f, -headYaw, 0f);
+                    rig.rotation = Quaternion.Euler(0f, SeatYaw - headYaw, 0f);
                     rigOffset = -(rig.rotation * headLocal);
                     eyeHeight = Mathf.Clamp(headLocal.y, 1f, 2.1f);
                     recentered = true;
@@ -235,7 +239,7 @@ namespace Anseong.Skirmish
             {
                 var keyboard = Keyboard.current;
                 var mouse = Mouse.current;
-                rig.SetPositionAndRotation(anchor, Quaternion.identity);
+                rig.SetPositionAndRotation(anchor, Quaternion.Euler(0f, SeatYaw, 0f));
                 recentered = true;
                 if (mouse != null && Cursor.lockState == CursorLockMode.Locked)
                 {

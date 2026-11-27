@@ -88,6 +88,9 @@ namespace Anseong.Skirmish
             foreach (var r in backRenderers) r.SetPropertyBlock(rimBlock);
         }
 
+        [SerializeField, Tooltip("보스의 팔과 대검 자세(임시 표현). 없으면 몸을 기울이는 것만 한다.")] BossPuppet bossPuppet;
+        public void BindBossPuppet(BossPuppet puppet) => bossPuppet = puppet;
+
         public void BindGrunt(Transform root, Renderer telegraph, Renderer guardPlate)
         {
             grunt = root; gruntTelegraph = telegraph; gruntGuard = guardPlate;
@@ -196,6 +199,7 @@ namespace Anseong.Skirmish
             else if (st.gruntStep == GruntStep.Stagger) pose *= Quaternion.Euler(-16f, 0f, 0f);
             else if (st.gruntStep == GruntStep.Guard) pose *= Quaternion.Euler(10f, 0f, 0f);
             grunt.rotation = pose;
+            if (bossPuppet != null) bossPuppet.Show(st.gruntStep, st.gruntAttack, st.gruntTimer, s.grunt);
 
             bool telegraph = st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike || st.gruntShell > 0f;
             // 상태를 몸의 테두리 색으로도 알린다(예고 = 붉게, 빈틈 = 희게, 가드 = 노랗게, 쓰러지면 꺼짐).

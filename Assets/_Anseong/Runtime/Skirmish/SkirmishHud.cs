@@ -83,9 +83,9 @@ namespace Anseong.Skirmish
                 : $"고로 {st.furnace}/{s.furnaceHits}    미사일 {st.missiles}    포열 {st.cannonHeat * 100f:0}%{(st.cannonOverheated ? " 과열" : "")}";
             if (st.gruntIndex >= 0) status += $"    적 {st.gruntIndex + 1} 체력 {st.gruntHp:0}{(st.gruntStep == GruntStep.Guard ? " 가드" : "")}";
             string lockLine = seat == SkirmishSeat.Gunner && st.lockTarget >= 0
-                ? $"잠금 {(st.lockTarget == SkirmishSession.G3 ? "정면 적" : "동쪽 적")} {st.lockProgress * 100f:0}%" + (st.lockProgress >= 1f ? " — 놓으면 발사" : "")
+                ? $"잠금 {(st.lockTarget == SkirmishSession.GruntTarget ? "보스" : st.lockTarget == SkirmishSession.G3 ? "정면 적" : "동쪽 적")} {st.lockProgress * 100f:0}%" + (st.lockProgress >= 1f ? " — 놓으면 발사" : "")
                 : "";
-            string result = st.phase == SkirmishPhase.Cleared ? (s.rangedEnemies ? "적치장 확보" : "첫 상대 격파")
+            string result = st.phase == SkirmishPhase.Cleared ? (s.rangedEnemies ? "적치장 확보" : SkirmishSettings.IsBoss(s, st.gruntIndex) ? "1막 끝 — 보스가 물러선다" : "첫 상대 격파")
                 : st.phase == SkirmishPhase.Failed ? "실패 — 운영자가 R로 재시작"
                 : st.phase == SkirmishPhase.Rebooting ? $"기체 재기동 {Mathf.CeilToInt(st.rebootTimer)}" : "";
             text.text = $"{status}\n{lockLine}\n{lastEvent}\n{result}";
@@ -102,7 +102,7 @@ namespace Anseong.Skirmish
                 case SkirmishEventKind.ShellBlocked: return "메카가 막았다";
                 case SkirmishEventKind.ShellMissed: return "큰 탄 빗나감";
                 case SkirmishEventKind.MechHit: return "메카 피격!";
-                case SkirmishEventKind.GruntTelegraph: return e.Id == (int)GruntAttack.Slam ? "치켜든 팔! 왼쪽으로 막아!" : "옆으로 벌린 팔! 오른쪽으로 막아!";
+                case SkirmishEventKind.GruntTelegraph: return e.Id == (int)GruntAttack.Slam ? "치켜든 팔! 왼쪽으로 막아!" : "옆으로 젖힌 팔! 오른쪽으로 막아!";
                 case SkirmishEventKind.GruntBlocked: return "막았다 — 지금 쳐라!";
                 case SkirmishEventKind.GruntPerfectBlock: return "딱 맞춰 막았다 — 지금 쳐라!";
                 case SkirmishEventKind.PunchHit: return "주먹 명중";
