@@ -72,25 +72,31 @@ namespace Anseong.EditorTools
             return true;
         }
 
+        /// <summary>기본 렌더링에서 보스 바탕색에 곱하는 값(1 = 원래 색).</summary>
+        const float BossBrightness = 1.4f;
+
         /// <summary>
-        /// 싸우는 자리의 색을 살리는 불 둘(맵은 건드리지 않고 이 장면에만 둔다).
-        /// 고로 쪽(로봇의 왼쪽)에서 오는 주황빛과, 보스 뒤 오른쪽 위에서 윤곽을 따는 푸른빛.
+        /// 두 로봇이 어둡게 나와서(선우 2026-11-27) 싸우는 자리에만 두는 흰 채움빛 둘. 맵은 건드리지 않는다.
+        /// 하나는 로봇 머리 위에서 보스의 앞면을(P1이 보는 면), 하나는 헬기 쪽 위에서 두 로봇의 옆면을(P2가 보는 면) 비춘다.
+        /// 스포트라이트라 바닥에는 발밑만 밝아진다.
         /// </summary>
         static void FightLights(SkirmishSettings settings)
         {
             var facing = Quaternion.Euler(0f, settings.mechYaw, 0f);
-            var root = new GameObject("Fight lights (고로 불빛, 윤곽빛)").transform;
-            void Glow(string name, Vector3 local, Color color, float intensity, float range)
+            var root = new GameObject("Fight lights (로봇 채움빛)").transform;
+            void Fill(string name, Vector3 from, Vector3 to, float intensity, float angle)
             {
                 var light = new GameObject(name).AddComponent<Light>();
                 light.transform.SetParent(root, false);
-                light.transform.position = settings.mechStart + facing * local;
-                light.type = LightType.Point; light.color = color; light.intensity = intensity; light.range = range;
+                var at = settings.mechStart + facing * from;
+                light.transform.SetPositionAndRotation(at, Quaternion.LookRotation(settings.mechStart + facing * to - at));
+                light.type = LightType.Spot; light.spotAngle = angle; light.range = 120f;
+                light.color = new Color(1f, 0.97f, 0.92f); light.intensity = intensity;
                 light.shadows = LightShadows.None;
                 light.renderMode = LightRenderMode.ForcePixel;
             }
-            Glow("Furnace glow", new Vector3(-30f, 38f, 11f), new Color(1f, 0.55f, 0.22f), 2.4f, 75f);
-            Glow("Rim light", new Vector3(26f, 46f, 36f), new Color(0.5f, 0.72f, 1f), 2.6f, 75f);
+            Fill("Boss front fill", new Vector3(-6f, 52f, -8f), new Vector3(0f, 22f, 22f), 0.9f, 60f);
+            Fill("Side fill", new Vector3(40f, 52f, 11f), new Vector3(0f, 20f, 11f), 0.8f, 70f);
         }
 
         /// <summary>헬기의 크기와 사수 눈 주변을 기록한다(확인용).</summary>
@@ -153,6 +159,17 @@ namespace Anseong.EditorTools
             instance.transform.SetParent(root, false);
             // 맵 프로젝트는 기본 렌더링이라 재질을 그쪽 것으로 바꿔 끼운다(URP에서는 아무것도 하지 않는다).
             UseBuiltInMaterials(instance);
+            // 보스의 바탕색이 짙어 기본 렌더링의 흐린 하늘 아래에서 검게 뭉개진다. 금속성을 낮추고 바탕색을 올린다.
+            if (BuiltIn)
+                foreach (var material in instance.GetComponentsInChildren<Renderer>(true).SelectMany(r => r.sharedMaterials).Where(m => m != null).Distinct())
+                {
+                    material.SetFloat("_Metallic", 0.1f);
+                    material.SetTexture("_MetallicGlossMap", null);
+                    material.DisableKeyword("_METALLICGLOSSMAP");
+                    material.SetFloat("_Glossiness", 0.35f);
+                    material.color = Color.white * BossBrightness;
+                    EditorUtility.SetDirty(material);
+                }
             foreach (var skin in instance.GetComponentsInChildren<SkinnedMeshRenderer>()) skin.updateWhenOffscreen = true;
             if (MeasureHeight(instance, out float min, out float max))
             {
