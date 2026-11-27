@@ -20,7 +20,7 @@ namespace Anseong.EditorTools
         /// <summary>선우가 내려받은 헬기 모델(AH-55 Shoebill)을 Blender에서 합쳐 FBX로 바꾼 것. 없으면 상자 조종석을 그대로 쓴다.</summary>
         const string HeliModel = "Assets/_Anseong/Art/Heli/Heli_AH55.fbx";
         /// <summary>
-        /// 헬기를 P2 자리에 놓을지. 2026-11-27 선우 결정: 기수를 30° 숙인 채 떠 있게 한다(수평이면 계기판이 싸움을 가린다).
+        /// 헬기를 P2 자리에 놓을지. 2026-11-27 선우 확정: 높이 40에서 기수를 15° 숙인 채 떠 있게 한다(수평이면 계기판이 싸움을 가린다).
         /// 끄면 상자 조종석을 쓴다.
         /// </summary>
         public static bool UseHelicopter = true;
@@ -268,8 +268,11 @@ namespace Anseong.EditorTools
                 {
                     localInput.PlaceCockpit(MechEye(), on);
                     camera.transform.position = MechEye();
-                    holoHud.Show(session.State, settings, session.Events, on, 0f);
+                    if (holoHud != null) holoHud.Show(session.State, settings, session.Events, false, 0f);
                 }
+                var bossHud = Object.FindAnyObjectByType<BossFightHud>();
+                // 화면 표시: 자리에 맞는 것을 띄우거나(P1, P2) 밖에서 찍을 때는 숨긴다.
+                void Hud(SkirmishSeat seat, bool hide = false) => bossHud.Show(session.State, settings, seat, false, hide, "", 0.02f);
                 void Until(System.Func<SkirmishState, bool> reached, string what)
                 {
                     for (int i = 0; i < 6000; i++) { Tick(); if (reached(session.State)) return; }
@@ -311,9 +314,12 @@ namespace Anseong.EditorTools
                 {
                     var mech = session.State.mech;
                     Pilot(true);
+                    Hud(SkirmishSeat.Mech);
                     Shot(name + "-p1", MechEye(), Center() + Vector3.up * 6f, 90f);
                     Pilot(false);
+                    Hud(SkirmishSeat.Gunner);
                     Shot(name + "-p2", settings.gunnerPost, mech + facing * new Vector3(0f, 22f, 11f), 90f);
+                    Hud(SkirmishSeat.Gunner, true);
                     Shot(name + "-side", mech + facing * new Vector3(-70f, 24f, 11f), mech + facing * new Vector3(0f, 19f, 11f), 60f);
                 }
 
@@ -329,6 +335,36 @@ namespace Anseong.EditorTools
                 Until(st => st.shells.Any(x => x.kind == ShellKind.BigShell && Vector3.Distance(x.position, settings.gunnerPost) < 90f), "자폭 드론이 다가옴");
                 Pilot(false);
                 Shot("5-drone-p2", settings.gunnerPost, session.State.shells.First(x => x.kind == ShellKind.BigShell).position, 90f);
+                // P2의 스캔: 버튼을 누른 채 보스를 겨누는 중(고리가 차오름)과 약점이 뜬 순간.
+                void ScanTick(bool cancel)
+                {
+                    var mechInput = SkirmishBots.Mech(session.State, settings);
+                    mechInput.punchDamage = 0f;
+                    session.SetMech(mechInput);
+                    var at = (Center() - settings.gunnerPost).normalized;
+                    session.SetGunner(new GunnerInput { aim = at, pointer = at, lockHeld = true, cancel = cancel });
+                    session.Tick(0.02f);
+                    view.Show(session, aim, 0f);
+                }
+                for (int i = 0; i < 400 && session.State.lockProgress < 0.6f; i++) ScanTick(false);
+                var fight = session.State.mech + facing * new Vector3(0f, 22f, 11f);
+                Pilot(false);
+                // 고리는 카메라가 보는 쪽을 기준으로 놓이므로 먼저 카메라를 돌려 둔다.
+                camera.transform.SetPositionAndRotation(settings.gunnerPost, Quaternion.LookRotation(fight - settings.gunnerPost));
+                Hud(SkirmishSeat.Gunner);
+                Shot("5b-scan-p2", settings.gunnerPost, fight, 90f);
+                // 약점 셋(등, 어깨, 옆구리)이 P2 눈에 보이는지 하나씩 찍는다. 취소하고 놓으면 쏘지 않고 다음 약점으로 넘어간다.
+                string[] spots = { "back", "shoulder", "flank" };
+                for (int spot = 0; spot < spots.Length; spot++)
+                {
+                    for (int i = 0; i < 400 && session.State.weakTimer <= 0f; i++) ScanTick(false);
+                    Hud(SkirmishSeat.Gunner);
+                    Shot($"5c-weak-point-{spot + 1}-{spots[spot]}-p2", settings.gunnerPost, fight, 90f);
+                    ScanTick(true);
+                    session.SetMech(default);
+                    session.SetGunner(default);
+                    session.Tick(0.02f);
+                }
                 attack = true;
                 Until(st => st.phase == SkirmishPhase.Cleared, "1막 끝");
                 Three("6-act-end");

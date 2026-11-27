@@ -30,6 +30,10 @@ namespace Anseong.Skirmish
         public void BindCockpit(Transform mount) => cockpitMount = mount;
         [SerializeField, Tooltip("P1 조종석의 홀로그램 HUD(있으면 같이 갱신한다).")] MechHoloHud holo;
         public void BindHolo(MechHoloHud value) => holo = value;
+        [SerializeField, Tooltip("보스전의 간결한 화면 표시(있으면 보스전에서는 글자 계기와 홀로그램 대신 이것만 보인다).")] BossFightHud bossHud;
+        public void BindBossHud(BossFightHud value) => bossHud = value;
+        /// <summary>운영자가 착용자 정면을 다시 맞췄을 때 화면 표시도 다시 놓는다.</summary>
+        public void Replace() { if (bossHud != null) bossHud.Replace(); }
 
         void Build()
         {
@@ -60,6 +64,18 @@ namespace Anseong.Skirmish
         public void Show(SkirmishState st, SkirmishSettings s, IReadOnlyList<SkirmishEvent> events, SkirmishSeat seat, bool vr, string waiting)
         {
             if (text == null) Build();
+            if (bossHud != null && SkirmishSettings.IsBoss(s, 0))
+            {
+                // 보스전: 얇은 줄 몇 개만 보인다. 글자 계기와 홀로그램은 숨긴다.
+                if (holo != null) holo.Show(st, s, events, false, Time.time);
+                if (panel.gameObject.activeSelf) panel.gameObject.SetActive(false);
+                string note = st.phase == SkirmishPhase.Waiting ? waiting
+                    : st.phase == SkirmishPhase.Cleared ? "1막 끝"
+                    : st.phase == SkirmishPhase.Failed ? "고로를 지키지 못했다"
+                    : st.phase == SkirmishPhase.Rebooting ? $"기체 재기동 {Mathf.CeilToInt(st.rebootTimer)}" : "";
+                bossHud.Show(st, s, seat, vr, HideForMenu, note, Time.deltaTime);
+                return;
+            }
             if (holo != null) holo.Show(st, s, events, seat == SkirmishSeat.Mech && !HideForMenu, Time.time);
             if (panel.gameObject.activeSelf == HideForMenu) panel.gameObject.SetActive(!HideForMenu);
             // 모니터로 볼 때는 고개를 숙일 수 없으니 계기판을 머리 앞에 그대로 둔다.

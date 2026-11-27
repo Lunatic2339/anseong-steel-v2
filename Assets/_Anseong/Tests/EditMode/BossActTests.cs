@@ -264,7 +264,8 @@ namespace Anseong.Tests
             Assert.AreEqual(90f, s.mechYaw, "동쪽을 본다");
             Assert.Less(Vector3.Distance(new Vector3(100f, 0f, 632f), s.mechStart), 0.01f);
             Assert.Less(Vector3.Distance(new Vector3(122f, 0f, 632f), s.grunts[0].start), 0.01f, "보스는 로봇 앞 22");
-            Assert.Less(Vector3.Distance(new Vector3(111f, 50f, 595f), s.gunnerPost), 0.01f, "P2 드론 자리");
+            Assert.Less(Vector3.Distance(new Vector3(111f, 40f, 595f), s.gunnerPost), 0.01f, "P2 헬기 자리");
+            Assert.AreEqual(15f, s.gunnerPitch, "기수를 15도 숙인다");
             Assert.AreEqual(0f, s.gunnerYaw, 0.01f, "P2는 북쪽을 본다");
             Assert.Greater(s.droneFrom.x, 200f, "자폭 드론은 동쪽에서 온다");
         }
@@ -391,7 +392,7 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void 약점은_등_어깨_무릎을_차례로_돈다()
+        public void 약점은_등_어깨_옆구리를_차례로_돌고_셋_다_허리_위다()
         {
             var s = Act1();
             Gun(s, 0.1f, _ => default);
@@ -408,7 +409,8 @@ namespace Anseong.Tests
             Assert.AreEqual(3, s.State.missiles, "취소하면 쓰지 않는다");
             Assert.Greater(heights[0], 20f, "등");
             Assert.Greater(heights[1], 20f, "어깨");
-            Assert.Less(heights[2], 15f, "무릎");
+            Assert.Greater(heights[2], 17.5f, "옆구리도 허리(키의 절반) 위");
+            Assert.Less(heights[2], heights[1], "옆구리는 어깨보다 낮다");
         }
 
         [Test]

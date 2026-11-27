@@ -132,7 +132,7 @@ namespace Anseong.Skirmish
                 if (keyboard.rKey.wasPressedThisFrame) ResetSession();
                 if (keyboard.enterKey.wasPressedThisFrame) forcedStart = true;
                 if (keyboard.bKey.wasPressedThisFrame) botFillsEmptySeat = !botFillsEmptySeat;
-                if (keyboard.cKey.wasPressedThisFrame && local.VrActive) local.Recenter();
+                if (keyboard.cKey.wasPressedThisFrame && local.VrActive) { local.Recenter(); if (hud != null) hud.Replace(); }
                 if (keyboard.gKey.wasPressedThisFrame && Solo) soloAsGunner = !soloAsGunner;
                 if (keyboard.kKey.wasPressedThisFrame) session.BreakShield();
             }

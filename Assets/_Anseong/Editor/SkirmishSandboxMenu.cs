@@ -522,12 +522,23 @@ namespace Anseong.EditorTools
             var hud = viewRoot.AddComponent<SkirmishHud>();
             hud.Bind(rig.transform, camera.transform);
             hud.BindCockpit(hudMount);
-            var holo = viewRoot.AddComponent<MechHoloHud>();
-            holo.Bind(cockpit, camera.transform, mechArms);
-            holo.BindGlow(Shader.Find("Anseong/HoloUI"));
+            // 보스전은 얇은 줄 화면 표시만 쓴다. 홀로그램 계기는 만들지 않는다.
+            bool bossScene = SkirmishSettings.IsBoss(settings, 0);
+            var holo = bossScene ? null : viewRoot.AddComponent<MechHoloHud>();
+            if (holo != null)
+            {
+                holo.Bind(cockpit, camera.transform, mechArms);
+                holo.BindGlow(Shader.Find("Anseong/HoloUI"));
+            }
             // 테두리 빛이 되는 프로젝트(기본 렌더링)에서는 예고용 빨간 공을 뺀다: 몸의 붉은 빛과 표적 테두리로 충분하다.
             view.TelegraphGlow = !BuiltIn;
-            hud.BindHolo(holo);
+            if (holo != null) hud.BindHolo(holo);
+            if (bossScene)
+            {
+                var bossHud = viewRoot.AddComponent<BossFightHud>();
+                bossHud.Bind(rig.transform, camera.transform);
+                hud.BindBossHud(bossHud);
+            }
 
             // 헤드셋을 쓴 채 값을 바꾸고 확인 결과를 적는 메뉴. 오른손 B는 P2의 잠금 취소라서 왼손 메뉴 버튼으로 연다.
             var tuning = SceneSetupMenu.AddTuningMenu(camera.transform, null);

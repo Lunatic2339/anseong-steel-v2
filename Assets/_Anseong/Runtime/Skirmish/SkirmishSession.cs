@@ -347,7 +347,7 @@ namespace Anseong.Skirmish
         Vector3 TargetCenter(int id) => id != GruntTarget ? EnemyCenter(id) : weakIndex >= 0 ? WeakPoint(weakIndex) : GruntCenter(State, Settings);
 
         /// <summary>
-        /// 약점 자리: 등, 어깨, 무릎을 차례로 돈다. 보스 기준(x 보스의 오른쪽, z 로봇 쪽)이고 P2가 있는 쪽(로봇의 오른쪽 = 보스의 왼쪽)을 쓴다.
+        /// 약점 자리: 등, 어깨, 옆구리를 차례로 돈다. 셋 다 허리 위다(P2의 헬기에서는 보스의 다리가 기수에 가린다). 보스 기준(x 보스의 오른쪽, z 로봇 쪽)이고 P2가 있는 쪽(로봇의 오른쪽 = 보스의 왼쪽)을 쓴다.
         /// </summary>
         Vector3 WeakPoint(int index)
         {
@@ -357,7 +357,8 @@ namespace Anseong.Skirmish
             {
                 case 0: local = new Vector3(-1.5f, h * 0.8f, -4f); break;      // 등 위쪽
                 case 1: local = new Vector3(-7f, h * 0.78f, 0f); break;        // 어깨
-                default: local = new Vector3(-4f, h * 0.27f, 1.5f); break;     // 무릎
+                // 옆구리: 키의 0.55 높이에서는 P2 헬기의 기수에 가렸다(11/27 사진). 팔 아래 0.66 높이로 올렸다.
+                default: local = new Vector3(-6f, h * 0.66f, 2.5f); break;
             }
             var forward = SkirmishMath.Flat(State.mech - grunt.Position);
             if (forward == Vector3.zero) forward = Vector3.back;

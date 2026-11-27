@@ -12,7 +12,27 @@ namespace Anseong.EditorTools
     {
         const string Dir = "Assets/_Anseong/Art/BossMecha";
         const string Fbx = Dir + "/BossMecha.fbx";
-        const string OutDir = "Logs/BossMechaTest";
+        static string OutDir = "Logs/BossMechaTest";
+        // 찍을 동작: Dir 아래의 폴더와 파일 이름(확장자 없이). 기본은 Meshy 일반병 동작 넷.
+        static string ClipFolder = "TestMotions";
+        static string[] ClipNames = { "Grunt_walk", "Grunt_fire", "Grunt_hit", "Grunt_death" };
+
+        /// <summary>Mixamo "Great Sword" 묶음에서 고른 동작을 보스에 입혀 찍는다(두 장으로 나눠서). -executeMethod Anseong.EditorTools.BossMechaTest.RunGreatSword</summary>
+        public static void RunGreatSword()
+        {
+            try
+            {
+                ClipFolder = "GreatSword";
+                ClipNames = new[] { "great sword idle", "great sword walk", "great sword slash", "great sword slash (2)", "great sword slash (3)", "great sword slash (4)", "great sword slash (5)", "great sword attack" };
+                OutDir = "Logs/BossGreatSwordA";
+                Capture();
+                ClipNames = new[] { "great sword blocking", "great sword casting", "great sword power up", "great sword jump attack", "great sword slide attack", "great sword impact", "great sword impact (3)", "two handed sword death" };
+                OutDir = "Logs/BossGreatSwordB";
+                Capture();
+                EditorApplication.Exit(0);
+            }
+            catch (System.Exception e) { Debug.LogException(e); EditorApplication.Exit(1); }
+        }
         const float Height = 35f;
 
         public static void Run()
@@ -155,11 +175,11 @@ namespace Anseong.EditorTools
             Directory.CreateDirectory(OutDir);
 
             // 사람형 동작: Meshy로 만든 일반병 동작 넷(뼈 이름이 Mixamo식). Mixamo 동작이 들어올 길과 같은 길이다.
-            var clips = new[] { "Grunt_walk", "Grunt_fire", "Grunt_hit", "Grunt_death" };
+            var clips = ClipNames;
             var loaded = new Dictionary<string, AnimationClip>();
             foreach (var n in clips)
             {
-                string fp = Dir + "/TestMotions/" + n + ".fbx";
+                string fp = Dir + "/" + ClipFolder + "/" + n + ".fbx";
                 var mi = (ModelImporter)AssetImporter.GetAtPath(fp);
                 if (mi.animationType != ModelImporterAnimationType.Human)
                 {

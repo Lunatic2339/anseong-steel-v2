@@ -247,12 +247,12 @@ namespace Anseong.Skirmish
         public static SkirmishSettings BossAct1() => BossAct1At(new Vector3(-350f, 0f, 450f), 0f);
 
         /// <summary>
-        /// 같은 1막을 맵 위 고로 앞에 놓는다(기획안 2절): 로봇 (100, 0, 632)이 동쪽을 보고, 보스는 (122, 0, 632), P2는 (111, 50, 595)에서 북쪽을 본다.
+        /// 같은 1막을 맵 위 고로 앞에 놓는다(기획안 2절): 로봇 (100, 0, 632)이 동쪽을 보고, 보스는 (122, 0, 632), P2는 (111, 40, 595)에서 북쪽을 본다.
         /// </summary>
         public static SkirmishSettings BossAct1OnMap() => BossAct1At(new Vector3(100f, 0f, 632f), 90f);
 
         /// <summary>
-        /// 로봇의 자리와 방향을 받아 나머지 자리를 로봇 기준으로 놓는다: 보스는 앞 22, P2는 오른쪽 37·앞 11·높이 50에서 싸움을 옆으로 본다.
+        /// 로봇의 자리와 방향을 받아 나머지 자리를 로봇 기준으로 놓는다: 보스는 앞 22, P2는 오른쪽 37·앞 11·높이 40에서 싸움을 옆으로 본다.
         /// </summary>
         /// <summary>그 번호의 적이 보스인가(튕겨난 동안에만 피해가 들어가는 적).</summary>
         public static bool IsBoss(SkirmishSettings s, int index) =>
@@ -267,10 +267,10 @@ namespace Anseong.Skirmish
                 mechYaw = yaw,
                 // 걷지 않는다(옆으로 한 걸음은 아직 없다).
                 mechArea = new Vector4(mech.x, mech.z, mech.x, mech.z),
-                gunnerPost = mech + facing * new Vector3(37f, 50f, 11f),
+                gunnerPost = mech + facing * new Vector3(37f, 40f, 11f),
                 gunnerYaw = yaw - 90f,
-                // 수평이면 계기판과 기수가 싸움을 전부 가린다(11/27 시험). 30° 숙이면 계기판 위로 보인다.
-                gunnerPitch = 30f,
+                // 2026-11-27 선우 확정: 높이 40, 기수 15° 숙임. 수평이면 계기판과 기수가 싸움을 가린다.
+                gunnerPitch = 15f,
                 // 우리 로봇은 왼팔 방패와 오른팔 검으로 시작한다(3막에서 잃는 것은 아직 없다).
                 swordDamage = 40f,
                 missiles = 3,
