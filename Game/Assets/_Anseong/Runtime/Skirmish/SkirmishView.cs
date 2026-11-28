@@ -90,7 +90,12 @@ namespace Anseong.Skirmish
         }
 
         [SerializeField, Tooltip("보스의 팔과 대검 자세(임시 표현). 없으면 몸을 기울이는 것만 한다.")] BossPuppet bossPuppet;
-        public void BindBossPuppet(BossPuppet puppet) => bossPuppet = puppet;
+        public void BindBossPuppet(BossPuppet puppet)
+        {
+            bossPuppet = puppet;
+            bossMotion = puppet != null ? puppet.GetComponent<BossMotion>() : null;
+        }
+        [SerializeField, Tooltip("보스의 온몸 동작(받은 동작 파일). 있으면 몸을 통째로 기울이는 임시 표현을 쓰지 않는다.")] BossMotion bossMotion;
         [SerializeField, Tooltip("P2의 스캔이 끝났을 때 보스의 약점 자리에 뜨는 표시.")] Transform weakMarker;
         public void BindWeakMarker(Transform marker) => weakMarker = marker;
 
@@ -207,16 +212,23 @@ namespace Anseong.Skirmish
             var rotation = facing.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(facing) : grunt.rotation;
             var pose = rotation;
             bool finale = !dead && st.finale != FinaleStep.None;
+            bool moving = bossMotion != null && bossMotion.Ready;
             // 마무리: 가슴이 터지면 뒤로 젖혀지고, 일격이 들어가면 넘어가기 시작한다. 몸 전체를 발을 축으로 기울인다.
             float lean = !finale ? 0f : st.finale == FinaleStep.Together ? -12f : st.finale == FinaleStep.Blow ? -45f : st.finale == FinaleStep.Open ? 6f : 0f;
             finaleLean = Application.isPlaying ? Mathf.MoveTowards(finaleLean, lean, 30f * Time.deltaTime) : lean;
-            if (finale || Mathf.Abs(finaleLean) > 0.01f) pose *= Quaternion.Euler(dead ? 0f : finaleLean, 0f, 0f);
-            if (dead) pose *= Quaternion.Euler(-88f, 0f, 0f);
-            else if (st.gruntStep == GruntStep.Stagger) pose *= Quaternion.Euler(-16f, 0f, 0f);
-            else if (st.gruntStep == GruntStep.Guard) pose *= Quaternion.Euler(10f, 0f, 0f);
+            // 온몸 동작이 있으면 비틀거림과 쓰러짐은 동작이 한다. 없을 때만 몸을 통째로 기울인다.
+            if (!moving)
+            {
+                if (finale || Mathf.Abs(finaleLean) > 0.01f) pose *= Quaternion.Euler(dead ? 0f : finaleLean, 0f, 0f);
+                if (dead) pose *= Quaternion.Euler(-88f, 0f, 0f);
+                else if (st.gruntStep == GruntStep.Stagger) pose *= Quaternion.Euler(-16f, 0f, 0f);
+                else if (st.gruntStep == GruntStep.Guard) pose *= Quaternion.Euler(10f, 0f, 0f);
+            }
             grunt.rotation = pose;
+            if (moving) bossMotion.Show(st, s, Application.isPlaying ? Time.deltaTime : 0.02f);
             if (bossPuppet != null)
             {
+                bossPuppet.Active = !moving || !bossMotion.DrivesArms;
                 if (finale) bossPuppet.Finale(st.finale);
                 else bossPuppet.Show(st.gruntStep, st.gruntAttack, st.gruntTimer, s.grunt, st.gruntSide);
             }

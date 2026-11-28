@@ -178,6 +178,8 @@ namespace Anseong.Skirmish
 
         Pose target = Stance, shown = Stance;
         bool started;
+        /// <summary>false면 팔과 대검을 건드리지 않는다(온몸 동작이 잡고 있을 때). 등 뒤의 불과 조준선은 그대로 한다.</summary>
+        public bool Active { get; set; } = true;
 
         /// <summary>장면을 만드는 에디터 메뉴가 뼈와 칼·방패를 넣는다. 그때의 뼈 회전을 기준 자세로 적어 둔다.</summary>
         public void Bind(Arm swordSide, Arm shieldSide, Transform swordRoot, Transform shieldRoot, float bladeLength)
@@ -250,7 +252,7 @@ namespace Anseong.Skirmish
 
         void Apply()
         {
-            if (swordArm.upper == null || shieldArm.upper == null) return;
+            if (!Active || swordArm.upper == null || shieldArm.upper == null) return;
             var frame = transform.rotation;
             Aim(swordArm, frame * shown.swordUpper, frame * shown.swordFore);
             Aim(shieldArm, frame * shown.shieldUpper, frame * shown.shieldFore);
