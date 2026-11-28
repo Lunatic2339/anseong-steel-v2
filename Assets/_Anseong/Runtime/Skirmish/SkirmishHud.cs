@@ -72,8 +72,7 @@ namespace Anseong.Skirmish
                 if (holo != null) holo.Show(st, s, events, false, Time.time);
                 if (panel.gameObject.activeSelf) panel.gameObject.SetActive(false);
                 string note = st.phase == SkirmishPhase.Waiting ? waiting
-                    : st.phase == SkirmishPhase.Cleared ? "1막 끝"
-                    : st.phase == SkirmishPhase.Failed ? "고로를 지키지 못했다"
+                    : st.phase == SkirmishPhase.Cleared || st.phase == SkirmishPhase.Failed ? ""
                     : st.phase == SkirmishPhase.Rebooting ? $"기체 재기동 {Mathf.CeilToInt(st.rebootTimer)}" : "";
                 bossHud.Show(st, s, seat, vr, HideForMenu, note, Time.deltaTime);
                 return;

@@ -226,6 +226,18 @@ namespace Anseong.Skirmish
         /// <summary>로봇이 옆으로 비켜 있는 거리(오른쪽이 +). mech에 이미 들어 있다.</summary>
         public float sideStep;
 
+        // 결과 화면에 쓰는 기록(기획안 "결과 화면"). 재기동해도 이어서 센다.
+        /// <summary>싸운 실제 시간(초). 느린 시간과 상관없다.</summary>
+        public float statSeconds;
+        /// <summary>P1이 막은 횟수(자폭 드론을 막은 것 포함)와 그 가운데 딱 맞춰 막은 횟수.</summary>
+        public int statBlocks, statPerfect;
+        /// <summary>로봇이 받은 피해의 합.</summary>
+        public float statTaken;
+        /// <summary>P2가 떨어뜨린 자폭 드론 수.</summary>
+        public int statDrones;
+        /// <summary>P2가 보스에게 넣은 피해의 합(틈에 넣은 연사와 강한 탄).</summary>
+        public float statGunnerDamage;
+
         /// <summary>보스전 마무리의 지금 단계.</summary>
         public FinaleStep finale;
         /// <summary>그 단계에서 한 사람이 채우는 정도(0~1): 막고 있는 시간, 가슴을 맞힌 시간.</summary>
