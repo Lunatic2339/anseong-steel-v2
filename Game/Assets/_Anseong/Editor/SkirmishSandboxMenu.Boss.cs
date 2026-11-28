@@ -555,8 +555,11 @@ namespace Anseong.EditorTools
                     for (int i = 0; i < 10; i++) Tick();
                     Intro("0b-wrecks");
                     Until(st => st.stage == SceneStage.Drones && st.shells.Any(x => x.kind == ShellKind.BigShell), "자폭 드론 장면");
+                    // 이 사진에서는 P2가 쏘지 않는다(드론이 남아 있어야 방향 화살표가 찍힌다).
+                    attack = false;
                     for (int i = 0; i < 40; i++) Tick();
                     Intro("0c-drones");
+                    attack = true;
                     Until(st => st.stage == SceneStage.Entrance && st.stageTimer > 1f, "등장 영상");
                     for (int i = 0; i < 60; i++) bossHud.Show(session.State, intro, SkirmishSeat.Mech, false, false, "", 0.02f);
                     Intro("0d-entrance");

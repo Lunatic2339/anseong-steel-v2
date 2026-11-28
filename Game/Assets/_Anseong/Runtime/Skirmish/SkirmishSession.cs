@@ -129,6 +129,7 @@ namespace Anseong.Skirmish
             }
             // 결과 화면의 기록은 재기동해도 이어 간다.
             State.statSeconds = old.statSeconds; State.statBlocks = old.statBlocks; State.statPerfect = old.statPerfect;
+            State.missFeint = old.missFeint; State.missBig = old.missBig; State.missThrust = old.missThrust; State.cannonBounced = old.cannonBounced;
             State.statTaken = old.statTaken; State.statDrones = old.statDrones; State.statGunnerDamage = old.statGunnerDamage;
             startAct = old.act;
             var st = State;
@@ -853,6 +854,16 @@ namespace Anseong.Skirmish
             st.gruntSide = grunt.Side; st.gruntImpactIn = grunt.ImpactIn;
         }
 
+        /// <summary>특별한 공격을 놓쳤거나(맞음) 맞혔을 때(막음, 비킴) 연속으로 놓친 횟수를 고친다.</summary>
+        void Missed(GruntAttack attack, bool missed)
+        {
+            var st = State;
+            byte Next(byte now) => missed ? (byte)Mathf.Min(now + 1, 9) : (byte)0;
+            if (attack == GruntAttack.Feint) st.missFeint = Next(st.missFeint);
+            else if (attack == GruntAttack.BigSlam) st.missBig = Next(st.missBig);
+            else if (attack == GruntAttack.Thrust) st.missThrust = Next(st.missThrust);
+        }
+
         void OnGruntEvent(GruntEvent e)
         {
             var st = State;
@@ -861,12 +872,14 @@ namespace Anseong.Skirmish
             {
                 case GruntEventKind.Arrived: Emit(SkirmishEventKind.GruntArrived, st.gruntIndex, center, MechChest); break;
                 case GruntEventKind.TelegraphStarted: Emit(SkirmishEventKind.GruntTelegraph, (int)e.Attack, center, MechChest); break;
-                case GruntEventKind.Blocked: Emit(SkirmishEventKind.GruntBlocked, (int)e.Attack, center, MechChest); break;
+                case GruntEventKind.Blocked: Missed(e.Attack, false); Emit(SkirmishEventKind.GruntBlocked, (int)e.Attack, center, MechChest); break;
                 case GruntEventKind.PerfectBlocked:
+                    Missed(e.Attack, false);
                     st.slowMotion = Settings.perfectSlowSeconds;
                     Emit(SkirmishEventKind.GruntPerfectBlock, (int)e.Attack, center, MechChest);
                     break;
                 case GruntEventKind.RobotHit:
+                    Missed(e.Attack, true);
                     st.hull = Mathf.Max(0f, st.hull - e.Amount);
                     Emit(SkirmishEventKind.MechHit, -1, center, MechChest);
                     break;
@@ -891,7 +904,7 @@ namespace Anseong.Skirmish
                     droneTimer = Mathf.Max(droneTimer, DroneInterval);
                     break;
                 }
-                case GruntEventKind.ThrustPassed: Emit(SkirmishEventKind.ThrustPassed, st.gruntIndex, center, MechChest); break;
+                case GruntEventKind.ThrustPassed: Missed(GruntAttack.Thrust, false); Emit(SkirmishEventKind.ThrustPassed, st.gruntIndex, center, MechChest); break;
                 case GruntEventKind.WeaponsBroken:
                     // 보스의 일격에 방패가 부서지고 검이 부러진다. 막기 판정은 그대로고, 이후로는 주먹으로 친다.
                     st.shieldBroken = st.swordBroken = true;
@@ -1101,6 +1114,8 @@ namespace Anseong.Skirmish
                 float before = grunt.Hp;
                 grunt.CannonHit(s.cannonDamage);
                 st.statGunnerDamage += Mathf.Max(0f, before - grunt.Hp);
+                // 닫힌 보스에게는 튕긴다. 마무리에서 가슴을 쏘는 것은 튕긴 것으로 치지 않는다.
+                if (grunt.Hp >= before && grunt.Spec.openOnlyWhenStaggered && grunt.Step != GruntStep.Stagger && st.finale == FinaleStep.None) st.cannonBounced = true;
                 foreach (var e in grunt.Events)
                     if (e.Kind == GruntEventKind.GuardBroken) OnGruntEvent(e);
                 CopyGrunt();

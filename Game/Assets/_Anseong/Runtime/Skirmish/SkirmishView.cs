@@ -196,7 +196,12 @@ namespace Anseong.Skirmish
             if (furnaceLight != null)
             {
                 float left = (float)st.furnace / Mathf.Max(1, s.furnaceHits);
-                block.SetColor(BaseColorId, left > 0.67f ? furnaceSafe : left > 0.34f ? furnaceWarn : furnaceDanger);
+                var lamp = left > 0.67f ? furnaceSafe : left > 0.34f ? furnaceWarn : furnaceDanger;
+                // 보스전: 고로에는 내구도가 없고 경고등만 있다. 싸우는 동안 붉게 깜빡이고, 이기면 초록으로 바뀐다.
+                if (SkirmishSettings.IsBoss(s, 0))
+                    lamp = st.phase == SkirmishPhase.Cleared ? furnaceSafe
+                        : Color.Lerp(furnaceWarn, furnaceDanger, 0.5f + 0.5f * Mathf.Sin(now * 4f));
+                block.SetColor(BaseColorId, lamp);
                 furnaceLight.SetPropertyBlock(block);
             }
         }

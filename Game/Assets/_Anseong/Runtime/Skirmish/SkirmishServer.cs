@@ -24,6 +24,9 @@ namespace Anseong.Skirmish
         [SerializeField, Tooltip("소리. 없으면 소리 없이 돈다.")] SkirmishSound sound;
         [SerializeField, Tooltip("사수가 없으면 자동 조작이 공중포대를 맡는다.")] bool botFillsEmptySeat = true;
         [SerializeField, Range(10, 60), Tooltip("상태·입력을 보내는 횟수(초당).")] int sendRate = 30;
+        [SerializeField, Min(0f), Tooltip("싸움이 끝난 뒤 이 시간(초)이 지나면 처음(운영자가 시작하기를 기다리는 화면)으로 돌아간다. 정적 3초 + 결과 화면 15초. 0 = 돌아가지 않는다.")] float resultSeconds = 18f;
+        float endedFor;
+        bool waitForOperator;
         [SerializeField, Range(0.2f, 3f), Tooltip("이 시간(초) 동안 사수 입력이 안 오면 끊긴 것으로 보고 포를 멈춘다.")] float gunnerStaleSeconds = 0.75f;
 
         const float Step = 0.02f;
@@ -147,7 +150,22 @@ namespace Anseong.Skirmish
             local.ShieldBroken = st.shieldBroken;
             local.Read(st.mech, SkirmishSession.GunnerAt(st, settings));
 
-            if (st.phase == SkirmishPhase.Waiting && (Solo || gunnerConnected || forcedStart)) session.SetReady(true, true);
+            // 결과를 다 보여 줬으면 처음으로 돌아가 다음 사람을 기다린다. 이때는 운영자가 Enter를 눌러야 시작한다.
+            bool over = st.phase == SkirmishPhase.Cleared || st.phase == SkirmishPhase.Failed;
+            endedFor = over ? endedFor + Time.unscaledDeltaTime : 0f;
+            if (over && resultSeconds > 0f && endedFor >= resultSeconds && !AutoRunning)
+            {
+                ResetSession();
+                waitForOperator = true;
+                st = session.State;
+            }
+            if (st.phase == SkirmishPhase.Waiting && (waitForOperator ? forcedStart : Solo || gunnerConnected || forcedStart))
+            {
+                waitForOperator = false;
+                session.SetReady(true, true);
+            }
+            // 자동 확인은 보스전부터 잰다.
+            if (AutoRunning) while (session.State.phase == SkirmishPhase.Fighting && session.State.stage != SceneStage.None && session.State.stage != SceneStage.Fight) session.SkipStage();
 
             bool localIsMech = seat == SkirmishSeat.Mech;
             var mechInput = localIsMech && !local.UseBot ? local.Mech : SkirmishBots.Mech(st, settings);
@@ -191,6 +209,19 @@ namespace Anseong.Skirmish
         }
 
         string WaitingText() => Solo ? "" : gunnerConnected ? "" : "공중포대 사수 접속을 기다리는 중 (Enter: 사수 없이 시작)";
+
+        /// <summary>자동 접속 확인으로 돌고 있다(개발 빌드·에디터에서만 true가 될 수 있다).</summary>
+        bool AutoRunning
+        {
+            get
+            {
+#if UNITY_EDITOR || DEVELOPMENT_BUILD
+                return autoResultPath != null;
+#else
+                return false;
+#endif
+            }
+        }
 
         void ResetSession()
         {

@@ -244,6 +244,14 @@ namespace Anseong.Skirmish
         /// <summary>로봇이 옆으로 비켜 있는 거리(오른쪽이 +). mech에 이미 들어 있다.</summary>
         public float sideStep;
 
+        /// <summary>
+        /// 같은 특별한 공격을 연속으로 놓친 횟수(속임 베기, 큰 내려베기, 찌르며 돌진). 한 번 맞히면 0으로 돌아간다.
+        /// 2 이상이면 다음에는 사령관이 답을 말해 준다(기획안 "말이 안 통할 때", 대사 5-1 ~ 5-4).
+        /// </summary>
+        public byte missFeint, missBig, missThrust;
+        /// <summary>P2의 포가 닫힌 보스에게 튕긴 적이 있다(대사 2-2를 한 번 띄운다).</summary>
+        public bool cannonBounced;
+
         /// <summary>지금 장면과 그 장면에 들어온 뒤의 실제 초.</summary>
         public SceneStage stage;
         public float stageTimer;
