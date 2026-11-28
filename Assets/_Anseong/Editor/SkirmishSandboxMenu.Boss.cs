@@ -220,7 +220,56 @@ namespace Anseong.EditorTools
             line.enabled = false;
             puppet.BindSignals(lights, line);
             puppet.Show(GruntStep.Idle, GruntAttack.Slam, 0f, new GruntSettings());
+            Motion(root, instance, all, swordArm.hand, sword);
             return puppet;
+        }
+
+        /// <summary>
+        /// 받은 동작 파일(Art/BossMecha/Motions, git에 없음)이 있으면 온몸 동작을 붙인다. 없으면 붙이지 않는다(팔 자세만 남는다).
+        /// 어느 파일을 어느 공격에 쓰는지와, 그 동작에서 예고 자세가 잡히는 지점·칼이 닿는 지점을 여기서 정한다.
+        /// </summary>
+        static void Motion(Transform root, GameObject instance, Transform[] all, Transform hand, Transform sword)
+        {
+            AnimationClip Clip(string name)
+            {
+                foreach (var o in AssetDatabase.LoadAllAssetsAtPath(BossMotionImport.Folder + name + ".fbx"))
+                    if (o is AnimationClip c && !c.name.StartsWith("__preview")) return c;
+                return null;
+            }
+            var idle = Clip("GS_idle_1");
+            var animator = instance.GetComponent<Animator>();
+            var pinky = BossBone(all, "pinky1_base_r");
+            var middle = BossBone(all, "middle1_base_r");
+            if (idle == null || animator == null || !animator.isHuman || pinky == null || middle == null)
+            {
+                Debug.LogWarning($"{LogPrefix} 보스 동작 파일이 없어 팔 자세만 씁니다: {BossMotionImport.Folder}");
+                return;
+            }
+            // 걷기 둘 가운데 앞으로 가는 쪽과 뒤로 가는 쪽을 동작의 이동 방향으로 가린다.
+            var a = Clip("GS_walk_1");
+            var b = Clip("GS_walk_2");
+            bool aForward = a != null && (b == null || a.averageSpeed.z >= b.averageSpeed.z);
+            var motion = root.gameObject.AddComponent<BossMotion>();
+            // 날은 주먹의 엄지 쪽으로 나가고(새끼손가락 뿌리 → 가운뎃손가락 뿌리), 날 선 쪽은 손목에서 손가락 쪽이다.
+            var blade = hand.InverseTransformDirection(middle.position - pinky.position).normalized;
+            var edge = hand.InverseTransformDirection(middle.position - hand.position).normalized;
+            motion.Bind(animator, hand, blade, edge, sword, BossSwordLength);
+            motion.idle = idle;
+            motion.walk = aForward ? a : b;
+            motion.walkBack = aForward ? b : a;
+            motion.stagger = Clip("GS_impact_2");
+            // 쓰러짐 둘 가운데 뒤로(로봇 반대쪽으로) 넘어가는 쪽을 쓴다.
+            var d1 = Clip("GS_death_1");
+            var d2 = Clip("GS_death_2");
+            motion.death = d1 != null && (d2 == null || d1.averageSpeed.z <= d2.averageSpeed.z) ? d1 : d2;
+            motion.staggerHold = 0.5f;
+            motion.slam = new BossMotion.Move { clip = Clip("GS_slash_4"), ready = 0.33f, hit = 0.62f };
+            motion.swing = new BossMotion.Move { clip = Clip("GS_slash_1"), ready = 0.2f, hit = 0.36f };
+            // 큰 내려베기와 마무리의 마지막 내려베기는 같은 내려베기 동작을 쓴다(뛰어오르는 동작은 예고 동안 공중에 멈춰 있게 되어 쓰지 않는다).
+            motion.bigSlam = new BossMotion.Move { clip = Clip("GS_slash_4"), ready = 0.3f, hit = 0.62f };
+            motion.thrust = new BossMotion.Move { clip = Clip("GS_attack_1"), ready = 0.12f, hit = 0.33f };
+            EditorUtility.SetDirty(motion);
+            Debug.Log($"{LogPrefix} BOSS_MOTION 온몸 동작 연결 (앞으로 걷기 = {(aForward ? "GS_walk_1" : "GS_walk_2")}, 쓰러짐 = {motion.death.name}, 속도 {d1?.averageSpeed.z:0.00} / {d2?.averageSpeed.z:0.00})");
         }
 
         [MenuItem("Anseong/Sandbox/Build Boss Act 1")]
