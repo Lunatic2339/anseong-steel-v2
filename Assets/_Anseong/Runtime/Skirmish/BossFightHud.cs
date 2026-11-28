@@ -87,6 +87,8 @@ namespace Anseong.Skirmish
         GameObject entranceCard;
         float dark;
         SceneStage saidStage;
+        bool saidBounce, saidBack, helped;
+        RectTransform droneArrow;
         bool saidFast, saidDown;
         GameObject result;
         Text resultTitle, resultTime, resultMech, resultGunner;
@@ -137,6 +139,23 @@ namespace Anseong.Skirmish
                 foreach (var shell in st.shells)
                     if (shell.kind == ShellKind.BigShell && shell.velocity.magnitude > 24f)
                     { saidFast = true; Say("하나 샜다. 지원, 어느 쪽인지 말해 줘라. 기체, 그쪽으로 막아라.", 4f); break; }
+            // 포가 처음 튕겼을 때(2-2), 돌진을 처음 피했을 때(3-8).
+            if (st.cannonBounced && !saidBounce && st.act == 0) Say("포가 튕긴다. 열릴 때까지 기다려라.");
+            saidBounce = st.cannonBounced;
+            bool back = st.gruntIndex >= 0 && st.gruntAttack == GruntAttack.Thrust && st.gruntStep == GruntStep.Stagger;
+            if (back && !saidBack) { saidBack = true; Say("등을 보였다. 지금 쏴라!"); }
+            // 말이 안 통할 때(5-1 ~ 5-4): 같은 특별한 공격을 두 번 연속 놓쳤으면 이번에는 사령관이 답을 말한다. 예고 한 번에 한 번만.
+            bool winding = st.gruntIndex >= 0 && (st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike);
+            if (!winding) helped = false;
+            else if (!helped)
+            {
+                if (st.gruntAttack == GruntAttack.Feint && st.missFeint >= 2 && st.gruntStep != GruntStep.Rise)
+                { helped = true; Say(st.gruntSide == Anseong.Pilot.PilotSide.Left ? "왼쪽이다, 막아!" : "오른쪽이다, 막아!", 2f); }
+                else if (st.gruntAttack == GruntAttack.BigSlam && st.missBig >= 2 && st.gruntImpactIn > 0f && st.gruntImpactIn <= 0.6f)
+                { helped = true; Say("지금 막아!", 1.5f); }
+                else if (st.gruntAttack == GruntAttack.Thrust && st.missThrust >= 2 && st.gruntStep != GruntStep.Rise)
+                { helped = true; Say("비켜!", 2f); }
+            }
             // 마무리의 대사.
             if (st.finale != saidFinale)
             {
@@ -288,6 +307,12 @@ namespace Anseong.Skirmish
             // P2: 헬기가 노려질 때. 가장자리가 붉어지고 아래 화살표(숙여라).
             var warn = Group("Heli warning", root, Vector2.zero);
             heliWarn = warn.gameObject;
+            // P2: 자폭 드론이 시야 밖에 있으면 오는 쪽을 가리키는 화살표.
+            var drone = Label("Drone arrow", root, Vector2.zero, new Vector2(120f, 120f), font, 84, TextAnchor.MiddleCenter);
+            drone.text = "▲";
+            drone.color = redColor;
+            droneArrow = drone.rectTransform;
+            droneArrow.gameObject.SetActive(false);
             var warnLines = new List<Image>();
             Frame(warnLines, "Heli edge", warn, Vector2.zero, new Vector2(1180f, 640f), 8f);
             foreach (var line in warnLines) line.color = redColor;
@@ -549,7 +574,7 @@ namespace Anseong.Skirmish
                 for (int i = 0; i < flash.Length; i++) flash[i] = 0f;
                 saidGuard = saidOpen = saidDrone = false; subtitleLeft = 0f;
                 saidAttacks = 0;
-                saidFinale = st.finale; resultWait = 0f; saidStage = SceneStage.None; saidFast = saidDown = false;
+                saidFinale = st.finale; resultWait = 0f; saidStage = SceneStage.None; saidFast = saidDown = false; saidBounce = st.cannonBounced; saidBack = helped = false;
                 saidAct = st.act; saidBroken = st.swordBroken; gearLost = st.shieldBroken || st.swordBroken; gearOffIn = 0f;
             }
             Lines(st);
@@ -660,6 +685,36 @@ namespace Anseong.Skirmish
                 scanRing.enabled = scanning;
                 scanRing.fillAmount = st.lockProgress;
             }
+
+            // P2: 가장 가까운 자폭 드론이 시야 밖이면 가장자리에 오는 쪽 화살표.
+            bool arrowOn = false;
+            if (!mech && head != null && st.phase == SkirmishPhase.Fighting)
+            {
+                SkirmishShell nearest = null;
+                float best = float.MaxValue;
+                foreach (var shell in st.shells)
+                {
+                    if (shell.kind != ShellKind.BigShell) continue;
+                    float d = (shell.position - head.position).sqrMagnitude;
+                    if (d < best) { best = d; nearest = shell; }
+                }
+                if (nearest != null)
+                {
+                    // 화면 판 위에서 가운데 쪽에 있으면 보이는 것이다.
+                    bool seen = OnCanvas(nearest.position - head.position, out var spot) && Mathf.Abs(spot.x) < 520f && Mathf.Abs(spot.y) < 280f;
+                    if (!seen)
+                    {
+                        var toward = canvas.InverseTransformDirection(nearest.position - head.position);
+                        var flat = new Vector2(toward.x, toward.y);
+                        if (flat.sqrMagnitude < 1e-6f) flat = Vector2.up;
+                        flat.Normalize();
+                        arrowOn = true;
+                        droneArrow.anchoredPosition = new Vector2(flat.x * 520f, flat.y * 280f);
+                        droneArrow.localRotation = Quaternion.Euler(0f, 0f, Mathf.Atan2(flat.y, flat.x) * Mathf.Rad2Deg - 90f);
+                    }
+                }
+            }
+            Active(droneArrow.gameObject, arrowOn);
 
             // P2: 약점 표시.
             bool finaleMark = st.finale == FinaleStep.Open;

@@ -50,7 +50,8 @@ namespace Anseong.Skirmish
         public byte Finale;
         public float FinaleProgress;
         public bool FinaleMech, FinaleGunner;
-        public byte Stage, Tried;
+        public byte Stage, Tried, MissFeint, MissBig, MissThrust;
+        public bool CannonBounced;
         public float StageTimer, Lift;
         public float StatSeconds, StatTaken, StatGunnerDamage;
         public ushort StatBlocks, StatPerfect, StatDrones;
@@ -90,6 +91,7 @@ namespace Anseong.Skirmish
             s.SerializeValue(ref GruntImpactIn); s.SerializeValue(ref CannonJam); s.SerializeValue(ref SideStep);
             s.SerializeValue(ref Finale); s.SerializeValue(ref FinaleProgress);
             s.SerializeValue(ref FinaleMech); s.SerializeValue(ref FinaleGunner);
+            s.SerializeValue(ref MissFeint); s.SerializeValue(ref MissBig); s.SerializeValue(ref MissThrust); s.SerializeValue(ref CannonBounced);
             s.SerializeValue(ref Stage); s.SerializeValue(ref Tried); s.SerializeValue(ref StageTimer); s.SerializeValue(ref Lift);
             s.SerializeValue(ref StatSeconds); s.SerializeValue(ref StatTaken); s.SerializeValue(ref StatGunnerDamage);
             s.SerializeValue(ref StatBlocks); s.SerializeValue(ref StatPerfect); s.SerializeValue(ref StatDrones);
@@ -132,6 +134,7 @@ namespace Anseong.Skirmish
                 SwordBroken = st.swordBroken, Act = (byte)st.act, GruntSide = (byte)st.gruntSide,
                 GruntImpactIn = st.gruntImpactIn, CannonJam = st.cannonJam, SideStep = st.sideStep,
                 Finale = (byte)st.finale, FinaleProgress = st.finaleProgress, FinaleMech = st.finaleMech, FinaleGunner = st.finaleGunner,
+                MissFeint = st.missFeint, MissBig = st.missBig, MissThrust = st.missThrust, CannonBounced = st.cannonBounced,
                 Stage = (byte)st.stage, Tried = st.tried, StageTimer = st.stageTimer, Lift = st.lift,
                 StatSeconds = st.statSeconds, StatTaken = st.statTaken, StatGunnerDamage = st.statGunnerDamage,
                 StatBlocks = (ushort)st.statBlocks, StatPerfect = (ushort)st.statPerfect, StatDrones = (ushort)st.statDrones,
@@ -170,6 +173,7 @@ namespace Anseong.Skirmish
             st.swordBroken = SwordBroken; st.act = Act; st.gruntSide = (Anseong.Pilot.PilotSide)GruntSide;
             st.gruntImpactIn = GruntImpactIn; st.cannonJam = CannonJam; st.sideStep = SideStep;
             st.finale = (FinaleStep)Finale; st.finaleProgress = FinaleProgress; st.finaleMech = FinaleMech; st.finaleGunner = FinaleGunner;
+            st.missFeint = MissFeint; st.missBig = MissBig; st.missThrust = MissThrust; st.cannonBounced = CannonBounced;
             st.stage = (SceneStage)Stage; st.tried = Tried; st.stageTimer = StageTimer; st.lift = Lift;
             st.statSeconds = StatSeconds; st.statTaken = StatTaken; st.statGunnerDamage = StatGunnerDamage;
             st.statBlocks = StatBlocks; st.statPerfect = StatPerfect; st.statDrones = StatDrones;
