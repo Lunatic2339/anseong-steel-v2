@@ -566,10 +566,70 @@ namespace Anseong.EditorTools
             var server = serverObject.AddComponent<SkirmishServer>();
             server.Bind(view, input, hud);
             server.Configure(settings);
+            server.BindSound(Sound(viewRoot, bossScene));
 
             view.Show(new SkirmishSession(settings), Vector3.forward, 0f);
             EditorSceneManager.MarkSceneDirty(scene);
             AssetDatabase.SaveAssets();
+        }
+
+        const string ClipFolder = "Assets/_Anseong/Audio/Clips/";
+
+        static SkirmishSound.Cue Cue(float volume, float pitch, params string[] names)
+        {
+            var clips = names.Select(n => AssetDatabase.LoadAssetAtPath<AudioClip>(ClipFolder + n + ".mp3")).Where(c => c != null).ToArray();
+            if (clips.Length < names.Length) Debug.LogWarning("소리 파일이 없다: " + string.Join(", ", names));
+            return new SkirmishSound.Cue { clips = clips, volume = volume, pitch = pitch };
+        }
+
+        /// <summary>소리 재생기를 붙이고 Audio/Clips의 파일을 꽂는다. 크기는 파일마다 달라서 여기서 맞춘다.</summary>
+        static SkirmishSound Sound(GameObject viewRoot, bool boss)
+        {
+            // 긴 파일은 통째로 올리지 않고 흘려서 튼다.
+            foreach (var path in new[] { "Music/fight_synth_tense_loop" })
+            {
+                var importer = AssetImporter.GetAtPath(ClipFolder + path + ".mp3") as AudioImporter;
+                if (importer == null) continue;
+                var sample = importer.defaultSampleSettings;
+                if (sample.loadType == AudioClipLoadType.Streaming) continue;
+                sample.loadType = AudioClipLoadType.Streaming;
+                importer.defaultSampleSettings = sample;
+                importer.SaveAndReimport();
+            }
+            var sound = viewRoot.AddComponent<SkirmishSound>();
+            sound.SetMusic(boss);
+            sound.music = Cue(1f, 1f, "Music/fight_synth_tense_loop");
+            sound.ambience = Cue(0.6f, 1f, "Ambience/factory_fans_loop");
+            sound.heliRotor = Cue(0.5f, 1f, "Heli/rotor_loop_short");
+            sound.cannonLoop = Cue(0.4f, 1f, "Heli/cannon_heavy_mg");
+            sound.droneLoop = Cue(1f, 1f, "Drone/fly_loop_mini");
+            sound.jamAlarm = Cue(1f, 1f, "Heli/jam_warning_beep");
+            sound.mechStep = Cue(0.6f, 1f, "Mech/step_1", "Mech/step_2", "Mech/step_3");
+            sound.mechServo = Cue(0.8f, 1f, "Mech/servo_1", "Mech/servo_2");
+            sound.block = Cue(0.7f, 1f, "Mech/shield_block_1", "Mech/shield_block_2");
+            sound.swordHit = Cue(1f, 1f, "Mech/sword_hit_2", "Mech/sword_hit_1");
+            sound.fistHit = Cue(0.8f, 0.75f, "Mech/shield_block_2");
+            sound.bounce = Cue(0.9f, 1f, "Mech/shield_block_3");
+            sound.gearBreak = Cue(1f, 1f, "Mech/gear_break_1");
+            sound.mechHit = Cue(0.7f, 1f, "Boss/slam_seismic");
+            sound.reboot = Cue(1f, 1f, "Heli/jam_overheat_vent");
+            sound.bossStep = Cue(1f, 1f, "Boss/step_1", "Boss/step_2", "Boss/step_3", "Boss/step_4", "Boss/step_5");
+            sound.bossSwing = Cue(1f, 1f, "Boss/swing_big");
+            sound.bossSlamSwing = Cue(1f, 1f, "Boss/swing_very_big", "Boss/swing_deep_heavy");
+            sound.bossThrust = Cue(1f, 1.2f, "Boss/swing_deep_heavy");
+            sound.bossStagger = Cue(0.8f, 1f, "Boss/fall_metal_door");
+            sound.bossFall = Cue(1f, 1f, "Boss/fall_cinematic_impact");
+            sound.heliShot = Cue(1f, 1f, "Boss/slam_deep_boom");
+            sound.explodeSmall = Cue(0.9f, 1f, "Drone/explode_small_1", "Drone/explode_small_2", "Drone/explode_small_3");
+            sound.explodeLarge = Cue(0.9f, 1f, "Drone/explode_large_1");
+            sound.missile = Cue(0.9f, 1f, "Mech/punch_whoosh");
+            sound.telegraph = Cue(0.5f, 1f, "Signal/telegraph_charge");
+            sound.telegraphSpecial = Cue(0.4f, 1f, "Signal/telegraph_machine_charge");
+            sound.actChange = Cue(0.9f, 1f, "Signal/act_change_boom");
+            sound.weakShown = Cue(0.8f, 1.5f, "Signal/radio_beep_2");
+            sound.radio = Cue(0.8f, 1f, "Signal/radio_beep_1");
+            EditorUtility.SetDirty(sound);
+            return sound;
         }
 
         [MenuItem("Anseong/Sandbox/Build Scene 1 Duel")]

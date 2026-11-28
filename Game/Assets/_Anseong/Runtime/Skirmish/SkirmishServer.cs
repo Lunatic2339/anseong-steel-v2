@@ -21,6 +21,7 @@ namespace Anseong.Skirmish
         [SerializeField] SkirmishView view;
         [SerializeField] SkirmishLocalInput local;
         [SerializeField] SkirmishHud hud;
+        [SerializeField, Tooltip("소리. 없으면 소리 없이 돈다.")] SkirmishSound sound;
         [SerializeField, Tooltip("사수가 없으면 자동 조작이 공중포대를 맡는다.")] bool botFillsEmptySeat = true;
         [SerializeField, Range(10, 60), Tooltip("상태·입력을 보내는 횟수(초당).")] int sendRate = 30;
         [SerializeField, Range(0.2f, 3f), Tooltip("이 시간(초) 동안 사수 입력이 안 오면 끊긴 것으로 보고 포를 멈춘다.")] float gunnerStaleSeconds = 0.75f;
@@ -51,6 +52,8 @@ namespace Anseong.Skirmish
         {
             view = skirmishView; local = input; hud = skirmishHud;
         }
+
+        public void BindSound(SkirmishSound value) => sound = value;
 
         void Awake()
         {
@@ -231,6 +234,7 @@ namespace Anseong.Skirmish
                 hud.GunnerAim = local.Gunner.aim;
                 hud.Show(st, settings, pending, seat, local.VrActive, waiting);
             }
+            if (sound != null) sound.Show(st, settings, pending, seat, Time.deltaTime);
             pending.Clear();
         }
 
