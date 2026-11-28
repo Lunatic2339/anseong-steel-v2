@@ -440,6 +440,16 @@ namespace Anseong.EditorTools
                 Until(st => st.swordBroken, "검과 방패를 잃음");
                 for (int i = 0; i < 10; i++) Tick();
                 Three("6c-act3-bare");
+                // 마무리: P1이 받아 냄 → P2가 가슴을 터뜨림 → 둘이 같이.
+                Until(st => st.finale == FinaleStep.Catch, "마무리: P1의 차례");
+                Three("6d-finale-catch");
+                Until(st => st.finale == FinaleStep.Open && st.finaleProgress > 0.5f, "마무리: P2가 가슴을 쏘는 중");
+                Three("6e-finale-open");
+                Until(st => st.finale == FinaleStep.Together, "마무리: 같이 끝내기");
+                Three("6f-finale-together");
+                Until(st => st.finale == FinaleStep.Blow, "마무리: 일격");
+                for (int i = 0; i < 40; i++) Tick();
+                Three("6g-finale-blow");
                 Until(st => st.phase == SkirmishPhase.Cleared, "싸움 끝");
                 Three("6-act-end");
                 // P2의 헬기를 밖에서 본 모습과, 사수 자리에서 정면·아래를 본 모습(헬기를 켰을 때만).

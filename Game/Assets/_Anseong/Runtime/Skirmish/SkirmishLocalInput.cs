@@ -336,7 +336,8 @@ namespace Anseong.Skirmish
             {
                 var e = events[i];
                 bool hit = e.Kind == SkirmishEventKind.MechHit;
-                bool blocked = e.Kind == SkirmishEventKind.GruntBlocked || e.Kind == SkirmishEventKind.GruntPerfectBlock || e.Kind == SkirmishEventKind.ShellBlocked;
+                bool blocked = e.Kind == SkirmishEventKind.GruntBlocked || e.Kind == SkirmishEventKind.GruntPerfectBlock || e.Kind == SkirmishEventKind.ShellBlocked
+                               || e.Kind == SkirmishEventKind.FinaleCaught || e.Kind == SkirmishEventKind.FinaleBlow;
                 if (!hit && !blocked) continue;
                 feel.Impact(e.To - e.From, hit ? cameraFeel.hitPush : cameraFeel.blockPush);
                 Rumble(hit ? hitHaptic : blockHaptic, hit ? 0.15f : 0.08f);

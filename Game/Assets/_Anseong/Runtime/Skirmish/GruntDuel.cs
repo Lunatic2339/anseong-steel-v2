@@ -332,6 +332,23 @@ namespace Anseong.Skirmish
             Timer = Mathf.Max(0.0001f, seconds);
         }
 
+        /// <summary>마무리가 시작될 때: 하던 것을 모두 끊고 선다. 이후의 자세는 화면이 마무리 단계를 보고 잡는다.</summary>
+        public void Halt()
+        {
+            if (!Alive) return;
+            Stop = 0f; ShellWindup = 0f; Breaker = false; passed = false; Finishing = false;
+            Step = GruntStep.Idle;
+            Timer = 0f;
+        }
+
+        /// <summary>마무리의 마지막 일격이 끝났을 때: 체력과 상관없이 쓰러진다.</summary>
+        public void Fall()
+        {
+            if (!Alive) return;
+            Hp = 0f;
+            Finish();
+        }
+
         /// <summary>검과 방패를 부수는 일격을 시작한다(왼쪽 내려베기, 예고는 처음 나오는 공격만큼 길다). 하던 공격은 끊긴다.</summary>
         public void BeginBreaker()
         {

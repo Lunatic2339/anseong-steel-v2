@@ -74,6 +74,11 @@ namespace Anseong.Skirmish
         readonly List<Image> shieldLines = new List<Image>(), swordLines = new List<Image>();
         bool gearLost;
         float gearOffIn;
+        // 마무리: 지금 할 일을 크게 띄운다.
+        GameObject prompt, promptBar, promptLamps;
+        Text promptText, promptSub;
+        Image promptFill, lampMech, lampGunner;
+        FinaleStep saidFinale;
 
         /// <summary>1막에서 이미 일어나는 일에 붙는 사령관 대사(기획안 대사 표 1-1, 3-1, 3-2). 상태만 보고 띄우므로 두 PC에서 같이 나온다.</summary>
         void Lines(SkirmishState st)
@@ -106,6 +111,15 @@ namespace Anseong.Skirmish
                     case GruntAttack.BigSlam: Say("큰 게 온다. 지원, 등 뒤의 불 셋이다. 세어 줘라!", 4f); break;
                     case GruntAttack.Thrust: Say("저건 못 막는다. 기체, 옆으로 비켜라!", 4f); break;
                 }
+            }
+            // 마무리의 대사.
+            if (st.finale != saidFinale)
+            {
+                if (st.finale == FinaleStep.Raise) Say("마지막 일격이 온다. 화면을 따라라. 둘이 같이 끝낸다!", 4f);
+                else if (st.finale == FinaleStep.Open) Say("받아 냈다! 지원, 가슴을 쏴라!", 3f);
+                else if (st.finale == FinaleStep.Together) Say("가슴이 터졌다. 지금이다, 같이 꽂아라!", 4f);
+                else if (st.finale == FinaleStep.Blow) Say("들어갔다!", 3f);
+                saidFinale = st.finale;
             }
             if (st.swordBroken && !saidBroken) Say("검과 방패가 나갔다. 기체, 팔로 막아라. 주먹으로 끝낸다.", 4f);
             saidBroken = st.swordBroken;
@@ -308,6 +322,68 @@ namespace Anseong.Skirmish
 
             subtitle = Label("Subtitle", root, new Vector2(0f, subtitleY), new Vector2(1000f, 44f), font, 26, TextAnchor.MiddleCenter);
             message = Label("Message", root, new Vector2(0f, 150f), new Vector2(1100f, 60f), font, 30, TextAnchor.MiddleCenter);
+
+            // 마무리의 지시: 큰 글씨 한 줄, 작은 글씨 한 줄, 차오르는 줄, "같이 끝내기"의 두 칸(기체, 지원).
+            var promptRect = Group("Finale prompt", root, new Vector2(0f, 80f));
+            prompt = promptRect.gameObject;
+            promptText = Label("Finale text", promptRect, Vector2.zero, new Vector2(1200f, 70f), font, 48, TextAnchor.MiddleCenter);
+            promptSub = Label("Finale sub", promptRect, new Vector2(0f, -52f), new Vector2(1200f, 40f), font, 26, TextAnchor.MiddleCenter);
+            var barRect = Group("Finale bar", promptRect, new Vector2(0f, -92f));
+            promptBar = barRect.gameObject;
+            promptFill = Bar("Finale fill", barRect, new Vector2(-170f, 0f), new Vector2(340f, 12f), greenColor, out _, false);
+            var lamps = Group("Finale lamps", promptRect, new Vector2(0f, -100f));
+            promptLamps = lamps.gameObject;
+            Box("Lamp P1 back", lamps, new Vector2(-70f, 0f), new Vector2(40f, 40f), backColor);
+            lampMech = Box("Lamp P1", lamps, new Vector2(-70f, 0f), new Vector2(32f, 32f), whiteColor);
+            Label("Lamp P1 name", lamps, new Vector2(-70f, -36f), new Vector2(120f, 30f), font, 20, TextAnchor.MiddleCenter).text = "기체";
+            Box("Lamp P2 back", lamps, new Vector2(70f, 0f), new Vector2(40f, 40f), backColor);
+            lampGunner = Box("Lamp P2", lamps, new Vector2(70f, 0f), new Vector2(32f, 32f), whiteColor);
+            Label("Lamp P2 name", lamps, new Vector2(70f, -36f), new Vector2(120f, 30f), font, 20, TextAnchor.MiddleCenter).text = "지원";
+            prompt.SetActive(false);
+        }
+
+        /// <summary>마무리에서 이 자리의 사람이 지금 할 일. 자기 차례가 아니면 동료가 무엇을 하는지 작은 글씨로 알린다.</summary>
+        void Prompt(SkirmishState st, bool mech)
+        {
+            bool on = st.finale >= FinaleStep.Catch && st.finale <= FinaleStep.Together && st.phase == SkirmishPhase.Fighting;
+            Active(prompt, on);
+            if (!on) return;
+            // 보스와 가슴의 표시를 가리지 않게 시야 가운데보다 위에 띄운다.
+            ((RectTransform)prompt.transform).anchoredPosition = new Vector2(0f, 200f);
+            string big = "", small = "";
+            bool mine = false, bar = false, lamps = false;
+            switch (st.finale)
+            {
+                case FinaleStep.Catch:
+                    mine = mech; bar = mech;
+                    if (mech) { big = "왼팔을 들어 막아라!"; small = "칼을 받아 내라"; }
+                    else small = "기체가 칼을 받는 중";
+                    break;
+                case FinaleStep.Open:
+                    mine = !mech; bar = true;
+                    if (mech) small = "지원이 가슴을 쏘는 중. 버텨라";
+                    else { big = "가슴의 표시를 쏴라!"; small = "터질 때까지 계속"; }
+                    break;
+                case FinaleStep.Together:
+                    lamps = true;
+                    bool done = mech ? st.finaleMech : st.finaleGunner;
+                    mine = !done;
+                    if (mech) { big = done ? "" : "주먹을 내질러라!"; small = done ? "지원을 기다리는 중" : "둘이 같이 끝낸다"; }
+                    else { big = done ? "" : "왼손 버튼을 누르고 있어라!"; small = done ? "기체의 주먹을 기다리는 중" : "둘이 같이 끝낸다"; }
+                    break;
+            }
+            promptText.text = big;
+            // 자기 차례인 글씨는 살짝 뛴다.
+            promptText.color = mine ? Color.Lerp(whiteColor, greenColor, 0.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 8f)) : whiteColor;
+            promptSub.text = small;
+            Active(promptBar, bar);
+            if (bar) promptFill.fillAmount = st.finaleProgress;
+            Active(promptLamps, lamps);
+            if (lamps)
+            {
+                lampMech.color = st.finaleMech ? greenColor : new Color(whiteColor.r, whiteColor.g, whiteColor.b, 0.25f);
+                lampGunner.color = st.finaleGunner ? greenColor : new Color(whiteColor.r, whiteColor.g, whiteColor.b, 0.25f);
+            }
         }
 
         Text Label(string name, Transform parent, Vector2 position, Vector2 size, Font font, int fontSize, TextAnchor anchor)
@@ -360,6 +436,7 @@ namespace Anseong.Skirmish
                 for (int i = 0; i < flash.Length; i++) flash[i] = 0f;
                 saidGuard = saidOpen = saidDrone = false; subtitleLeft = 0f;
                 saidAttacks = 0;
+                saidFinale = st.finale;
                 saidAct = st.act; saidBroken = st.swordBroken; gearLost = st.shieldBroken || st.swordBroken; gearOffIn = 0f;
             }
             Lines(st);
@@ -416,6 +493,8 @@ namespace Anseong.Skirmish
             Active(stepArrows, thrust);
             Active(heliWarn, !mech && winding && st.gruntAttack == GruntAttack.AimHeli);
 
+            Prompt(st, mech);
+
             // P1: 로봇 상태판. 선 색이 내구도다.
             Active(statusPanel, mech);
             if (mech)
@@ -460,12 +539,14 @@ namespace Anseong.Skirmish
             }
 
             // P2: 약점 표시.
-            bool weakOn = !mech && boss && st.weakTimer > 0f && head != null && OnCanvas(st.weakPoint - head.position, out aimAt);
+            bool finaleMark = st.finale == FinaleStep.Open;
+            bool weakOn = !mech && boss && (st.weakTimer > 0f || finaleMark) && head != null && OnCanvas(st.weakPoint - head.position, out aimAt);
             Active(weak.gameObject, weakOn);
             if (weakOn)
             {
                 weak.anchoredPosition = aimAt;
-                weakRing.fillAmount = Mathf.Clamp01(st.weakTimer / Mathf.Max(0.01f, s.weakPointSeconds));
+                // 마무리에서는 맞히는 만큼 고리가 차오른다.
+                weakRing.fillAmount = finaleMark ? st.finaleProgress : Mathf.Clamp01(st.weakTimer / Mathf.Max(0.01f, s.weakPointSeconds));
             }
 
             // 자막: P2의 헬기에서는 아래쪽이 기수에 가려서 보스 체력 줄 위에 둔다.

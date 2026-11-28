@@ -242,6 +242,14 @@ namespace Anseong.Skirmish
                     case SkirmishEventKind.MissileFired: Play(missile, e.From, gunner); break;
                     case SkirmishEventKind.MissileHit: Play(explodeLarge, e.To, false); break;
                     case SkirmishEventKind.WeakPointShown: Play(weakShown, e.To, true); break;
+                    case SkirmishEventKind.FinaleStarted: Play(actChange, e.From, true); break;
+                    case SkirmishEventKind.FinaleCaught: Play(block, e.To, !gunner, 1.3f, 0.8f); break;
+                    case SkirmishEventKind.FinaleOpened: Play(explodeLarge, e.From, false, 1.2f); Play(bossStagger, e.From, false); break;
+                    case SkirmishEventKind.FinaleBlow:
+                        Play(fistHit, e.From, false, 1.3f);
+                        Play(explodeLarge, e.From, false, 1.3f, 0.8f);
+                        Play(actChange, e.From, true, 0.8f);
+                        break;
                     case SkirmishEventKind.Rebooting:
                     case SkirmishEventKind.Failed: Play(reboot, st.mech, true); break;
                 }

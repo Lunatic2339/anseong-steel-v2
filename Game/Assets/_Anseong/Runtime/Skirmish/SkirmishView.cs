@@ -42,6 +42,7 @@ namespace Anseong.Skirmish
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor");
         static readonly int RimColorId = Shader.PropertyToID("_RimColor");
         Renderer[] gruntRenderers;
+        float finaleLean;
         MaterialPropertyBlock rimBlock;
 
         readonly Dictionary<int, Transform> shells = new Dictionary<int, Transform>();
@@ -171,7 +172,7 @@ namespace Anseong.Skirmish
             ShowBack(st);
             if (weakMarker != null)
             {
-                bool shown = st.weakTimer > 0f;
+                bool shown = st.weakTimer > 0f || st.finale == FinaleStep.Open;
                 if (weakMarker.gameObject.activeSelf != shown) weakMarker.gameObject.SetActive(shown);
                 if (shown) weakMarker.position = st.weakPoint;
             }
@@ -205,18 +206,30 @@ namespace Anseong.Skirmish
             facing.y = 0f;
             var rotation = facing.sqrMagnitude > 1e-4f ? Quaternion.LookRotation(facing) : grunt.rotation;
             var pose = rotation;
+            bool finale = !dead && st.finale != FinaleStep.None;
+            // 마무리: 가슴이 터지면 뒤로 젖혀지고, 일격이 들어가면 넘어가기 시작한다. 몸 전체를 발을 축으로 기울인다.
+            float lean = !finale ? 0f : st.finale == FinaleStep.Together ? -12f : st.finale == FinaleStep.Blow ? -45f : st.finale == FinaleStep.Open ? 6f : 0f;
+            finaleLean = Application.isPlaying ? Mathf.MoveTowards(finaleLean, lean, 30f * Time.deltaTime) : lean;
+            if (finale || Mathf.Abs(finaleLean) > 0.01f) pose *= Quaternion.Euler(dead ? 0f : finaleLean, 0f, 0f);
             if (dead) pose *= Quaternion.Euler(-88f, 0f, 0f);
             else if (st.gruntStep == GruntStep.Stagger) pose *= Quaternion.Euler(-16f, 0f, 0f);
             else if (st.gruntStep == GruntStep.Guard) pose *= Quaternion.Euler(10f, 0f, 0f);
             grunt.rotation = pose;
-            if (bossPuppet != null) bossPuppet.Show(st.gruntStep, st.gruntAttack, st.gruntTimer, s.grunt, st.gruntSide);
+            if (bossPuppet != null)
+            {
+                if (finale) bossPuppet.Finale(st.finale);
+                else bossPuppet.Show(st.gruntStep, st.gruntAttack, st.gruntTimer, s.grunt, st.gruntSide);
+            }
 
             bool telegraph = st.gruntStep == GruntStep.Rise || st.gruntStep == GruntStep.Hold || st.gruntStep == GruntStep.Strike || st.gruntShell > 0f;
+            // 마무리: 칼을 든 동안은 붉게(막아라), 가슴이 터진 뒤에는 희게(기회).
+            if (finale) telegraph = st.finale == FinaleStep.Raise || st.finale == FinaleStep.Catch;
+            bool exposed = finale && (st.finale == FinaleStep.Together || st.finale == FinaleStep.Blow);
             // 상태를 몸의 테두리 색으로도 알린다(예고 = 붉게, 빈틈 = 희게, 가드 = 노랗게, 쓰러지면 꺼짐).
             gruntRenderers ??= grunt.GetComponentsInChildren<Renderer>(true);
             rimBlock ??= new MaterialPropertyBlock();
             rimBlock.SetColor(RimColorId, dead ? Color.black : telegraph ? gruntRimTelegraph
-                : st.gruntStep == GruntStep.Stagger || st.gruntStep == GruntStep.Frozen ? gruntRimStagger
+                : exposed || st.gruntStep == GruntStep.Stagger || st.gruntStep == GruntStep.Frozen ? gruntRimStagger
                 : st.gruntStep == GruntStep.Guard ? gruntRimGuard : gruntRim);
             foreach (var r in gruntRenderers) r.SetPropertyBlock(rimBlock);
             // 등 뒤의 불은 자기 색을 쓴다(위의 테두리 색을 덮어쓴다).
@@ -224,9 +237,20 @@ namespace Anseong.Skirmish
             if (gruntTelegraph != null)
             {
                 // 빛 덩어리는 기본 두 공격의 것이다. 특별한 공격은 대검의 자세와 등 뒤 불로 알린다.
-                bool glow = telegraph && telegraphGlow && st.gruntAttack <= GruntAttack.Swing;
-                gruntTelegraph.enabled = glow;
-                if (glow)
+                bool glow = !finale && telegraph && telegraphGlow && st.gruntAttack <= GruntAttack.Swing;
+                // 마무리: 같은 빛 덩어리를 가슴에 쓴다. P2가 맞히는 만큼 달아오르고, 터진 뒤에는 속이 드러나 뛰고, 일격에 크게 번쩍인다.
+                bool heat = finale && st.finale >= FinaleStep.Open;
+                gruntTelegraph.enabled = glow || heat;
+                if (heat)
+                {
+                    float size = st.finale == FinaleStep.Open ? Mathf.Lerp(1f, 4f, st.finaleProgress)
+                        : st.finale == FinaleStep.Together ? 3.5f + 0.5f * Mathf.Sin(Time.unscaledTime * 9f)
+                        : 5f;
+                    // 몸이 젖혀지면 가슴을 따라간다.
+                    gruntTelegraph.transform.position = grunt.position + grunt.rotation * new Vector3(0f, s.gruntHeight * s.finaleChestHeight, 4f);
+                    gruntTelegraph.transform.localScale = Vector3.one * size;
+                }
+                else if (glow)
                 {
                     // 내려치기는 적의 오른팔(로봇이 볼 때 왼쪽 위), 휘두르기는 적의 왼팔(로봇이 볼 때 오른쪽 옆)에서 온다.
                     bool slam = st.gruntAttack == GruntAttack.Slam;

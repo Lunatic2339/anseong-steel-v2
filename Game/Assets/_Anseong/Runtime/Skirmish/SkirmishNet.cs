@@ -47,6 +47,9 @@ namespace Anseong.Skirmish
         public bool ShieldOpen, ShieldBroken, SwordBroken;
         public byte Act, GruntSide;
         public float GruntImpactIn, CannonJam, SideStep;
+        public byte Finale;
+        public float FinaleProgress;
+        public bool FinaleMech, FinaleGunner;
         public float SlowMotion;
         public float GruntShell, BackHp, BackShell, RebootTimer;
         public sbyte BackIndex;
@@ -81,6 +84,8 @@ namespace Anseong.Skirmish
             s.SerializeValue(ref WeakTimer); s.SerializeValue(ref WeakPoint);
             s.SerializeValue(ref SwordBroken); s.SerializeValue(ref Act); s.SerializeValue(ref GruntSide);
             s.SerializeValue(ref GruntImpactIn); s.SerializeValue(ref CannonJam); s.SerializeValue(ref SideStep);
+            s.SerializeValue(ref Finale); s.SerializeValue(ref FinaleProgress);
+            s.SerializeValue(ref FinaleMech); s.SerializeValue(ref FinaleGunner);
             s.SerializeValue(ref ShellCount);
             if (ShellCount > MaxShells) ShellCount = MaxShells;
             if (s.IsReader)
@@ -119,6 +124,7 @@ namespace Anseong.Skirmish
                 WeakTimer = st.weakTimer, WeakPoint = st.weakPoint,
                 SwordBroken = st.swordBroken, Act = (byte)st.act, GruntSide = (byte)st.gruntSide,
                 GruntImpactIn = st.gruntImpactIn, CannonJam = st.cannonJam, SideStep = st.sideStep,
+                Finale = (byte)st.finale, FinaleProgress = st.finaleProgress, FinaleMech = st.finaleMech, FinaleGunner = st.finaleGunner,
                 ShellCount = (byte)count,
                 ShellId = new int[count], ShellKind = new byte[count],
                 ShellPosition = new Vector3[count], ShellVelocity = new Vector3[count],
@@ -153,6 +159,7 @@ namespace Anseong.Skirmish
             st.weakTimer = WeakTimer; st.weakPoint = WeakPoint;
             st.swordBroken = SwordBroken; st.act = Act; st.gruntSide = (Anseong.Pilot.PilotSide)GruntSide;
             st.gruntImpactIn = GruntImpactIn; st.cannonJam = CannonJam; st.sideStep = SideStep;
+            st.finale = (FinaleStep)Finale; st.finaleProgress = FinaleProgress; st.finaleMech = FinaleMech; st.finaleGunner = FinaleGunner;
             st.shells.Clear();
             for (int i = 0; i < ShellCount; i++)
                 st.shells.Add(new SkirmishShell
@@ -172,6 +179,16 @@ namespace Anseong.Skirmish
         /// <summary>큰 탄이 오면 그쪽으로 가드, 아니면 G3(없으면 G4)를 쏜다.</summary>
         public static MechInput Mech(SkirmishState st, SkirmishSettings s)
         {
+            if (st.GruntAlive && st.finale != FinaleStep.None)
+            {
+                // 마무리: 화면이 시키는 대로 한다(막기, 그다음 주먹).
+                return new MechInput
+                {
+                    guard = st.finale == FinaleStep.Catch, guardDirection = st.gruntPosition - st.mech, guardSide = Anseong.Pilot.PilotSide.Left,
+                    aim = (SkirmishSession.GruntCenter(st, s) - SkirmishSession.Gun(st, s)).normalized,
+                    punchSeq = Mathf.FloorToInt(st.elapsed / 0.2f), punchDamage = st.finale == FinaleStep.Together ? 25f : 0f,
+                };
+            }
             if (st.GruntAlive)
             {
                 // 돌격형: 예고가 보이면 오는 쪽으로 막고, 튕겨난 틈에 0.6초마다 잽. 큰 탄이 날아오면 그쪽으로 막는다.
@@ -217,6 +234,12 @@ namespace Anseong.Skirmish
             {
                 // 보스: 튕겨난 틈에는 가슴을 쏘고, 그 밖에는 날아오는 자폭 드론을 쏜다.
                 var chest = (SkirmishSession.GruntCenter(st, s) - s.gunnerPost).normalized;
+                if (st.finale != FinaleStep.None)
+                {
+                    // 마무리: 가슴의 표시를 쏘고, 같이 끝낼 때는 지시기 버튼을 누르고 있는다.
+                    var mark = (st.weakPoint - s.gunnerPost).normalized;
+                    return new GunnerInput { fire = st.finale == FinaleStep.Open, aim = mark, pointer = mark, lockHeld = st.finale == FinaleStep.Together };
+                }
                 if (st.gruntStep == GruntStep.Stagger) return new GunnerInput { fire = true, aim = chest, pointer = chest };
                 var drone = st.shells.FirstOrDefault(x => x.kind == ShellKind.BigShell);
                 if (drone == null) return new GunnerInput { aim = chest, pointer = chest };
