@@ -115,7 +115,7 @@ namespace Anseong.Skirmish
             // 마무리의 대사.
             if (st.finale != saidFinale)
             {
-                if (st.finale == FinaleStep.Raise) Say("마지막 일격이 온다. 화면을 따라라. 둘이 같이 끝낸다!", 4f);
+                if (st.finale == FinaleStep.Raise) Say("거의 다 왔다. 마지막이다. 맞춰 막아라!", 4f);
                 else if (st.finale == FinaleStep.Open) Say("받아 냈다! 지원, 가슴을 쏴라!", 3f);
                 else if (st.finale == FinaleStep.Together) Say("가슴이 터졌다. 지금이다, 같이 꽂아라!", 4f);
                 else if (st.finale == FinaleStep.Blow) Say("들어갔다!", 3f);

@@ -246,6 +246,8 @@ namespace Anseong.Skirmish
                     case SkirmishEventKind.FinaleCaught: Play(block, e.To, !gunner, 1.3f, 0.8f); break;
                     case SkirmishEventKind.FinaleOpened: Play(explodeLarge, e.From, false, 1.2f); Play(bossStagger, e.From, false); break;
                     case SkirmishEventKind.FinaleBlow:
+                        // 주먹과 같이 P2의 미사일이 꽂힌다.
+                        Play(missile, s.gunnerPost, gunner);
                         Play(fistHit, e.From, false, 1.3f);
                         Play(explodeLarge, e.From, false, 1.3f, 0.8f);
                         Play(actChange, e.From, true, 0.8f);
