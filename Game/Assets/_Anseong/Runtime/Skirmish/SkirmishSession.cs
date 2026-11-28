@@ -101,6 +101,7 @@ namespace Anseong.Skirmish
             nextWave = 0;
             waveShellDone = false;
             actEnded = false;
+            tallyHull = -1f;
             finaleTimer = finaleWait = finaleWind = fightSeconds = 0f;
             droneTimer = 0f;
             weakIndex = -1;
@@ -117,6 +118,9 @@ namespace Anseong.Skirmish
             var old = State;
             int left = old.rebootsLeft;
             Reset();
+            // 결과 화면의 기록은 재기동해도 이어 간다.
+            State.statSeconds = old.statSeconds; State.statBlocks = old.statBlocks; State.statPerfect = old.statPerfect;
+            State.statTaken = old.statTaken; State.statDrones = old.statDrones; State.statGunnerDamage = old.statGunnerDamage;
             startAct = old.act;
             var st = State;
             st.rebootsLeft = left;
@@ -207,7 +211,37 @@ namespace Anseong.Skirmish
             CannonFire(world);
             MissileLock(world);
             TickShells(world);
+            Tally(dt);
             Resolve();
+        }
+
+        float tallyHull = -1f;
+
+        /// <summary>강한 탄이 보스에 꽂힌다. 깎인 만큼을 P2의 기록에 더한다.</summary>
+        bool StrongHit(float seconds)
+        {
+            float before = grunt.Hp;
+            bool hit = grunt.StrongHit(Settings.missileDamage, seconds);
+            State.statGunnerDamage += Mathf.Max(0f, before - grunt.Hp);
+            return hit;
+        }
+
+        /// <summary>결과 화면에 쓸 기록을 이 틱에 일어난 일에서 센다.</summary>
+        void Tally(float dt)
+        {
+            var st = State;
+            st.statSeconds += dt;
+            // 내구도가 줄어든 만큼이 받은 피해다(막이 바뀌며 가득 차는 것은 세지 않는다).
+            if (tallyHull >= 0f && st.hull < tallyHull) st.statTaken += tallyHull - st.hull;
+            tallyHull = st.hull;
+            foreach (var e in Events)
+                switch (e.Kind)
+                {
+                    case SkirmishEventKind.GruntPerfectBlock: st.statBlocks++; st.statPerfect++; break;
+                    case SkirmishEventKind.GruntBlocked:
+                    case SkirmishEventKind.ShellBlocked: st.statBlocks++; break;
+                    case SkirmishEventKind.ShellIntercepted: st.statDrones++; break;
+                }
         }
 
         void MoveMech(float dt)
@@ -950,7 +984,9 @@ namespace Anseong.Skirmish
                 Emit(SkirmishEventKind.CannonShot, -1, s.gunnerPost, s.gunnerPost + aim * gruntDistance);
                 // 막이 끝난 뒤에는 더 깎이지 않는다.
                 if (actEnded) return;
+                float before = grunt.Hp;
                 grunt.CannonHit(s.cannonDamage);
+                st.statGunnerDamage += Mathf.Max(0f, before - grunt.Hp);
                 foreach (var e in grunt.Events)
                     if (e.Kind == GruntEventKind.GuardBroken) OnGruntEvent(e);
                 CopyGrunt();
@@ -1075,7 +1111,7 @@ namespace Anseong.Skirmish
                         {
                             Emit(SkirmishEventKind.MissileHit, shell.target, shell.position, center);
                             if (!atGrunt) Damage(enemy, s.missileDamage, true);
-                            else if (grunt.StrongHit(s.missileDamage, ScanMode ? s.weakPointStagger : s.staggerSeconds))
+                            else if (StrongHit(ScanMode ? s.weakPointStagger : s.staggerSeconds))
                             {
                                 // 강한 탄은 끊는 패다: 어떤 예고든 끊기고 튕겨난다.
                                 Emit(SkirmishEventKind.EnemyStaggered, GruntTarget, center, center);

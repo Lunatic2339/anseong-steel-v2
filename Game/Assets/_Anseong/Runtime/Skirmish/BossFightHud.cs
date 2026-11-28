@@ -79,6 +79,12 @@ namespace Anseong.Skirmish
         Text promptText, promptSub;
         Image promptFill, lampMech, lampGunner;
         FinaleStep saidFinale;
+        // 결과 화면.
+        [SerializeField, Min(0f), Tooltip("싸움이 끝난 뒤 결과 화면이 뜰 때까지의 정적(초).")] float resultDelay = 3f;
+        [SerializeField, Tooltip("결과 화면 맨 아래의 출처 한 줄.")] string credit = "보스 모델: OSCAR CREATIVO (Sketchfab, CC BY-NC 4.0)";
+        GameObject result;
+        Text resultTitle, resultTime, resultMech, resultGunner;
+        float resultWait;
 
         /// <summary>1막에서 이미 일어나는 일에 붙는 사령관 대사(기획안 대사 표 1-1, 3-1, 3-2). 상태만 보고 띄우므로 두 PC에서 같이 나온다.</summary>
         void Lines(SkirmishState st)
@@ -340,6 +346,46 @@ namespace Anseong.Skirmish
             lampGunner = Box("Lamp P2", lamps, new Vector2(70f, 0f), new Vector2(32f, 32f), whiteColor);
             Label("Lamp P2 name", lamps, new Vector2(70f, -36f), new Vector2(120f, 30f), font, 20, TextAnchor.MiddleCenter).text = "지원";
             prompt.SetActive(false);
+
+            // 결과 화면: 제목, 걸린 시간, 두 사람의 기록, 출처.
+            var resultRect = Group("Result", root, Vector2.zero);
+            result = resultRect.gameObject;
+            // 싸움이 끝난 뒤라 가려도 된다. 읽히게 크게, 뒷판은 짙게.
+            resultRect.localScale = Vector3.one * 1.35f;
+            Box("Result back", resultRect, new Vector2(0f, 10f), new Vector2(900f, 440f), new Color(0f, 0f, 0f, 0.88f));
+            resultTitle = Label("Result title", resultRect, new Vector2(0f, 170f), new Vector2(860f, 70f), font, 52, TextAnchor.MiddleCenter);
+            resultTime = Label("Result time", resultRect, new Vector2(0f, 105f), new Vector2(860f, 40f), font, 28, TextAnchor.MiddleCenter);
+            Box("Result line", resultRect, new Vector2(0f, 70f), new Vector2(800f, 2f), whiteColor);
+            Label("Result P1 name", resultRect, new Vector2(-210f, 35f), new Vector2(380f, 36f), font, 26, TextAnchor.MiddleCenter).text = "기체 (P1)";
+            Label("Result P2 name", resultRect, new Vector2(210f, 35f), new Vector2(380f, 36f), font, 26, TextAnchor.MiddleCenter).text = "지원 (P2)";
+            resultMech = Label("Result P1", resultRect, new Vector2(-210f, -55f), new Vector2(380f, 130f), font, 26, TextAnchor.MiddleCenter);
+            resultGunner = Label("Result P2", resultRect, new Vector2(210f, -55f), new Vector2(380f, 130f), font, 26, TextAnchor.MiddleCenter);
+            var creditText = Label("Result credit", resultRect, new Vector2(0f, -180f), new Vector2(860f, 30f), font, 22, TextAnchor.MiddleCenter);
+            creditText.text = credit;
+            creditText.color = new Color(whiteColor.r, whiteColor.g, whiteColor.b, 0.7f);
+            result.SetActive(false);
+        }
+
+        /// <summary>싸움이 끝나면 정적 뒤에 결과를 띄운다(기획안 "결과 화면"). 두 사람의 기록을 둘 다 보여 주고 자기 쪽을 밝게 한다.</summary>
+        void Result(SkirmishState st, bool mech, float dt)
+        {
+            bool over = st.phase == SkirmishPhase.Cleared || st.phase == SkirmishPhase.Failed;
+            resultWait = over ? resultWait + dt : 0f;
+            bool on = over && resultWait >= resultDelay;
+            Active(result, on);
+            if (!on) return;
+            // P2의 헬기에서는 아래쪽이 기수와 계기판에 가려서 위로 올린다.
+            ((RectTransform)result.transform).anchoredPosition = new Vector2(0f, mech ? 0f : 250f);
+            bool won = st.phase == SkirmishPhase.Cleared;
+            resultTitle.text = won ? "적 기체 격파" : "고로를 지키지 못했다";
+            resultTitle.color = won ? greenColor : redColor;
+            int seconds = Mathf.RoundToInt(st.statSeconds);
+            resultTime.text = seconds >= 60 ? $"걸린 시간  {seconds / 60}분 {seconds % 60}초" : $"걸린 시간  {seconds}초";
+            resultMech.text = $"막은 횟수  {st.statBlocks}\n딱 맞춰 막음  {st.statPerfect}\n받은 피해  {Mathf.RoundToInt(st.statTaken)}";
+            resultGunner.text = $"떨어뜨린 드론  {st.statDrones}\n보스에 넣은 피해  {Mathf.RoundToInt(st.statGunnerDamage)}";
+            var dim = new Color(whiteColor.r, whiteColor.g, whiteColor.b, 0.6f);
+            resultMech.color = mech ? whiteColor : dim;
+            resultGunner.color = mech ? dim : whiteColor;
         }
 
         /// <summary>마무리에서 이 자리의 사람이 지금 할 일. 자기 차례가 아니면 동료가 무엇을 하는지 작은 글씨로 알린다.</summary>
@@ -436,7 +482,7 @@ namespace Anseong.Skirmish
                 for (int i = 0; i < flash.Length; i++) flash[i] = 0f;
                 saidGuard = saidOpen = saidDrone = false; subtitleLeft = 0f;
                 saidAttacks = 0;
-                saidFinale = st.finale;
+                saidFinale = st.finale; resultWait = 0f;
                 saidAct = st.act; saidBroken = st.swordBroken; gearLost = st.shieldBroken || st.swordBroken; gearOffIn = 0f;
             }
             Lines(st);
@@ -494,6 +540,7 @@ namespace Anseong.Skirmish
             Active(heliWarn, !mech && winding && st.gruntAttack == GruntAttack.AimHeli);
 
             Prompt(st, mech);
+            Result(st, mech, dt);
 
             // P1: 로봇 상태판. 선 색이 내구도다.
             Active(statusPanel, mech);

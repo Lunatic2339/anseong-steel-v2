@@ -501,6 +501,9 @@ namespace Anseong.EditorTools
                 Three("6g-finale-blow");
                 Until(st => st.phase == SkirmishPhase.Cleared, "싸움 끝");
                 Three("6-act-end");
+                // 결과 화면: 끝난 뒤 3초의 정적이 지나야 뜬다.
+                for (int i = 0; i < 160; i++) bossHud.Show(session.State, settings, SkirmishSeat.Mech, false, false, "", 0.02f);
+                Three("6h-result");
                 // P2의 헬기를 밖에서 본 모습과, 사수 자리에서 정면·아래를 본 모습(헬기를 켰을 때만).
                 if (UseHelicopter)
                 {
