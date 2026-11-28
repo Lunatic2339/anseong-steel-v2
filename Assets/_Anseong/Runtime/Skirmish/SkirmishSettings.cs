@@ -155,6 +155,30 @@ namespace Anseong.Skirmish
         [Min(0f), Tooltip("검과 방패가 부서지는 순간 시간이 느려지는 길이(실제 초). 빠르기는 perfectSlowScale. 0 = 끔.")]
         public float breakSlowSeconds = 0.4f;
 
+        [Header("보스전 앞 장면 (기획안 5절의 장면 0, 1, 2. 모두 실제 초)")]
+        [Tooltip("켜면 보스가 나오기 전에 준비, 자폭 드론 여섯, 등장 영상 자리를 거친다. 운영자가 N으로 넘길 수 있다.")]
+        public bool intro;
+        [Tooltip("P2의 헬기가 떠오르기 시작하는 자리(로봇 오른발 옆).")]
+        public Vector3 gunnerStart;
+        [Min(0f), Tooltip("떠오르는 데 걸리는 시간. 0이면 처음부터 제자리에 있다(멀미가 나면 0으로).")]
+        public float liftSeconds = 15f;
+        [Min(1f), Tooltip("준비 장면의 최대 길이. 둘 다 해 볼 것을 다 해 보면 먼저 넘어간다.")]
+        public float setupSeconds = 45f;
+        [Tooltip("준비 장면에서 P2가 쏴 보는 폐차 셋의 자리.")]
+        public Vector3[] wrecks = new Vector3[0];
+        [Min(0.5f), Tooltip("폐차를 맞힌 것으로 보는 반지름.")]
+        public float wreckRadius = 5f;
+        [Min(0), Tooltip("장면 1에 오는 자폭 드론 수.")]
+        public int introDrones = 6;
+        [Min(0.5f), Tooltip("장면 1의 자폭 드론 간격.")]
+        public float introDroneGap = 5f;
+        [Min(0), Tooltip("일부러 P2가 잡기 어렵게 빨리 오는 드론의 차례(1부터). 0이면 없다.")]
+        public int introFastDrone = 4;
+        [Min(1f), Tooltip("빨리 오는 드론의 빠르기(보통의 몇 배).")]
+        public float introFastSpeed = 2.2f;
+        [Min(0f), Tooltip("등장 영상의 길이. 영상이 아직 없어 어두운 화면에 안내만 뜬다.")]
+        public float entranceSeconds = 20f;
+
         [Header("마무리 (보스 체력이 끝 선까지 내려간 뒤. 모두 실제 초)")]
         [Min(0f), Tooltip("보스가 대검을 드는 시간. 이 뒤에 P1의 지시가 뜬다.")]
         public float finaleRaiseSeconds = 1.2f;
@@ -305,6 +329,8 @@ namespace Anseong.Skirmish
                 mechArea = new Vector4(mech.x, mech.z, mech.x, mech.z),
                 gunnerPost = mech + facing * new Vector3(37f, 40f, 11f),
                 gunnerYaw = yaw - 90f,
+                gunnerStart = mech + facing * new Vector3(14f, 2f, 0f),
+                wrecks = new[] { mech + facing * new Vector3(-8f, 0f, 30f), mech + facing * new Vector3(4f, 0f, 38f), mech + facing * new Vector3(14f, 0f, 30f) },
                 // 2026-11-27 선우 확정: 높이 40, 기수 15° 숙임. 수평이면 계기판과 기수가 싸움을 가린다.
                 gunnerPitch = 15f,
                 // 우리 로봇은 왼팔 방패와 오른팔 검으로 시작한다. 3막에 들어갈 때 둘 다 잃는다.

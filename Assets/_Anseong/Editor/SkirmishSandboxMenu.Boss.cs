@@ -523,6 +523,48 @@ namespace Anseong.EditorTools
                     Shot("7-top", session.State.mech + new Vector3(0f, 190f, -1f) + facing * new Vector3(0f, 0f, 11f), session.State.mech + facing * new Vector3(0f, 0f, 11f), 60f);
                 }
 
+                // 보스전 앞의 장면들: 준비(이륙 중, 폐차 쏘기), 자폭 드론, 등장 영상 자리.
+                {
+                    var intro = onMap ? SkirmishSettings.BossAct1OnMap() : SkirmishSettings.BossAct1();
+                    intro.intro = true;
+                    session = new SkirmishSession(intro);
+                    for (int i = 0; i < 20; i++) session.Reset();
+                    session.SetReady(true, true);
+                    attack = true;
+                    void Intro(string name)
+                    {
+                        var mech = session.State.mech;
+                        var eye = SkirmishSession.GunnerAt(session.State, intro);
+                        var lookAt = mech + facing * new Vector3(0f, 22f, 11f);
+                        Pilot(true);
+                        Look(MechEye(), mech + facing * new Vector3(0f, 20f, 40f));
+                        bossHud.Aim = facing * Vector3.forward;
+                        bossHud.Show(session.State, intro, SkirmishSeat.Mech, false, false, "", 0.02f);
+                        Shot(name + "-p1", MechEye(), mech + facing * new Vector3(0f, 20f, 40f), 90f);
+                        Pilot(false);
+                        Look(eye, lookAt);
+                        bossHud.Aim = lookAt - eye;
+                        bossHud.Show(session.State, intro, SkirmishSeat.Gunner, false, false, "", 0.02f);
+                        Shot(name + "-p2", eye, lookAt, 90f);
+                        bossHud.Show(session.State, intro, SkirmishSeat.Gunner, false, true, "", 0.02f);
+                        Shot(name + "-side", mech + facing * new Vector3(-70f, 24f, 11f), mech + facing * new Vector3(0f, 19f, 11f), 60f);
+                    }
+                    Until(st => st.stage == SceneStage.Setup && st.lift > 0.45f, "준비: 떠오르는 중");
+                    Intro("0a-liftoff");
+                    Until(st => st.stage == SceneStage.Setup && st.lift >= 1f, "준비: 제자리");
+                    for (int i = 0; i < 10; i++) Tick();
+                    Intro("0b-wrecks");
+                    Until(st => st.stage == SceneStage.Drones && st.shells.Any(x => x.kind == ShellKind.BigShell), "자폭 드론 장면");
+                    for (int i = 0; i < 40; i++) Tick();
+                    Intro("0c-drones");
+                    Until(st => st.stage == SceneStage.Entrance && st.stageTimer > 1f, "등장 영상");
+                    for (int i = 0; i < 60; i++) bossHud.Show(session.State, intro, SkirmishSeat.Mech, false, false, "", 0.02f);
+                    Intro("0d-entrance");
+                    Until(st => st.stage == SceneStage.Fight && st.gruntIndex >= 0, "보스전으로 넘어감");
+                    for (int i = 0; i < 60; i++) bossHud.Show(session.State, intro, SkirmishSeat.Mech, false, false, "", 0.02f);
+                    Intro("0e-fight-begins");
+                }
+
                 // 특별한 공격 다섯: 그 공격만 하는 싸움을 따로 돌려 예고를 찍는다(막기만 하고 치지 않는다).
                 int round = 0;
                 void Special(params GruntAttack[] attacks)

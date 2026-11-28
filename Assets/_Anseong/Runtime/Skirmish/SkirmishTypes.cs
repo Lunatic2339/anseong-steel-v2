@@ -99,6 +99,24 @@ namespace Anseong.Skirmish
         FinaleOpened,
         /// <summary>두 사람의 마지막 일격이 같이 들어감.</summary>
         FinaleBlow,
+        /// <summary>장면이 바뀜. Id가 새 장면(<see cref="SceneStage"/>).</summary>
+        StageChanged,
+        /// <summary>준비 장면에서 P2가 폐차를 맞힘. Id가 폐차 번호.</summary>
+        WreckHit,
+    }
+
+    /// <summary>보스전 앞의 장면들(기획안 5절). 쓰지 않는 싸움에서는 None에 머문다.</summary>
+    public enum SceneStage : byte
+    {
+        None,
+        /// <summary>장면 0 배치: P2의 헬기가 떠오르고, 두 사람이 조작을 한 번씩 해 본다.</summary>
+        Setup,
+        /// <summary>장면 1: 자폭 드론 여섯이 하나씩 온다.</summary>
+        Drones,
+        /// <summary>장면 2: 보스 등장 영상. 화면이 어두워지고 영상이 나온다.</summary>
+        Entrance,
+        /// <summary>장면 3: 보스전.</summary>
+        Fight,
     }
 
     /// <summary>보스전 마무리의 단계. 느린 시간 속에서 화면이 할 일을 알려 주고, 두 사람이 차례로 해내야 넘어간다. 여기서는 지지 않는다.</summary>
@@ -225,6 +243,15 @@ namespace Anseong.Skirmish
         public float cannonJam;
         /// <summary>로봇이 옆으로 비켜 있는 거리(오른쪽이 +). mech에 이미 들어 있다.</summary>
         public float sideStep;
+
+        /// <summary>지금 장면과 그 장면에 들어온 뒤의 실제 초.</summary>
+        public SceneStage stage;
+        public float stageTimer;
+        /// <summary>P2의 헬기가 떠오른 정도(0 = 로봇 발 옆, 1 = 제자리). 앞 장면을 쓰지 않으면 늘 1이다.</summary>
+        public float lift = 1f;
+        /// <summary>준비 장면에서 해 본 것(아래 Try 값들을 더한 것).</summary>
+        public byte tried;
+        public const byte TryLeft = 1, TryRight = 2, TrySwing = 4, TryStep = 8, TryWreck = 16, TryAllMech = 15, TryAll = 127;
 
         // 결과 화면에 쓰는 기록(기획안 "결과 화면"). 재기동해도 이어서 센다.
         /// <summary>싸운 실제 시간(초). 느린 시간과 상관없다.</summary>
