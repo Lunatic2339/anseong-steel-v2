@@ -155,6 +155,26 @@ namespace Anseong.Skirmish
         [Min(0f), Tooltip("검과 방패가 부서지는 순간 시간이 느려지는 길이(실제 초). 빠르기는 perfectSlowScale. 0 = 끔.")]
         public float breakSlowSeconds = 0.4f;
 
+        [Header("마무리 (보스 체력이 끝 선까지 내려간 뒤. 모두 실제 초)")]
+        [Min(0f), Tooltip("보스가 대검을 드는 시간. 이 뒤에 P1의 지시가 뜬다.")]
+        public float finaleRaiseSeconds = 1.2f;
+        [Min(0.05f), Tooltip("P1이 이만큼 막고 있으면 받아 낸 것으로 본다.")]
+        public float finaleCatchHold = 0.3f;
+        [Min(0.1f), Tooltip("P2가 가슴의 표시를 이만큼 맞히면 터진다.")]
+        public float finaleOpenSeconds = 1.5f;
+        [Range(1f, 30f), Tooltip("가슴의 표시에서 이 각도 안을 겨누고 쏘면 맞은 것으로 본다.")]
+        public float finaleAimDegrees = 7f;
+        [Min(0.1f), Tooltip("P1이 주먹을 낸 뒤 이만큼은 P2를 기다려 준다.")]
+        public float finaleWindSeconds = 1.5f;
+        [Min(0f), Tooltip("마지막 일격이 들어간 뒤 보스가 쓰러질 때까지.")]
+        public float finaleBlowSeconds = 2f;
+        [Min(0f), Tooltip("한 단계에서 이만큼 아무도 못 하면 저절로 넘어간다(전시에서 멈춰 있지 않게). 0 = 끝까지 기다린다.")]
+        public float finaleAutoSeconds = 15f;
+        [Min(0f), Tooltip("보스와 맞붙은 지 이만큼 지나면 체력과 상관없이 마무리로 넘어간다. 0 = 끔.")]
+        public float finaleAfterSeconds = 210f;
+        [Range(0.3f, 0.9f), Tooltip("가슴의 표시 높이(보스 키에 대한 비율).")]
+        public float finaleChestHeight = 0.74f;
+
         [Header("고로 (B08)")]
         public Vector3 furnacePoint = new Vector3(100f, 45f, 715f);
         [Tooltip("고로가 버티는 피격 수.")]
@@ -302,7 +322,7 @@ namespace Anseong.Skirmish
                 {
                     new GruntWave
                     {
-                        start = mech + facing * new Vector3(0f, 0f, 22f), endAtHp = 60f,
+                        start = mech + facing * new Vector3(0f, 0f, 22f), endAtHp = 60f, finale = true,
                         acts = new[]
                         {
                             // 같은 특별한 공격이 두 번 이어지지 않게 기본 공격 사이에 끼운다. 헬기를 노림과 자폭 떼는 한 번씩만 나온다.
@@ -360,6 +380,8 @@ namespace Anseong.Skirmish
         public GruntAct[] acts = new GruntAct[0];
         [Min(0f), Tooltip("체력이 이 값까지 내려가면 이 적과의 싸움을 끝낸다(보스전의 한 막). 0이면 쓰러질 때까지. 혼자 할 때는 체력 비율만큼 낮아진다.")]
         public float endAtHp;
+        [Tooltip("endAtHp에서 그냥 끝내지 않고 두 사람이 같이 넣는 마무리를 거친다(보스).")]
+        public bool finale;
         public Vector3 start;
         public GruntSpec spec = new GruntSpec();
         [Tooltip("앞 번호의 돌격형과 동시에 출발해 35 거리에서 기다린다. 혼자 할 때는 앞의 적이 쓰러진 뒤에 출발한다.")]

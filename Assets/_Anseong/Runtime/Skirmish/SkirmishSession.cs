@@ -36,6 +36,9 @@ namespace Anseong.Skirmish
         GruntDuel back;         // 뒤에서 기다리는 돌격형
         int nextWave;           // 다음에 내보낼 돌격형 번호
         bool waveShellDone;     // 맞붙을 적의 "지나가면 한 발"을 이미 쐈는가
+        float finaleTimer, finaleWait, finaleWind;   // 마무리: 단계가 끝날 때까지, 그 단계에서 기다린 시간, P1의 주먹이 유효한 남은 시간
+        float fightSeconds;     // 보스와 맞붙은 뒤 흐른 실제 초
+        float real;             // 이번 틱의 실제 초(느린 시간과 상관없음)
         bool actEnded;          // 맞붙은 적의 체력이 endAtHp까지 내려가 싸움이 끝남
         float droneTimer;       // 다음 자폭 드론까지 남은 초
         int weakIndex = -1;     // 지금(또는 마지막으로) 표시된 약점 번호. 스캔할 때마다 다음 것으로 넘어간다
@@ -98,6 +101,7 @@ namespace Anseong.Skirmish
             nextWave = 0;
             waveShellDone = false;
             actEnded = false;
+            finaleTimer = finaleWait = finaleWind = fightSeconds = 0f;
             droneTimer = 0f;
             weakIndex = -1;
             scanSpent = false;
@@ -176,6 +180,7 @@ namespace Anseong.Skirmish
 
             // 딱 맞춰 막은 직후에는 세상의 시간이 느리게 흐른다. 로봇의 이동만은 평소 속도다(눈이 타고 있는 몸의 속도가 갑자기 바뀌면 멀미가 난다).
             float world = dt;
+            real = dt;
             if (st.slowMotion > 0f)
             {
                 float slow = Mathf.Min(dt, st.slowMotion);
@@ -285,7 +290,8 @@ namespace Anseong.Skirmish
             var st = State; var s = Settings;
             bool punched = mech.punchSeq != lastPunchSeq && mech.punchDamage > 0f;
             lastPunchSeq = mech.punchSeq;
-            if (s.grunts == null || s.grunts.Length == 0 || EndAct()) return;
+            if (s.grunts == null || s.grunts.Length == 0) return;
+            if (Finale(punched) || EndAct()) return;
             if (grunt == null || !grunt.Alive)
             {
                 if (back != null)
@@ -434,6 +440,107 @@ namespace Anseong.Skirmish
             FireBigShell(Settings.droneFrom);
         }
 
+        /// <summary>마무리에서 P2가 쏘는 가슴의 표시 자리(보스의 정면 쪽).</summary>
+        Vector3 FinaleChest
+        {
+            get
+            {
+                var toward = SkirmishMath.Flat(home - grunt.Position);
+                return grunt.Position + Vector3.up * (Settings.gruntHeight * Settings.finaleChestHeight) + toward * 4f;
+            }
+        }
+
+        void FinaleNext(FinaleStep step, SkirmishEventKind kind)
+        {
+            var st = State;
+            st.finale = step;
+            st.finaleProgress = 0f;
+            st.finaleMech = st.finaleGunner = false;
+            finaleWait = finaleWind = 0f;
+            Emit(kind, (int)step, FinaleChest, MechChest);
+        }
+
+        /// <summary>
+        /// 보스전 마무리(기획안 2026-11-28): 체력이 끝 선까지 내려가거나 맞붙은 지 finaleAfterSeconds가 지나면 시작한다.
+        /// 시간이 느려지고, 보스는 공격하지 않으며, 화면이 알려 주는 일을 두 사람이 차례로 해야 넘어간다:
+        /// P1이 막아 받아 냄 → P2가 가슴의 표시를 쏴서 터뜨림 → P1의 주먹과 P2의 지시기 버튼이 같은 때에 → 쓰러짐.
+        /// 여기서는 지지 않는다. 마무리 중이면 true(이 틱에 보스의 보통 규칙을 돌리지 않는다).
+        /// </summary>
+        bool Finale(bool punched)
+        {
+            var st = State; var s = Settings;
+            if (actEnded || grunt == null || !grunt.Alive || st.gruntIndex < 0) return false;
+            var wave = s.grunts[st.gruntIndex];
+            if (!wave.finale) return false;
+            if (st.finale == FinaleStep.None)
+            {
+                if (grunt.Step == GruntStep.Approach) return false;
+                fightSeconds += real;
+                float end = wave.endAtHp * grunt.MaxHp / Mathf.Max(1f, wave.spec.hp);
+                bool late = s.finaleAfterSeconds > 0f && fightSeconds >= s.finaleAfterSeconds
+                            && !grunt.Breaker && grunt.Step != GruntStep.Regroup;
+                if (grunt.Hp > end && !late) return false;
+                grunt.Halt();
+                st.shells.RemoveAll(x => x.kind == ShellKind.BigShell);
+                st.weakTimer = 0f; st.lockTarget = -1; st.lockProgress = 0f; st.cannonJam = 0f;
+                finaleTimer = s.finaleRaiseSeconds;
+                FinaleNext(FinaleStep.Raise, SkirmishEventKind.FinaleStarted);
+            }
+
+            // 마무리 내내 시간이 느리다.
+            st.slowMotion = Mathf.Max(st.slowMotion, 0.25f);
+            st.weakPoint = FinaleChest;
+            finaleWait += real;
+            bool auto = s.finaleAutoSeconds > 0f && finaleWait >= s.finaleAutoSeconds;
+            switch (st.finale)
+            {
+                case FinaleStep.Raise:
+                    finaleTimer -= real;
+                    if (finaleTimer <= 0f) { st.finale = FinaleStep.Catch; finaleWait = 0f; }
+                    break;
+                case FinaleStep.Catch:
+                    st.finaleProgress = st.guarding ? Mathf.Clamp01(st.finaleProgress + real / s.finaleCatchHold) : 0f;
+                    if (st.finaleProgress >= 1f || auto) FinaleNext(FinaleStep.Open, SkirmishEventKind.FinaleCaught);
+                    break;
+                case FinaleStep.Open:
+                {
+                    // 혼자 할 때는 자동이 쏜다.
+                    var aim = gunner.aim;
+                    bool on = Solo || (gunner.fire && SkirmishMath.Direction(ref aim)
+                                       && Vector3.Angle(aim, st.weakPoint - s.gunnerPost) <= s.finaleAimDegrees);
+                    if (on) st.finaleProgress = Mathf.Clamp01(st.finaleProgress + real / s.finaleOpenSeconds);
+                    if (st.finaleProgress >= 1f || auto) FinaleNext(FinaleStep.Together, SkirmishEventKind.FinaleOpened);
+                    break;
+                }
+                case FinaleStep.Together:
+                    // 주먹을 낸 뒤 잠깐은 P2를 기다려 준다. P2는 누르고 있는 동안이 자기 몫이다.
+                    if (punched) finaleWind = s.finaleWindSeconds;
+                    finaleWind -= real;
+                    st.finaleMech = finaleWind > 0f;
+                    st.finaleGunner = Solo || gunner.lockHeld;
+                    if ((st.finaleMech && st.finaleGunner) || auto)
+                    {
+                        finaleTimer = s.finaleBlowSeconds;
+                        FinaleNext(FinaleStep.Blow, SkirmishEventKind.FinaleBlow);
+                        st.finaleMech = st.finaleGunner = true;
+                    }
+                    break;
+                case FinaleStep.Blow:
+                    finaleTimer -= real;
+                    if (finaleTimer <= 0f)
+                    {
+                        var center = grunt.Position + Vector3.up * (s.gruntHeight * 0.5f);
+                        grunt.Fall();
+                        actEnded = true;
+                        st.gruntsDown++;
+                        Emit(SkirmishEventKind.GruntDown, st.gruntIndex, center, center);
+                    }
+                    break;
+            }
+            CopyGrunt();
+            return true;
+        }
+
         /// <summary>맞붙은 적의 체력이 그 막의 끝(endAtHp)까지 내려갔으면 싸움을 끝낸다. 끝났으면 true.</summary>
         bool EndAct()
         {
@@ -453,7 +560,7 @@ namespace Anseong.Skirmish
             return true;
         }
 
-        bool GruntLockable => grunt != null && grunt.Alive && !actEnded && grunt.Spec.strongShotTarget && grunt.Step != GruntStep.Approach
+        bool GruntLockable => grunt != null && grunt.Alive && !actEnded && State.finale == FinaleStep.None && grunt.Spec.strongShotTarget && grunt.Step != GruntStep.Approach
                               && grunt.Step != GruntStep.Regroup && !grunt.Breaker;
 
         /// <summary>강한 탄이 잠글 수 있는 것 가운데 지시선이 처음 닿는 것. 없으면 -1.</summary>
@@ -863,6 +970,8 @@ namespace Anseong.Skirmish
         void MissileLock(float dt)
         {
             var st = State; var s = Settings;
+            // 마무리에서는 지시기 버튼이 "같이 끝내기"의 P2 몫이다. 스캔과 강한 탄은 쉰다.
+            if (st.finale != FinaleStep.None) { st.lockTarget = -1; st.lockProgress = 0f; return; }
             if (ScanMode) { Scan(dt); return; }
             if (gunner.cancel) { lockCancelled = true; st.lockTarget = -1; st.lockProgress = 0f; }
             if (gunner.lockHeld)

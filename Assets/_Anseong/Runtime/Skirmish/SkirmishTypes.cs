@@ -91,6 +91,30 @@ namespace Anseong.Skirmish
         ThrustPassed,
         /// <summary>P1이 옆으로 한 걸음 비키기 시작함. Id -1 = 왼쪽, 1 = 오른쪽.</summary>
         SideStep,
+        /// <summary>마무리가 시작됨: 보스가 마지막 내려베기를 들고 시간이 느려진다.</summary>
+        FinaleStarted,
+        /// <summary>P1이 마지막 내려베기를 받아 냄. 이제 P2가 가슴을 쏜다.</summary>
+        FinaleCaught,
+        /// <summary>P2의 사격에 보스의 가슴이 터져 속이 드러남. 이제 둘이 같이 끝낸다.</summary>
+        FinaleOpened,
+        /// <summary>두 사람의 마지막 일격이 같이 들어감.</summary>
+        FinaleBlow,
+    }
+
+    /// <summary>보스전 마무리의 단계. 느린 시간 속에서 화면이 할 일을 알려 주고, 두 사람이 차례로 해내야 넘어간다. 여기서는 지지 않는다.</summary>
+    public enum FinaleStep : byte
+    {
+        None,
+        /// <summary>보스가 대검을 머리 위로 든다(할 일 없음).</summary>
+        Raise,
+        /// <summary>P1: 왼팔을 들어 막는다.</summary>
+        Catch,
+        /// <summary>P2: 가슴의 표시를 쏜다.</summary>
+        Open,
+        /// <summary>둘이 같이: P1은 주먹, P2는 왼손 지시기 버튼을 누르고 있는다.</summary>
+        Together,
+        /// <summary>일격이 들어가 보스가 넘어가는 중.</summary>
+        Blow,
     }
 
     /// <summary>한 틱에 일어난 일. 화면·소리·진동이 이것을 보고 반응한다.</summary>
@@ -201,6 +225,13 @@ namespace Anseong.Skirmish
         public float cannonJam;
         /// <summary>로봇이 옆으로 비켜 있는 거리(오른쪽이 +). mech에 이미 들어 있다.</summary>
         public float sideStep;
+
+        /// <summary>보스전 마무리의 지금 단계.</summary>
+        public FinaleStep finale;
+        /// <summary>그 단계에서 한 사람이 채우는 정도(0~1): 막고 있는 시간, 가슴을 맞힌 시간.</summary>
+        public float finaleProgress;
+        /// <summary>같이 끝내기에서 각자 자기 몫을 하고 있다.</summary>
+        public bool finaleMech, finaleGunner;
 
         /// <summary>고로가 더 버틸 수 있는 피격 수.</summary>
         public int furnace;

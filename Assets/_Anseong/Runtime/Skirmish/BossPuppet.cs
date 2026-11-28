@@ -222,6 +222,16 @@ namespace Anseong.Skirmish
             if (!Application.isPlaying) { shown = target; Apply(); }
         }
 
+        /// <summary>
+        /// 마무리의 자세: 대검을 머리 위로 들었다가(Raise, Catch), 로봇에게 받혀 내려온 채 멈추고(Open), 가슴이 터지면 두 팔이 벌어진다(Together, Blow).
+        /// 몸이 젖혀지고 쓰러지는 것은 화면 쪽이 몸 전체를 기울여서 한다(이 모델은 가슴판이 따로 없고, 지금은 팔만 움직인다).
+        /// </summary>
+        public void Finale(FinaleStep step)
+        {
+            target = step == FinaleStep.Raise || step == FinaleStep.Catch ? SwordHigh : step == FinaleStep.Open ? SwordDown : Open;
+            if (!Application.isPlaying) { shown = target; Apply(); }
+        }
+
         void LateUpdate()
         {
             float k = follow <= 0f || !started ? 1f : 1f - Mathf.Exp(-follow * Time.deltaTime);

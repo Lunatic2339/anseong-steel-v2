@@ -7,7 +7,7 @@ using UnityEngine;
 
 namespace Anseong.Tests
 {
-    /// <summary>보스전 1막(기획안 2026-11-26 4절·5절): 대검 왼쪽 베기와 오른쪽 베기(방패 없음), 튕겨난 동안에만 피해, 스캔과 약점 사격, 자폭 드론. 체력 800에서 2막, 400에서 3막(검과 방패를 잃음), 60에서 끝.</summary>
+    /// <summary>보스전 1막(기획안 2026-11-26 4절·5절): 대검 왼쪽 베기와 오른쪽 베기(방패 없음), 튕겨난 동안에만 피해, 스캔과 약점 사격, 자폭 드론. 체력 800에서 2막, 400에서 3막(검과 방패를 잃음), 60에서 마무리(BossFinaleTests).</summary>
     public class BossActTests
     {
         const float Dt = 0.02f;
@@ -198,9 +198,10 @@ namespace Anseong.Tests
             var seen = Play(s, 900f, until: x => x.State.phase != SkirmishPhase.Fighting);
 
             Assert.AreEqual(SkirmishPhase.Cleared, s.State.phase);
-            Assert.AreEqual(60f, s.State.gruntHp, "체력 60에서 끝난다");
+            Assert.AreEqual(0f, s.State.gruntHp, "체력 60에서 마무리로 넘어가고, 마지막 일격에 쓰러진다");
+            Assert.AreEqual(FinaleStep.Blow, s.State.finale);
             Assert.AreEqual(2, s.State.act, "3막까지 갔다");
-            Assert.AreNotEqual(GruntStep.Dead, s.State.gruntStep, "보스는 쓰러지지 않고 남아 있다");
+            Assert.AreEqual(GruntStep.Dead, s.State.gruntStep, "마무리의 일격에 쓰러진다");
             Assert.AreEqual(2, seen.Count(k => k == SkirmishEventKind.ActChanged));
             Assert.AreEqual(1, seen.Count(k => k == SkirmishEventKind.SwordBroken));
             CollectionAssert.Contains(seen, SkirmishEventKind.GruntBlocked);
@@ -455,7 +456,7 @@ namespace Anseong.Tests
             var seen = Play(s, 900f, until: x => x.State.phase != SkirmishPhase.Fighting);
             Assert.AreEqual(SkirmishPhase.Cleared, s.State.phase);
             CollectionAssert.Contains(seen, SkirmishEventKind.GruntBlocked);
-            Assert.Less(Vector3.Distance(new Vector3(122f, 0f, 632f), s.State.gruntPosition), 0.5f, "보스는 제자리에 서 있다");
+            Assert.Less(Vector3.Distance(new Vector3(122f, 0f, 632f), s.State.gruntPosition), 16f, "보스는 싸우던 자리에서 뒤로 밀려나 쓰러진다");
         }
 
         // ── 특별한 공격 다섯 (기획안 4절의 표) ──
@@ -811,14 +812,16 @@ namespace Anseong.Tests
         }
 
         [Test]
-        public void 혼자_할_때는_체력_900에서_시작해_45에서_끝난다()
+        public void 혼자_할_때는_체력_900에서_시작해_45에서_마무리로_넘어간다()
         {
             var s = Act1(solo: true);
             Play(s, 1f);
             Assert.AreEqual(900f, s.State.gruntHp);
-            Play(s, 900f, until: x => x.State.phase != SkirmishPhase.Fighting);
-            Assert.AreEqual(SkirmishPhase.Cleared, s.State.phase);
+            Play(s, 900f, until: x => x.State.finale != FinaleStep.None);
             Assert.AreEqual(45f, s.State.gruntHp);
+            Play(s, 60f, until: x => x.State.phase != SkirmishPhase.Fighting);
+            Assert.AreEqual(SkirmishPhase.Cleared, s.State.phase);
+            Assert.AreEqual(0f, s.State.gruntHp);
         }
 
         [Test]
