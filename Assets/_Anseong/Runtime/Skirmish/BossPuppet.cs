@@ -142,7 +142,7 @@ namespace Anseong.Skirmish
         [SerializeField, Tooltip("헬기를 노릴 때 칼끝에서 P2 얼굴로 가는 붉은 선.")] LineRenderer aimLine;
         [SerializeField, ColorUsage(false, true), Tooltip("속임 베기: 왼쪽으로 온다.")] Color lightLeft = new Color(2.4f, 0.08f, 0.05f);
         [SerializeField, ColorUsage(false, true), Tooltip("속임 베기: 오른쪽으로 온다.")] Color lightRight = new Color(2.2f, 2.2f, 2.2f);
-        [SerializeField, ColorUsage(false, true), Tooltip("큰 내려베기: 하나씩 꺼지는 불.")] Color lightCount = new Color(2.4f, 1.5f, 0.25f);
+        [SerializeField, ColorUsage(false, true), Tooltip("큰 내려베기: 하나씩 꺼지는 불.")] Color lightCount = new Color(2.2f, 2.2f, 2.2f);
         MaterialPropertyBlock lightBlock;
         static readonly int BaseColorId = Shader.PropertyToID("_BaseColor"), ColorId = Shader.PropertyToID("_Color");
 
