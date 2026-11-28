@@ -101,6 +101,7 @@ namespace Anseong.Skirmish
             nextWave = 0;
             waveShellDone = false;
             actEnded = false;
+            introLaunched = 0; introGap = 0f; introRetried = false;
             tallyHull = -1f;
             finaleTimer = finaleWait = finaleWind = fightSeconds = 0f;
             droneTimer = 0f;
@@ -118,6 +119,14 @@ namespace Anseong.Skirmish
             var old = State;
             int left = old.rebootsLeft;
             Reset();
+            // 앞 장면에서 졌으면 자폭 드론 장면의 처음으로, 보스전에서 졌으면 하던 막의 처음으로.
+            if (old.stage != SceneStage.None)
+            {
+                State.stage = old.stage == SceneStage.Fight ? SceneStage.Fight : SceneStage.Drones;
+                State.lift = 1f;
+                State.tried = SkirmishState.TryAll;
+                introLaunched = 0; introGap = 1.5f;
+            }
             // 결과 화면의 기록은 재기동해도 이어 간다.
             State.statSeconds = old.statSeconds; State.statBlocks = old.statBlocks; State.statPerfect = old.statPerfect;
             State.statTaken = old.statTaken; State.statDrones = old.statDrones; State.statGunnerDamage = old.statGunnerDamage;
@@ -168,6 +177,9 @@ namespace Anseong.Skirmish
         public static Vector3 Gun(SkirmishState state, SkirmishSettings s) => state.mech + Vector3.up * s.mechGunHeight;
         public static Vector3 Center(SkirmishState state, SkirmishSettings s, int id) => state.enemies[id].position + Vector3.up * (s.enemyHeight * 0.5f);
         public static Vector3 Muzzle(SkirmishState state, SkirmishSettings s, int id) => state.enemies[id].position + Vector3.up * s.enemyMuzzleHeight;
+        /// <summary>P2의 헬기(사수의 눈)가 지금 있는 자리. 준비 장면에서 로봇 발 옆에서 제자리까지 일정한 빠르기로 떠오른다.</summary>
+        public static Vector3 GunnerAt(SkirmishState state, SkirmishSettings s) =>
+            s.intro ? Vector3.Lerp(s.gunnerStart, s.gunnerPost, Mathf.Clamp01(state.lift)) : s.gunnerPost;
         public static Vector3 GruntCenter(SkirmishState state, SkirmishSettings s) => state.gruntPosition + Vector3.up * (s.gruntHeight * 0.5f);
 
         public void Tick(float dt)
@@ -216,6 +228,91 @@ namespace Anseong.Skirmish
         }
 
         float tallyHull = -1f;
+        bool introRetried;      // 자폭 드론 장면을 한 번 다시 했다
+        int introLaunched;      // 장면 1에서 띄운 자폭 드론 수
+        float introGap;         // 다음 드론까지 남은 초
+
+        void Stage(SceneStage next)
+        {
+            var st = State;
+            st.stage = next;
+            st.stageTimer = 0f;
+            if (next != SceneStage.Setup) st.lift = 1f;
+            if (next == SceneStage.Drones) { introLaunched = 0; introGap = 1.5f; }
+            if (next == SceneStage.Fight) gruntWait = 0f;
+            Emit(SkirmishEventKind.StageChanged, (int)next, st.mech, st.mech);
+        }
+
+        /// <summary>운영자가 지금 장면을 넘긴다(준비, 자폭 드론, 등장 영상). 보스전에서는 아무것도 하지 않는다.</summary>
+        public void SkipStage()
+        {
+            var st = State;
+            if (!Settings.intro || st.phase != SkirmishPhase.Fighting || st.stage == SceneStage.None || st.stage == SceneStage.Fight) return;
+            st.shells.RemoveAll(x => x.kind == ShellKind.BigShell);
+            Stage(st.stage + 1);
+        }
+
+        /// <summary>
+        /// 보스전 앞의 장면들(기획안 5절). 준비(P2 이륙, 조작을 한 번씩 해 봄) → 자폭 드론 여섯 → 등장 영상 → 보스전.
+        /// 아직 보스전이 아니면 true(보스를 내보내지 않는다).
+        /// </summary>
+        bool Intro(bool punched)
+        {
+            var st = State; var s = Settings;
+            if (!s.intro || st.stage == SceneStage.Fight) return false;
+            if (st.stage == SceneStage.None)
+            {
+                Stage(SceneStage.Setup);
+                st.lift = s.liftSeconds > 0f ? 0f : 1f;
+                st.tried = 0;
+            }
+            st.stageTimer += real;
+            switch (st.stage)
+            {
+                case SceneStage.Setup:
+                    if (s.liftSeconds > 0f) st.lift = Mathf.Clamp01(st.stageTimer / s.liftSeconds);
+                    if (st.guarding) st.tried |= st.guardSide == Anseong.Pilot.PilotSide.Left ? SkirmishState.TryLeft : SkirmishState.TryRight;
+                    if (punched) st.tried |= SkirmishState.TrySwing;
+                    if (Mathf.Abs(st.sideStep) > 1f) st.tried |= SkirmishState.TryStep;
+                    // 혼자 할 때는 P2의 몫(폐차 셋)을 한 것으로 친다. 폐차가 없는 장면도 마찬가지다.
+                    if (st.lift >= 1f && (Solo || s.wrecks == null || s.wrecks.Length == 0)) st.tried |= SkirmishState.TryAll - SkirmishState.TryAllMech;
+                    for (int i = s.wrecks != null ? s.wrecks.Length : 0; i < 3; i++) st.tried |= (byte)(SkirmishState.TryWreck << i);
+                    if ((st.tried & SkirmishState.TryAll) == SkirmishState.TryAll && st.lift >= 1f || st.stageTimer >= s.setupSeconds) Stage(SceneStage.Drones);
+                    break;
+                case SceneStage.Drones:
+                    introGap -= real;
+                    if (introLaunched < s.introDrones && introGap <= 0f)
+                    {
+                        introGap = s.introDroneGap;
+                        introLaunched++;
+                        FireBigShell(s.droneFrom, introLaunched == s.introFastDrone ? s.introFastSpeed : 1f);
+                    }
+                    bool flying = false;
+                    foreach (var shell in st.shells) flying |= shell.kind == ShellKind.BigShell;
+                    if (introLaunched >= s.introDrones && !flying) Stage(SceneStage.Entrance);
+                    break;
+                case SceneStage.Entrance:
+                    if (st.stageTimer >= s.entranceSeconds) Stage(SceneStage.Fight);
+                    break;
+            }
+            return st.stage != SceneStage.Fight;
+        }
+
+        /// <summary>준비 장면: 조준선이 폐차에 닿았는가.</summary>
+        bool WreckOnRay(Vector3 origin, Vector3 direction, out int index, out float distance)
+        {
+            index = -1; distance = float.MaxValue;
+            var wrecks = Settings.wrecks;
+            for (int i = 0; wrecks != null && i < wrecks.Length && i < 3; i++)
+            {
+                var center = wrecks[i] + Vector3.up * 2f;
+                float along = Vector3.Dot(center - origin, direction);
+                if (along <= 0f || along >= distance) continue;
+                if ((origin + direction * along - center).sqrMagnitude > Settings.wreckRadius * Settings.wreckRadius) continue;
+                index = i; distance = along;
+            }
+            return index >= 0;
+        }
 
         /// <summary>강한 탄이 보스에 꽂힌다. 깎인 만큼을 P2의 기록에 더한다.</summary>
         bool StrongHit(float seconds)
@@ -324,6 +421,7 @@ namespace Anseong.Skirmish
             var st = State; var s = Settings;
             bool punched = mech.punchSeq != lastPunchSeq && mech.punchDamage > 0f;
             lastPunchSeq = mech.punchSeq;
+            if (Intro(punched)) return;
             if (s.grunts == null || s.grunts.Length == 0) return;
             if (Finale(punched) || EndAct()) return;
             if (grunt == null || !grunt.Alive)
@@ -732,15 +830,16 @@ namespace Anseong.Skirmish
         }
 
         /// <summary>메카 가슴을 향해 느린 큰 탄을 쏜다. 옆으로 피하면 지나가서 사라진다.</summary>
-        void FireBigShell(Vector3 from)
+        void FireBigShell(Vector3 from, float speedScale = 1f)
         {
             var s = Settings;
             var to = MechChest;
+            float speed = s.bigShellSpeed * Mathf.Max(0.1f, speedScale);
             var shell = new SkirmishShell
             {
                 id = nextShellId++, kind = ShellKind.BigShell, position = from,
-                velocity = (to - from).normalized * s.bigShellSpeed, target = -1, hitsLeft = s.bigShellHits,
-                life = Vector3.Distance(from, to) / s.bigShellSpeed + 1.5f,
+                velocity = (to - from).normalized * speed, target = -1, hitsLeft = s.bigShellHits,
+                life = Vector3.Distance(from, to) / speed + 1.5f,
             };
             State.shells.Add(shell);
             Emit(SkirmishEventKind.ShellFired, shell.id, from, to);
@@ -971,9 +1070,24 @@ namespace Anseong.Skirmish
             if (st.cannonJam > 0f) return;
             // 스캔하는 동안에는 포가 나가지 않는다.
             if (ScanMode && !Solo && gunner.lockHeld) return;
+            // 준비 장면: 떠오르는 동안에는 포를 잡지 않는다.
+            bool setup = s.intro && st.stage == SceneStage.Setup;
+            if (setup && st.lift < 1f) return;
             cannonCooldown = s.cannonInterval;
             st.cannonHeat += s.cannonHeatPerShot;
             if (st.cannonHeat >= 1f) { st.cannonHeat = 1f; st.cannonOverheated = true; }
+            // 준비 장면: 폐차 셋을 쏴 본다.
+            if (setup && WreckOnRay(s.gunnerPost, aim, out int wreck, out float wreckDistance))
+            {
+                Emit(SkirmishEventKind.CannonShot, -1, s.gunnerPost, s.gunnerPost + aim * wreckDistance);
+                byte bit = (byte)(SkirmishState.TryWreck << wreck);
+                if ((st.tried & bit) == 0)
+                {
+                    st.tried |= bit;
+                    Emit(SkirmishEventKind.WreckHit, wreck, s.wrecks[wreck], s.wrecks[wreck]);
+                }
+                return;
+            }
 
             int enemy = EnemyOnRay(s.gunnerPost, aim, out float enemyDistance);
             var shell = BigShellOnRay(s.gunnerPost, aim, out float shellDistance);
@@ -1133,6 +1247,15 @@ namespace Anseong.Skirmish
         void Resolve()
         {
             var st = State;
+            // 자폭 드론 장면에서는 지지 않는다(아직 배우는 중이다): 내구도가 바닥나면 한 번은 그 장면을 처음부터, 그다음에는 그냥 넘어간다. 재기동 횟수를 쓰지 않는다.
+            if (Settings.intro && st.stage == SceneStage.Drones && st.hull <= 0f)
+            {
+                st.hull = Settings.mechHull;
+                st.shells.RemoveAll(x => x.kind == ShellKind.BigShell);
+                bool again = !introRetried;
+                introRetried = true;
+                Stage(again ? SceneStage.Drones : SceneStage.Entrance);
+            }
             if (st.hull <= 0f || st.furnace <= 0)
             {
                 if (st.rebootsLeft > 0)

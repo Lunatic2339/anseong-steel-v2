@@ -98,6 +98,8 @@ namespace Anseong.Skirmish
         [SerializeField, Tooltip("보스의 온몸 동작(받은 동작 파일). 있으면 몸을 통째로 기울이는 임시 표현을 쓰지 않는다.")] BossMotion bossMotion;
         [SerializeField, Tooltip("P2의 스캔이 끝났을 때 보스의 약점 자리에 뜨는 표시.")] Transform weakMarker;
         public void BindWeakMarker(Transform marker) => weakMarker = marker;
+        [SerializeField, Tooltip("준비 장면에서 P2가 쏴 보는 폐차 셋.")] Transform[] wrecks = new Transform[0];
+        public void BindWrecks(Transform[] value) => wrecks = value;
 
         public void BindGrunt(Transform root, Renderer telegraph, Renderer guardPlate)
         {
@@ -141,7 +143,14 @@ namespace Anseong.Skirmish
                 // 에디터에서 화면을 찍을 때는 LateUpdate가 돌지 않으므로 여기서 바로 자세를 잡는다.
                 if (!Application.isPlaying) mechArms.Apply(0f, true);
             }
-            if (gunnerRig != null) gunnerRig.position = s.gunnerPost;
+            if (gunnerRig != null) gunnerRig.position = SkirmishSession.GunnerAt(st, s);
+            // 준비 장면의 폐차 셋: 그 장면에서만 보이고, 맞히면 사라진다.
+            for (int i = 0; i < wrecks.Length; i++)
+            {
+                if (wrecks[i] == null) continue;
+                bool on = s.intro && st.stage == SceneStage.Setup && (st.tried & (SkirmishState.TryWreck << i)) == 0;
+                if (wrecks[i].gameObject.activeSelf != on) wrecks[i].gameObject.SetActive(on);
+            }
 
             for (int i = 0; i < enemies.Length; i++)
             {

@@ -82,6 +82,12 @@ namespace Anseong.Skirmish
         // 결과 화면.
         [SerializeField, Min(0f), Tooltip("싸움이 끝난 뒤 결과 화면이 뜰 때까지의 정적(초).")] float resultDelay = 3f;
         [SerializeField, Tooltip("결과 화면 맨 아래의 출처 한 줄.")] string credit = "보스 모델: OSCAR CREATIVO (Sketchfab, CC BY-NC 4.0)";
+        // 앞 장면: 등장 영상 동안의 어둠과 영상이 뜰 자리.
+        Image curtain;
+        GameObject entranceCard;
+        float dark;
+        SceneStage saidStage;
+        bool saidFast, saidDown;
         GameObject result;
         Text resultTitle, resultTime, resultMech, resultGunner;
         float resultWait;
@@ -118,6 +124,19 @@ namespace Anseong.Skirmish
                     case GruntAttack.Thrust: Say("저건 못 막는다. 기체, 옆으로 비켜라!", 4f); break;
                 }
             }
+            // 앞 장면의 대사(대사 표 0-1 ~ 2-1)와 끝의 대사(4-1).
+            if (st.stage != saidStage)
+            {
+                if (st.stage == SceneStage.Setup) Say("안성제철 비상 방어. 고로는 넘겨줄 수 없다. 여기서 막는다.", 4f);
+                else if (st.stage == SceneStage.Entrance) Say("정면, 큰 놈이다. 적 기체다.", 4f);
+                saidStage = st.stage;
+            }
+            if (st.stage == SceneStage.Setup && subtitleLeft <= 0f && st.stageTimer > 4f && st.stageTimer < 4.5f)
+                Say("지원, 떠올라라. 자리에 닿으면 포를 잡아라. 기체, 방패를 들어 봐라. 왼쪽, 오른쪽. 검을 휘둘러 봐라.", 6f);
+            if (!saidFast && st.stage == SceneStage.Drones)
+                foreach (var shell in st.shells)
+                    if (shell.kind == ShellKind.BigShell && shell.velocity.magnitude > 24f)
+                    { saidFast = true; Say("하나 샜다. 지원, 어느 쪽인지 말해 줘라. 기체, 그쪽으로 막아라.", 4f); break; }
             // 마무리의 대사.
             if (st.finale != saidFinale)
             {
@@ -227,6 +246,9 @@ namespace Anseong.Skirmish
             var font = Font.CreateDynamicFontFromOSFont(osFontNames, 28);
             // 맞았을 때는 이 묶음만 흔든다.
             root = Group("Root", canvas, Vector2.zero);
+            // 맨 뒤에 깔리는 어둠(등장 영상 동안). 판이 눈앞에 있어서 시야를 거의 다 덮는다. 조종석 틀은 그 앞에 남는다.
+            curtain = Box("Curtain", root, Vector2.zero, new Vector2(60000f, 60000f), Color.black);
+            curtain.enabled = false;
 
             // 보스 체력: 길고 얇은 붉은 줄, 800과 400 자리에 가는 눈금, 줄 위 왼쪽에 작은 글씨. 밑에 때릴 틈의 초록 줄.
             var bossRect = Group("Boss", root, Vector2.zero);
@@ -347,6 +369,19 @@ namespace Anseong.Skirmish
             Label("Lamp P2 name", lamps, new Vector2(70f, -36f), new Vector2(120f, 30f), font, 20, TextAnchor.MiddleCenter).text = "지원";
             prompt.SetActive(false);
 
+            // 등장 영상이 뜰 자리. 영상이 아직 없어서 틀과 안내만 있다.
+            var card = Group("Entrance", root, new Vector2(0f, 40f));
+            entranceCard = card.gameObject;
+            Box("Entrance screen", card, Vector2.zero, new Vector2(1120f, 630f), new Color(0.03f, 0.03f, 0.04f, 1f));
+            var screenLines = new List<Image>();
+            Frame(screenLines, "Entrance frame", card, Vector2.zero, new Vector2(1120f, 630f), 3f);
+            Label("Entrance text", card, new Vector2(0f, 20f), new Vector2(1000f, 60f), font, 40, TextAnchor.MiddleCenter).text = "적 기체 접근";
+            var waitText = Label("Entrance sub", card, new Vector2(0f, -40f), new Vector2(1000f, 40f), font, 22, TextAnchor.MiddleCenter);
+            waitText.text = "(보스 등장 영상이 들어갈 자리)";
+            waitText.color = new Color(whiteColor.r, whiteColor.g, whiteColor.b, 0.5f);
+            entranceCard.SetActive(false);
+            card.SetSiblingIndex(1);
+
             // 결과 화면: 제목, 걸린 시간, 두 사람의 기록, 출처.
             var resultRect = Group("Result", root, Vector2.zero);
             result = resultRect.gameObject;
@@ -388,9 +423,41 @@ namespace Anseong.Skirmish
             resultGunner.color = mech ? dim : whiteColor;
         }
 
+        static string Mark(SkirmishState st, int bit, string name) => ((st.tried & bit) != 0 ? "■ " : "□ ") + name;
+
+        /// <summary>준비 장면에서 해 볼 것들. 한 것은 채워진 네모로 바뀐다.</summary>
+        bool Setup(SkirmishState st, bool mech)
+        {
+            if (st.stage != SceneStage.Setup || st.phase != SkirmishPhase.Fighting) return false;
+            Active(prompt, true);
+            ((RectTransform)prompt.transform).anchoredPosition = new Vector2(0f, 200f);
+            Active(promptBar, !mech && st.lift < 1f);
+            Active(promptLamps, false);
+            promptText.color = whiteColor;
+            if (mech)
+            {
+                promptText.text = "움직여 봐라";
+                promptSub.text = Mark(st, SkirmishState.TryLeft, "왼쪽으로 막기") + "    " + Mark(st, SkirmishState.TryRight, "오른쪽으로 막기") + "    "
+                                 + Mark(st, SkirmishState.TrySwing, "검 휘두르기") + "    " + Mark(st, SkirmishState.TryStep, "옆으로 한 걸음");
+            }
+            else if (st.lift < 1f)
+            {
+                promptText.text = "떠오르는 중";
+                promptSub.text = "자리에 닿으면 포를 잡는다";
+                promptFill.fillAmount = st.lift;
+            }
+            else
+            {
+                promptText.text = "폐차 셋을 쏴 봐라";
+                promptSub.text = Mark(st, SkirmishState.TryWreck, "하나") + "    " + Mark(st, SkirmishState.TryWreck << 1, "둘") + "    " + Mark(st, SkirmishState.TryWreck << 2, "셋");
+            }
+            return true;
+        }
+
         /// <summary>마무리에서 이 자리의 사람이 지금 할 일. 자기 차례가 아니면 동료가 무엇을 하는지 작은 글씨로 알린다.</summary>
         void Prompt(SkirmishState st, bool mech)
         {
+            if (Setup(st, mech)) return;
             bool on = st.finale >= FinaleStep.Catch && st.finale <= FinaleStep.Together && st.phase == SkirmishPhase.Fighting;
             Active(prompt, on);
             if (!on) return;
@@ -482,7 +549,7 @@ namespace Anseong.Skirmish
                 for (int i = 0; i < flash.Length; i++) flash[i] = 0f;
                 saidGuard = saidOpen = saidDrone = false; subtitleLeft = 0f;
                 saidAttacks = 0;
-                saidFinale = st.finale; resultWait = 0f;
+                saidFinale = st.finale; resultWait = 0f; saidStage = SceneStage.None; saidFast = saidDown = false;
                 saidAct = st.act; saidBroken = st.swordBroken; gearLost = st.shieldBroken || st.swordBroken; gearOffIn = 0f;
             }
             Lines(st);
@@ -541,6 +608,15 @@ namespace Anseong.Skirmish
 
             Prompt(st, mech);
             Result(st, mech, dt);
+            // 등장 영상: 0.5초에 걸쳐 어두워지고, 끝나면 다시 0.5초에 걸쳐 밝아진다.
+            bool entrance = st.stage == SceneStage.Entrance && st.phase == SkirmishPhase.Fighting;
+            dark = Mathf.MoveTowards(dark, entrance ? 1f : 0f, dt * 2f);
+            curtain.enabled = dark > 0f;
+            curtain.color = new Color(0f, 0f, 0f, dark);
+            Active(entranceCard, entrance && dark >= 1f);
+            group.alpha = Mathf.Lerp(opacity, 1f, dark);
+            if (st.phase == SkirmishPhase.Cleared && !saidDown && resultWait > 0.5f)
+            { saidDown = true; Say("적 기체 정지. 고로는 무사하다. 수고했다.", 5f); }
 
             // P1: 로봇 상태판. 선 색이 내구도다.
             Active(statusPanel, mech);
@@ -601,6 +677,8 @@ namespace Anseong.Skirmish
             subtitleLeft -= dt;
             subtitle.text = subtitleLeft > 0f ? pendingLine : "";
             message.text = note ?? "";
+            // 어두운 동안에는 영상 자리와 자막만 남긴다.
+            if (dark >= 1f) { Active(statusPanel, false); Active(reticle.gameObject, false); }
         }
 
         /// <summary>모니터에서는 머리에, 헤드셋에서는 자리에(머리를 따라오지 않게) 붙인다. 자리가 바뀌면 다시 놓는다.</summary>

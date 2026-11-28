@@ -469,6 +469,16 @@ namespace Anseong.EditorTools
                     var weak = Shape(PrimitiveType.Sphere, "Boss weak point marker (약점 표시)", null, Vector3.zero, Vector3.one * 1.5f, Unlit("WeakPoint", new Color(0.3f, 0.95f, 0.45f)));
                     weak.gameObject.SetActive(false);
                     view.BindWeakMarker(weak);
+                    // 준비 장면에서 P2가 쏴 보는 폐차 셋(임시 상자). 그 장면에서만 보인다.
+                    var wreckMaterial = Lit("Wreck", new Color(0.32f, 0.2f, 0.12f));
+                    var wreckRoots = new Transform[settings.wrecks != null ? settings.wrecks.Length : 0];
+                    for (int i = 0; i < wreckRoots.Length; i++)
+                    {
+                        wreckRoots[i] = Box("Wreck " + (i + 1) + " (폐차, 임시)", null, settings.wrecks[i] + Vector3.up * 2f, new Vector3(5f, 4f, 10f), wreckMaterial);
+                        wreckRoots[i].rotation = Quaternion.Euler(0f, settings.mechYaw + 25f * (i - 1), 6f * (i - 1));
+                        wreckRoots[i].gameObject.SetActive(false);
+                    }
+                    view.BindWrecks(wreckRoots);
                 }
                 else Grunt(gruntRoot, settings.gruntHeight, enemy);
                 var telegraph = Shape(PrimitiveType.Sphere, "Charger telegraph glow", null, Vector3.zero, Vector3.one * 3f, danger).GetComponent<Renderer>();
@@ -565,7 +575,14 @@ namespace Anseong.EditorTools
             serverObject.AddComponent<NetworkObject>();
             var server = serverObject.AddComponent<SkirmishServer>();
             server.Bind(view, input, hud);
-            server.Configure(settings);
+            // 실제 장면은 보스전 앞의 장면들을 거친다(운영자가 N으로 넘긴다). 사진을 찍는 쪽과 테스트는 보스전부터 시작한다.
+            if (bossScene)
+            {
+                var played = JsonUtility.FromJson<SkirmishSettings>(JsonUtility.ToJson(settings));
+                played.intro = true;
+                server.Configure(played);
+            }
+            else server.Configure(settings);
             server.BindSound(Sound(viewRoot, bossScene));
 
             view.Show(new SkirmishSession(settings), Vector3.forward, 0f);

@@ -155,8 +155,10 @@ namespace Anseong.Skirmish
             // 계속 나는 소리.
             bool boss = SkirmishSettings.IsBoss(s, Mathf.Max(0, st.gruntIndex));
             Loop(ambienceSource, ambience, true, st.mech, true, ambienceVolume, dt, 0.5f);
-            Loop(musicSource, music, playMusic && boss && fighting, st.mech, true, musicVolume, dt, 0.5f);
-            Loop(rotorSource, heliRotor, true, s.gunnerPost, gunner, gunner ? 0.55f : 1f, dt, 1f);
+            // 음악은 보스가 나온 뒤부터(앞 장면에서는 배경음만).
+            bool fightStage = st.stage == SceneStage.None || st.stage == SceneStage.Fight;
+            Loop(musicSource, music, playMusic && boss && fighting && fightStage, st.mech, true, musicVolume, dt, 0.5f);
+            Loop(rotorSource, heliRotor, true, SkirmishSession.GunnerAt(st, s), gunner, gunner ? 0.55f : 1f, dt, 1f);
             Loop(cannonSource, cannonLoop, Time.time < cannonUntil, s.gunnerPost, gunner, gunner ? 0.7f : 1f, dt, 12f);
             Loop(alarmSource, jamAlarm, gunner && st.cannonJam > 0f, s.gunnerPost, true, 1f, dt, 8f);
             // 가장 가까운 드론 하나의 소리만 낸다.
@@ -242,6 +244,10 @@ namespace Anseong.Skirmish
                     case SkirmishEventKind.MissileFired: Play(missile, e.From, gunner); break;
                     case SkirmishEventKind.MissileHit: Play(explodeLarge, e.To, false); break;
                     case SkirmishEventKind.WeakPointShown: Play(weakShown, e.To, true); break;
+                    case SkirmishEventKind.WreckHit: Play(explodeSmall, e.To, false); break;
+                    case SkirmishEventKind.StageChanged:
+                        Play(e.Id == (int)SceneStage.Entrance ? actChange : radio, e.From, true, e.Id == (int)SceneStage.Entrance ? 0.8f : 1f);
+                        break;
                     case SkirmishEventKind.FinaleStarted: Play(actChange, e.From, true); break;
                     case SkirmishEventKind.FinaleCaught: Play(block, e.To, !gunner, 1.3f, 0.8f); break;
                     case SkirmishEventKind.FinaleOpened: Play(explodeLarge, e.From, false, 1.2f); Play(bossStagger, e.From, false); break;

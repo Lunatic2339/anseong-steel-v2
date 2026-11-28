@@ -50,6 +50,8 @@ namespace Anseong.Skirmish
         public byte Finale;
         public float FinaleProgress;
         public bool FinaleMech, FinaleGunner;
+        public byte Stage, Tried;
+        public float StageTimer, Lift;
         public float StatSeconds, StatTaken, StatGunnerDamage;
         public ushort StatBlocks, StatPerfect, StatDrones;
         public float SlowMotion;
@@ -88,6 +90,7 @@ namespace Anseong.Skirmish
             s.SerializeValue(ref GruntImpactIn); s.SerializeValue(ref CannonJam); s.SerializeValue(ref SideStep);
             s.SerializeValue(ref Finale); s.SerializeValue(ref FinaleProgress);
             s.SerializeValue(ref FinaleMech); s.SerializeValue(ref FinaleGunner);
+            s.SerializeValue(ref Stage); s.SerializeValue(ref Tried); s.SerializeValue(ref StageTimer); s.SerializeValue(ref Lift);
             s.SerializeValue(ref StatSeconds); s.SerializeValue(ref StatTaken); s.SerializeValue(ref StatGunnerDamage);
             s.SerializeValue(ref StatBlocks); s.SerializeValue(ref StatPerfect); s.SerializeValue(ref StatDrones);
             s.SerializeValue(ref ShellCount);
@@ -129,6 +132,7 @@ namespace Anseong.Skirmish
                 SwordBroken = st.swordBroken, Act = (byte)st.act, GruntSide = (byte)st.gruntSide,
                 GruntImpactIn = st.gruntImpactIn, CannonJam = st.cannonJam, SideStep = st.sideStep,
                 Finale = (byte)st.finale, FinaleProgress = st.finaleProgress, FinaleMech = st.finaleMech, FinaleGunner = st.finaleGunner,
+                Stage = (byte)st.stage, Tried = st.tried, StageTimer = st.stageTimer, Lift = st.lift,
                 StatSeconds = st.statSeconds, StatTaken = st.statTaken, StatGunnerDamage = st.statGunnerDamage,
                 StatBlocks = (ushort)st.statBlocks, StatPerfect = (ushort)st.statPerfect, StatDrones = (ushort)st.statDrones,
                 ShellCount = (byte)count,
@@ -166,6 +170,7 @@ namespace Anseong.Skirmish
             st.swordBroken = SwordBroken; st.act = Act; st.gruntSide = (Anseong.Pilot.PilotSide)GruntSide;
             st.gruntImpactIn = GruntImpactIn; st.cannonJam = CannonJam; st.sideStep = SideStep;
             st.finale = (FinaleStep)Finale; st.finaleProgress = FinaleProgress; st.finaleMech = FinaleMech; st.finaleGunner = FinaleGunner;
+            st.stage = (SceneStage)Stage; st.tried = Tried; st.stageTimer = StageTimer; st.lift = Lift;
             st.statSeconds = StatSeconds; st.statTaken = StatTaken; st.statGunnerDamage = StatGunnerDamage;
             st.statBlocks = StatBlocks; st.statPerfect = StatPerfect; st.statDrones = StatDrones;
             st.shells.Clear();
@@ -224,6 +229,18 @@ namespace Anseong.Skirmish
                     punchSeq = Mathf.FloorToInt(st.elapsed / 0.6f), punchDamage = st.gruntStep == GruntStep.Stagger ? 25f : 0f,
                 };
             }
+            if (st.stage == SceneStage.Setup)
+            {
+                // 준비: 왼쪽으로 막고, 오른쪽으로 막고, 검을 휘두르고, 옆으로 한 걸음.
+                float t = st.stageTimer;
+                return new MechInput
+                {
+                    guard = t < 2f, guardDirection = Quaternion.Euler(0f, s.mechYaw, 0f) * Vector3.forward,
+                    guardSide = t < 1f ? Anseong.Pilot.PilotSide.Left : Anseong.Pilot.PilotSide.Right,
+                    punchSeq = t > 2f ? 1 : 0, punchDamage = 25f,
+                    move = t > 2.5f && t < 2.8f ? Quaternion.Euler(0f, s.mechYaw, 0f) * Vector3.right : Vector3.zero,
+                };
+            }
             var shell = st.shells.FirstOrDefault(x => x.kind == ShellKind.BigShell);
             int target = st.enemies[SkirmishSession.G3].Alive ? SkirmishSession.G3 : SkirmishSession.G4;
             return new MechInput
@@ -253,6 +270,24 @@ namespace Anseong.Skirmish
                 if (drone == null) return new GunnerInput { aim = chest, pointer = chest };
                 var at = (drone.position - s.gunnerPost).normalized;
                 return new GunnerInput { fire = true, aim = at, pointer = chest };
+            }
+            if (st.stage == SceneStage.Setup)
+            {
+                // 준비: 제자리에 닿으면 아직 안 맞힌 폐차를 차례로 쏜다.
+                for (int i = 0; st.lift >= 1f && s.wrecks != null && i < s.wrecks.Length && i < 3; i++)
+                {
+                    if ((st.tried & (SkirmishState.TryWreck << i)) != 0) continue;
+                    var at = (s.wrecks[i] + Vector3.up * 2f - s.gunnerPost).normalized;
+                    return new GunnerInput { fire = true, aim = at, pointer = at };
+                }
+                return new GunnerInput { aim = Vector3.forward, pointer = Vector3.forward };
+            }
+            if (st.stage == SceneStage.Drones)
+            {
+                // 자폭 드론 장면: 날아오는 것을 쏜다.
+                var coming = st.shells.FirstOrDefault(x => x.kind == ShellKind.BigShell);
+                var at = coming != null ? (coming.position - s.gunnerPost).normalized : Vector3.forward;
+                return new GunnerInput { fire = coming != null, aim = at, pointer = at };
             }
             if (st.GruntAlive && st.gruntStep == GruntStep.Guard)
             {

@@ -114,7 +114,7 @@ namespace Anseong.Skirmish
             if (!IsSpawned)
             {
                 // 운영자가 시작 화면에서 고르기 전: 처음 상태만 보여 준다.
-                local.Read(shown.mech, settings.gunnerPost);
+                local.Read(shown.mech, SkirmishSession.GunnerAt(shown, settings));
                 view.Show(shown, settings, null, mechAim, Vector3.zero, Time.time);
                 if (hud != null) hud.Show(shown, settings, null, local.Seat, local.VrActive, "운영자가 시작하기를 기다리는 중");
                 AutoCheck();
@@ -138,12 +138,14 @@ namespace Anseong.Skirmish
                 if (keyboard.cKey.wasPressedThisFrame && local.VrActive) { local.Recenter(); if (hud != null) hud.Replace(); }
                 if (keyboard.gKey.wasPressedThisFrame && Solo) soloAsGunner = !soloAsGunner;
                 if (keyboard.kKey.wasPressedThisFrame) session.BreakShield();
+                // 운영자가 지금 장면을 넘긴다(준비, 자폭 드론, 등장 영상).
+                if (keyboard.nKey.wasPressedThisFrame) session.SkipStage();
             }
             st = session.State;
             var seat = Solo && soloAsGunner ? SkirmishSeat.Gunner : SkirmishSeat.Mech;
             local.SetSeat(seat);
             local.ShieldBroken = st.shieldBroken;
-            local.Read(st.mech, settings.gunnerPost);
+            local.Read(st.mech, SkirmishSession.GunnerAt(st, settings));
 
             if (st.phase == SkirmishPhase.Waiting && (Solo || gunnerConnected || forcedStart)) session.SetReady(true, true);
 
@@ -209,7 +211,7 @@ namespace Anseong.Skirmish
                 if (keyboard.rKey.wasPressedThisFrame) ResetRpc();
                 if (keyboard.cKey.wasPressedThisFrame && local.VrActive) local.Recenter();
             }
-            local.Read(shown.mech, settings.gunnerPost);
+            local.Read(shown.mech, SkirmishSession.GunnerAt(shown, settings));
             var input = local.UseBot ? (StatesReceived > 0 ? SkirmishBots.Gunner(shown, settings) : default) : local.Gunner;
             if (SkirmishMath.Direction(ref input.aim)) gunnerAim = input.aim;
 
